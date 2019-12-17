@@ -7,6 +7,7 @@ if ((${CMAKE_VERSION} VERSION_EQUAL 3.12.0) OR (${CMAKE_VERSION} VERSION_GREATER
 endif ()
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../cmake/modules)
 
 project(DISTCONV CXX)
 
@@ -30,6 +31,8 @@ if (CUDA_FOUND)
   set(DISTCONV_CUDA_VERSION_MAJOR ${CUDA_VERSION_MAJOR})
   set(DISTCONV_CUDA_VERSION_MINOR ${CUDA_VERSION_MINOR})
 endif ()
+
+find_package(CUB REQUIRED)
 
 # Options
 option(DISTCONV_OPTIMIZE_FIND_DESTINATION
@@ -80,8 +83,7 @@ target_include_directories(distconv PUBLIC
   $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}>)
 
-target_include_directories(distconv SYSTEM PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/lib/cub-1.8.0>)
+target_include_directories(distconv SYSTEM PUBLIC ${CUB_INCLUDE_PATH})
 
 target_link_libraries(distconv PUBLIC MPI::MPI_CXX)
 target_link_libraries(distconv PUBLIC cuda::toolkit)

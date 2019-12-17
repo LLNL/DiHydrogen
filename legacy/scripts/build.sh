@@ -56,6 +56,7 @@ ENABLE_P2P=
 
 # External library paths
 Aluminum_DIR=${Aluminum_DIR:-$HOME/wsa/aluminum/install/$UNIQUE_PATH}
+CUB_DIR=${CUB_DIR:-/usr/workspace/wsb/brain/cub/cub-1.8.0}
 NVSHMEM_VERSION=0.3.3
 NVSHMEM_DIR=${NVSHMEM_DIR:-/usr/workspace/wsb/brain/nvshmem/nvshmem_$NVSHMEM_VERSION/cuda-${CUDA_VERSION_MAJOR}.${CUDA_VERSION_MINOR}_$(uname -p)}
 P2P_DIR=${P2P_DIR:-$HOME/wsa/p2p/install/$UNIQUE_PATH}
@@ -148,6 +149,7 @@ cmake ${SRC_DIR} \
       -DAluminum_DIR=$Aluminum_DIR \
       -DP2P_DIR=$P2P_DIR \
       -DNVSHMEM_DIR=$NVSHMEM_DIR \
+      -DCUB_DIR=$CUB_DIR \
       -DDISTCONV_OPTIMIZE_FIND_DESTINATION=ON \
       -G Ninja
 
