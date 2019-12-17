@@ -1,3 +1,5 @@
+# @H2_LICENSE_TEXT
+
 find_package(Breathe 4.10.0)
 
 if (NOT BREATHE_FOUND)

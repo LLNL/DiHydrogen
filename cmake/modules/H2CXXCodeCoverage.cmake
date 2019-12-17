@@ -1,3 +1,5 @@
+# @H2_LICENSE_TEXT@
+
 # There's two branches here; LLVM is obviously preferred.
 #
 # This will produce a macro with the following signature:

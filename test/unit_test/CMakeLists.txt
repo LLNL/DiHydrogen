@@ -1,3 +1,5 @@
+# @H2_LICENSE_TEXT@
+
 # TODO: GPU catch main(?)
 
 # Setup this directory tests. It's not clear that all tests will

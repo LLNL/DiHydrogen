@@ -1,3 +1,5 @@
+.. @H2_LICENSE_TEXT@
+
 ==============================
 DiHydrogen documentation
 ==============================
@@ -9,7 +11,7 @@ over time.
    :maxdepth: 2
    :caption: Contents:
 
-   
+
 
 ==============================
 Indices and tables

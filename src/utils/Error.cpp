@@ -1,3 +1,5 @@
+// @H2_LICENSE_TEXT@
+
 #include <h2/utils/Error.hpp>
 
 namespace h2

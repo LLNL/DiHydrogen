@@ -1,3 +1,5 @@
+# @H2_LICENSE_TEXT@
+
 # A handy macro to add the current source directory to a local
 # filename. To be used for creating a list of sources.
 macro(h2_set_full_path VAR)

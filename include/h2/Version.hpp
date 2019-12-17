@@ -1,3 +1,5 @@
+// @H2_LICENSE_TEXT@
+
 #ifndef H2_VERSION_HPP_
 #define H2_VERSION_HPP_
 

@@ -1,3 +1,5 @@
+# @H2_LICENSE_TEXT@
+
 # This is a script to build documentation without a proper
 # configuration. The only difference should be that the
 # "h2_config.hpp" header won't exist.

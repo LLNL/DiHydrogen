@@ -1,3 +1,5 @@
+# @H2_LICENSE_TEXT@
+
 get_filename_component(COMPILER_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
 get_filename_component(COMPILER_PREFIX "${COMPILER_BIN_DIR}" DIRECTORY)
 

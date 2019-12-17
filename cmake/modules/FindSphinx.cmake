@@ -1,4 +1,4 @@
-# @TOM_LICENSE_TEXT@
+# @H2_LICENSE_TEXT@
 
 #[=============[.rst
 FindSphinx

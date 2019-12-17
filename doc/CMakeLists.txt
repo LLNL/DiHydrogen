@@ -1,3 +1,5 @@
+# @H2_LICENSE_TEXT@
+
 find_package(Doxygen 1.8.5)
 find_package(Sphinx 1.8.0)
 

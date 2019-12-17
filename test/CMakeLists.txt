@@ -1,3 +1,5 @@
+# @H2_LICENSE_TEXT@
+
 # Setup the Catch2 stuff.
 find_package(Catch2 2.0.0 CONFIG QUIET
   HINTS ${CATCH2_DIR} $ENV{CATCH2_DIR} ${CATCH_DIR} $ENV{CATCH_DIR}

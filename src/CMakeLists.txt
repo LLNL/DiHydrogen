@@ -1,3 +1,5 @@
+# @H2_LICENSE_TEXT@
+
 h2_set_full_path(THIS_DIR_CXX_SOURCES
   Version.cpp)
 

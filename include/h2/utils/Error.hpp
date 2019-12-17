@@ -1,3 +1,5 @@
+// @H2_LICENSE_TEXT@
+
 #ifndef H2_UTILS_ERROR_HPP_
 #define H2_UTILS_ERROR_HPP_
 

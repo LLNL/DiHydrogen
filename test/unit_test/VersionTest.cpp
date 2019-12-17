@@ -1,3 +1,5 @@
+// @H2_LICENSE_TEXT@
+
 #include <h2/Version.hpp>
 
 #include <iostream>

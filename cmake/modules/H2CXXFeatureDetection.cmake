@@ -1,3 +1,5 @@
+# @H2_LICENSE_TEXT@
+
 include(CheckCXXSourceCompiles)
 include(CheckCXXCompilerFlag)
 
