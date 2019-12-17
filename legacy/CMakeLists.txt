@@ -83,10 +83,9 @@ target_include_directories(distconv PUBLIC
   $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}>)
 
-target_include_directories(distconv SYSTEM PUBLIC ${CUB_INCLUDE_PATH})
-
 target_link_libraries(distconv PUBLIC MPI::MPI_CXX)
 target_link_libraries(distconv PUBLIC cuda::toolkit)
+target_link_libraries(distconv PUBLIC cuda::CUB)
 target_link_libraries(distconv PUBLIC cuda::cudnn)
 if (P2P_FOUND)
   target_link_libraries(distconv PUBLIC P2P::P2P)
