@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+
+set -u
+set -e
+
+. @CMAKE_CURRENT_BINARY_DIR@/../test_util.sh
+NUM_RUNS=1
+HOSTFILE=/dev/null
+TEST_NAME=test_tensor_mpi_cuda_copy
+BUILD_DIR=@CMAKE_CURRENT_BINARY_DIR@
+###
+PARAMS=("2 2"
+		"1 4"
+		"4 1"
+		"4 4"
+		"2 2 2"
+		"1 2 4"
+		"1 4 4")
+###
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+LOG=$TEST_NAME.$TIMESTAMP.log
+### utils
+function calc_np() {
+	local np=1
+	for i in $(seq $#); do
+		np=$((np * $1))
+		shift
+	done
+	echo $np
+}
+##############
+OPTS=`getopt -o h --long host-file:,num-runs: -- "$@"`
+if [ $? != 0 ]; then echo Failed parsing options. >&2; exit 1; fi
+eval set -- $OPTS
+while true; do
+	case $1 in
+		--host-file)
+			HOSTFILE=$2
+			shift 2
+			;;
+		--num-runs)
+			NUM_RUNS=$2
+			shift 2
+			;;
+		--)
+			shift; break
+			;;
+		*)
+			echo "Invalid option" >&2
+			exit 1
+			;;
+	esac
+done
+
+echo "Start running tests"
+echo "Output is saved in $LOG"
+for i in $(seq $NUM_RUNS); do
+	for param in "${PARAMS[@]}"; do
+		echo "Test parameters: $param"
+		np=$(calc_np $param)
+		echo "Testing $BUILD_DIR/$TEST_NAME $param" 2>&1 |tee -a $LOG
+		set +e
+		mpi_run $np $HOSTFILE $BUILD_DIR/$TEST_NAME $param >> $LOG 2>&1
+		if [ $? -ne  0 ]; then
+			echo "Test failed"
+			exit 1
+		fi
+		set -e
+	done
+done
+
+echo "Completed successfully"

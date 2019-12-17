@@ -1,0 +1,486 @@
+# The `run_test` function in this script
+# 1. runs the Distconv benchmark,
+# 2. stash the outputs as "_dc",
+# 3. runs the reference implementation, and
+# 4. comapre the results,
+# for a given test case.
+
+TEST_UTIL=@CMAKE_CURRENT_BINARY_DIR@/../test_util.sh
+COMPARE_BINARY_FILES=@CMAKE_CURRENT_BINARY_DIR@/../compare_binary_files
+
+. ${TEST_UTIL}
+
+TEST_CONV="conv"
+TEST_POOL="pool"
+TEST_BN="bn"
+
+TENSOR_NAMES=(input_tensor filter_tensor output_tensor bias_tensor
+              mean_tensor running_mean_tensor var_tensor
+              running_var_tensor scale_tensor)
+
+# USE_NVPROF=1
+
+# Return nvprof command and its arguments from a given experiment name.
+function get_nvprof_cmd() {
+    experiment_name=$1
+    return "nvprof -o nvprof_${experiment_name}_%q{OMPI_COMM_WORLD_RANK}.nvprof"
+}
+
+# Add the "_dc" prefix to all the tensor data files in the current
+# directory if exists.
+function move_to_dc() {
+    local idx=$1
+    local method=$2
+    local suffixes=(out txt)
+    for f in ${TENSOR_NAMES[*]}; do
+        for suffix in ${suffixes[*]}; do
+            if [[ -f ${f}.${suffix} ]]; then
+                mv ${f}.${suffix} ${f}_dc_${idx}_${method}.${suffix}
+            fi
+        done
+        for suffix in ${suffixes[*]}; do
+            if [[ -f d_${f}.${suffix} ]]; then
+                mv d_${f}.${suffix} d_${f}_dc_${idx}_${method}.${suffix}
+            fi
+        done
+    done
+}
+
+# Compare two tensor data files.
+function validate() {
+    local test_op=$1
+    shift
+    local ref=$1
+    local out=$2
+    local bitwise=$3
+    echo "Comparing $ref and $out"
+    # Return 0 if they match exactly. Otherwise, use numdiff
+    if diff -q $ref $out; then
+        return 0
+    fi
+    local ret=0
+    local err_threshold=0
+    if [[ $bitwise != 1 ]]; then
+        err_threshold=0.000015
+        if [[ $out = d_bias* ]]; then
+            err_threshold=0.00005
+        fi
+        # Batchnorm tends to have larger rounding errors
+        if [[ $out = d_input* && $test_op == $TEST_BN ]]; then
+            err_threshold=0.0005
+        fi
+    fi
+    echo Validating $out
+    if [[ $out != *.txt ]]; then
+        #od -An -w4 -tfF -v $out > ${out}.txt
+        $COMPARE_BINARY_FILES float $err_threshold $ref $out
+    else
+        numdiff -r $err_threshold ${ref} ${out}
+    fi
+    if [[ $? -ne 0 ]]; then
+        echo "Validation error"
+        ret=1
+    fi
+    return $ret
+}
+
+# Compare all the tensor data files in the current directory if exists.
+function validate_all() {
+    #set +x
+    local test_op=$1
+    shift
+    local halo_exchange_methods=($*)
+    local halo_exchange_base=${halo_exchange_methods[0]}
+    local num_successes=0
+    local num_failures=0
+    local prefix_list=("" "d_")
+    for i in ${TENSOR_NAMES[*]}; do
+        for prefix in "${prefix_list[@]}"; do
+            local f=${prefix}${i}
+            echo "Checking $f tensor"
+            local idx=-1
+            for method in ${halo_exchange_methods[*]}; do
+                echo "Comparison with $method"
+                ((++idx))
+                if [ -f ${f}.out ]; then
+                    validate $test_op ${f}.out ${f}_dc_${idx}_${method}.out 0 > ${f}_ref_${idx}_${method}.diff 2>&1
+                elif [ -f ${f}.txt ]; then
+                    validate $test_op ${f}.txt ${f}_dc_${idx}_${method}.txt 0 > ${f}_ref_${idx}_${method}.diff 2>&1
+                else
+                    echo "Skipping $f." 1>&2
+                    continue
+                fi
+                if [[ $? -ne 0 ]]; then
+                    ((++num_failures))
+                    echo "Validation of ${f} with ${method} failed."
+                else
+                    ((++num_successes))
+                    echo "Validation of ${f} with ${method} succeeded."
+                fi
+                # Compare DC results with different halo exchange methods
+                if [[ $idx > 0 ]]; then
+                    if [ -f ${f}.out ]; then
+                        validate ${f}_dc_0_${halo_exchange_base}.out \
+                                 ${f}_dc_${idx}_${method}.out 1 > \
+                                 ${f}_dc_${idx}_${halo_exchange_base}_${method}.diff 2>&1
+                    elif [ -f ${f}.txt ]; then
+                        validate ${f}_dc_0_${halo_exchange_base}.txt \
+                                 ${f}_dc_${idx}_${method}.txt 1 > \
+                                 ${f}_dc_${idx}_${halo_exchange_base}_${method}.diff 2>&1
+                    else
+                        echo "Skipping $f." 1>&2
+                        continue
+                    fi
+                    if [[ $? -ne 0 ]]; then
+                        ((++num_failures))
+                        echo "Validation of ${f} with ${method} against ${halo_exchange_base} failed."
+                    else
+                        ((++num_successes))
+                        echo "Validation of ${f} with ${method} against ${halo_exchange_base} succeeded."
+                    fi
+                fi
+            done
+        done
+    done
+    if ((num_successes + num_failures == 0)); then
+        echo "Validation failure: No output found."
+        return 1
+    elif ((num_failures > 0)); then
+        return 1
+    else
+        return 0
+    fi
+}
+
+# Run a test for a specific tensor/process shape and an operation.
+function run_test() {
+    local ret_success=0
+    local ret_not_supported=1
+    local ret_fail=2
+
+    # When passed "--check-only" at the first argument, just checks whether
+    # the parameter combinations is supported and does not actually run
+    # the test commands.
+    local check_only=
+    if [[ $1 == --check-only ]]; then
+        check_only=1
+        shift
+    else
+        echo "Running test with $@"
+    fi
+
+    local BENCHMARK_BIN=$1; shift
+    local REF_BENCHMARK_BIN=$1; shift
+
+    local experiment_name=`echo $@ | sed "s/[ ,]/_/g"`
+
+    local TYPE=$1; shift
+    local ND=$1; shift
+    local N=$1; shift
+    local C=$1; shift
+    # Number of filters. Ignored except for conv. test_pool does not pass.
+    if [[ ${TYPE} != $TEST_POOL ]]; then
+        local K=$1; shift
+    fi
+    local H=$1; shift
+    local F=$1; shift
+    local S=$1; shift
+    local PADDING=$1; shift
+    local PROC_N=$1; shift
+    local PROC_DIV=$1; shift
+    local BIAS=$1; shift
+    local OVERLAP=$1; shift
+    local MODE=$1; shift
+    local METHODS=$*; shift
+    local NP=`echo ${PROC_N},${PROC_DIV} | sed "s/,/ \* /g" | xargs expr`
+
+    # Sanity-check
+    for PROC_S in `echo ${PROC_DIV} | sed "s/,/ /g"`; do
+        if (( ${PROC_S} > ${H} )); then
+            echo "Test not supported as the number of spatial partitions (${PROC_S}) is larger than the spatial domain (H=${H})."
+            return $ret_not_supported
+        fi
+        if [[ $TYPE != $TEST_BN ]]; then
+            if (( ($H / $PROC_S) < ($F / 2) )); then
+                echo "Test not supported as each spatial partition of the input tensor is smaller than the halo size ($(($H / $PROC_S)) < $(($F / 2)))"
+                return $ret_not_supported
+            fi
+            # Check output tensor size against filter size
+            local output_part_dim=$(($H / $PROC_S))
+            if (( $PADDING == 1 )); then
+                output_part_dim=$(($output_part_dim + ($F / 2)))
+            fi
+            output_part_dim=$((($output_part_dim - $F + 1) / $S))
+            if (( $output_part_dim == 0 )); then
+                echo "Test not supported as the dimension of the spatial partition of the output tensor is zero."
+                return $ret_not_supported
+            fi
+            if (( $output_part_dim < ($F / 2) )); then
+                echo "Test not supported as each spatial partition of the output tensor is smaller than the halo size ($output_part_dim < $(($F / 2)))"
+                return $ret_not_supported
+            fi
+        fi
+    done
+
+    local max_num_procs=$(($(get_max_num_nodes) * $(get_num_gpus_per_node)))
+    if (( $NP > $max_num_procs )); then
+        echo "Test not supported as it requires too many MPI ranks ($NP > $max_num_procs)"
+        return $ret_not_supported
+    fi
+    if [[ $TYPE != $TEST_BN && $PADDING == 0 && $H -lt $F ]]; then
+        echo "Test not supported as its spatial dimension ($H) is too small for the filter size ($F)"
+        return $ret_not_supported
+    fi
+
+
+    if [[ ! $TYPE =~ ($TEST_CONV|$TEST_POOL|$TEST_BN) ]]; then
+        echo "TYPE should be $TEST_CONV, $TEST_POOL or $TEST_BN: $TYPE"
+        exit
+    fi
+
+    if [[ ! ${ND} = 2 && ! ${ND} = 3 ]]; then
+        echo "ND should be 2 or 3: ${ND}"
+        exit
+    fi
+
+    # All pre-test checks have been done. Returns when just checking
+    # the configuration.
+    if [[ $check_only ]]; then
+        return $ret_success
+    fi
+
+    local W=$H
+    local D=$H
+    local PROC_C=1
+
+    # Run Distconv
+    local runcmd=
+    local runcmd_ref=
+    if [[ -n `hostname | grep lassen` ]]; then
+        # Lassen
+        if [[ ${NP} -le 4 ]]; then
+            # Run in a node
+            runcmd="jsrun -n 1 -r 1 -a ${NP} -g ${NP} -c `expr 10 \* ${NP}`"
+        else
+            # Run among multiple nodes
+            if [[ `expr ${NP} % 4` != 0 ]]; then
+                echo "Error: NP / 4 != 0 (NP=${NP})"
+                exit
+            fi
+            runcmd="jsrun -n `expr ${NP} / 4` -r 1 -a 4 -g 4 -c 40"
+        fi
+        runcmd+=" -b packed:10 -d packed"
+        runcmd_ref="jsrun -n1"
+    elif [[ -n `hostname | grep ray` ]]; then
+        # Ray
+        runcmd="mpirun -n ${NP}"
+        # no launcher required
+        runcmd_ref=""
+    else
+        echo "Error: Invalid hostname (`hostname`)"
+        exit
+    fi
+
+    local FILTER_SIZE="${F},${F}"
+    if [[ ${TYPE} == $TEST_CONV ]]; then
+        FILTER_SIZE="${K},${FILTER_SIZE}"
+    fi
+    local IMAGE_SIZE=
+    local STRIDE_SIZE=
+    if [[ ${ND} == 2 ]]; then
+        IMAGE_SIZE="${N},${C},${H},${W}"
+        STRIDE_SIZE="${S},${S}"
+    elif [[ ${ND} == 3 ]]; then
+        IMAGE_SIZE="${N},${C},${D},${H},${W}"
+        FILTER_SIZE="${FILTER_SIZE},${F}"
+        STRIDE_SIZE="${S},${S},${S}"
+    fi
+
+    local VERIFY=
+    local TEST_ARGS="--num-dims $ND --image-size ${IMAGE_SIZE} --testing --num-warmup-runs 0 --num-runs 1 --mode ${MODE}"
+
+    if [[ ${MODE} != "SIMPLE" ]]; then
+        VERIFY=1
+        TEST_ARGS+=" --dump-output --dump-binary"
+    else
+        VERIFY=0
+    fi
+
+    # Options only for convolution or pooling
+    if [[ $TYPE != $TEST_BN ]]; then
+        if [[ $PADDING == 0 ]]; then
+            TEST_ARGS+=" --no-padding"
+        fi
+        if [[ $OVERLAP == 1 ]]; then
+            TEST_ARGS+=" --overlap"
+        fi
+        TEST_ARGS+=" --filter-size $FILTER_SIZE"
+        TEST_ARGS+=" --strides $STRIDE_SIZE"
+    fi
+
+    # Options only for convolution
+    if [[ $TYPE == $TEST_CONV ]]; then
+        if [[ $BIAS == 1 ]]; then
+            TEST_ARGS+=" --use-bias"
+        fi
+        if [[ $VERIFY == 1 ]]; then
+            TEST_ARGS+=" --deterministic"
+        else
+            TEST_ARGS+=" --conv-algo AUTOTUNE"
+        fi
+    fi
+
+    # Options only for batchnorm
+    if [[ $TYPE == $TEST_BN ]]; then
+        TEST_ARGS+=" --global-stat"
+    fi
+
+    local NVPROF_CMD=""
+    if [[ ${USE_NVPROF} = 1 ]]; then
+        NVPROF_CMD=`get_nvprof_cmd ${experiment_name}`
+    fi
+
+    # Just ensure stale results are not reused
+    for tn in "${TENSOR_NAMES[@]}"; do
+        rm -f ${tn}.txt
+    done
+
+    local test_idx=0
+    for method in ${METHODS[*]}; do
+        echo "Running $(basename ${BENCHMARK_BIN}) with $method"
+        local METHOD_ARGS=
+        if [[ $TYPE == $TEST_BN ]]; then
+            METHOD_ARGS="--bn-impl $method"
+            # CUDA-awareness is needed for the MPI implementation of batchnorm
+            if [[ $method == "MPI" ]]; then
+                runcmd+=" -M -gpu"
+            fi
+        else
+            METHOD_ARGS="--halo-exchange-method $method"
+        fi
+        echo ${runcmd} ${NVPROF_CMD} ${BENCHMARK_BIN} \
+             --proc-size "${PROC_N},${PROC_C},${PROC_DIV}" \
+             $TEST_ARGS $METHOD_ARGS \
+             > log_distconv_${test_idx}_${method}.txt 2>&1
+
+        ${runcmd} ${NVPROF_CMD} ${BENCHMARK_BIN} \
+            --proc-size "${PROC_N},${PROC_C},${PROC_DIV}" \
+            $TEST_ARGS $METHOD_ARGS \
+            >> log_distconv_${test_idx}_${method}.txt 2>&1
+        if [[ $? -ne 0 ]]; then
+            echo "Execution of ${BENCHMARK_BIN} with ${method} failed"
+            return $ret_fail
+        fi
+        # Stash the results
+        if [[ ${VERIFY} = 1 ]]; then
+            # Sometimes delay can happen when using NFS
+            if [[ ! -f output_tensor.out ]]; then
+                echo "Output not found. Try again..."
+                # Try again after waiting a few seconcs
+                sleep 5s
+                if [[ ! -f output_tensor.out ]]; then
+                    echo "Output tensor not found"
+                    return $ret_fail
+                fi
+            fi
+            move_to_dc $test_idx $method
+        fi
+        ((++test_idx))
+    done
+
+    # Run the reference implementation.
+    echo "Running $(basename ${REF_BENCHMARK_BIN})"
+    local proc_one=$(echo $PROC_DIV | sed 's/\([0-9]\+\)/1/g')
+    # CUDA-awareness is needed for the MPI implementation of batchnorm
+    if [[ $TYPE == $TEST_BN ]]; then
+        runcmd_ref+=" -M -gpu"
+    fi
+    echo ${runcmd_ref} ${REF_BENCHMARK_BIN} \
+         --proc-size "1,1,$proc_one" \
+         $TEST_ARGS \
+         > log_reference.txt 2>&1
+
+    ${runcmd_ref} ${REF_BENCHMARK_BIN} \
+        --proc-size "1,1,$proc_one" \
+        $TEST_ARGS \
+        >> log_reference.txt 2>&1
+    if [[ $? -ne 0 ]]; then
+        echo "Execution of ${REF_BENCHMARK_BIN} failed"
+        return $ret_fail
+    fi
+
+    echo "Validating results"
+
+    # Compare them
+    if [[ ${VERIFY} = 1 ]]; then
+        validate_all $TYPE ${METHODS[*]} > log_validate.txt 2>&1
+    else
+        echo "Warning: The results are not validated since ${MODE} is not supported in the cuDNN benchmark"
+    fi
+    if [[ $? -ne 0 ]]; then
+        echo "Validation failed"
+        return $ret_fail
+    fi
+
+    echo "Test completed successfully"
+    return $ret_success
+}
+
+# Remove old log files
+function cleanup_cudnn_test_logs() {
+    rm -f *input_tensor* *output_tensor* *filter_tensor* *bias_tensor* log_*.txt results_*.txt *.core
+}
+
+function expand_proc_shapes_2d() {
+    local configs_name=$1
+    shift
+    local num_procs=($*)
+    #eval local configs_copy=\(\" \${${configs_name}[@]} \"\)
+    local new_configs=()
+    for np in "${num_procs[@]}"; do
+        local proc_shapes1=()
+        find_divisible_pairs proc_shapes1 $np
+        for p in "${proc_shapes1[@]}"; do
+            x=$(echo $p | awk '{print $1}')
+            y=$(echo $p | awk '{print $2}')
+            local proc_shapes2=()
+            find_divisible_pairs proc_shapes2 $y
+            for q in "${proc_shapes2[@]}"; do
+                y=$(echo $q | awk '{print $1}')
+                z=$(echo $q | awk '{print $2}')
+                new_configs+=("$x $y,$z")
+            done
+        done
+    done
+    eval ${configs_name}='("${new_configs[@]}")'
+}
+
+function expand_proc_shapes_3d() {
+    local configs_name=$1
+    shift
+    local num_procs=($*)
+    #eval local configs_copy=\(\" \${${configs_name}[@]} \"\)
+    local new_configs=()
+    for np in "${num_procs[@]}"; do
+        local proc_shapes1=()
+        find_divisible_pairs proc_shapes1 $np
+        for p in "${proc_shapes1[@]}"; do
+            x=$(echo $p | awk '{print $1}')
+            y=$(echo $p | awk '{print $2}')
+            local proc_shapes2=()
+            find_divisible_pairs proc_shapes2 $y
+            for q in "${proc_shapes2[@]}"; do
+                y=$(echo $q | awk '{print $1}')
+                z=$(echo $q | awk '{print $2}')
+                local proc_shapes3=()
+                find_divisible_pairs proc_shapes3 $z
+                for r in "${proc_shapes3[@]}"; do
+                    z=$(echo $r | awk '{print $1}')
+                    w=$(echo $r | awk '{print $2}')
+                    new_configs+=("$x $y,$z,$w")
+                done
+            done
+        done
+    done
+    eval ${configs_name}='("${new_configs[@]}")'
+}

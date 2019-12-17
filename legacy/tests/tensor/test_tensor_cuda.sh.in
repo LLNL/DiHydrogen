@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+set -u
+set -e
+
+. @CMAKE_CURRENT_BINARY_DIR@/../test_util.sh
+TEST_NAME=test_tensor_cuda
+BUILD_DIR=@CMAKE_CURRENT_BINARY_DIR@
+
+$BUILD_DIR/$TEST_NAME
