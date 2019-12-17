@@ -1,0 +1,54 @@
+#!/bin/bash
+
+BENCHMARK_ROOT=@CMAKE_CURRENT_BINARY_DIR@/../../benchmarks
+TEST_UTIL=@CMAKE_CURRENT_BINARY_DIR@/../test_util.sh
+TEST_CUDNN_UTIL=@CMAKE_CURRENT_BINARY_DIR@/test_cudnn_util.sh
+DISTCONV_POOLING_BENCHMARK=${BENCHMARK_ROOT}/distconv_benchmark_pooling
+POOL_REFERENCE=@CMAKE_CURRENT_BINARY_DIR@/chainer_pooling.py
+
+# Main
+
+set -x
+
+. ${TEST_UTIL}
+. ${TEST_CUDNN_UTIL}
+
+# Parse the first arguemnt as initialization mode
+MODE_2D=NORMAL
+MODE_3D=SIMPLE
+if [[ $# -ge 1 ]]; then
+    MODE_2D=$1
+    MODE_3D=$1
+fi
+
+HALO_EXCHANGE_METHOD=HYBRID
+
+function run_test_pool_2d() {
+    run_test ${DISTCONV_POOLING_BENCHMARK} ${POOL_REFERENCE} pool 2 $@ ${MODE_2D} $HALO_EXCHANGE_METHOD
+}
+
+function run_test_pool_3d() {
+    run_test ${DISTCONV_POOLING_BENCHMARK} ${POOL_REFERENCE} pool 3 $@ ${MODE_3D} $HALO_EXCHANGE_METHOD
+}
+
+# TODO: Refactor like the convolution test
+#                N  C  H F S PADDING PN  PS BIAS OVERLAP
+run_test_pool_2d 8 16 32 3 1       1  1 1,1    0       0
+run_test_pool_2d 8 16 32 3 1       1  1 1,2    0       0
+run_test_pool_2d 8 16 32 3 1       1  1 2,1    0       0
+run_test_pool_2d 8 16 32 3 1       1  1 2,2    0       0
+run_test_pool_2d 8 16 32 3 1       1  2 1,1    0       0
+run_test_pool_2d 8 16 32 3 1       1  2 1,2    0       0
+run_test_pool_2d 8 16 32 3 1       1  2 2,1    0       0
+
+#                N  C  H F S PADDING PN    PS BIAS OVERLAP
+run_test_pool_3d 8 16 32 3 1       1  1 1,1,1    0       0
+run_test_pool_3d 8 16 32 3 1       1  1 1,1,2    0       0
+run_test_pool_3d 8 16 32 3 1       1  1 1,2,1    0       0
+run_test_pool_3d 8 16 32 3 1       1  1 1,2,2    0       0
+run_test_pool_3d 8 16 32 3 1       1  2 1,1,1    0       0
+run_test_pool_3d 8 16 32 3 1       1  2 1,1,2    0       0
+run_test_pool_3d 8 16 32 3 1       1  2 1,2,1    0       0
+run_test_pool_3d 8 16 32 3 1       1  2 2,1,1    0       0
+
+echo "Completed successfully"

@@ -1,0 +1,150 @@
+CLUSTER=$(hostname | sed 's/\([a-zA-Z][a-zA-Z]*\)[0-9]*/\1/g')
+CUDA_MEMCHECK="cuda-memcheck --log-file memcheck.%p"
+### MPI
+# detect MPI
+MPI_NAME="UNKNOWN"
+MPI_HOME=""
+if mpicc -v 2>&1 | grep -iq Spectrum; then
+	MPI_NAME="SPECTRUM"
+	MPIRUN="mpirun"
+	MPI_HOME=$MPI_ROOT
+	MPI_RANK_ENV=${MPI_RANK_ENV:-OMPI_COMM_WORLD_RANK}
+elif mpicc -v 2>&1 | grep -iq MVAPICH; then
+	MPI_RANK_ENV=${MPI_RANK_ENV:-MV2_COMM_WORLD_RANK}
+	if mpiexec --version 2>&1 | grep -iq mvapich2-gdr; then
+		MPI_NAME="MVAPICH-GDR"
+	else
+		MPI_NAME="MVAPICH"
+	fi
+fi
+
+function get_num_gpus_per_node() {
+    case $CLUSTER in
+        lassen|ray|sierra)
+            echo 4
+            ;;
+        pascal)
+            echo 2
+            ;;
+        *)
+            echo "Unknown system"
+            exit 1
+    esac
+}
+
+function mpi_run_host() {
+	np=$1
+	hostfile=$2
+	shift 2
+	if [[ $MPI_NAME = "MVAPICH"* ]]; then
+		echo "mpirun_rsh -rsh -np $np -hostfile $hostfile MV2_USE_RDMA_CM=0 $*"
+		mpirun_rsh -rsh -np $np -hostfile $hostfile MV2_USE_RDMA_CM=0 $*
+	elif [[ $MPI_NAME = "SPECTRUM" && $CLUSTER != ray ]]; then
+		local num_tasks=1
+		if [[ $(($np % 32)) == 0 ]]; then
+			num_tasks=32
+		elif [[ $(($np % 16)) == 0 ]]; then
+			num_tasks=16
+		elif [[ $(($np % 8)) == 0 ]]; then
+			num_tasks=8
+		elif [[ $(($np % 4)) == 0 ]]; then
+			num_tasks=4
+		elif [[ $(($np % 2)) == 0 ]]; then
+			num_tasks=2
+		fi
+		num_nodes=$(($np / $num_tasks))
+		echo jsrun -n $num_nodes -r 1 -a $num_tasks -c 40 $*
+		jsrun -M -gpu -n $num_nodes -r 1 -a $num_tasks -c 40 -b packed:10 -d packed $*
+	elif [[ $MPI_NAME = "SPECTRUM" && $CLUSTER = ray ]]; then
+		mpirun -np $np $*
+	else
+		echo "Unknown MPI"
+	fi
+}
+
+function mpi_run() {
+	np=$1
+	hostfile=$2
+	shift 2
+	if [[ $MPI_NAME = "MVAPICH"* ]]; then
+		echo "mpirun_rsh -rsh -np $np -hostfile $hostfile MV2_USE_CUDA=1 MV2_CUDA_IPC=0  MV2_CUDA_SMP_IPC=0 MV2_SHOW_CPU_BINDING=1 MV2_USE_RDMA_CM=0 $*"
+		mpirun_rsh -rsh -np $np -hostfile $hostfile MV2_USE_CUDA=1 MV2_CUDA_IPC=0  MV2_CUDA_SMP_IPC=0 MV2_SHOW_CPU_BINDING=1 MV2_USE_RDMA_CM=0 $*
+	elif [[ $MPI_NAME = "SPECTRUM" && $CLUSTER != ray ]]; then
+		num_nodes=$(($np / 4))
+		echo jsrun -M -gpu -n $num_nodes -r 1 -a 4 -c 40 -g 4 -b packed:10 -d packed $*
+		jsrun -M -gpu -n $num_nodes -r 1 -a 4 -c 40 -g 4 -b packed:10 -d packed $*
+	elif [[ $MPI_NAME = "SPECTRUM" && $CLUSTER = ray ]]; then
+		mpirun -np $np $*
+	else
+		echo "Unknown MPI"
+	fi
+}
+
+# Find all integer pairs of (i, j) where i * j == N. The pairs are
+# appended to a given array.
+#
+# @param $1 name of an array variable
+# @param $2 an integer value (N)
+function find_divisible_pairs() {
+    local array_name=$1
+    local n=$2
+    for i in $(seq $n); do
+        if [[ $(($n % $i)) -eq 0 ]]; then
+            local d=$(($n / $i))
+            eval ${array_name}+='("$i $d")'
+        fi
+    done
+}
+
+_MAX_NUM_NODES=0
+function get_max_num_nodes() {
+    if [[ $_MAX_NUM_NODES == 0 ]]; then
+        if [[ ${LSB_DJOB_RANK_FILE+x} ]]; then
+            _MAX_NUM_NODES=$(jsrun -r1 -a1 hostname | wc -l)
+        elif [[ $CLUSTER == lassen ]]; then
+            # We are not in a job session.
+            _MAX_NUM_NODES=256
+        elif [[ $CLUSTER == ray ]]; then
+            # We are not in a job session.
+            _MAX_NUM_NODES=32
+        else
+            echo "Unsupported system"
+            exit 1
+        fi
+    fi
+    echo $_MAX_NUM_NODES
+}
+
+function submit() {
+    local nnodes=$1
+    local out=$2
+    local name=$3
+    local queue=$4
+    local time=$5
+    local command_log=$6
+    shift 6
+    local bank=guests
+    case $CLUSTER in
+        lassen|sierra)
+            bank=exalearn
+            ;;
+    esac
+    case $CLUSTER in
+        lassen|sierra|ray)
+            cmd="bsub -q$queue -G $bank -W $time -nnodes $nnodes -o $out -J $name $*"
+            echo $cmd > $command_log
+            $cmd
+            ;;
+        *)
+            echo "Unsupported system"
+            exit 1
+    esac
+}
+
+function get_timestamp() {
+    date +%Y%m%d_%H%M%S
+}
+
+function check_numeric() {
+    [[ $1 =~ [0-9]+ ]]
+}

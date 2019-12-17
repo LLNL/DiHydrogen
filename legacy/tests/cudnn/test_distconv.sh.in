@@ -1,0 +1,633 @@
+#!/bin/bash
+
+BENCHMARK_ROOT=@CMAKE_CURRENT_BINARY_DIR@/../../benchmarks
+TEST_UTIL=@CMAKE_CURRENT_BINARY_DIR@/../test_util.sh
+TEST_CUDNN_UTIL=@CMAKE_CURRENT_BINARY_DIR@/test_cudnn_util.sh
+DISTCONV_BENCHMARK=${BENCHMARK_ROOT}/distconv_benchmark
+# TODO: This should check the build environment and use _jsrun only if necessary.
+CUDNN_BENCHMARK=${BENCHMARK_ROOT}/cudnn_benchmark_jsrun.sh
+
+# Main
+set -u
+set -e
+
+. ${TEST_UTIL}
+. ${TEST_CUDNN_UTIL}
+
+RUN_ID=test_distconv_$(get_timestamp)
+WORK_DIR=./$RUN_ID
+LOG=$WORK_DIR/log
+
+TEST_OP=$TEST_CONV
+MODE_2D=NORMAL
+MODE_3D=NORMAL
+HALO_EXCHANGE_METHODS=(HYBRID)
+BN_IMPLS=(MPI)
+USE_NVPROF=
+NUM_IMAGES=(4 1 16)
+IMAGE_SIZES=(16 15 63 99)
+NUM_CHANNELS=(1 16)
+FILTER_SIZES=(3 5 7 1)
+STRIDE_SIZES=(1 2)
+PADDING=(1 0)
+NUM_PROCS=(4 64 8)
+NUM_DIMS=(2 3)
+OVERLAP=(1 0)
+BIAS=(1)
+
+TEST_MODE=LONG # QUICK, LONG, ALL
+RUN_AS_JOBS=
+MAX_CONCURRENT_JOBS=
+JOB_QUEUE=standby
+JOB_WALLTIME=120
+NUM_TESTS_PER_JOB=20
+TEST_CASES=test_cases.txt
+
+function prepare_or_run_test() {
+    local job_script=$1
+    shift
+    local nd=$1
+    shift
+    local test_exe=
+    local ref_exe=
+    if [[ $TEST_OP == $TEST_CONV ]]; then
+        test_exe=$DISTCONV_BENCHMARK
+        ref_exe=$CUDNN_BENCHMARK
+    elif [[ $TEST_OP == $TEST_BN ]]; then
+        test_exe=${DISTCONV_BENCHMARK}_bn
+        ref_exe=$test_exe
+    fi
+    local cmd_arg="$test_exe $ref_exe $TEST_OP $nd $@"
+    if [[ $nd == 2 ]]; then
+        cmd_arg+=" ${MODE_2D}"
+    elif [[ $nd == 3 ]]; then
+        cmd_arg+=" ${MODE_3D}"
+    fi
+    if [[ $TEST_OP == $TEST_BN ]]; then
+        cmd_arg+=" ${BN_IMPLS[*]}"
+    else
+        cmd_arg+=" ${HALO_EXCHANGE_METHODS[*]}"
+    fi
+    local run_cmd="run_test $cmd_arg"
+    local check_cmd="run_test --check-only $cmd_arg"
+
+    # Returns if this test case is not supported
+    if ! $check_cmd; then
+        return
+    fi
+
+    # Creates a unique directory for this test
+    local test_id=$(echo $run_cmd | md5sum | sed "s/\(^[0-9a-f]*\).*$/\1/")
+    local dirpath=$(realpath ${test_id})
+    if [[ -d $dirpath ]]; then
+        echo "Error: Test ID conflict detected"
+        return 1
+    fi
+    mkdir $dirpath
+
+    local ret=0
+    # Runs the test as a job or directly run
+    if [[ $RUN_AS_JOBS ]]; then
+        echo pushd $dirpath >> $job_script
+        echo $run_cmd >> $job_script
+        echo popd >> $job_script
+    else
+        pushd $dirpath
+        $run_cmd
+        if [[ $? != 0 ]]; then
+            echo "Test failed"
+            ret=1
+        fi
+        popd
+    fi
+    return $ret
+}
+
+function throttle_job_submission() {
+    if [[ ! $RUN_AS_JOBS ]]; then return; fi
+    while (( $(bjobs -o name | grep $RUN_ID | wc -l) > $MAX_CONCURRENT_JOBS )); do
+        echo "Job limit ($MAX_CONCURRENT_JOBS) reached"
+        sleep 5
+    done
+}
+
+function wait_all_jobs() {
+    if [[ ! $RUN_AS_JOBS ]]; then return; fi
+    while true; do
+        local num_jobs=$(bjobs -o name | grep $RUN_ID | wc -l)
+        if (( $num_jobs > 0 )); then
+            echo "$num_jobs jobs remaining"
+            sleep 5
+        else
+            break
+        fi
+    done
+    echo "All jobs completed"
+}
+
+function print_results() {
+    #if [[ ! $RUN_AS_JOBS ]]; then return; fi
+
+    set +e
+
+    local num_success=0
+    local num_job_failure=0
+    local num_job_timeout=0
+    local num_execution_failure=0
+    local num_validation_failure=0
+    local num_preemption=0
+    local num_unknown=0
+
+    local failure_jobs=failure_jobs.txt
+    local timeout_jobs=timeout_jobs.txt
+    local execution_failure_tests=execution_failure_tests.txt
+    local validation_failure_tests=validation_failure_tests.txt
+    local unknown_tests=unknown_tests.txt
+    local preempted_jobs=preempted_jobs.txt
+    rm -f $failure_jobs $timeout_jobs
+    rm -f $execution_failure_tests $validation_failure_tests $preempted_jobs
+    rm -f $unknown_tests
+    for d in $(find . -maxdepth 1 -name 'job_output_*.txt'); do
+        local job_out=$d
+        if ! grep -q "^Job completed" $job_out; then
+            if grep -q "TERM_RUNLIMIT: job killed after reaching LSF run time limit" $job_out; then
+                ((++num_job_timeout))
+                echo $d >> $timeout_jobs
+                continue
+            fi
+            if grep -q "TERM_PREEMPT: job killed after preemption" $job_out; then
+                ((++num_preemption))
+                echo $d >> $preempted_jobs
+                continue
+            fi
+            if grep -q "Exited with exit code" $job_out; then
+                ((++num_job_failure))
+                echo $d >> $failure_jobs
+                continue
+            fi
+        fi
+        local nt=$(grep "^Running test with " $job_out | wc -l)
+        local ns=$(grep "Test completed successfully" $job_out | wc -l)
+        ((num_success += ns))
+        if [[ ns == nt ]]; then continue; fi
+        local nef=$(grep "Execution of .* failed" $job_out | wc -l)
+        ((num_execution_failure += nef))
+        if (( nef > 0 )); then
+            echo $d >> $execution_failure_tests
+        fi
+        local nv=$(grep "Validation failed" $job_out | wc -l)
+        ((num_validation_failure += nv))
+        if (( nv > 0 )); then
+            echo $d >> $validation_failure_tests
+        fi
+        if (( ns + nef + nv > nt )); then
+            echo "Error! Invalid job output: $job_out"
+            exit 1
+        fi
+        local nu=$((nt - ns - nef -nv))
+        ((num_unknown += nu))
+        if (( nu > 0 )); then
+            echo $d >> $unknown_tests
+        fi
+    done
+    local num_tests=$((num_success + num_job_failure + num_job_timeout
+                       + num_execution_failure + num_validation_failure
+                       + num_preemption + num_unknown))
+    echo ""
+    echo "$num_tests test(s) ran"
+    if ((num_success == num_tests)); then
+        echo "All tests succeeded"
+        return
+    fi
+    echo "$num_success test(s) succeeded"
+    if ((num_job_failure > 0)); then
+        echo "$num_job_failure job(s) failed (see $failure_jobs)"
+    fi
+    if ((num_job_timeout > 0)); then
+        echo "$num_job_timeout job(s) timed out (see $timeout_jobs)"
+    fi
+    if ((num_preemption > 0)); then
+        echo "$num_preemption job(s) preempted (see $preempted_jobs)"
+    fi
+    if ((num_execution_failure > 0)); then
+        echo "Execution of $num_execution_failure test(s) failed (see $execution_failure_tests)"
+    fi
+    if ((num_validation_failure > 0)); then
+        echo "Validation of $num_validation_failure test(s) failed (see $validation_failure_tests)"
+    fi
+    if ((num_unknown > 0)); then
+        echo "$num_unknown test(s) unknown (see $unknown_tests)"
+    fi
+}
+
+function adjust_config_options() {
+    local mode=$1
+    local num_images_count="${#NUM_IMAGES[@]}"
+    local image_sizes_count="${#IMAGE_SIZES[@]}"
+    local num_channels_count="${#NUM_CHANNELS[@]}"
+    local filter_sizes_count="${#FILTER_SIZES[@]}"
+    local stride_sizes_count="${#STRIDE_SIZES[@]}"
+    local padding_count="${#PADDING[@]}"
+    local num_procs_count="${#NUM_PROCS[@]}"
+    local overlap_count="${#OVERLAP[@]}"
+    local bias_count="${#BIAS[@]}"
+    if [[ $mode == QUICK ]]; then
+        num_images_count=1
+        image_sizes_count=1
+        num_channels_count=1
+        filter_sizes_count=1
+        stride_sizes_count=1
+        padding_count=1
+        num_procs_count=1
+        overlap_count=1
+        bias_count=1
+    elif [[ $mode == LONG ]]; then
+        num_images_count=3
+        image_sizes_count=3
+        num_channels_count=1
+        filter_sizes_count=3
+        stride_sizes_count=3
+        padding_count=2
+        num_procs_count=2
+        overlap_count=2
+        bias_count=1
+    fi
+    NUM_IMAGES=("${NUM_IMAGES[@]:0:${num_images_count}}")
+    IMAGE_SIZES=("${IMAGE_SIZES[@]:0:${image_sizes_count}}")
+    NUM_CHANNELS=("${NUM_CHANNELS[@]:0:${num_channels_count}}")
+    FILTER_SIZES=("${FILTER_SIZES[@]:0:${filter_sizes_count}}")
+    STRIDE_SIZES=("${STRIDE_SIZES[@]:0:${stride_sizes_count}}")
+    PADDING=("${PADDING[@]:0:${padding_count}}")
+    NUM_PROCS=("${NUM_PROCS[@]:0:${num_procs_count}}")
+    OVERLAP=("${OVERLAP[@]:0:${overlap_count}}")
+    BIAS=("${BIAS[@]:0:${bias_count}}")
+    if [[ $TEST_OP == $TEST_BN ]]; then
+        # These parameters don't matter for batchnorm
+        FILTER_SIZES=(1)
+        STRIDE_SIZES=(1)
+        PADDING=(0)
+        OVERLAP=(0)
+        BIAS=(0)
+    fi
+}
+
+function expand_configs() {
+    local configs_name=$1
+    shift
+    local config_options=($*)
+    eval local configs_copy=\( \"\${${configs_name}[@]} \"\)
+    local new_configs=()
+    for config in "${configs_copy[@]}"; do
+        for opt in "${config_options[@]}"; do
+            new_configs+=("$config $opt")
+            # Only choose the first option when in the QUICK mode
+            if [[ $TEST_MODE == QUICK ]]; then
+                break
+            fi
+        done
+    done
+    eval ${configs_name}='("${new_configs[@]}")'
+}
+
+function is_supported() {
+    local nd=$1
+    shift
+    local cfg=($*)
+    local image_size=${cfg[3]}
+    local filter_size=${cfg[4]}
+    local stride=${cfg[5]}
+    local padding=${cfg[6]}
+    local pn=${cfg[7]}
+    local ps=${cfg[8]}
+    if [[ $TEST_OP == $TEST_CONV ]]; then
+        if [[ $padding -eq 0 && $stride -gt 1 ]]; then
+            echo "Skipping ${cfg[@]} as pading == 0 && stride > 1"
+            return
+        fi
+    fi
+    if [[ $TEST_OP != $TEST_BN && $nd == 3 ]]; then
+        # Halo exchange in the inner-most dimension not implemented
+        if [[ ${ps##*,} != 1 ]]; then
+            echo "Skipping as partitioning of the inner-most dimension of 5D tensors is not supported"
+            return
+        fi
+    fi
+    echo YES
+}
+
+function filter_unsupported_configs() {
+    local configs_name=$1
+    eval local configs_copy=\( \"\${${configs_name}[@]} \"\)
+    local new_configs=()
+    for config in "${configs_copy[@]}"; do
+        if [[ $(is_supported $config) == NO ]]; then
+            echo "Skipping $config"
+            continue
+        fi
+        new_configs+=("$config")
+    done
+    eval ${configs_name}='("${new_configs[@]}")'
+}
+
+function adjust_job_options() {
+    if [[ $JOB_QUEUE == standby ]]; then
+        # Minimize preemption damage
+        JOB_WALLTIME=30
+        NUM_TESTS_PER_JOB=2
+        if [[ $CLUSTER == ray ]]; then
+            # Ray is less busy. Use longer wall time.
+            JOB_WALLTIME=60
+        fi
+    elif [[ $JOB_WALLTIME == pbatch ]]; then
+        if [[ $CLUSTER == lassen ]]; then
+            # Lassen is busy. Squeeze in short-running jobs
+            JOB_WALLTIME=60
+            NUM_TESTS_PER_JOB=10
+        elif [[ $CLUSTER == ray ]]; then
+            # Ray is not busy, but the number of pbatch nodes is limisted to 16 per user
+            JOB_WALLTIME=120
+            NUM_TESTS_PER_JOB=10
+        fi
+    fi
+}
+
+function submit_job() {
+    local nnodes=$1
+    shift
+    local output_file=$1
+    shift
+    local job_script=$1
+    shift
+    local command_log=${job_script}.log
+    # Clears the output file
+    rm -f $output_file
+    submit $nnodes $output_file $RUN_ID $JOB_QUEUE $JOB_WALLTIME $command_log $job_script
+}
+
+function run_nd_tests() {
+    local nd=$1
+    local nprocs=("${NUM_PROCS[@]}")
+    local proc_configs=()
+    if [[ $nd -eq 2 ]]; then
+        expand_proc_shapes_2d proc_configs "${nprocs[@]}"
+    elif [[ $nd -eq 3 ]]; then
+        expand_proc_shapes_3d proc_configs "${nprocs[@]}"
+    fi
+    local num_tests=0
+
+    echo "Generating ${nd}D tests"
+    for proc_cfg in "${proc_configs[@]}"; do
+        for num_images in "${NUM_IMAGES[@]}"; do
+            for num_channel in "${NUM_CHANNELS[@]}"; do
+                for image_size in "${IMAGE_SIZES[@]}"; do
+                    for filter_size in "${FILTER_SIZES[@]}"; do
+                        for stride_size in "${STRIDE_SIZES[@]}"; do
+                            for padding in "${PADDING[@]}"; do
+                                for bias in "${BIAS[@]}"; do
+                                    for overlap in "${OVERLAP[@]}"; do
+                                        cfg="$num_images $num_channel $num_channel $image_size $filter_size $stride_size $padding $proc_cfg $bias $overlap"
+                                        local sup=$(is_supported $nd "$cfg")
+                                        if [[ $sup != YES ]]; then
+                                            echo $sup
+                                            continue
+                                        fi
+                                        echo $nd $cfg >> $TEST_CASES
+                                    done
+                                done
+                            done
+                        done
+                    done
+                done
+            done
+        done
+    done
+    num_tests=$(wc -l $TEST_CASES | awk '{print $1}')
+    echo "Running $num_tests tests"
+    local job_idx=0
+    local job_script=""
+    local output_file=""
+    local test_idx=0
+    local nnodes=0
+    exec {fd}<$TEST_CASES
+    while read -u${fd} line; do
+        echo "Running $line"
+        if [[ $RUN_AS_JOBS ]]; then
+            if (( ($test_idx % $NUM_TESTS_PER_JOB) == 0 )); then
+                if [[ $job_script ]]; then
+                    # previous job file exists
+                    submit_job $nnodes $output_file $job_script
+                    job_script=""
+                    throttle_job_submission
+                fi
+                job_script=batch_${job_idx}.sh
+                # This sometimes fail. Do retry.
+                set +e
+                for ((retry_idx = 0; retry_idx <= 10; ++retry_idx)); do
+                    echo ". $TEST_CUDNN_UTIL" > $job_script
+                    if [[ $? -eq 0 ]]; then
+                        break
+                    fi
+                    sleep 3
+                done
+                set -e
+                chmod u+x $job_script
+                output_file=job_output_${job_idx}.txt
+                nnodes=0
+                ((++job_idx))
+            fi
+            local np=$(echo $line | awk '{print $9 "," $10}' | sed "s/,/ \* /g" | xargs expr)
+            local nn=$(( np / $(get_num_gpus_per_node)))
+            if (( nn > nnodes )); then
+                nnodes=$nn
+            fi
+        else
+            job_script="dummy"
+        fi
+        set +e
+        prepare_or_run_test $job_script $line
+        if [ $? -ne  0 ]; then
+            echo "Test with \"$line\" failed"
+            exit 1
+        fi
+        set -e
+        ((++test_idx))
+    done
+    # Submit remaining job
+    if [[ $RUN_AS_JOBS && $job_script ]]; then
+        submit_job $nnodes $output_file $job_script
+    fi
+    echo "Completed $num_tests tests of ${nd}D $TEST_OP"
+}
+
+function resubmit_kicked_out_jobs() {
+    local resubmit_count=0
+    for d in $(find . -maxdepth 1 -name 'job_output_*.txt'); do
+        local job_out=$d
+        if grep -q "job killed after preemption" $job_out; then
+            local cmd_log=$(echo $job_out | sed 's/job_output_\(.*\)\.txt/batch_\1.sh.log/')
+            local submit_command=$(cat $cmd_log)
+            echo "submit_command: ${submit_command}"
+            rm $job_out
+            eval $submit_command
+            ((++resubmit_count))
+        fi
+    done
+    echo $resubmit_count
+}
+
+function print_usage() {
+    cat <<EOM
+$(basename $0) ARGS
+
+where ARGS are:
+    --conv                  Run convolution tests (default)
+    --bn                    Run batchnorm tests
+    --quick                 Run a few tests
+    --long                  Run many tests (default)
+    --all                   Run all tests (can be extremely many)
+    --2d                    Run 2D tests
+    --3d                    Run 3D tests
+    --num-procs N           Run tests with N processes
+    --mode mode             Set test input mode
+    --halo-exchange-methods Set the halo exchange methods (P2P, AL, HYBRID, NVSHMEM)
+    --run-as-jobs N         Run tests with N maximum concurrent jobs
+    --queue queue-name      Submit jobs to queue-name
+    --bias bias-args        Set bias parameters
+    --overlap overlap-args  Set overlap parameters
+    --print-results dir     Print test result statistics at directory dir
+    --help                  Display help message
+
+When multiple halo exchange methods are given, they are compared against each other for bitwise equality. Doing so is useful for testing a new halo exchange method.
+
+Example:
+> $(basename $0) --2d --run-as-jobs 10
+Run 2D tests as jobs and cap the number of queued jobs at 10.
+
+> $(basename $0) --2d --overlap "0 1"
+Run 2D tests with and without overlapping.
+
+> $(basename $0) --2d --halo-exchange-methods "AL AL P2P"
+Run 2D tests, each of which is run 3 times with halo exchange methods being AL, AL  and P2P, respectively. The output tensors are compared for bitwise equality.
+EOM
+}
+
+mkdir $WORK_DIR
+
+{
+    pushd $WORK_DIR > /dev/null
+
+    OPTS=`getopt -o h --long help,conv,bn,quick,long,all,2d,3d,mode:,overlap:,bias:,num-procs:,run-as-jobs:,halo-exchange-methods:,queue:,print-results: -- "$@"`
+    if [ $? != 0 ]; then echo Failed parsing options. >&2; exit 1; fi
+    eval set -- $OPTS
+    while true; do
+        case $1 in
+            --help)
+                print_usage
+                exit 0
+                ;;
+            --conv)
+                TEST_OP=$TEST_CONV
+                shift
+                ;;
+            --bn)
+                TEST_OP=$TEST_BN
+                shift
+                ;;
+            --quick)
+                TEST_MODE=QUICK
+                shift
+                ;;
+            --long)
+                TEST_MODE=LONG
+                shift
+                ;;
+            --all)
+                TEST_MODE=ALL
+                shift
+                ;;
+            --2d)
+                NUM_DIMS=(2)
+                shift
+                ;;
+            --3d)
+                NUM_DIMS=(3)
+                shift
+                ;;
+            --mode)
+                MODE_2D=$2
+                MODE_3D=$2
+                shift 2
+                ;;
+            --bias)
+                BIAS=("$2")
+                shift 2
+                ;;
+            --overlap)
+                OVERLAP=("$2")
+                shift 2
+                ;;
+            --num-procs)
+                NUM_PROCS=("$2")
+                shift 2
+                ;;
+            --run-as-jobs)
+                RUN_AS_JOBS=1
+                if ! check_numeric $2; then
+                    echo "Invalid argument: --run-as-jobs $2" >&2
+                    print_usage >&2
+                    exit 1
+                fi
+                MAX_CONCURRENT_JOBS=$2
+                shift 2
+                ;;
+            --queue)
+                JOB_QUEUE=$2
+                shift 2
+                ;;
+            --halo-exchange-methods)
+                HALO_EXCHANGE_METHODS=("$2")
+                shift 2
+                ;;
+            --print-results)
+                cd $2
+                print_results
+                exit 0
+                ;;
+            --)
+                shift; break
+                ;;
+            *)
+                echo "Invalid option: $1" >&2
+                print_usage >&2
+                exit 1
+                ;;
+        esac
+    done
+
+    #cleanup_cudnn_test_logs
+    adjust_config_options $TEST_MODE
+
+    adjust_job_options
+
+    for nd in "${NUM_DIMS[@]}"; do
+        run_nd_tests $nd
+    done
+
+    wait_all_jobs
+
+    for (( resubmit_count=0; resubmit_count < 2; ++resubmit_count)); do
+        resubmitted_jobs=$(resubmit_kicked_out_jobs)
+        if [[ $resubmitted_jobs > 0 ]]; then
+            echo "$resubmitted_jobs jobs resubmitted"
+        else
+            break
+        fi
+        wait_all_jobs
+    done
+
+    if [[ $RUN_AS_JOBS ]]; then
+        print_results | tee results.txt
+    fi
+
+    popd > /dev/null
+} 2>&1 |tee $LOG

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+set -u
+
+. @CMAKE_CURRENT_BINARY_DIR@/../test_util.sh
+HOSTFILE=/dev/null
+TEST_NAME=test_tensor_mpi
+BUILD_DIR=@CMAKE_CURRENT_BINARY_DIR@
+
+if ! mpi_run_host 8 $HOSTFILE $BUILD_DIR/$TEST_NAME; then
+    echo "Failed"
+fi
+
+if ! mpi_run_host 16 $HOSTFILE $BUILD_DIR/$TEST_NAME; then
+    echo "Failed"
+fi
+
+if ! mpi_run_host 32 $HOSTFILE $BUILD_DIR/$TEST_NAME; then
+    echo "Failed"
+fi
+
+echo "Completed successfully"

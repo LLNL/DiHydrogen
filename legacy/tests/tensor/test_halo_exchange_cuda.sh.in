@@ -1,0 +1,190 @@
+#!/usr/bin/env bash
+
+set -u
+set -e
+
+. @CMAKE_CURRENT_BINARY_DIR@/../test_util.sh
+HOSTFILE=/dev/null
+NUM_RUNS=1
+if [[ $# -ge  1 ]]; then
+	HOSTFILE=$1
+fi
+VERBOSE=0
+INTRA_NODE=0
+INTER_NODE=0
+NUM_LOCAL_PROCS=4
+TEST_NAME=test_halo_exchange_cuda
+BUILD_DIR=@CMAKE_CURRENT_BINARY_DIR@
+###
+TENSOR_SHAPES_ALL=("224 224 3"
+				   "112 112 64"
+				   "55 55 64"
+				   "27 27 64"
+				   "14 14 64")
+NUM_SAMPLES_ALL=(1 4 32)
+INTRA_NODE_PROC_SHAPES=("1 4 1 1"
+						"4 1 1 1"
+						"1 2 1 2"
+						"1 4 1 2"
+						"2 2 1 1"
+						"2 2 1 2")
+INTER_NODE_PROC_SHAPES=("1 8 1 1"
+						"8 1 1 1"
+						"2 4 1 1"
+						"4 2 1 1"
+						"4 4 1 1"
+						"1 8 1 2"
+						"4 4 1 2")
+METHODS=(MPI P2P AL HYBRID)
+TEST_MODE=quick
+NUM_DIMS=(2 3)
+###
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+LOG=$TEST_NAME.$TIMESTAMP.log
+### utils
+function calc_np() {
+	local np=1
+	for i in "$@"; do
+		np=$((np * $i))
+	done
+	echo $np
+}
+function calc_nsp() {
+	local np=1
+	local nsd=$(($# - 2))
+	for i in $(seq $nsd); do
+		np=$((np * $1))
+		shift
+	done
+	echo $np
+}
+function shape_2to3() {
+	num_dims=$1
+	shift
+	if [[ $num_dims = 2 ]]; then
+		echo $@
+	elif [[ $num_dims = 3 ]]; then
+		w=$1
+		shift
+		echo $w $w $@
+	else
+		echo "Invalid number of spatial dimentions: $num_dims" >&2
+		exit
+	fi
+}
+##############
+
+OPTS=`getopt -o h --long long,quick,all,num-runs:,verbose,method:,inter-node,intra-node,num-dims: -- "$@"`
+if [ $? != 0 ]; then echo Failed parsing options. >&2; exit 1; fi
+eval set -- $OPTS
+while true; do
+	case $1 in
+		--quick)
+			TEST_MODE=quick
+			shift
+			;;
+		--long)
+			TEST_MODE=long
+			shift
+			;;
+		--all)
+			TEST_MODE=all
+			shift
+			;;
+		--num-runs)
+			NUM_RUNS=$2
+			shift 2
+			;;
+		--method)
+			METHODS=($2)
+			shift 2
+			;;
+		--inter-node)
+			INTER_NODE=1
+			shift
+			;;
+		--intra-node)
+			INTRA_NODE=1
+			shift
+			;;
+		--verbose)
+			VERBOSE=1
+			shift
+			;;
+		--num-dims)
+			NUM_DIMS=($2)
+			shift 2
+			;;
+		--)
+			shift; break
+			;;
+		*)
+			echo "Invalid option: $1" >&2
+			exit 1
+			;;
+	esac
+done
+
+# when none of inter-node or intra-node is given, test all configurations
+if [[ $INTRA_NODE == 0 && $INTER_NODE == 0 ]]; then
+	INTRA_NODE=1
+	INTER_NODE=1
+fi
+
+TENSOR_SHAPES_COUNT="${#TENSOR_SHAPES_ALL[@]}"
+NUM_SAMPLES_COUNT="${#NUM_SAMPLES_ALL[@]}"
+PROC_SHAPES=()
+if [[ $INTRA_NODE == 1 ]]; then
+	PROC_SHAPES+=("${INTRA_NODE_PROC_SHAPES[@]}")
+fi
+if [[ $INTER_NODE == 1 ]]; then
+	PROC_SHAPES+=("${INTER_NODE_PROC_SHAPES[@]}")
+fi
+PROC_SHAPES_COUNT="${#PROC_SHAPES[@]}"
+if [[ $TEST_MODE == quick ]]; then
+	TENSOR_SHAPES_COUNT=1
+	NUM_SAMPLES_COUNT=1
+	PROC_SHAPES_COUNT=1
+elif [[ $TEST_MODE == long ]]; then
+	TENSOR_SHAPES_COUNT=2
+	NUM_SAMPLES_COUNT=2
+	PROC_SHAPES_COUNT=4
+fi
+
+for num_dims in "${NUM_DIMS[@]}"; do
+	echo "Testing num_dims=$num_dims"
+	for i in $(seq $NUM_RUNS); do
+		for method in "${METHODS[@]}"; do
+			echo "Testing $method"
+			for i in $(seq 0 $(($PROC_SHAPES_COUNT - 1))); do
+				proc=`shape_2to3 $num_dims ${PROC_SHAPES[$i]}`
+				nsp=$(calc_nsp $proc)
+				if [[ $method == P2P && $nsp -gt $NUM_LOCAL_PROCS ]]; then
+					echo "Skipping $method as it is not supported for process grid of $proc"
+					continue
+				fi
+				np=$(calc_np $proc)
+				for j in $(seq 0 $(($NUM_SAMPLES_COUNT - 1))); do
+					ns=${NUM_SAMPLES_ALL[$j]}
+					for k in $(seq 0 $(($TENSOR_SHAPES_COUNT - 1))); do
+						shape=`shape_2to3 $num_dims ${TENSOR_SHAPES_ALL[$k]}`
+						echo "Testing $TEST_NAME $num_dims $proc $shape $ns $method" 2>&1 |tee -a $LOG
+                        set +e
+						if [[ $VERBOSE == 1 ]]; then
+							mpi_run $np $HOSTFILE $BUILD_DIR/$TEST_NAME $num_dims $proc $shape $ns $method 2>&1 | tee -a $LOG; test ${PIPESTATUS[0]} -eq 0
+						else
+							mpi_run $np $HOSTFILE $BUILD_DIR/$TEST_NAME $num_dims $proc $shape $ns $method >> $LOG 2>&1
+						fi
+						if [ $? -ne  0 ]; then
+							echo "Test failed"
+							exit 1
+						fi
+                        set -e
+					done
+				done
+			done
+		done
+	done
+done
+
+echo "Completed successfully"

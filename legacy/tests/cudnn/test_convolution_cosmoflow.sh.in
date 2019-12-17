@@ -1,0 +1,101 @@
+#!/bin/bash
+
+## Run the Distconv and cuDNN benchmark with CosmoFlow's layer parameters
+## on various number of GPUs.
+##
+## If `RUN_AS_JOBS` is set, this script submits jobs by using the
+## `SUBMIT_CMD` command, each of which runs a single test case.
+## If not, this script directly runs the test cases on the current GPU node.
+
+BENCHMARK_ROOT=@CMAKE_CURRENT_BINARY_DIR@/../../benchmarks
+TEST_CUDNN_UTIL=@CMAKE_CURRENT_BINARY_DIR@/test_cudnn_util.sh
+DISTCONV_BENCHMARK=${BENCHMARK_ROOT}/distconv_benchmark
+CUDNN_BENCHMARK=${BENCHMARK_ROOT}/cudnn_benchmark
+
+SUBMIT_CMD="bsub -W 30 -q pbatch -G guests"
+
+RUN_AS_JOBS=1
+
+function get_conv_params() {
+    l=$1; shift
+    if (( $l < 0 || $l >= 7 )); then
+        echo "Error: Invalid layer ID: ${l}" >&2
+        exit 1
+    fi
+
+    CS=(  1 16 32 64 128 256 256 256)
+    FS=(  3  5  5  3   3   3   3)
+    HS=(128 64 32  8   4   4   4)
+
+    # The original parameters without paddings
+    # FS=(  3  4  4  3   3   2   2)
+    # HS=(128 63 30 13   6   4   3)
+
+    C=${CS[$l]}
+    K=${CS[`expr $l + 1`]}
+    H=${HS[$l]}
+    F=${FS[$l]}
+    S=1
+
+    echo $C $K $H $F $S
+}
+
+function run_test_conv_3d() {
+    CMD="run_test ${DISTCONV_BENCHMARK} ${CUDNN_BENCHMARK} conv 3 $@ SIMPLE"
+    echo ${CMD}
+    if [[ ${RUN_AS_JOBS} = 1 ]]; then
+        shell_name="_test_convolution_cosmoflow_`echo ${CMD} | md5sum | sed "s/\(^[0-9a-f]*\).*$/\1/g"`.sh"
+        echo ". ${TEST_CUDNN_UTIL}" > ${shell_name}
+        echo ${CMD} >> ${shell_name}
+        chmod u+x ${shell_name}
+        ${SUBMIT_CMD} ./${shell_name}
+    else
+        ${CMD}
+    fi
+}
+
+set -e
+
+. ${TEST_CUDNN_UTIL}
+
+if (( $# >= 1 )); then
+    L=$1; shift
+else
+    echo "usage: ./test_convolution_cosmoflow.sh layer_id" >&2
+    exit
+fi
+
+params=($(get_conv_params $L))
+C=${params[0]}
+K=${params[1]}
+H=${params[2]}
+F=${params[3]}
+S=${params[4]}
+echo "Layer ID: ${L}, C: ${C}, K: ${K}, H: ${H}, F: ${F}, S: ${S}"
+
+NS=(1 4 16)
+PNS=(1 2 4)
+PSS=(1 2 4)
+
+cleanup_cudnn_test_logs
+rm -f *.out _test_*.sh
+
+for N in ${NS[@]}; do
+    for PN in ${PNS[@]}; do
+        for PX in ${PSS[@]}; do
+            for PY in ${PSS[@]}; do
+                for PZ in ${PSS[@]}; do
+                    PS="${PX},${PY},${PZ}"
+                    NP=`echo ${PN},${PS} | sed "s/,/ \* /g" | xargs expr`
+                    if (( ${NP} > 4 )); then
+                        continue
+                    fi
+                    #                 N  C  K  H  F  S  PN  PS
+                    run_test_conv_3d $N $C $K $H $F $S $PN $PS
+                done
+            done
+        done
+    done
+done
+
+echo "Completed successfully"
