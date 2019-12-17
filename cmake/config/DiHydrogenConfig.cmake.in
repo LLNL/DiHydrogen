@@ -1,0 +1,67 @@
+include("${CMAKE_CURRENT_LIST_DIR}/DiHydrogenConfigVersion.cmake")
+
+list(APPEND CMAKE_MODULE_PATH
+  "${CMAKE_CURRENT_LIST_DIR}"
+  "${CMAKE_CURRENT_LIST_DIR}/modules"
+  "@EXTRA_CMAKE_MODULE_DIR@")
+
+set(H2_VERSION ${PACKAGE_VERSION})
+
+# Verify the dependencies of H2
+include(CMakeFindDependencyMacro)
+
+set(H2_HAS_OPENMP @H2_HAS_OPENMP@)
+set(H2_HAS_HALF @H2_HAS_HALF@)
+set(H2_HAS_CUDA @H2_HAS_CUDA@)
+set(H2_HAS_HIP_ROCM @H2_HAS_HIP_ROCM@)
+
+find_dependency(BLASImpl)
+find_dependency(MPI)
+
+if (H2_HAS_OPENMP)
+  find_dependency(OpenMP)
+endif ()
+
+if (H2_HAS_HALF)
+  find_dependency(Half)
+endif ()
+
+if (H2_HAS_CUDA)
+  enable_language(CUDA)
+  find_dependency(CUB)
+  find_dependency(cuDNN)
+endif ()
+
+if (H2_HAS_HIP_ROCM)
+  message(FATAL_ERROR "This should not be possible.")
+endif ()
+
+@PACKAGE_INIT@
+
+# Now actually import the Hydrogen target
+set(_TMP_INCLUDE_DIRS "@PACKAGE_INCLUDE_INSTALL_DIRS@")
+foreach (_DIR ${_TMP_INCLUDE_DIRS})
+  set_and_check(_INCLUDE_DIR "${_DIR}")
+  list(APPEND HYDROGEN_INCLUDE_DIRS "${_INCLUDE_DIR}")
+endforeach (_DIR "${_TMP_INCLUDE_DIRS}")
+
+set(_TMP_LIBRARY_DIRS "@PACKAGE_LIB_INSTALL_DIR@")
+foreach (_DIR ${_TMP_LIBRARY_DIRS})
+  set_and_check(_LIBRARY_DIR "${_DIR}")
+  list(APPEND HYDROGEN_LIBRARY_DIRS "${_LIBRARY_DIR}")
+endforeach (_DIR ${_TMP_LIBRARY_DIRS})
+
+set(_H2_LIBRARIES @H2_LIBRARIES@)
+if (NOT TARGET H2::H2)
+  include(${CMAKE_CURRENT_LIST_DIR}/DiHydrogenTargets.cmake)
+
+  add_library(H2::H2 IMPORTED INTERFACE)
+  foreach (lib IN LISTS _H2_LIBRARIES)
+    target_link_libraries(H2::H2 INTERFACE H2::${lib})
+    string(SUBSTRING "${lib}" 3 -1 _COMP_NAME)
+    set(DiHydrogen_${_COMP_NAME}_FOUND TRUE)
+  endforeach ()
+endif (NOT TARGET H2::H2)
+
+check_required_components(DiHydrogen)
+set(H2_LIBRARIES H::Hydrogen)

@@ -1,0 +1,23 @@
+#ifndef H2_CONFIG_HPP_
+#define H2_CONFIG_HPP_
+
+// Version information
+#define H2_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define H2_VERSION_MINOR @PROJECT_VERSION_MINOR@
+#define H2_VERSION_PATCH @PROJECT_VERSION_PATCH@
+
+// Configuration information
+#cmakedefine H2_HAS_HALF
+#cmakedefine H2_HAS_OPENMP
+
+#cmakedefine H2_HAS_CUDA
+#cmakedefine H2_HAS_HIP_ROCM
+#if defined(H2_HAS_CUDA) || defined(H2_HAS_HIP_ROCM)
+#define H2_HAS_GPU
+#endif
+
+// Features detected at configure time
+#define H2_PRETTY_FUNCTION @H2_PRETTY_FUNCTION@
+#define H2_RESTRICT @H2_RESTRICT@
+
+#endif // H2_CONFIG_HPP_

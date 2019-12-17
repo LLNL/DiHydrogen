@@ -1,0 +1,16 @@
+# Emacs backup garbage
+.backup/
+
+# Other standard ignores
+*~
+*.pyc
+\#*#
+.#*
+.*.swp
+.DS_Store
+*.bak
+
+# building/install not-entirely-out-of-source stuff
+build*/
+install*/
+
