@@ -1,10 +1,10 @@
-set_full_path(THIS_DIR_SOURCES
+h2_set_full_path(THIS_DIR_SOURCES
   util.cpp
   util_cuda.cpp
   )
 
 if (DISTCONV_HAS_NVSHMEM)
-  set_full_path(THIS_DIR_CU_SOURCES
+  h2_set_full_path(THIS_DIR_CU_SOURCES
     nvshmem.cu
     )
 endif ()

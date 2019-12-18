@@ -1,4 +1,4 @@
-set_full_path(THIS_DIR_HEADERS
+h2_set_full_path(THIS_DIR_HEADERS
   common_cuda.hpp
   common.hpp
   reduce_sum_cuda.hpp

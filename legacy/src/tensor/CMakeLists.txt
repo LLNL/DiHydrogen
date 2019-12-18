@@ -1,8 +1,8 @@
-set_full_path(THIS_DIR_SOURCES
+h2_set_full_path(THIS_DIR_SOURCES
   runtime_cuda.cpp
   )
 
-set_full_path(THIS_DIR_CU_SOURCES
+h2_set_full_path(THIS_DIR_CU_SOURCES
   channel_exchange.cu
   tensor_mpi_cuda.cu
   shuffle_mpi_cuda.cu

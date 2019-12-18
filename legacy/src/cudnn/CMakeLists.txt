@@ -1,7 +1,7 @@
-set_full_path(THIS_DIR_SOURCES
+h2_set_full_path(THIS_DIR_SOURCES
   backend.cpp
   )
-set_full_path(THIS_DIR_CU_SOURCES
+h2_set_full_path(THIS_DIR_CU_SOURCES
   pooling.cu
   batchnorm.cu
   leaky_relu.cu

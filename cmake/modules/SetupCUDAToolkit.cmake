@@ -1,13 +1,10 @@
 # Copied from LBANN
 
 find_package(CUDA REQUIRED)
-enable_language(CUDA)
 set(CMAKE_CUDA_STANDARD 11)
 set(CMAKE_CUDA_STANDARD_REQUIRED TRUE)
 
-#find_package(CUB REQUIRED)
 find_package(NVTX REQUIRED)
-#find_package(cuDNN REQUIRED)
 
 if (NOT TARGET cuda::toolkit)
   add_library(cuda::toolkit INTERFACE IMPORTED)
