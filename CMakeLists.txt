@@ -3,9 +3,7 @@
 cmake_minimum_required(VERSION 3.14.0)
 
 # Use the OLD policy for CMP0074. The NEW policy picks MPI_ROOT environment variable, which is automatically defined by the Spectrum-MPI module on Lassen. Apparently, it results in a compilation error due to -pthread being added to nvcc device link command. Another workaround is to unset MPI_ROOT when invoking CMake.
-if ((${CMAKE_VERSION} VERSION_EQUAL 3.12.0) OR (${CMAKE_VERSION} VERSION_GREATER 3.12.0))
-  cmake_policy(SET CMP0074 OLD)
-endif ()
+cmake_policy(SET CMP0074 OLD)
 
 project(DiHydrogen
   VERSION 0.0.1
