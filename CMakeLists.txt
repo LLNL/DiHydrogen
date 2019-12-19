@@ -22,10 +22,6 @@ endif ()
 
 string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
 
-if (CMAKE_BUILD_TYPE MATCHES DEBUG)
-  set(DISTCONV_DEBUG TRUE)
-endif ()
-
 include(GNUInstallDirs)
 include(H2CMakeUtils)
 include(H2CXXFeatureDetection)
@@ -68,10 +64,6 @@ option(H2_ENABLE_TESTS
 option(H2_ENABLE_WERROR
   "Enable the \"-Werror\" flag. Requires compiler support."
   OFF)
-
-option(DISTCONV_OPTIMIZE_FIND_DESTINATION
-  "Enable optimization of find_destination."
-  ON)
 
 # Check option consistency
 if (H2_ENABLE_CUDA AND H2_ENABLE_HIP_ROCM)
@@ -127,18 +119,14 @@ find_package(MPI 3.0.0 COMPONENTS CXX REQUIRED)
 if (H2_ENABLE_CUDA)
   enable_language(CUDA)
   include(SetupCUDAToolkit)
-  set(DISTCONV_HAS_CUDA ${CUDA_FOUND})
   #find_package(CUBLAS REQUIRED)
   find_package(CUB REQUIRED)
   find_package(cuDNN REQUIRED)
-  set(DISTCONV_HAS_CUDNN ${cuDNN_FOUND})
   if (CMAKE_CUDA_COMPILER)
     set(H2_HAS_CUDA TRUE)
   endif ()
   find_package(P2P)
-  set(DISTCONV_HAS_P2P ${P2P_FOUND})
   find_package(NVSHMEM)
-  set(DISTCONV_HAS_NVSHMEM ${NVSHMEM_FOUND})
 endif (H2_ENABLE_CUDA)
 
 # This is a placeholder.
