@@ -1,4 +1,4 @@
-set_full_path(THIS_DIR_HEADERS
+h2_set_full_path(THIS_DIR_HEADERS
   algorithms_cuda.hpp
   algorithms.hpp
   channel_exchange.hpp

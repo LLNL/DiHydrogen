@@ -2,6 +2,9 @@
 
 cmake_minimum_required(VERSION 3.14.0)
 
+# Use the OLD policy for CMP0074. The NEW policy picks MPI_ROOT environment variable, which is automatically defined by the Spectrum-MPI module on Lassen. Apparently, it results in a compilation error due to -pthread being added to nvcc device link command. Another workaround is to unset MPI_ROOT when invoking CMake.
+cmake_policy(SET CMP0074 OLD)
+
 project(DiHydrogen
   VERSION 0.0.1
   DESCRIPTION "A distributed multilinear algebra interface library."
@@ -13,9 +16,17 @@ set(CMAKE_MODULE_DIR "${CMAKE_SOURCE_DIR}/cmake/modules")
 set(CONFIG_FILE_DIR "${CMAKE_SOURCE_DIR}/cmake/config")
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_DIR})
 
+if (NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE RELEASE CACHE STRING "CMake build type" FORCE)
+endif ()
+
+string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
+
 include(GNUInstallDirs)
 include(H2CMakeUtils)
 include(H2CXXFeatureDetection)
+include(SetupCXX)
+include(SetupMPI)
 
 #
 # It will be treated as a FATAL_ERROR to enable any feature and then
@@ -107,12 +118,15 @@ find_package(MPI 3.0.0 COMPONENTS CXX REQUIRED)
 # Other device features
 if (H2_ENABLE_CUDA)
   enable_language(CUDA)
+  include(SetupCUDAToolkit)
   #find_package(CUBLAS REQUIRED)
   find_package(CUB REQUIRED)
   find_package(cuDNN REQUIRED)
   if (CMAKE_CUDA_COMPILER)
     set(H2_HAS_CUDA TRUE)
   endif ()
+  find_package(P2P)
+  find_package(NVSHMEM)
 endif (H2_ENABLE_CUDA)
 
 # This is a placeholder.
@@ -127,6 +141,15 @@ endif ()
 
 if (H2_HAS_CUDA OR H2_HAS_HIP_ROCM)
   set(H2_HAS_GPU TRUE)
+endif ()
+
+find_package(Aluminum NO_MODULE QUIET
+  HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
+  $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
+  PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
+  NO_DEFAULT_PATH)
+if (NOT Aluminum_FOUND)
+  find_package(Aluminum NO_MODULE REQUIRED)
 endif ()
 
 # Decide where to put generated include files.
@@ -159,6 +182,9 @@ endif ()
 
 # Setup the documentation targets
 add_subdirectory(doc)
+
+# The legacy distconv code
+add_subdirectory(legacy)
 
 # Install target stuff
 include (CMakePackageConfigHelpers)

@@ -146,10 +146,12 @@ cmake ${SRC_DIR} \
       -DCMAKE_C_COMPILER=$C_COMPILER \
       -DCMAKE_CXX_COMPILER=$CXX_COMPILER \
       -DCMAKE_CUDA_HOST_COMPILER=$(which $CXX_COMPILER) \
+      -DH2_ENABLE_CUDA=ON \
       -DAluminum_DIR=$Aluminum_DIR \
       -DP2P_DIR=$P2P_DIR \
       -DNVSHMEM_DIR=$NVSHMEM_DIR \
       -DCUB_DIR=$CUB_DIR \
+      -DCatch2_DIR=/usr/workspace/wsb/brain/catch2/lib64/cmake/Catch2 \
       -DDISTCONV_OPTIMIZE_FIND_DESTINATION=ON \
       -G Ninja
 
