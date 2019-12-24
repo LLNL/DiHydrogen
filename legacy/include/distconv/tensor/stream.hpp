@@ -1,5 +1,7 @@
 #pragma once
 
+#include "distconv/base.hpp"
+
 namespace distconv {
 namespace tensor {
 

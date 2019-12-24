@@ -297,14 +297,14 @@ inline std::ostream& operator<<(std::ostream& os, const ChannelParallelismAlgori
 }
 
 enum class BatchnormImpl {
-  MPI, AL
+  MPI, AL_NCCL
 };
 
 inline std::ostream& operator<<(std::ostream &os, const BatchnormImpl &v) {
   if (v == BatchnormImpl::MPI) {
     return os << "MPI";
-  } else if (v == BatchnormImpl::AL) {
-    return os << "AL";
+  } else if (v == BatchnormImpl::AL_NCCL) {
+    return os << "AL_NCCL";
   } else {
     util::PrintStreamError() << "Unknown batchnorm implementation";
     std::abort();
@@ -314,8 +314,8 @@ inline std::ostream& operator<<(std::ostream &os, const BatchnormImpl &v) {
 inline BatchnormImpl GetBatchnormImpl(const std::string &impl) {
   if (impl == "MPI") {
     return BatchnormImpl::MPI;
-  } else if (impl == "AL") {
-    return BatchnormImpl::AL;
+  } else if (impl == "AL_NCCL") {
+    return BatchnormImpl::AL_NCCL;
   } else {
     util::PrintStreamError() << "Unknown implementation name for batchnorm: " << impl;
     std::abort();

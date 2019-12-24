@@ -351,10 +351,6 @@ function run_test() {
         local METHOD_ARGS=
         if [[ $TYPE == $TEST_BN ]]; then
             METHOD_ARGS="--bn-impl $method"
-            # CUDA-awareness is needed for the MPI implementation of batchnorm
-            if [[ $method == "MPI" ]]; then
-                runcmd+=" -M -gpu"
-            fi
         else
             METHOD_ARGS="--halo-exchange-method $method"
         fi

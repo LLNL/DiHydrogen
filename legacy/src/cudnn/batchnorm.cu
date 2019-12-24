@@ -74,7 +74,8 @@ template <int ND, typename Tensor>
 void channel_sums_and_sqsums(int num_samples, const Tensor &input, Tensor &sums,
                              Tensor &sqsums, cudaStream_t stream,
                              const std::vector<bool> &reduction_dims,
-                             bool reduce) {
+                             bool reduce,
+                             std::unique_ptr<tensor::Allreduce<typename Tensor::data_type>> &allreducer) {
   using DataType = typename Tensor::data_type;
   // Clear GPU memory
   DISTCONV_CHECK_CUDA(cudaMemsetAsync(
@@ -111,9 +112,10 @@ void channel_sums_and_sqsums(int num_samples, const Tensor &input, Tensor &sums,
 
   if (reduce) {
     // TODO: only global reduction is supported.
-    DISTCONV_CHECK_CUDA(cudaStreamSynchronize(stream));
-    sums.allreduce_shared_regions();
-    sqsums.allreduce_shared_regions();
+    allreducer->allreduce(sums.get_buffer(),
+                          sums.get_local_pitched_size());
+    allreducer->allreduce(sqsums.get_buffer(),
+                          sqsums.get_local_pitched_size());
   }
 }
 
@@ -124,7 +126,8 @@ void channel_sums_and_sqsums(int num_samples, const Tensor &input, Tensor &sums,
       const Tensor<TYPE> &input,   Tensor<TYPE> &sums,          \
       Tensor<TYPE> &sqsums, cudaStream_t stream,                \
       const std::vector<bool> &reduction_dims,                  \
-      bool reduce);
+      bool reduce,                                              \
+      std::unique_ptr<tensor::Allreduce<TYPE>> &allreducer);
 INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(4, float)
 INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(4, double)
 INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(5, float)

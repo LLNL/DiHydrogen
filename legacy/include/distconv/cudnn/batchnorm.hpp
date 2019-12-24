@@ -2,8 +2,12 @@
 
 #include "distconv/cudnn/backend.hpp"
 #include "distconv/tensor/algorithms.hpp"
+#include "distconv/tensor/allreduce.hpp"
+#include "distconv/tensor/allreduce_mpi_cuda.hpp"
+#include "distconv/tensor/allreduce_al.hpp"
 
 #include <numeric>
+#include <memory>
 
 namespace distconv {
 namespace batchnorm {
@@ -16,7 +20,8 @@ void channel_sums_and_sqsums(
     TensorType &sqsums,
     cudaStream_t stream,
     const std::vector<bool> &reduction_dims,
-    bool reduce);
+    bool reduce,
+    std::unique_ptr<tensor::Allreduce<typename TensorType::data_type>> &allreducer);
 
 template <int ND, typename TensorType>
 void sums_to_statistics(
@@ -84,12 +89,19 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
                      BatchnormImpl impl=BatchnormImpl::MPI):
       m_be(backend), m_decay(decay), m_epsilon(epsilon),
       m_reduction_dims(reduction_dims), m_use_local_stats(true),
-      m_impl(impl) {
+      m_impl(impl), m_allreducer(nullptr) {
     for (auto b: m_reduction_dims) {
       if (b) {
         m_use_local_stats = false;
         break;
       }
+    }
+    if (m_impl == BatchnormImpl::MPI) {
+      m_allreducer = std::make_unique<tensor::AllreduceMPICUDA<DataType>>(m_be.get_comm(),
+                                                                          m_be.get_stream());
+    } else if (m_impl == BatchnormImpl::AL_NCCL) {
+      m_allreducer = std::make_unique<tensor::AllreduceAlNCCL<DataType>>(
+          m_be.get_al_nccl_comm());
     }
   }
 #if 0
@@ -186,11 +198,14 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
       assert_always(std::accumulate(
           m_reduction_dims.begin(), m_reduction_dims.end(), true,
           std::logical_and<bool>()));
-      m_be.wait();
-      scale_gradient.allreduce_shared_regions();
-      bias_gradient.allreduce_shared_regions();
-      mean_gradient.allreduce_shared_regions();
-      var_gradient.allreduce_shared_regions();
+      m_allreducer->allreduce(scale_gradient.get_buffer(),
+                             scale_gradient.get_local_pitched_size());
+      m_allreducer->allreduce(bias_gradient.get_buffer(),
+                             bias_gradient.get_local_pitched_size());
+      m_allreducer->allreduce(mean_gradient.get_buffer(),
+                              mean_gradient.get_local_pitched_size());
+      m_allreducer->allreduce(var_gradient.get_buffer(),
+                              var_gradient.get_local_pitched_size());
     }
 
     return 0;
@@ -233,13 +248,14 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
   std::vector<bool> m_reduction_dims;
   bool m_use_local_stats;
   BatchnormImpl m_impl;
+  std::unique_ptr<tensor::Allreduce<DataType>> m_allreducer;
 
   template <typename Tensor>
   void channel_sums_and_sqsums(const Tensor &input, Tensor &mean,
                                Tensor &var, bool reduce) {
     batchnorm::channel_sums_and_sqsums<ND, Tensor>(
         m_num_current_samples, input, mean, var, m_be.get_stream(),
-        m_reduction_dims, reduce);
+        m_reduction_dims, reduce, m_allreducer);
   }
 
   template <typename Tensor>
