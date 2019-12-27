@@ -15,6 +15,7 @@ foreach (src ${SOURCES})
     add_executable(${target} ${src})
   endif ()
   target_link_libraries(${target} distconv)
+  set_target_properties(${target} PROPERTIES CXX_STANDARD 14)
 endforeach ()
 
 configure_file(cudnn_benchmark_jsrun.sh.in
