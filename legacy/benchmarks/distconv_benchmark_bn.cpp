@@ -222,9 +222,13 @@ int test_forward(Data<NSD, Backend, DataType> &d,
     util::MPIRootPrintStreamInfo() << "Warming up";
   }
 
+  const bool is_training = true;
+
   for (int i = 0; i < cfg.warming_up_count; ++i) {
-    bn.forward(d.input, d.mean, d.var, d.running_mean, d.running_var,
-               d.scale, d.bias, d.output, true);
+    bn.forward_stage1(d.input, d.mean, d.var, is_training);
+    bn.forward_allreduce(d.mean, d.var, is_training);
+    bn.forward_stage2(d.input, d.mean, d.var, d.running_mean, d.running_var,
+                      d.scale, d.bias, d.output, is_training);
   }
 
   be.wait();
@@ -240,19 +244,20 @@ int test_forward(Data<NSD, Backend, DataType> &d,
       spin_async_device(cfg.spin_time_ms, be);
     }
     // Runs for synchronization
-    bn.forward(d.input, d.mean, d.var, d.running_mean, d.running_var,
-               d.scale, d.bias, d.output, true);
+    bn.forward_allreduce(d.mean, d.var, is_training);
     // Start measurement
     clk.start();
-    bn.forward(d.input, d.mean, d.var, d.running_mean, d.running_var,
-               d.scale, d.bias, d.output, true);
+    bn.forward_stage1(d.input, d.mean, d.var, is_training);
+    bn.forward_allreduce(d.mean, d.var, is_training);
+    bn.forward_stage2(d.input, d.mean, d.var, d.running_mean, d.running_var,
+                      d.scale, d.bias, d.output, is_training);
     clk.stop();
     float elapsed = clk.get_time();
     prof.fwd_time[i] = elapsed;
   }
 
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
-  util::MPIRootPrintStreamInfo() << "Measurement done\n";
+  util::MPIRootPrintStreamInfo() << "Measurement done";
   return 0;
 }
 
@@ -347,8 +352,7 @@ struct BNTester<NSD, cudnn::BackendCUDNN, DataType> {
                            cfg.profiling);
     cudnn::BackendCUDNN be(comm, cudnn_h, be_opts);
     BatchNormalization<cudnn::BackendCUDNN, 2 + NSD, DataType> bn(
-        be, 0.9, 1e-5, std::vector<bool>(2 + NSD, cfg.global_stat),
-        cfg.batchnorm_impl);
+        be, 0.9, 1e-5, cfg.global_stat, cfg.batchnorm_impl);
     bn.set_num_samples(d.input.get_shape()[-1]);
     start_profiler<cudnn::BackendCUDNN>();
     if (cfg.nvtx_marking) {

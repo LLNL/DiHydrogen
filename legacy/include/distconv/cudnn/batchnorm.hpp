@@ -18,10 +18,7 @@ void channel_sums_and_sqsums(
     const TensorType &input,
     TensorType &sums,
     TensorType &sqsums,
-    cudaStream_t stream,
-    const std::vector<bool> &reduction_dims,
-    bool reduce,
-    std::unique_ptr<tensor::Allreduce<typename TensorType::data_type>> &allreducer);
+    cudaStream_t stream);
 
 template <int ND, typename TensorType>
 void sums_to_statistics(
@@ -80,25 +77,15 @@ void backprop2(
 template <int ND, typename DataType>
 class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
  public:
-  /**
-     @reduction_dims dimensions over which statistics are aggregated.
-   */
   BatchNormalization(cudnn::BackendCUDNN &backend,
                      DataType decay, DataType epsilon,
-                     const std::vector<bool> &reduction_dims,
+                     bool global_stats,
                      BatchnormImpl impl=BatchnormImpl::MPI):
       m_be(backend), m_decay(decay), m_epsilon(epsilon),
-      m_reduction_dims(reduction_dims), m_use_local_stats(true),
-      m_impl(impl), m_allreducer(nullptr) {
-    for (auto b: m_reduction_dims) {
-      if (b) {
-        m_use_local_stats = false;
-        break;
-      }
-    }
+      m_global_stats(global_stats), m_impl(impl), m_allreducer(nullptr) {
     if (m_impl == BatchnormImpl::MPI) {
-      m_allreducer = std::make_unique<tensor::AllreduceMPICUDA<DataType>>(m_be.get_comm(),
-                                                                          m_be.get_stream());
+      m_allreducer = std::make_unique<tensor::AllreduceMPICUDA<DataType>>(
+          m_be.get_comm(), m_be.get_stream());
     } else if (m_impl == BatchnormImpl::AL_NCCL) {
       m_allreducer = std::make_unique<tensor::AllreduceAlNCCL<DataType>>(
           m_be.get_al_nccl_comm());
@@ -120,18 +107,28 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
     m_decay = x.m_decay;
     m_epsilon = x.m_epsilon;
     m_num_current_samples = x.m_num_current_samples;
-    m_reduction_dims = x.m_reduction_dims;
+    m_global_stats = x.m_global_stats;
     m_impl = x.impl;
     return *this;
   }
 
   template <typename Tensor>
   int forward_stage1(const Tensor &input, Tensor &mean, Tensor &var,
-                     bool is_training, bool reduce) {
+                     bool is_training) {
     set_num_samples(input.get_local_shape()[-1]);
     if (is_training) {
-      // Channel sums and sqsums
-      channel_sums_and_sqsums(input, mean, var, reduce);
+      channel_sums_and_sqsums(input, mean, var);
+    }
+    return 0;
+  }
+
+  template <typename Tensor>
+  int forward_allreduce(Tensor &mean, Tensor &var, bool is_training) {
+    if (is_training && m_global_stats) {
+      m_allreducer->allreduce(mean.get_buffer(),
+                              mean.get_local_pitched_size());
+      m_allreducer->allreduce(var.get_buffer(),
+                              var.get_local_pitched_size());
     }
     return 0;
   }
@@ -146,11 +143,8 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
       // the sample dimension of the input tensor is assumed to be
       // properly reshaped if necessary (e.g., for the last mini batch
       // in an epoch)
-      tensor::Array<ND> stat_shape;
-      for (int i = 0; i < ND; ++i) {
-        stat_shape[i] = m_reduction_dims[i] ? input.get_shape()[i] :
-            input.get_local_shape()[i];
-      }
+      auto stat_shape = m_global_stats ? input.get_shape() :
+          input.get_local_shape();
       // Number of elements per channel. Note that the channel
       // dimension is assumed to be at the second to last dimension.
       index_t num_per_sum = stat_shape.get_size() / stat_shape[-2];
@@ -173,7 +167,8 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
               bool is_training) {
     util::MPIPrintStreamDebug()
         << "BatchNormalization: " << input << ", " << output;
-    forward_stage1(input, mean, var, is_training, true);
+    forward_stage1(input, mean, var, is_training);
+    forward_allreduce(mean, var, is_training);
     forward_stage2(input, mean, var, running_mean, running_var, scale,
                    bias, output, is_training);
     return 0;
@@ -194,10 +189,6 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
               bias_gradient, mean_gradient, var_gradient);
 
     if (!m_use_local_stats && reduce) {
-      // TODO: only global reduction is supported.
-      assert_always(std::accumulate(
-          m_reduction_dims.begin(), m_reduction_dims.end(), true,
-          std::logical_and<bool>()));
       m_allreducer->allreduce(scale_gradient.get_buffer(),
                              scale_gradient.get_local_pitched_size());
       m_allreducer->allreduce(bias_gradient.get_buffer(),
@@ -218,11 +209,8 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
                       const Tensor &var_gradient, Tensor &d_input) {
     util::MPIPrintStreamDebug() << "BatchNormalization BP stage 2";
 
-    tensor::Array<ND> stat_shape;
-    for (int i = 0; i < ND; ++i) {
-      stat_shape[i] = m_reduction_dims[i] ? input.get_shape()[i] :
-          input.get_local_shape()[i];
-    }
+    auto stat_shape = m_global_stats ? input.get_shape() :
+        input.get_local_shape();
     // Number of elements per channel. Note that the channel
     // dimension is assumed to be at the second to last dimension.
     index_t num_per_sum = stat_shape.get_size() / stat_shape[-2];
@@ -245,17 +233,16 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
   DataType m_decay;
   DataType m_epsilon;
   int m_num_current_samples = 0;
-  std::vector<bool> m_reduction_dims;
+  bool m_global_stats;
   bool m_use_local_stats;
   BatchnormImpl m_impl;
   std::unique_ptr<tensor::Allreduce<DataType>> m_allreducer;
 
   template <typename Tensor>
   void channel_sums_and_sqsums(const Tensor &input, Tensor &mean,
-                               Tensor &var, bool reduce) {
+                               Tensor &var) {
     batchnorm::channel_sums_and_sqsums<ND, Tensor>(
-        m_num_current_samples, input, mean, var, m_be.get_stream(),
-        m_reduction_dims, reduce, m_allreducer);
+        m_num_current_samples, input, mean, var, m_be.get_stream());
   }
 
   template <typename Tensor>
