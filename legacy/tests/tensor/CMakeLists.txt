@@ -14,6 +14,7 @@ foreach (src ${TEST_SOURCES})
   get_filename_component(target ${src} NAME_WE)
   add_executable(${target} ${src})
   target_link_libraries(${target} distconv)
+  set_target_properties(${target} PROPERTIES CXX_STANDARD 14)
 endforeach ()
 
 configure_file(test_tensor.sh.in
