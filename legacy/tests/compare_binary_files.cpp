@@ -52,8 +52,10 @@ int main(int argc, char *argv[]) {
   size_t ret = 0;
   if (type_str == "float") {
     ret = compare<float>(std::stof(threshold), path1, path2);
+  } else if (type_str == "double") {
+    ret = compare<double>(std::stof(threshold), path1, path2);
   } else {
-    std::cerr << "Unknown type";
+    std::cerr << "Unknown type: " << type_str << "\n";
     ret = -1;
   }
   if (ret) {

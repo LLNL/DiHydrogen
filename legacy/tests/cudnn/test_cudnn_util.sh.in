@@ -6,7 +6,7 @@
 # for a given test case.
 
 TEST_UTIL=@CMAKE_CURRENT_BINARY_DIR@/../test_util.sh
-COMPARE_BINARY_FILES=@CMAKE_CURRENT_BINARY_DIR@/../compare_binary_files
+COMPARE_BINARY_FILES=@CMAKE_BINARY_DIR@/bin/compare_binary_files
 
 . ${TEST_UTIL}
 
@@ -50,6 +50,8 @@ function move_to_dc() {
 function validate() {
     local test_op=$1
     shift
+    local type=$1
+    shift
     local ref=$1
     local out=$2
     local bitwise=$3
@@ -60,20 +62,17 @@ function validate() {
     fi
     local ret=0
     local err_threshold=0
-    if [[ $bitwise != 1 ]]; then
+    # BN's allreduce implementations are not bitwise-reproducible
+    if [[ $bitwise != 1 || $test_op == $TEST_BN ]]; then
         err_threshold=0.000015
         if [[ $out = d_bias* ]]; then
             err_threshold=0.00005
-        fi
-        # Batchnorm tends to have larger rounding errors
-        if [[ $out = d_input* && $test_op == $TEST_BN ]]; then
-            err_threshold=0.0005
         fi
     fi
     echo Validating $out
     if [[ $out != *.txt ]]; then
         #od -An -w4 -tfF -v $out > ${out}.txt
-        $COMPARE_BINARY_FILES float $err_threshold $ref $out
+        $COMPARE_BINARY_FILES $type $err_threshold $ref $out
     else
         numdiff -r $err_threshold ${ref} ${out}
     fi
@@ -89,6 +88,8 @@ function validate_all() {
     #set +x
     local test_op=$1
     shift
+    local type=$1
+    shift
     local halo_exchange_methods=($*)
     local halo_exchange_base=${halo_exchange_methods[0]}
     local num_successes=0
@@ -103,9 +104,9 @@ function validate_all() {
                 echo "Comparison with $method"
                 ((++idx))
                 if [ -f ${f}.out ]; then
-                    validate $test_op ${f}.out ${f}_dc_${idx}_${method}.out 0 > ${f}_ref_${idx}_${method}.diff 2>&1
+                    validate $test_op $type ${f}.out ${f}_dc_${idx}_${method}.out 0 > ${f}_ref_${idx}_${method}.diff 2>&1
                 elif [ -f ${f}.txt ]; then
-                    validate $test_op ${f}.txt ${f}_dc_${idx}_${method}.txt 0 > ${f}_ref_${idx}_${method}.diff 2>&1
+                    validate $test_op $type ${f}.txt ${f}_dc_${idx}_${method}.txt 0 > ${f}_ref_${idx}_${method}.diff 2>&1
                 else
                     echo "Skipping $f." 1>&2
                     continue
@@ -120,11 +121,13 @@ function validate_all() {
                 # Compare DC results with different halo exchange methods
                 if [[ $idx > 0 ]]; then
                     if [ -f ${f}.out ]; then
-                        validate ${f}_dc_0_${halo_exchange_base}.out \
+                        validate $test_op $type \
+                                 ${f}_dc_0_${halo_exchange_base}.out \
                                  ${f}_dc_${idx}_${method}.out 1 > \
                                  ${f}_dc_${idx}_${halo_exchange_base}_${method}.diff 2>&1
                     elif [ -f ${f}.txt ]; then
-                        validate ${f}_dc_0_${halo_exchange_base}.txt \
+                        validate $test_op $type \
+                                 ${f}_dc_0_${halo_exchange_base}.txt \
                                  ${f}_dc_${idx}_${method}.txt 1 > \
                                  ${f}_dc_${idx}_${halo_exchange_base}_${method}.diff 2>&1
                     else
@@ -174,12 +177,13 @@ function run_test() {
 
     local experiment_name=`echo $@ | sed "s/[ ,]/_/g"`
 
-    local TYPE=$1; shift
+    local TEST_OP=$1; shift
+    local DATA_TYPE=$1; shift
     local ND=$1; shift
     local N=$1; shift
     local C=$1; shift
     # Number of filters. Ignored except for conv. test_pool does not pass.
-    if [[ ${TYPE} != $TEST_POOL ]]; then
+    if [[ ${TEST_OP} != $TEST_POOL ]]; then
         local K=$1; shift
     fi
     local H=$1; shift
@@ -200,7 +204,7 @@ function run_test() {
             echo "Test not supported as the number of spatial partitions (${PROC_S}) is larger than the spatial domain (H=${H})."
             return $ret_not_supported
         fi
-        if [[ $TYPE != $TEST_BN ]]; then
+        if [[ $TEST_OP != $TEST_BN ]]; then
             if (( ($H / $PROC_S) < ($F / 2) )); then
                 echo "Test not supported as each spatial partition of the input tensor is smaller than the halo size ($(($H / $PROC_S)) < $(($F / 2)))"
                 return $ret_not_supported
@@ -227,14 +231,14 @@ function run_test() {
         echo "Test not supported as it requires too many MPI ranks ($NP > $max_num_procs)"
         return $ret_not_supported
     fi
-    if [[ $TYPE != $TEST_BN && $PADDING == 0 && $H -lt $F ]]; then
+    if [[ $TEST_OP != $TEST_BN && $PADDING == 0 && $H -lt $F ]]; then
         echo "Test not supported as its spatial dimension ($H) is too small for the filter size ($F)"
         return $ret_not_supported
     fi
 
 
-    if [[ ! $TYPE =~ ($TEST_CONV|$TEST_POOL|$TEST_BN) ]]; then
-        echo "TYPE should be $TEST_CONV, $TEST_POOL or $TEST_BN: $TYPE"
+    if [[ ! $TEST_OP =~ ($TEST_CONV|$TEST_POOL|$TEST_BN) ]]; then
+        echo "TEST_OP should be $TEST_CONV, $TEST_POOL or $TEST_BN: $TEST_OP"
         exit
     fi
 
@@ -282,7 +286,7 @@ function run_test() {
     fi
 
     local FILTER_SIZE="${F},${F}"
-    if [[ ${TYPE} == $TEST_CONV ]]; then
+    if [[ ${TEST_OP} == $TEST_CONV ]]; then
         FILTER_SIZE="${K},${FILTER_SIZE}"
     fi
     local IMAGE_SIZE=
@@ -297,7 +301,7 @@ function run_test() {
     fi
 
     local VERIFY=
-    local TEST_ARGS="--num-dims $ND --image-size ${IMAGE_SIZE} --testing --num-warmup-runs 0 --num-runs 1 --mode ${MODE}"
+    local TEST_ARGS="--num-dims $ND --image-size ${IMAGE_SIZE} --testing --num-warmup-runs 0 --num-runs 1 --mode ${MODE} --data-type $DATA_TYPE"
 
     if [[ ${MODE} != "SIMPLE" ]]; then
         VERIFY=1
@@ -307,7 +311,7 @@ function run_test() {
     fi
 
     # Options only for convolution or pooling
-    if [[ $TYPE != $TEST_BN ]]; then
+    if [[ $TEST_OP != $TEST_BN ]]; then
         if [[ $PADDING == 0 ]]; then
             TEST_ARGS+=" --no-padding"
         fi
@@ -319,7 +323,7 @@ function run_test() {
     fi
 
     # Options only for convolution
-    if [[ $TYPE == $TEST_CONV ]]; then
+    if [[ $TEST_OP == $TEST_CONV ]]; then
         if [[ $BIAS == 1 ]]; then
             TEST_ARGS+=" --use-bias"
         fi
@@ -331,7 +335,7 @@ function run_test() {
     fi
 
     # Options only for batchnorm
-    if [[ $TYPE == $TEST_BN ]]; then
+    if [[ $TEST_OP == $TEST_BN ]]; then
         TEST_ARGS+=" --global-stat"
     fi
 
@@ -349,7 +353,7 @@ function run_test() {
     for method in ${METHODS[*]}; do
         echo "Running $(basename ${BENCHMARK_BIN}) with $method"
         local METHOD_ARGS=
-        if [[ $TYPE == $TEST_BN ]]; then
+        if [[ $TEST_OP == $TEST_BN ]]; then
             METHOD_ARGS="--bn-impl $method"
         else
             METHOD_ARGS="--halo-exchange-method $method"
@@ -388,7 +392,7 @@ function run_test() {
     echo "Running $(basename ${REF_BENCHMARK_BIN})"
     local proc_one=$(echo $PROC_DIV | sed 's/\([0-9]\+\)/1/g')
     # CUDA-awareness is needed for the MPI implementation of batchnorm
-    if [[ $TYPE == $TEST_BN ]]; then
+    if [[ $TEST_OP == $TEST_BN ]]; then
         runcmd_ref+=" -M -gpu"
     fi
     echo ${runcmd_ref} ${REF_BENCHMARK_BIN} \
@@ -409,7 +413,7 @@ function run_test() {
 
     # Compare them
     if [[ ${VERIFY} = 1 ]]; then
-        validate_all $TYPE ${METHODS[*]} > log_validate.txt 2>&1
+        validate_all $TEST_OP $DATA_TYPE ${METHODS[*]} > log_validate.txt 2>&1
     else
         echo "Warning: The results are not validated since ${MODE} is not supported in the cuDNN benchmark"
     fi
