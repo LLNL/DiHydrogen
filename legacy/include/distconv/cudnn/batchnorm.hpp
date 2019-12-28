@@ -124,12 +124,25 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
 
   template <typename Tensor>
   int forward_allreduce(Tensor &mean, Tensor &var, bool is_training) {
-    if (is_training && m_global_stats) {
-      m_allreducer->allreduce(mean.get_buffer(),
-                              mean.get_local_pitched_size());
-      m_allreducer->allreduce(var.get_buffer(),
-                              var.get_local_pitched_size());
+    if (!is_training || !m_global_stats) return 0;
+
+    auto mean_ptr = mean.get_buffer();
+    auto var_ptr = var.get_buffer();
+    auto count = mean.get_local_pitched_size();
+    assert_eq(count, var.get_local_pitched_size());
+
+    // Combine allreduces of mean and var if possible
+    if (mean_ptr + count == var_ptr) {
+      // var comes immediately after mean
+      m_allreducer->allreduce(mean_ptr, count * 2);
+    } else if (mean_ptr == var_ptr + count) {
+      // mean comes immediately after var
+      m_allreducer->allreduce(var_ptr, count * 2);
+    } else {
+      m_allreducer->allreduce(mean_ptr, count);
+      m_allreducer->allreduce(var_ptr, count);
     }
+
     return 0;
   }
 
@@ -190,16 +203,28 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
   template <typename Tensor>
   int backward_allreduce(Tensor &scale_gradient, Tensor &bias_gradient,
                          Tensor &mean_gradient, Tensor &var_gradient) {
-    if (m_global_stats) {
-      m_allreducer->allreduce(scale_gradient.get_buffer(),
-                              scale_gradient.get_local_pitched_size());
-      m_allreducer->allreduce(bias_gradient.get_buffer(),
-                              bias_gradient.get_local_pitched_size());
-      m_allreducer->allreduce(mean_gradient.get_buffer(),
-                              mean_gradient.get_local_pitched_size());
-      m_allreducer->allreduce(var_gradient.get_buffer(),
-                              var_gradient.get_local_pitched_size());
+    if (!m_global_stats) return 0;
+
+    auto mean_ptr = mean_gradient.get_buffer();
+    auto var_ptr = var_gradient.get_buffer();
+    auto count = mean_gradient.get_local_pitched_size();
+    assert_eq(count, var_gradient.get_local_pitched_size());
+
+    if (mean_ptr + count == var_ptr) {
+      // var comes immediately after mean
+      m_allreducer->allreduce(mean_ptr, count * 2);
+    } else if (mean_ptr == var_ptr + count) {
+      // mean comes immediately after var
+      m_allreducer->allreduce(var_ptr, count * 2);
+    } else {
+      m_allreducer->allreduce(mean_ptr, count);
+      m_allreducer->allreduce(var_ptr, count);
     }
+
+    m_allreducer->allreduce(scale_gradient.get_buffer(),
+                            scale_gradient.get_local_pitched_size());
+    m_allreducer->allreduce(bias_gradient.get_buffer(),
+                            bias_gradient.get_local_pitched_size());
     return 0;
   }
 

@@ -85,6 +85,7 @@ class Data {
   typename TensorType<Backend, DataType>::type d_input;
   typename TensorType<Backend, DataType>::type output;
   typename TensorType<Backend, DataType>::type d_output;
+  typename TensorType<Backend, DataType>::type mean_and_var;
   typename TensorType<Backend, DataType>::type mean;
   typename TensorType<Backend, DataType>::type var;;
   typename TensorType<Backend, DataType>::type running_mean;
@@ -93,6 +94,7 @@ class Data {
   typename TensorType<Backend, DataType>::type bias;
   typename TensorType<Backend, DataType>::type d_scale;
   typename TensorType<Backend, DataType>::type d_bias;
+  typename TensorType<Backend, DataType>::type d_mean_and_var;
   typename TensorType<Backend, DataType>::type d_mean;
   typename TensorType<Backend, DataType>::type d_var;
 
@@ -136,6 +138,9 @@ class Data {
 
     tensor::Shape ch_stat_shape(NSD + 2, 1);
     ch_stat_shape[-2] = cfg.i_c;
+    tensor::Shape ch_stat_shape2(NSD + 2, 1);
+    ch_stat_shape2[-2] = cfg.i_c * 2;
+    mean_and_var = Tensor(ch_stat_shape2, loc, shared_dist);
     mean = Tensor(ch_stat_shape, loc, shared_dist);
     var = Tensor(ch_stat_shape, loc, shared_dist);
     running_mean = Tensor(ch_stat_shape, loc, shared_dist);
@@ -144,6 +149,7 @@ class Data {
     bias = Tensor(ch_stat_shape, loc, shared_dist);
     d_scale = Tensor(ch_stat_shape, loc, shared_dist);
     d_bias = Tensor(ch_stat_shape, loc, shared_dist);
+    d_mean_and_var = Tensor(ch_stat_shape2, loc, shared_dist);
     d_mean = Tensor(ch_stat_shape, loc, shared_dist);
     d_var = Tensor(ch_stat_shape, loc, shared_dist);
 
@@ -163,10 +169,11 @@ class Data {
     d_input.zero(); // will be overwritten
     assert0(d_output.allocate());
     d_output.zero(); // will be used
-    assert0(mean.allocate());
-    mean.zero(); // will be overwritten
-    assert0(var.allocate());
-    var.zero(); // will be overwritten
+    assert0(mean_and_var.allocate());
+    mean_and_var.zero(); // will be overwritten
+    assert0(tensor::View(mean, mean_and_var.get_buffer()));
+    assert0(tensor::View(var, mean_and_var.get_buffer() +
+                         ch_stat_shape.get_size()));
     assert0(running_mean.allocate());
     running_mean.zero(); // will be incremented
     assert0(running_var.allocate());
@@ -179,10 +186,11 @@ class Data {
     d_scale.zero(); // will be overwritten
     assert0(d_bias.allocate());
     d_bias.zero(); // will be overwritten
-    assert0(d_mean.allocate());
-    d_mean.zero(); // will be overwritten
-    assert0(d_var.allocate());
-    d_var.zero(); // will be overwritten
+    assert0(d_mean_and_var.allocate());
+    d_mean_and_var.zero(); // will be overwritten
+    assert0(tensor::View(d_mean, mean_and_var.get_buffer()));
+    assert0(tensor::View(d_var, mean_and_var.get_buffer() +
+                         ch_stat_shape.get_size()));
   }
   bool is_empty() const {
     return output.get_size() == 0;
