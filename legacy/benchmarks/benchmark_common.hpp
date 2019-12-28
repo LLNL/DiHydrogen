@@ -525,8 +525,8 @@ inline BenchmarkConfig<NSD> process_opt(int argc, char *argv[], int pid,
       ("b,backend", "Convolution backend", cxxopts::value<std::string>()->default_value("CUDNN"))
       ("data-type", "Data type", cxxopts::value<std::string>()->default_value("float"))
       ("mode", "Test mode", cxxopts::value<std::string>()->default_value("NORMAL"))
-      ("halo-exchange-method", "Halo exchange method", cxxopts::value<std::string>()->default_value("HYBRID"))
-      ("shuffle-method", "Shuffle method", cxxopts::value<std::string>()->default_value("HYBRID"))
+      ("halo-exchange-method", "Halo exchange method", cxxopts::value<std::string>()->default_value("AL"))
+      ("shuffle-method", "Shuffle method", cxxopts::value<std::string>()->default_value("AL"))
       ("bn-impl", "Batchnorm implementation", cxxopts::value<std::string>()->default_value("MPI"))
 
       ("num-dims", "Number of spatial dimensions", cxxopts::value<int>())
