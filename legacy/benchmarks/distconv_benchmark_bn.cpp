@@ -31,16 +31,22 @@ class Profile {
  public:
   BenchmarkConfig<NSD> m_cfg;
   std::vector<float> fwd_time;
+  std::vector<float> fwd_allreduce_time;
   std::vector<float> bwd_time;
+  std::vector<float> bwd_allreduce_time;
   Profile(const BenchmarkConfig<NSD> &cfg):
       m_cfg(cfg),
       fwd_time(cfg.run_count, 0),
-      bwd_time(cfg.run_count, 0) {}
+      fwd_allreduce_time(cfg.run_count, 0),
+      bwd_time(cfg.run_count, 0),
+      bwd_allreduce_time(cfg.run_count, 0) {}
 
   std::ostream &print_as_row(std::ostream &os) {
     for (size_t i = 0; i < fwd_time.size(); ++i) {
       m_cfg.print_as_row(os) << " " << fwd_time[i]
-                             << " " << bwd_time[i];
+                             << " " << fwd_allreduce_time[i]
+                             << " " << bwd_time[i]
+                             << " " << bwd_allreduce_time[i];
       os << std::endl;
     }
     return os;
@@ -52,11 +58,20 @@ class Profile {
               << ", min: " << get_min(fwd_time)
               << ", max: " << get_max(fwd_time)
               << "\n"
-              << "Backward mean: "
-              << get_mean(bwd_time)
+              << "Forward allreduce mean: " << get_mean(fwd_allreduce_time)
+              << ", median: " << get_median(fwd_allreduce_time)
+              << ", min: " << get_min(fwd_allreduce_time)
+              << ", max: " << get_max(fwd_allreduce_time)
+              << "\n"
+              << "Backward mean: " << get_mean(bwd_time)
               << ", median: " << get_median(bwd_time)
               << ", min: " << get_min(bwd_time)
               << ", max: " << get_max(bwd_time)
+              << "\n"
+              << "Backward allreduce mean: " << get_mean(bwd_allreduce_time)
+              << ", median: " << get_median(bwd_allreduce_time)
+              << ", min: " << get_min(bwd_allreduce_time)
+              << ", max: " << get_max(bwd_allreduce_time)
               << std::endl;
   }
 };
@@ -237,6 +252,7 @@ int test_forward(Data<NSD, Backend, DataType> &d,
                                  << " times of measurement";
 
   Clock<Backend> clk(be);
+  Clock<Backend> clk_allreduce(be);
   for (int i = 0; i < cfg.run_count; ++i) {
     complete_async<Backend>();
     DISTCONV_CHECK_MPI(MPI_Barrier(comm));
@@ -246,14 +262,17 @@ int test_forward(Data<NSD, Backend, DataType> &d,
     // Runs for synchronization
     bn.forward_allreduce(d.mean, d.var, is_training);
     // Start measurement
+    clk_allreduce.start();
+    bn.forward_allreduce(d.mean, d.var, is_training);
+    clk_allreduce.stop();
     clk.start();
     bn.forward_stage1(d.input, d.mean, d.var, is_training);
     bn.forward_allreduce(d.mean, d.var, is_training);
     bn.forward_stage2(d.input, d.mean, d.var, d.running_mean, d.running_var,
                       d.scale, d.bias, d.output, is_training);
     clk.stop();
-    float elapsed = clk.get_time();
-    prof.fwd_time[i] = elapsed;
+    prof.fwd_time[i] = clk.get_time();
+    prof.fwd_allreduce_time[i] = clk_allreduce.get_time();
   }
 
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
@@ -281,8 +300,8 @@ int test_backward(Data<NSD, Backend, DataType> &d,
 
   for (int i = 0; i < cfg.warming_up_count; ++i) {
     bn.backward_stage1(d.input, d.d_output, d.mean, d.var, d.scale,
-                       d.d_scale, d.d_bias, d.d_mean, d.d_var,
-                       cfg.global_stat);
+                       d.d_scale, d.d_bias, d.d_mean, d.d_var);
+    bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var);
     bn.backward_stage2(d.input, d.d_output, d.mean, d.var, d.scale,
                        d.d_mean, d.d_var, d.d_input);
   }
@@ -293,9 +312,7 @@ int test_backward(Data<NSD, Backend, DataType> &d,
                                  << " times of measurement";
 
   Clock<Backend> clk(be);
-  Clock<Backend> clk_data(be);
-  Clock<Backend> clk_filter(be);
-  Clock<Backend> clk_bias(be);
+  Clock<Backend> clk_allreduce(be);
   for (int i = 0; i < cfg.run_count; ++i) {
     complete_async<Backend>();
     DISTCONV_CHECK_MPI(MPI_Barrier(comm));
@@ -303,18 +320,19 @@ int test_backward(Data<NSD, Backend, DataType> &d,
       spin_async_device(cfg.spin_time_ms, be);
     }
     // synchronize the processes
-    bn.backward_stage1(d.input, d.d_output, d.mean, d.var, d.scale,
-                       d.d_scale, d.d_bias, d.d_mean, d.d_var,
-                       cfg.global_stat);
+    bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var);
+    clk_allreduce.start();
+    bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var);
+    clk_allreduce.stop();
     clk.start();
     bn.backward_stage1(d.input, d.d_output, d.mean, d.var, d.scale,
-                       d.d_scale, d.d_bias, d.d_mean, d.d_var,
-                       cfg.global_stat);
+                       d.d_scale, d.d_bias, d.d_mean, d.d_var);
+    bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var);
     bn.backward_stage2(d.input, d.d_output, d.mean, d.var, d.scale,
                        d.d_mean, d.d_var, d.d_input);
     clk.stop();
-    float elapsed = clk.get_time();
-    prof.bwd_time[i] = elapsed;
+    prof.bwd_time[i] = clk.get_time();
+    prof.bwd_allreduce_time[i] = clk_allreduce.get_time();
   }
 
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));

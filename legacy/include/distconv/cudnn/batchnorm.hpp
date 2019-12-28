@@ -179,26 +179,27 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
                       const Tensor &mean, const Tensor &var,
                       const Tensor &scale, Tensor &scale_gradient,
                       Tensor &bias_gradient, Tensor &mean_gradient,
-                      Tensor &var_gradient,
-                      bool reduce) {
+                      Tensor &var_gradient) {
     util::MPIPrintStreamDebug() << "BatchNormalization BP stage 1";
-
     set_num_samples(input.get_local_shape()[-1]);
-
     backprop1(input, d_output, mean, var, scale, scale_gradient,
               bias_gradient, mean_gradient, var_gradient);
+    return 0;
+  }
 
-    if (!m_use_local_stats && reduce) {
+  template <typename Tensor>
+  int backward_allreduce(Tensor &scale_gradient, Tensor &bias_gradient,
+                         Tensor &mean_gradient, Tensor &var_gradient) {
+    if (m_global_stats) {
       m_allreducer->allreduce(scale_gradient.get_buffer(),
-                             scale_gradient.get_local_pitched_size());
+                              scale_gradient.get_local_pitched_size());
       m_allreducer->allreduce(bias_gradient.get_buffer(),
-                             bias_gradient.get_local_pitched_size());
+                              bias_gradient.get_local_pitched_size());
       m_allreducer->allreduce(mean_gradient.get_buffer(),
                               mean_gradient.get_local_pitched_size());
       m_allreducer->allreduce(var_gradient.get_buffer(),
                               var_gradient.get_local_pitched_size());
     }
-
     return 0;
   }
 
@@ -220,6 +221,22 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
     return 0;
   }
 
+  template <typename Tensor>
+  int backward(const Tensor &input, const Tensor &d_output,
+               const Tensor &mean, const Tensor &var,
+               const Tensor &scale,
+               Tensor &scale_gradient, Tensor &bias_gradient,
+               Tensor &mean_gradient, Tensor &var_gradient,
+               Tensor &d_input) {
+    backward_stage1(input, d_output, mean, var, scale, scale_gradient,
+                    bias_gradient, mean_gradient, var_gradient);
+    backward_allreduce(scale_gradient, bias_gradient,
+                       mean_gradient, var_gradient);
+    backward_stage2(input, d_output, mean, var, scale,
+                    mean_gradient, var_gradient, d_input);
+    return 0;
+  }
+
   // n: the number of the current local minibatch samples
   void set_num_samples(int n) {
     if (n != m_num_current_samples) {
@@ -234,7 +251,6 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
   DataType m_epsilon;
   int m_num_current_samples = 0;
   bool m_global_stats;
-  bool m_use_local_stats;
   BatchnormImpl m_impl;
   std::unique_ptr<tensor::Allreduce<DataType>> m_allreducer;
 
