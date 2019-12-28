@@ -220,8 +220,10 @@ class Data {
     dump_shared_tensor(var, "var_tensor", dump_binary);
     dump_shared_tensor(running_mean, "running_mean_tensor", dump_binary);
     dump_shared_tensor(running_var, "running_var_tensor", dump_binary);
-    dump_shared_tensor(d_scale, "d_scale_tensor", dump_binary);
-    dump_shared_tensor(d_bias, "d_bias_tensor", dump_binary);
+    if (!m_cfg.skip_weight_allreduce) {
+      dump_shared_tensor(d_scale, "d_scale_tensor", dump_binary);
+      dump_shared_tensor(d_bias, "d_bias_tensor", dump_binary);
+    }
     dump_shared_tensor(d_mean, "d_mean_tensor", dump_binary);
     dump_shared_tensor(d_var, "d_var_tensor", dump_binary);
   }
@@ -330,12 +332,14 @@ int test_backward(Data<NSD, Backend, DataType> &d,
     // synchronize the processes
     bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var);
     clk_allreduce.start();
-    bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var);
+    bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var,
+                          cfg.skip_weight_allreduce);
     clk_allreduce.stop();
     clk.start();
     bn.backward_stage1(d.input, d.d_output, d.mean, d.var, d.scale,
                        d.d_scale, d.d_bias, d.d_mean, d.d_var);
-    bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var);
+    bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var,
+                          cfg.skip_weight_allreduce);
     bn.backward_stage2(d.input, d.d_output, d.mean, d.var, d.scale,
                        d.d_mean, d.d_var, d.d_input);
     clk.stop();

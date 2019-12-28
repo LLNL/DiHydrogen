@@ -202,7 +202,8 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
 
   template <typename Tensor>
   int backward_allreduce(Tensor &scale_gradient, Tensor &bias_gradient,
-                         Tensor &mean_gradient, Tensor &var_gradient) {
+                         Tensor &mean_gradient, Tensor &var_gradient,
+                         bool skip_weights=false) {
     if (!m_global_stats) return 0;
 
     auto mean_ptr = mean_gradient.get_buffer();
@@ -221,10 +222,13 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
       m_allreducer->allreduce(var_ptr, count);
     }
 
-    m_allreducer->allreduce(scale_gradient.get_buffer(),
-                            scale_gradient.get_local_pitched_size());
-    m_allreducer->allreduce(bias_gradient.get_buffer(),
-                            bias_gradient.get_local_pitched_size());
+    if (!skip_weights) {
+      m_allreducer->allreduce(scale_gradient.get_buffer(),
+                              scale_gradient.get_local_pitched_size());
+      m_allreducer->allreduce(bias_gradient.get_buffer(),
+                              bias_gradient.get_local_pitched_size());
+    }
+
     return 0;
   }
 
