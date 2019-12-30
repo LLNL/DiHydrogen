@@ -24,6 +24,10 @@ h2_set_full_path(THIS_DIR_HEADERS
   tensor_mpi_cuda.hpp
   tensor_mpi.hpp
   tensor_process.hpp
+  allreduce.hpp
+  allreduce_mpi.hpp
+  allreduce_mpi_cuda.hpp
+  allreduce_al.hpp
   )
 
 if (DISTCONV_HAS_P2P)
