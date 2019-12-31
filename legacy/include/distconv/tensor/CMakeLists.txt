@@ -44,6 +44,8 @@ endif ()
 if (DISTCONV_HAS_NVSHMEM)
   list(APPEND THIS_DIR_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/halo_exchange_cuda_nvshmem.hpp")
+  list(APPEND THIS_DIR_HEADERS
+    "${CMAKE_CURRENT_SOURCE_DIR}/allreduce_nvshmem.hpp")
 endif ()
 
 add_subdirectory(algorithms)
