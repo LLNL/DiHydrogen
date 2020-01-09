@@ -297,7 +297,11 @@ inline std::ostream& operator<<(std::ostream& os, const ChannelParallelismAlgori
 }
 
 enum class BatchnormImpl {
-  MPI, AL_NCCL
+  MPI, AL_NCCL,
+#ifdef DISTCONV_HAS_NVSHMEM
+  NVSHMEM_RECURSIVE_DOUBLING_HOST,
+  NVSHMEM_RECURSIVE_DOUBLING,
+#endif // DISTCONV_HAS_NVSHMEM
 };
 
 inline std::ostream& operator<<(std::ostream &os, const BatchnormImpl &v) {
@@ -305,6 +309,12 @@ inline std::ostream& operator<<(std::ostream &os, const BatchnormImpl &v) {
     return os << "MPI";
   } else if (v == BatchnormImpl::AL_NCCL) {
     return os << "AL_NCCL";
+#ifdef DISTCONV_HAS_NVSHMEM
+  } else if (v == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_HOST) {
+    return os << "NVSHMEM_RECURSIVE_DOUBLING_HOST";
+  } else if (v == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING) {
+    return os << "NVSHMEM_RECURSIVE_DOUBLING";
+#endif // DISTCONV_HAS_NVSHMEM
   } else {
     util::PrintStreamError() << "Unknown batchnorm implementation";
     std::abort();
@@ -316,10 +326,30 @@ inline BatchnormImpl GetBatchnormImpl(const std::string &impl) {
     return BatchnormImpl::MPI;
   } else if (impl == "AL_NCCL") {
     return BatchnormImpl::AL_NCCL;
+#ifdef DISTCONV_HAS_NVSHMEM
+  } else if (impl == "NVSHMEM_RECURSIVE_DOUBLING_HOST") {
+    return BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_HOST;
+  } else if (impl == "NVSHMEM_RECURSIVE_DOUBLING") {
+    return BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING;
+#endif // DISTCONV_HAS_NVSHMEM
   } else {
     util::PrintStreamError() << "Unknown implementation name for batchnorm: " << impl;
     std::abort();
   }
+}
+
+inline bool IsNVSHMEMUsed(BatchnormImpl m) {
+#ifdef DISTCONV_HAS_NVSHMEM
+  switch (m) {
+    case BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_HOST:
+    case BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING:
+      return true;
+    default:
+      return false;
+  }
+#else
+  return false;
+#endif
 }
 
 } //namespace distconv

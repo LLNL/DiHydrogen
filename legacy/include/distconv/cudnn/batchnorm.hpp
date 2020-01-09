@@ -5,6 +5,9 @@
 #include "distconv/tensor/allreduce.hpp"
 #include "distconv/tensor/allreduce_mpi_cuda.hpp"
 #include "distconv/tensor/allreduce_al.hpp"
+#ifdef DISTCONV_HAS_NVSHMEM
+#include "distconv/tensor/allreduce_nvshmem.hpp"
+#endif // DISTCONV_HAS_NVSHMEM
 
 #include <numeric>
 #include <memory>
@@ -89,6 +92,16 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
     } else if (m_impl == BatchnormImpl::AL_NCCL) {
       m_allreducer = std::make_unique<tensor::AllreduceAlNCCL<DataType>>(
           m_be.get_al_nccl_comm());
+#ifdef DISTCONV_HAS_NVSHMEM
+    } else if (m_impl == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_HOST) {
+      m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+          m_be.get_stream(),
+          tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_HOST);
+    } else if (m_impl == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING) {
+      m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+          m_be.get_stream(),
+          tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING);
+#endif // DISTCONV_HAS_NVSHMEM
     }
   }
 #if 0

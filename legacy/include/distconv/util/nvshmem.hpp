@@ -53,18 +53,29 @@ struct PairwiseSyncDevice {
       nvshmem_quiet();
     }
 
-    const long counter = *m_local_counter;
+    const auto counter = *m_local_counter;
 
-    nvshmem_long_p((long*)m_shmem_counter, counter, peer);
+    nvshmem_long_p((CounterType*)m_shmem_counter, counter, peer);
   }
 
   __device__ __forceinline__ void wait() {
-    const long counter = *m_local_counter;
+    const auto counter = *m_local_counter;
     nvshmem_wait_until(m_shmem_counter, NVSHMEM_CMP_GE, counter);
   }
 
   __device__ __forceinline__ void inc_counter() {
     ++(*m_local_counter);
+  }
+
+  __device__ __forceinline__ void sync(int peer, bool do_notify, bool do_wait,
+                                       SyncType sync_type) {
+    if (do_notify) {
+      notify(peer, sync_type);
+    }
+    if (do_wait) {
+      wait();
+    }
+    inc_counter();
   }
 #endif
 
@@ -86,6 +97,77 @@ struct PairwiseSync {
  private:
   std::shared_ptr<CounterType> m_local_counter;
   std::shared_ptr<CounterType> m_shmem_counter;
+};
+
+struct SyncArrayDevice {
+  using CounterType = long;
+
+  SyncArrayDevice(CounterType *local_counter,
+                  CounterType *shmem_counter):
+      m_local_counter(local_counter), m_shmem_counter(shmem_counter) {}
+
+  ~SyncArrayDevice() = default;
+
+#ifdef __CUDACC__
+  __device__ __forceinline__ void notify(int peer, SyncType sync_type, int idx) {
+    if (sync_type == SyncType::FENCE) {
+      nvshmem_fence();
+    } else if (sync_type == SyncType::QUIET) {
+      nvshmem_quiet();
+    }
+
+#if 1
+    const auto counter = m_local_counter[idx];
+    nvshmem_long_p((CounterType*)(m_shmem_counter + idx), counter, peer);
+#else
+    nvshmem_long_put_nbi((CounterType*)(m_shmem_counter + idx),
+                         m_local_counter + idx, 1, peer);
+#endif
+  }
+
+  __device__ __forceinline__ void wait(int idx) {
+    const auto counter = m_local_counter[idx];
+    nvshmem_wait_until(m_shmem_counter + idx, NVSHMEM_CMP_GE, counter);
+  }
+
+  __device__ __forceinline__ void inc_counter(int idx) {
+    ++m_local_counter[idx];
+  }
+
+  __device__ __forceinline__ void sync(int peer, bool do_notify, bool do_wait,
+                                       SyncType sync_type, int idx) {
+    if (do_notify) {
+      notify(peer, sync_type, idx);
+    }
+    if (do_wait) {
+      wait(idx);
+    }
+    inc_counter(idx);
+  }
+#endif
+
+  CounterType *m_local_counter;
+  volatile CounterType *m_shmem_counter;
+};
+
+struct SyncArray {
+  using CounterType = SyncArrayDevice::CounterType;
+ public:
+  SyncArray(size_t size): m_local_counter(nullptr), m_shmem_counter(nullptr),
+                          m_size(size) {}
+  void alloc_counters();
+  void init_counters();
+  void ensure_size(size_t size);
+  void sync(int peer, bool notify, bool wait,
+            SyncType sync_type, int idx, cudaStream_t stream);
+  void notify(int peer, SyncType sync_type, int idx, cudaStream_t stream);
+  void wait(int idx, cudaStream_t stream);
+  void inc_counter(int idx, cudaStream_t stream);
+  SyncArrayDevice get_for_device();
+ private:
+  std::shared_ptr<CounterType> m_local_counter;
+  std::shared_ptr<CounterType> m_shmem_counter;
+  size_t m_size;
 };
 
 #ifdef __NVCC__

@@ -257,7 +257,7 @@ int test_forward(Data<NSD, Backend, DataType> &d,
   }
 
   be.wait();
-
+  MPI_Barrier(MPI_COMM_WORLD);
   util::MPIRootPrintStreamInfo() << "Starting " << cfg.run_count
                                  << " times of measurement";
 
@@ -388,6 +388,43 @@ struct BNTester<NSD, cudnn::BackendCUDNN, DataType> {
     if (cfg.nvtx_marking) {
       be.enable_nvtx_marking();
     }
+
+#ifdef DISTCONV_HAS_NVSHMEM
+    // hack to use NVSHMEM buffers
+    if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+      // mean and var
+      auto mean_and_var_nvshmem = static_cast<DataType*>(
+          nvshmem_malloc(d.mean_and_var.get_max_local_real_shape().size()
+                         * sizeof(DataType)));
+      assert_always(mean_and_var_nvshmem != nullptr);
+      assert0(tensor::View(d.mean_and_var, mean_and_var_nvshmem));
+      assert0(tensor::View(d.mean, d.mean_and_var.get_buffer()));
+      assert0(tensor::View(d.var, d.mean_and_var.get_buffer() +
+                           d.mean.get_local_real_size()));
+      // d_mean and d_var
+      auto d_mean_and_var_nvshmem = static_cast<DataType*>(
+          nvshmem_malloc(d.d_mean_and_var.get_max_local_real_shape().size()
+                         * sizeof(DataType)));
+      assert_always(d_mean_and_var_nvshmem != nullptr);
+      assert0(tensor::View(d.d_mean_and_var, d_mean_and_var_nvshmem));
+      assert0(tensor::View(d.d_mean, d.d_mean_and_var.get_buffer()));
+      assert0(tensor::View(d.d_var, d.d_mean_and_var.get_buffer() +
+                           d.d_mean.get_local_real_size()));
+      // scale_gradient
+      auto d_scale_nvshmem = static_cast<DataType*>(
+          nvshmem_malloc(d.d_scale.get_max_local_real_shape().size()
+                         * sizeof(DataType)));
+      assert_always(d_scale_nvshmem != nullptr);
+      assert0(tensor::View(d.d_scale, d_scale_nvshmem));
+      // bias_gradient
+      auto d_bias_nvshmem = static_cast<DataType*>(
+          nvshmem_malloc(d.d_bias.get_max_local_real_shape().size()
+                         * sizeof(DataType)));
+      assert_always(d_bias_nvshmem != nullptr);
+      assert0(tensor::View(d.d_bias, d_bias_nvshmem));
+    }
+#endif // DISTCONV_HAS_NVSHMEM
+
     test_forward<NSD, cudnn::BackendCUDNN, DataType>(
         d, cfg, comm, be, bn, prof);
     test_backward<NSD, cudnn::BackendCUDNN, DataType>(
@@ -416,7 +453,7 @@ void run(int argc, char *argv[], int pid, int np) {
   }
 
 #ifdef DISTCONV_HAS_NVSHMEM
-  if (IsNVSHMEMUsed(cfg.halo_exchange_method)) {
+  if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
     util::nvshmem::initialize(MPI_COMM_WORLD);
   }
 #endif // DISTCONV_HAS_NVSHMEM
@@ -426,7 +463,7 @@ void run(int argc, char *argv[], int pid, int np) {
   util::MPIRootPrintStreamInfo() << "Finishing";
 
 #ifdef DISTCONV_HAS_NVSHMEM
-  if (IsNVSHMEMUsed(cfg.halo_exchange_method)) {
+  if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
     util::nvshmem::finalize();
   }
 #endif // DISTCONV_HAS_NVSHMEM

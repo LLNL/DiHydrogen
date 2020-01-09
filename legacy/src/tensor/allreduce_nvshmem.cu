@@ -1,5 +1,7 @@
 #include "distconv/tensor/allreduce_nvshmem.hpp"
 
+using namespace distconv::util::nvshmem;
+
 namespace distconv {
 namespace tensor {
 
@@ -52,6 +54,111 @@ DEFINE_REDUCE(double)
 DEFINE_REDUCE(int)
 DEFINE_REDUCE(long)
 #undef DEFINE_REDUCE
+
+namespace allreduce_nvshmem {
+
+template <typename DataType>
+__device__ __forceinline__ void copy_block(DataType *x, const DataType *y, size_t count) {
+  if (x == y) return;
+  size_t bsize = blockDim.x;
+  for (size_t idx = threadIdx.x; idx < count; idx += bsize) {
+    x[idx] = y[idx];
+  }
+}
+
+template <typename DataType>
+__device__ __forceinline__ void reduce_block(DataType *x, const DataType *y, size_t count) {
+  size_t bsize = blockDim.x;
+  for (size_t idx = threadIdx.x; idx < count; idx += bsize) {
+    x[idx] += y[idx];
+  }
+}
+
+template <typename DataType>
+__device__ __forceinline__ void swap(DataType *&x, DataType *&y) {
+  auto z = x;
+  x = y;
+  y = z;
+}
+
+template <typename DataType>
+__global__ void recursive_doubling_kernel(const DataType *send_buf,
+                                          DataType *recv_buf,
+                                          DataType *tmp_buf,
+                                          size_t count, size_t work_per_block,
+                                          int pid, int np, int num_steps,
+                                          SyncArrayDevice sync) {
+  const int tid = threadIdx.x;
+  int sync_idx = blockIdx.x * num_steps;
+  send_buf += blockIdx.x * work_per_block;
+  recv_buf += blockIdx.x * work_per_block;
+  tmp_buf += blockIdx.x * work_per_block;
+  work_per_block = min(work_per_block, count - blockIdx.x * work_per_block);
+
+  copy_block(recv_buf, send_buf, work_per_block);
+
+  constexpr SyncType st = SyncType::NONE;
+
+  for (int i = 0; i < num_steps; ++i) {
+    int peer = pid ^ (1 << i);
+    if (i != 0) {
+      __syncthreads();
+      if (tid == 0) {
+        sync.sync(peer, true, true, st, sync_idx + i);
+      }
+    }
+    __syncthreads();
+    put_nbi_block(tmp_buf, recv_buf, work_per_block, peer);
+    __syncthreads();
+    if (tid == 0) {
+      sync.sync(peer, true, true, st, sync_idx + i);
+    }
+    __syncthreads();
+    reduce_block(tmp_buf, recv_buf, work_per_block);
+    swap(tmp_buf, recv_buf);
+  }
+
+  if (num_steps % 2 != 0) {
+    copy_block(tmp_buf, recv_buf, work_per_block);
+  }
+}
+
+} // namespace allreduce_recursive_doubling
+
+template <typename DataType>
+void AllreduceNVSHMEM<DataType>::recursive_doubling(
+    const DataType *send_buf, DataType *recv_buf, size_t count) {
+  size_t work_per_block;
+  int block_size;
+  int grid_size;
+  set_blocking_params(count, work_per_block, block_size, grid_size);
+
+  auto log_np = std::log2((float)m_np);
+  assert_always(std::ceil(log_np) == std::floor(log_np));
+
+  ensure_buffer(count);
+
+  const int num_steps = log_np;
+
+  // Need to have different sync objects for different thread blocks
+  m_sync.ensure_size(num_steps * grid_size);
+
+  allreduce_nvshmem::recursive_doubling_kernel<DataType><<<
+    grid_size, block_size, 0, m_stream>>>(
+        send_buf, recv_buf, static_cast<DataType*>(m_buf.get()),
+        count, work_per_block,
+        m_pid, m_np, num_steps, m_sync.get_for_device());
+}
+
+#define DEFINE_RECURSIVE_DOUBLING(TYPE)                                 \
+  template                                                              \
+  void AllreduceNVSHMEM<TYPE>::recursive_doubling(                      \
+      const TYPE *send_buf, TYPE *recv_buf, size_t count);
+DEFINE_RECURSIVE_DOUBLING(float)
+DEFINE_RECURSIVE_DOUBLING(double)
+DEFINE_RECURSIVE_DOUBLING(int)
+DEFINE_RECURSIVE_DOUBLING(long)
+#undef DEFINE_RECURSIVE_DOUBLING
 
 } // namespace tensor
 } // namespace distconv
