@@ -18,8 +18,9 @@ using namespace distconv;
 
 #ifdef DISTCONV_HAS_NVSHMEM
 static std::vector<std::string> nvshmem_methods = {
-  "AllreduceNVSHMEM", "AllreduceNVSHMEMRecursiveDoubling",
-  "AllreduceNVSHMEMRecursiveDoublingSingle"
+  "AllreduceNVSHMEM", "AllreduceNVSHMEMRecursiveDoublingHost",
+  "AllreduceNVSHMEMRecursiveDoubling",
+  "AllreduceNVSHMEMRecursiveDoublingBuffered",
 };
 #endif
 
@@ -138,6 +139,9 @@ std::unique_ptr<tensor::Allreduce<DataType>> make_reducer(const std::string name
   } else if (name == "AllreduceNVSHMEMRecursiveDoubling") {
     return std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
         stream, tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING);
+  } else if (name == "AllreduceNVSHMEMRecursiveDoublingBuffered") {
+    return std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+        stream, tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BUFFERED);
 #endif // DISTCONV_HAS_NVSHMEM
   } else {
     util::MPIRootPrintStreamError() << "Unknown allreducer name: '" << name << "'";

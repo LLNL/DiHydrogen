@@ -23,6 +23,10 @@ void barrier() {
   nvshmem_barrier_all();
 }
 
+void launch_barrier(cudaStream_t s) {
+  nvshmemx_barrier_all_on_stream(s);
+}
+
 namespace internal {
 
 __global__ void sync_pairwise_kernel(int peer,

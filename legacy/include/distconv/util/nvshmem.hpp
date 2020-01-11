@@ -33,6 +33,7 @@ namespace nvshmem {
 void initialize(MPI_Comm comm);
 void finalize();
 void barrier();
+void launch_barrier(cudaStream_t s);
 
 enum class SyncType {NONE, FENCE, QUIET};
 

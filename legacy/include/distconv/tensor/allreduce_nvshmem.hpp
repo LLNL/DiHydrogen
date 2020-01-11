@@ -18,7 +18,8 @@ namespace tensor {
 template <typename DataType>
 class AllreduceNVSHMEM: public Allreduce<DataType> {
  public:
-  enum Algo {NAIVE, RECURSIVE_DOUBLING_HOST, RECURSIVE_DOUBLING};
+  enum Algo {NAIVE, RECURSIVE_DOUBLING_HOST, RECURSIVE_DOUBLING,
+             RECURSIVE_DOUBLING_BUFFERED};
   AllreduceNVSHMEM(cudaStream_t stream, Algo algo=NAIVE):
       m_stream(stream), m_algo(algo), m_pid(nvshmem_my_pe()), m_np(nvshmem_n_pes()),
       m_sync(0) {
@@ -43,6 +44,9 @@ class AllreduceNVSHMEM: public Allreduce<DataType> {
         break;
       case RECURSIVE_DOUBLING:
         recursive_doubling(send_buf, recv_buf, count);
+        break;
+      case RECURSIVE_DOUBLING_BUFFERED:
+        recursive_doubling_buffered(send_buf, recv_buf, count);
         break;
       default:
         util::MPIRootPrintStreamError() << "Unknown allreduce algorithm";
@@ -152,18 +156,20 @@ class AllreduceNVSHMEM: public Allreduce<DataType> {
                            int &grid_size) {
     // default work size
     work_per_block = 1024;
-    work_per_block = std::max((size_t)32, std::min(count, work_per_block));
+    work_per_block = std::min(count, work_per_block);
     // override if set
     auto env = std::getenv("DISTCONV_RECURSIVE_DOUBLING_WORK_PER_BLOCK");
     if (env) {
       work_per_block = std::atoi(env);
     }
 
-    block_size = std::min(work_per_block, (size_t)256);
+    block_size = std::max(32, (int)std::min(work_per_block, (size_t)256));
     grid_size = (count + work_per_block - 1) / work_per_block;
   }
 
   void recursive_doubling(const DataType *send_buf, DataType *recv_buf, size_t count);
+  void recursive_doubling_buffered(const DataType *send_buf, DataType *recv_buf,
+                                   size_t count);
 
   void copy(const DataType *src, DataType *dst, size_t count);
   void reduce(const DataType *src, DataType *dst, size_t count);

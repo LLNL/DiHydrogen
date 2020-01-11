@@ -257,9 +257,10 @@ int test_forward(Data<NSD, Backend, DataType> &d,
   }
 
   be.wait();
-  MPI_Barrier(MPI_COMM_WORLD);
   util::MPIRootPrintStreamInfo() << "Starting " << cfg.run_count
                                  << " times of measurement";
+
+  DISTCONV_CHECK_MPI(MPI_Barrier(comm));
 
   Clock<Backend> clk(be);
   Clock<Backend> clk_allreduce(be);
@@ -271,6 +272,9 @@ int test_forward(Data<NSD, Backend, DataType> &d,
     }
     // Runs for synchronization
     bn.forward_allreduce(d.mean, d.var, is_training);
+    if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+      util::nvshmem::launch_barrier(be.get_stream());
+    }
     // Start measurement
     clk_allreduce.start();
     bn.forward_allreduce(d.mean, d.var, is_training);
@@ -331,6 +335,9 @@ int test_backward(Data<NSD, Backend, DataType> &d,
     }
     // synchronize the processes
     bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var);
+    if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+      util::nvshmem::launch_barrier(be.get_stream());
+    }
     clk_allreduce.start();
     bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var,
                           cfg.skip_weight_allreduce);
