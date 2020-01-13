@@ -713,6 +713,8 @@ struct ConvolutionTester<NSD, cudnn::BackendCUDNN, DataType> {
 #endif
     test_convolution_backward<NSD, cudnn::BackendCUDNN, DataType>(
       d, cfg, comm, be, conv, prof);
+    // This seems necessary to avoid hang using NVSHMEM v0.3.3
+    DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
     return 0;
   }
 };
