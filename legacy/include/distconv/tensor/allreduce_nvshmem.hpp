@@ -18,7 +18,7 @@ namespace tensor {
 template <typename DataType>
 class AllreduceNVSHMEM: public Allreduce<DataType> {
  public:
-  enum Algo {NAIVE, RECURSIVE_DOUBLING_HOST, RECURSIVE_DOUBLING,
+  enum Algo {NAIVE, NATIVE, RECURSIVE_DOUBLING_HOST, RECURSIVE_DOUBLING,
              RECURSIVE_DOUBLING_BUFFERED};
   AllreduceNVSHMEM(cudaStream_t stream, Algo algo=NAIVE):
       m_stream(stream), m_algo(algo), m_pid(nvshmem_my_pe()), m_np(nvshmem_n_pes()),
@@ -38,6 +38,9 @@ class AllreduceNVSHMEM: public Allreduce<DataType> {
     switch (m_algo) {
       case NAIVE:
         allreduce_naive(send_buf, recv_buf, count);
+        break;
+      case NATIVE:
+        allreduce_native(send_buf, recv_buf, count);
         break;
       case RECURSIVE_DOUBLING_HOST:
         recursive_doubling_host(send_buf, recv_buf, count);
@@ -61,6 +64,7 @@ class AllreduceNVSHMEM: public Allreduce<DataType> {
   int m_np;
   Memory<NVSHMEMAllocator> m_buf;
   util::nvshmem::SyncArray m_sync;
+  Memory<NVSHMEMAllocator> m_native_sync;
 
   void ensure_buffer(size_t count) {
     size_t cur_size = m_buf.get_size() / sizeof(DataType);
@@ -126,6 +130,31 @@ class AllreduceNVSHMEM: public Allreduce<DataType> {
     }
 
     m_sync.inc_counter(counter_idx, m_stream);
+  }
+
+  void ensure_native_sync() {
+    using SyncType = long;
+    size_t cur_size = m_native_sync.get_size() / sizeof(SyncType);
+    size_t required_size = NVSHMEM_REDUCE_SYNC_SIZE;
+    if (cur_size >= required_size) return;
+    m_native_sync.allocate(required_size * sizeof(SyncType));
+  }
+
+  void ensure_native_buffer(size_t count) {
+    size_t required_size = std::max(count / 2 + 1, (size_t)NVSHMEM_REDUCE_MIN_WRKDATA_SIZE);
+    ensure_buffer(required_size);
+  }
+
+  void allreduce_native(const DataType *send_buf, DataType *recv_buf,
+                        size_t count) {
+    ensure_native_sync();
+    ensure_native_buffer(count);
+    int pe_start = 0;
+    int pe_size = nvshmem_n_pes();
+    util::nvshmem::sum_to_all_on_stream(recv_buf, send_buf, count, pe_start,
+                                        0, pe_size, static_cast<DataType*>(m_buf.get()),
+                                        static_cast<long*>(m_native_sync.get()),
+                                        m_stream);
   }
 
   void recursive_doubling_host(const DataType *send_buf, DataType *recv_buf,

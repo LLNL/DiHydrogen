@@ -18,7 +18,9 @@ using namespace distconv;
 
 #ifdef DISTCONV_HAS_NVSHMEM
 static std::vector<std::string> nvshmem_methods = {
-  "AllreduceNVSHMEM", "AllreduceNVSHMEMRecursiveDoublingHost",
+  "AllreduceNVSHMEM",
+  "AllreduceNVSHMEMNATIVE",
+  "AllreduceNVSHMEMRecursiveDoublingHost",
   "AllreduceNVSHMEMRecursiveDoubling",
   "AllreduceNVSHMEMRecursiveDoublingBuffered",
 };
@@ -133,6 +135,9 @@ std::unique_ptr<tensor::Allreduce<DataType>> make_reducer(const std::string name
   } else if (name == "AllreduceNVSHMEM") {
     return std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
         stream, tensor::AllreduceNVSHMEM<DataType>::NAIVE);
+  } else if (name == "AllreduceNVSHMEMNATIVE") {
+    return std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+        stream, tensor::AllreduceNVSHMEM<DataType>::NATIVE);
   } else if (name == "AllreduceNVSHMEMRecursiveDoublingHost") {
     return std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
         stream, tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_HOST);

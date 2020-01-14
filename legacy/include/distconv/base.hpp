@@ -299,6 +299,7 @@ inline std::ostream& operator<<(std::ostream& os, const ChannelParallelismAlgori
 enum class BatchnormImpl {
   MPI, AL_NCCL,
 #ifdef DISTCONV_HAS_NVSHMEM
+  NVSHMEM_NATIVE,
   NVSHMEM_RECURSIVE_DOUBLING_HOST,
   NVSHMEM_RECURSIVE_DOUBLING,
   NVSHMEM_RECURSIVE_DOUBLING_BUFFERED,
@@ -311,6 +312,8 @@ inline std::ostream& operator<<(std::ostream &os, const BatchnormImpl &v) {
   } else if (v == BatchnormImpl::AL_NCCL) {
     return os << "AL_NCCL";
 #ifdef DISTCONV_HAS_NVSHMEM
+  } else if (v == BatchnormImpl::NVSHMEM_NATIVE) {
+    return os << "NVSHMEM_RECURSIVE_NATIVE";
   } else if (v == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_HOST) {
     return os << "NVSHMEM_RECURSIVE_DOUBLING_HOST";
   } else if (v == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING) {
@@ -330,6 +333,8 @@ inline BatchnormImpl GetBatchnormImpl(const std::string &impl) {
   } else if (impl == "AL_NCCL") {
     return BatchnormImpl::AL_NCCL;
 #ifdef DISTCONV_HAS_NVSHMEM
+  } else if (impl == "NVSHMEM_NATIVE") {
+    return BatchnormImpl::NVSHMEM_NATIVE;
   } else if (impl == "NVSHMEM_RECURSIVE_DOUBLING_HOST") {
     return BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_HOST;
   } else if (impl == "NVSHMEM_RECURSIVE_DOUBLING") {
@@ -346,6 +351,7 @@ inline BatchnormImpl GetBatchnormImpl(const std::string &impl) {
 inline bool IsNVSHMEMUsed(BatchnormImpl m) {
 #ifdef DISTCONV_HAS_NVSHMEM
   switch (m) {
+    case BatchnormImpl::NVSHMEM_NATIVE:
     case BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_HOST:
     case BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING:
     case BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_BUFFERED:

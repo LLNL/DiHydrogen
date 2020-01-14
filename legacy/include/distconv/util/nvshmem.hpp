@@ -206,14 +206,27 @@ DEFINE_PUT_NBI_BLOCK(int)
 DEFINE_PUT_NBI_BLOCK(long)
 #undef DEFINE_PUT_NBI_BLOCK
 
-
 #endif // __NVCC__
 
-#else
+#define DEFINE_SUM_TO_ALL(TYPE)                                         \
+  inline void sum_to_all_on_stream(TYPE *target, const TYPE *source, int nreduce, \
+                                   int PE_start, int logPE_stride, int PE_size, \
+                                   TYPE *pWrk, long *pSync, cudaStream_t s) { \
+    nvshmemx_##TYPE##_sum_to_all_on_stream(                             \
+        target, source, nreduce, PE_start,                              \
+        logPE_stride, PE_size, pWrk, pSync, s);                         \
+  }
+DEFINE_SUM_TO_ALL(float)
+DEFINE_SUM_TO_ALL(double)
+DEFINE_SUM_TO_ALL(int)
+DEFINE_SUM_TO_ALL(long)
+#undef DEFINE_SUM_TO_ALL
+
+#else // DISTCONV_HAS_NVSHMEM
 inline void initialize(MPI_Comm comm) {}
 inline void finalize() {}
 inline void barrier() {}
-#endif
+#endif // DISTCONV_HAS_NVSHMEM
 
 } // namespace nvshmem
 } // namespace util
