@@ -256,12 +256,12 @@ class Data {
   }
 };
 
-template <int NSD, typename Backend, typename DataType>
+template <int NSD, typename Backend, typename DataType, typename ConvType>
 int test_convolution_forward(Data<NSD, Backend, DataType> &d,
                              const BenchmarkConfig<NSD> &cfg,
                              MPI_Comm comm,
                              Backend &be,
-                             Convolution<Backend, NSD+2, DataType> &conv,
+                             ConvType &conv,
                              Profile<NSD> &prof) {
   int pid;
   MPI_Comm_rank(comm, &pid);
@@ -611,6 +611,9 @@ int test_convolution_backward(Data<NSD, Backend, DataType> &d,
 template <int NSD, typename Backend, typename DataType>
 struct ConvolutionTester;
 
+template <int NSD, typename Backend, typename DataType>
+struct DeconvolutionTester;
+
 template <int NSD, typename DataType>
 struct ConvolutionTester<NSD, ref::Backend, DataType> {
   ConvolutionTester() {}
@@ -642,6 +645,18 @@ struct ConvolutionTester<NSD, ref::Backend, DataType> {
     test_convolution_backward_filter<NSD, ref::Backend, DataType>(
         d, cfg, comm, be, conv, prof);
     return 0;
+  }
+};
+
+template <int NSD, typename DataType>
+struct DeconvolutionTester<NSD, ref::Backend, DataType> {
+  DeconvolutionTester() {}
+  int operator()(Data<NSD, ref::Backend, DataType> &d,
+                 const BenchmarkConfig<NSD> &cfg,
+                 MPI_Comm comm,
+                 Profile<NSD> &prof) {
+    util::MPIRootPrintStreamError() << "Not implemented";
+    std::exit(1);
   }
 };
 
@@ -718,6 +733,66 @@ struct ConvolutionTester<NSD, cudnn::BackendCUDNN, DataType> {
     return 0;
   }
 };
+
+// REFACTORING: This is mostly the same as ConvolutionTester
+template <int NSD, typename DataType>
+struct DeconvolutionTester<NSD, cudnn::BackendCUDNN, DataType> {
+  DeconvolutionTester() {}
+  int operator()(Data<NSD, cudnn::BackendCUDNN, DataType> &d,
+                 const BenchmarkConfig<NSD> &cfg, MPI_Comm comm,
+                 Profile<NSD> &prof) {
+    int pid;
+    DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
+    cudnnHandle_t cudnn_h;
+    DISTCONV_CHECK_CUDNN(cudnnCreate(&cudnn_h));
+    cudnn::Options be_opts(cfg.overlap_halo_exchange,
+                           cfg.deterministic,
+                           cfg.profiling);
+    cudnn::BackendCUDNN be(comm, cudnn_h, be_opts);
+    Deconvolution<cudnn::BackendCUDNN, DataType> conv(
+        be);
+    conv.setup(d.input, d.filter, d.output,
+               d.d_input, d.d_filter, d.d_output,
+               cfg.pads,
+               cfg.strides,
+               cfg.dilations,
+               cfg.num_groups,
+               cfg.conv_fwd_algo, cfg.conv_bwd_data_algo,
+               cfg.conv_bwd_filter_algo, 0);
+    if (cfg.use_bias) {
+      conv.setup_bias(d.bias);
+      conv.setup_bias_gradient(d.d_bias);
+    }
+    if (pid == 0) {
+      std::cout
+          << "Forward algorithm: " <<
+          util::CUDNNConvolutionFwdAlgorithms::get_name(
+              conv.get_fwd_algo())
+          << std::endl << "Backward data algorithm: " <<
+          util::CUDNNConvolutionBwdDataAlgorithms::get_name(
+              conv.get_bwd_data_algo())
+          << std::endl << "Backward filter algorithm: " <<
+          util::CUDNNConvolutionBwdFilterAlgorithms::get_name(
+              conv.get_bwd_filter_algo())
+          << std::endl;
+    }
+    // AUTOTUNE may modify tensors
+    if (cfg.conv_fwd_algo == "AUTOTUNE" ||
+        cfg.conv_bwd_data_algo == "AUTOTUNE" ||
+        cfg.conv_bwd_filter_algo == "AUTOTUNE") {
+      d.initialize();
+    }
+    test_convolution_forward<NSD, cudnn::BackendCUDNN, DataType>(
+      d, cfg, comm, be, conv, prof);
+#if 0
+    test_convolution_backward<NSD, cudnn::BackendCUDNN, DataType>(
+      d, cfg, comm, be, conv, prof);
+#endif
+    // This seems necessary to avoid hang using NVSHMEM v0.3.3
+    DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
+    return 0;
+  }
+};
 #endif
 
 template <int NSD>
@@ -744,7 +819,11 @@ void run(int argc, char *argv[], int pid, int np) {
   }
 #endif // DISTCONV_HAS_NVSHMEM
 
-  run_test<NSD, Data, Profile, ConvolutionTester>(cfg, MPI_COMM_WORLD);
+  if (cfg.deconv) {
+    run_test<NSD, Data, Profile, DeconvolutionTester>(cfg, MPI_COMM_WORLD);
+  } else {
+    run_test<NSD, Data, Profile, ConvolutionTester>(cfg, MPI_COMM_WORLD);
+  }
 
   util::MPIRootPrintStreamInfo() << "Finishing";
 
