@@ -250,27 +250,58 @@ std::ostream &operator<<(std::ostream &os, Opts &o) {
 }
 #endif
 
+template <int NSD>
 class Profile {
  public:
+  const BenchmarkConfig<NSD> &m_cfg;
   std::vector<float> conv_fwd_time;
   std::vector<float> conv_bwd_data_time;
   std::vector<float> conv_bwd_filter_time;
   std::vector<float> conv_bwd_bias_time;
-  Profile() = default;
 
-  template <int NSD>
-  std::ostream &print_as_row(std::ostream &os, const BenchmarkConfig<NSD> &cfg) {
+  Profile(const BenchmarkConfig<NSD> &cfg): m_cfg(cfg) {}
+
+  std::ostream &print_as_row(std::ostream &os) {
     for (size_t i = 0; i < conv_fwd_time.size(); ++i) {
       std::stringstream ss;
-      cfg.print_as_row(ss) << " " << conv_fwd_time[i] << " "
-                           << conv_bwd_data_time[i] << " "
-                           << conv_bwd_filter_time[i];
+      m_cfg.print_as_row(ss) << " " << conv_fwd_time[i] << " "
+                             << conv_bwd_data_time[i] << " "
+                             << conv_bwd_filter_time[i];
       if (i < conv_bwd_bias_time.size()) {
         ss << " " << conv_bwd_bias_time[i];
       }
       os << ss.str() << std::endl;
     }
     return os;
+  }
+
+  void print_summary(std::ostream &os) {
+    using namespace distconv_benchmark;
+    std::cout << "Forward mean: " << get_mean(conv_fwd_time)
+              << ", median: " << get_median(conv_fwd_time)
+              << ", min: " << get_min(conv_fwd_time)
+              << ", max: " << get_max(conv_fwd_time)
+              << "\n";
+    std::cout << "Backward data mean: "
+              << get_mean(conv_bwd_data_time)
+              << ", median: " << get_median(conv_bwd_data_time)
+              << ", min: " << get_min(conv_bwd_data_time)
+              << ", max: " << get_max(conv_bwd_data_time)
+              << "\n";
+    std::cout << "Backward filter mean: "
+              << get_mean(conv_bwd_filter_time)
+              << ", median: " << get_median(conv_bwd_filter_time)
+              << ", min: " << get_min(conv_bwd_filter_time)
+              << ", max: " << get_max(conv_bwd_filter_time)
+              << "\n";
+    if (m_cfg.use_bias) {
+      std::cout << "Backward bias mean: "
+                << get_mean(conv_bwd_bias_time)
+                << ", median: " << get_median(conv_bwd_bias_time)
+                << ", min: " << get_min(conv_bwd_bias_time)
+                << ", max: " << get_max(conv_bwd_bias_time)
+                << "\n";
+    }
   }
 };
 
@@ -630,7 +661,7 @@ void measure_forward_convolution(const Data<REAL> &d,
                                  cudnnConvolutionDescriptor_t conv_desc,
                                  size_t ws_size, void *ws,
                                  const BenchmarkConfig<NSD> &cfg,
-                                 Profile &prof) {
+                                 Profile<NSD> &prof) {
   std::vector<util::Clock> clks(cfg.run_count, stream);
   DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
   if (cfg.warming_up_count > 0) std::cout << "Warming up\n";
@@ -657,7 +688,7 @@ void measure_backward_data_convolution(const Data<REAL> &d,
                                        cudnnConvolutionDescriptor_t conv_desc,
                                        size_t ws_size, void *ws,
                                        const BenchmarkConfig<NSD> &cfg,
-                                       Profile &prof) {
+                                       Profile<NSD> &prof) {
   std::vector<util::Clock> clks(cfg.run_count, stream);
   DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
   if (cfg.warming_up_count > 0) std::cout << "Warming up\n";
@@ -684,7 +715,7 @@ void measure_backward_filter_convolution(const Data<REAL> &d,
                                          cudnnConvolutionDescriptor_t conv_desc,
                                          size_t ws_size, void *ws,
                                          const BenchmarkConfig<NSD> &cfg,
-                                         Profile &prof) {
+                                         Profile<NSD> &prof) {
   std::vector<util::Clock> clks(cfg.run_count, stream);
   DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
   if (cfg.warming_up_count > 0) std::cout << "Warming up\n";
@@ -709,7 +740,7 @@ void measure_backward_filter_convolution(const Data<REAL> &d,
 template <int NSD, typename REAL>
 void measure_backward_bias_convolution(const Data<REAL> &d,
                                        const BenchmarkConfig<NSD> &cfg,
-                                       Profile &prof) {
+                                       Profile<NSD> &prof) {
   std::vector<util::Clock> clks(cfg.run_count, stream);
   DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
   if (cfg.warming_up_count > 0) std::cout << "Warming up\n";
@@ -823,11 +854,26 @@ int run(const BenchmarkConfig<NSD> &cfg) {
   cudnnConvolutionDescriptor_t conv_desc = get_conv_desc<NSD, REAL>(cfg);
   std::cout << "conv_desc: " << util::tostring(conv_desc) << "\n";
 
+  std::cout
+      << "Forward algo: "
+      << (cfg.deconv ?
+          util::CUDNNConvolutionBwdDataAlgorithms::get_real_name(cfg.conv_fwd_algo) :
+          util::CUDNNConvolutionFwdAlgorithms::get_real_name(cfg.conv_fwd_algo))
+      << "\n"
+      << "Bacward data algo: "
+      << (cfg.deconv ?
+          util::CUDNNConvolutionFwdAlgorithms::get_real_name(cfg.conv_bwd_data_algo) :
+          util::CUDNNConvolutionBwdDataAlgorithms::get_real_name(cfg.conv_bwd_data_algo))
+      << "\n"
+      << "Bacward filter algo: "
+      << util::CUDNNConvolutionBwdFilterAlgorithms::get_real_name(cfg.conv_bwd_filter_algo)
+      << "\n";
+
   size_t ws_size;
   void *ws;
   setup_workspace(d, conv_desc, cfg, ws_size, ws);
 
-  Profile prof;
+  Profile<NSD> prof(cfg);
   measure_forward_convolution(d, conv_desc, ws_size, ws, cfg, prof);
   measure_backward_data_convolution(d, conv_desc, ws_size, ws, cfg, prof);
   measure_backward_filter_convolution(d, conv_desc, ws_size, ws, cfg, prof);
@@ -838,6 +884,8 @@ int run(const BenchmarkConfig<NSD> &cfg) {
   std::cout << "Destroying cudnn handle\n";
   DISTCONV_CHECK_CUDNN(cudnnDestroy(cudnn_h));
 
+  prof.print_summary(std::cout);
+
   std::ostream *output_stream;
   std::ofstream ofs;
   if (cfg.output_file.length() > 0) {
@@ -847,7 +895,7 @@ int run(const BenchmarkConfig<NSD> &cfg) {
     output_stream = &std::cout;
   }
 
-  prof.print_as_row(*output_stream, cfg);
+  prof.print_as_row(*output_stream);
 
   if (cfg.dump_output) {
     size_t output_tensor_size = calc_len(cfg.i_n, cfg.f_k,
