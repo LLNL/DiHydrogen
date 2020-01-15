@@ -765,12 +765,21 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
           m_conv_bwd_filter_d, m_bwd_filter_algo, ws, m_ws_size_bwd_filter,
           &beta, m_d_filter_d, d_filter.get_buffer()));
       } else {
-        DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardFilter(
-          m_be.get_handle(), &alpha, m_input_d,
-          input_ptr,
-          m_d_output_d, d_output.get_const_buffer(),
-          m_conv_bwd_filter_d, m_bwd_filter_algo, ws, m_ws_size_bwd_filter,
-          &beta, m_d_filter_d, d_filter.get_buffer()));
+        if (!m_deconv) {
+          DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardFilter(
+              m_be.get_handle(), &alpha, m_input_d,
+              input_ptr,
+              m_d_output_d, d_output.get_const_buffer(),
+              m_conv_bwd_filter_d, m_bwd_filter_algo, ws, m_ws_size_bwd_filter,
+              &beta, m_d_filter_d, d_filter.get_buffer()));
+        } else {
+          DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardFilter(
+              m_be.get_handle(), &alpha,
+              m_d_output_d, d_output.get_const_buffer(),
+              m_input_d, input_ptr,
+              m_conv_bwd_filter_d, m_bwd_filter_algo, ws, m_ws_size_bwd_filter,
+              &beta, m_d_filter_d, d_filter.get_buffer()));
+        }
       }
 
       internal::RuntimeCUDA::get_device_memory_pool().release(ws);
