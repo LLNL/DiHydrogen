@@ -356,9 +356,9 @@ class BenchmarkConfig {
     }
     if (pr.count("deterministic") > 0 || testing) {
       deterministic = true;
-      conv_fwd_algo = "IMPLICIT_GEMM";
-      conv_bwd_data_algo = "ALGO_1";
-      conv_bwd_filter_algo = "ALGO_1";
+      conv_fwd_algo = "DETERMINISTIC";
+      conv_bwd_data_algo = "DETERMINISTIC";
+      conv_bwd_filter_algo = "DETERMINISTIC";
     }
     if (pr.count("skip-allreduce") > 0) {
       skip_allreduce = true;
