@@ -164,7 +164,7 @@ class Data {
       << " locale_shape: " << util::join_array(locale_shape, " ");
     input = create_input_tensor<Tensor>(
         input_shape, locale_shape, filter_dims, strides,
-        dilations, MPI_COMM_WORLD);
+        dilations, cfg.deconv, MPI_COMM_WORLD);
     d_input = create_d_input_tensor<Tensor>(input);
 
     filter = create_filter_tensor<Tensor>(locale_shape, filter_dims,
@@ -173,11 +173,19 @@ class Data {
                                           cfg.chanfilt_algo);
     d_filter = create_d_filter_tensor<Tensor>(filter);
 
-    output = create_convolution_output_tensor<Tensor>(input, filter,
-                                                      strides, pads, dilations,
-                                                      cfg.num_groups);
-    d_output = create_convolution_d_output_tensor<Tensor>(
-        output, filter, dilations);
+    if (!cfg.deconv) {
+      output = create_convolution_output_tensor<Tensor>(input, filter,
+                                                        strides, pads, dilations,
+                                                        cfg.num_groups);
+      d_output = create_convolution_d_output_tensor<Tensor>(
+          output, filter, dilations);
+    } else {
+      output = create_deconvolution_output_tensor<Tensor>(input, filter,
+                                                          strides, pads, dilations,
+                                                          cfg.num_groups);
+      d_output = create_deconvolution_d_output_tensor<Tensor>(
+          output, filter, dilations);
+    }
 
     if (cfg.use_bias) {
       bias = create_bias_tensor<Tensor>(output);
@@ -684,7 +692,8 @@ struct ConvolutionTester<NSD, cudnn::BackendCUDNN, DataType> {
                cfg.dilations,
                cfg.num_groups,
                cfg.conv_fwd_algo, cfg.conv_bwd_data_algo,
-               cfg.conv_bwd_filter_algo, 0);
+               cfg.conv_bwd_filter_algo, 0, false,
+               cfg.deconv);
     if (cfg.use_bias) {
       conv.setup_bias(d.bias);
       conv.setup_bias_gradient(d.d_bias);
@@ -726,8 +735,10 @@ struct ConvolutionTester<NSD, cudnn::BackendCUDNN, DataType> {
           d, cfg, comm, be, conv, prof);
     }
 #endif
+#if 0
     test_convolution_backward<NSD, cudnn::BackendCUDNN, DataType>(
       d, cfg, comm, be, conv, prof);
+#endif
     // This seems necessary to avoid hang using NVSHMEM v0.3.3
     DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
     return 0;
@@ -819,11 +830,15 @@ void run(int argc, char *argv[], int pid, int np) {
   }
 #endif // DISTCONV_HAS_NVSHMEM
 
+#if 0
   if (cfg.deconv) {
     run_test<NSD, Data, Profile, DeconvolutionTester>(cfg, MPI_COMM_WORLD);
   } else {
     run_test<NSD, Data, Profile, ConvolutionTester>(cfg, MPI_COMM_WORLD);
   }
+#else
+  run_test<NSD, Data, Profile, ConvolutionTester>(cfg, MPI_COMM_WORLD);
+#endif
 
   util::MPIRootPrintStreamInfo() << "Finishing";
 

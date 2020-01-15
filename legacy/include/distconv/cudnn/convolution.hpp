@@ -238,7 +238,8 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
         const std::string &bwd_data_algo,
         const std::string &bwd_filter_algo,
         size_t ws_size,
-        bool skip_bp_data=false) {
+        bool skip_bp_data=false,
+        bool deconv=false) {
     // NVSHMEM-exchange requires all processes join the allocation of
     // halo buffers, so this must be called even the local buffer is
     // empty.
@@ -254,13 +255,20 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     select_chanfilt_algorithm(input, filter, output);
 
     m_skip_bp_data = skip_bp_data;
+    m_deconv = deconv;
 
     int stencil_dims[NSD];
     for (int i = 0; i < NSD; ++i) {
       auto window_dim = internal::get_dilated_filter_size(
           (int)filter.get_shape()[i], dilations[i]);
-      assert_always(window_dim % 2 == 1);
-      stencil_dims[i] = (window_dim - 1) / 2;
+      if (window_dim % 2) {
+        stencil_dims[i] = (window_dim - 1) / 2;
+      } else {
+        // Allow even-shaped filters only when no spatial data
+        // dependency exists
+        assert_eq(strides[i], window_dim);
+        stencil_dims[i] = 0;
+      }
     }
 
     auto p = pads[0];
@@ -473,11 +481,21 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
           m_fwd_algo, ws, m_ws_size_fwd,
           &beta, m_output_d, output.get_base_ptr()));
       } else {
-        DISTCONV_CHECK_CUDNN(cudnnConvolutionForward(
-          m_be.get_handle(), &alpha, m_input_d, input_ptr,
-          m_filter_d, filter.get_const_base_ptr(), m_conv_fwd_d,
-          m_fwd_algo, ws, m_ws_size_fwd,
-          &beta, m_output_d, output.get_base_ptr()));
+        // REFACTORING: Temporary adds deconv only this case
+        if (!m_deconv) {
+          DISTCONV_CHECK_CUDNN(cudnnConvolutionForward(
+              m_be.get_handle(), &alpha, m_input_d, input_ptr,
+              m_filter_d, filter.get_const_base_ptr(), m_conv_fwd_d,
+              m_fwd_algo, ws, m_ws_size_fwd,
+              &beta, m_output_d, output.get_base_ptr()));
+        } else {
+          DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardData(
+              m_be.get_handle(), &alpha,
+              m_filter_d, filter.get_const_base_ptr(),
+              m_input_d, input_ptr,
+              m_conv_fwd_d, m_bwd_data_algo, ws, m_ws_size_fwd,
+              &beta, m_output_d, output.get_base_ptr()));
+        }
       }
       record_end_comp();
     } else {
@@ -853,6 +871,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
  protected:
   cudnn::BackendCUDNN &m_be;
   bool m_skip_bp_data;
+  bool m_deconv;
   cudnnTensorDescriptor_t m_input_d;
   cudnnTensorDescriptor_t m_input_no_halo_d;
   cudnnFilterDescriptor_t m_filter_d;
@@ -1349,11 +1368,19 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
           &m_conv_fwd_d, &m_output_d, output,
           ws_size);
       } else {
-        m_fwd_algo = m_be.get_fwd_algorithm(
-          fwd_algo, &m_input_d, input,
-          &m_filter_d, filter,
-          &m_conv_fwd_d, &m_output_d, output,
-          ws_size);
+        if (!m_deconv) {
+          m_fwd_algo = m_be.get_fwd_algorithm(
+              fwd_algo, &m_input_d, input,
+              &m_filter_d, filter,
+              &m_conv_fwd_d, &m_output_d, output,
+              ws_size);
+        } else {
+          m_fwd_algo = m_be.get_fwd_algorithm(
+              fwd_algo, &m_output_d, output,
+              &m_filter_d, filter,
+              &m_conv_fwd_d, &m_input_d, input,
+              ws_size);
+        }
       }
       util::MPIPrintStreamDebug()
           << "Convolution forward algorithm: "
@@ -1416,13 +1443,25 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
         &m_conv_bwd_filter_d, &m_d_filter_d, filter, ws_size);
     } else {
       if (!m_skip_bp_data) {
-        m_bwd_data_algo = m_be.get_bwd_data_algorithm(
-          bwd_data_algo, &m_filter_d, filter, &m_d_output_d, output,
-          &m_conv_bwd_d, &m_d_input_d, input, ws_size);
+        if (!m_deconv) {
+          m_bwd_data_algo = m_be.get_bwd_data_algorithm(
+              bwd_data_algo, &m_filter_d, filter, &m_d_output_d, output,
+              &m_conv_bwd_d, &m_d_input_d, input, ws_size);
+        } else {
+          m_bwd_data_algo = m_be.get_bwd_data_algorithm(
+              bwd_data_algo, &m_filter_d, filter, &m_input_d, input,
+              &m_conv_bwd_d, &m_output_d, output, ws_size);
+        }
       }
-      m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
-        bwd_filter_algo, &m_input_d, input, &m_d_output_d, output,
-        &m_conv_bwd_filter_d, &m_d_filter_d, filter, ws_size);
+      if (!m_deconv) {
+        m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
+            bwd_filter_algo, &m_input_d, input, &m_d_output_d, output,
+            &m_conv_bwd_filter_d, &m_d_filter_d, filter, ws_size);
+      } else {
+        m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
+            bwd_filter_algo, &m_d_output_d, output, &m_input_d, input,
+            &m_conv_bwd_filter_d, &m_d_filter_d, filter, ws_size);
+      }
     }
     if (!m_skip_bp_data) {
       util::MPIPrintStreamDebug()
@@ -1464,9 +1503,14 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
                                m_be.get_handle(), m_input_gathered_d, m_filter_d, m_conv_fwd_d,
                                m_output_d, m_fwd_algo, &s));
       } else {
+#if 0
         DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(
                                m_be.get_handle(), m_input_d, m_filter_d, m_conv_fwd_d,
                                m_output_d, m_fwd_algo, &s));
+#else
+        s = get_workspace_size_fwd(m_input_d, m_filter_d, m_conv_fwd_d,
+                                   m_output_d);
+#endif
       }
     } else {
       if (m_interior_req) {
@@ -1479,6 +1523,21 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
       }
     }
     m_ws_size_fwd = s;
+  }
+
+  size_t get_workspace_size_fwd(cudnnTensorDescriptor_t input,
+                                cudnnFilterDescriptor_t filter,
+                                cudnnConvolutionDescriptor_t conv,
+                                cudnnTensorDescriptor_t output) {
+    size_t s;
+    if (!m_deconv) {
+      DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(
+          m_be.get_handle(), input, filter, conv, output, m_fwd_algo, &s));
+    } else {
+      DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardDataWorkspaceSize(
+          m_be.get_handle(), filter, input, conv, output, m_bwd_data_algo, &s));
+    }
+    return s;
   }
 
   void setup_workspace_size_fwd_boundaries() {
@@ -1500,7 +1559,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
   void setup_workspace_size_bwd_data() {
     if (m_skip_bp_data) return;
     size_t s;
-    cudnnStatus_t err;
+    cudnnStatus_t err = CUDNN_STATUS_SUCCESS;
     if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
       err = cudnnGetConvolutionBackwardDataWorkspaceSize(
         m_be.get_handle(), m_filter_d, m_d_output_gathered_d,
@@ -1512,10 +1571,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
         m_conv_bwd_d,
         m_d_input_all_channels_d, m_bwd_data_algo, &s);
     } else {
-      err = cudnnGetConvolutionBackwardDataWorkspaceSize(
-        m_be.get_handle(), m_filter_d, m_d_output_d,
-        m_conv_bwd_d,
-        m_d_input_d, m_bwd_data_algo, &s);
+      s = get_workspace_size_bwd_data(m_filter_d, m_d_output_d, m_d_input_d);
     }
     if (err != CUDNN_STATUS_SUCCESS) {
       util::MPIPrintStreamError()
@@ -1527,6 +1583,22 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
       DISTCONV_CHECK_CUDNN(err);
     }
     m_ws_size_bwd_data = s;
+  }
+
+  size_t get_workspace_size_bwd_data(cudnnFilterDescriptor_t filter,
+                                     cudnnTensorDescriptor_t d_output,
+                                     cudnnTensorDescriptor_t d_input) {
+    size_t s;
+    if (!m_deconv) {
+      DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardDataWorkspaceSize(
+          m_be.get_handle(), filter, d_output,
+          m_conv_bwd_d, d_input, m_bwd_data_algo, &s));
+    } else {
+      DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(
+          m_be.get_handle(), d_output, filter,
+          m_conv_bwd_d, d_input, m_fwd_algo, &s));
+    }
+    return s;
   }
 
   void setup_workspace_size_bwd_filter() {
@@ -1550,11 +1622,31 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
                              m_be.get_handle(), m_input_gathered_d, m_d_output_d,
                              m_conv_bwd_filter_d, m_d_filter_d, m_bwd_filter_algo, &s));
     } else {
+#if 0
       DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(
                              m_be.get_handle(), m_input_d, m_d_output_d,
                              m_conv_bwd_filter_d, m_d_filter_d, m_bwd_filter_algo, &s));
+#else
+      s = get_workspace_size_bwd_filter(m_input_d, m_d_output_d, m_d_filter_d);
+#endif
     }
     m_ws_size_bwd_filter = s;
+  }
+
+  size_t get_workspace_size_bwd_filter(cudnnTensorDescriptor_t input,
+                                       cudnnTensorDescriptor_t d_output,
+                                       cudnnFilterDescriptor_t d_filter) {
+    size_t s = 0;
+    if (!m_deconv) {
+      DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(
+          m_be.get_handle(), input, d_output,
+          m_conv_bwd_filter_d, d_filter, m_bwd_filter_algo, &s));
+    } else {
+      DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(
+          m_be.get_handle(), d_output, input,
+          m_conv_bwd_filter_d, d_filter, m_bwd_filter_algo, &s));
+    }
+    return s;
   }
 
   template <typename TensorType>
@@ -1594,8 +1686,14 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
 
     auto stencil_dims = filter_shape;
     for (int i = 0; i < NSD; ++i) {
-      stencil_dims[i] = (internal::get_dilated_filter_size<int>(
-          stencil_dims[i], dilations[i]) - 1) / 2;
+      auto window_dim = internal::get_dilated_filter_size<int>(
+          stencil_dims[i], dilations[i]);
+      if (window_dim % 2) {
+        stencil_dims[i] = (window_dim - 1) / 2;
+      } else {
+        assert_eq(window_dim, strides[i]);
+        stencil_dims[i] = 0;
+      }
     }
 
     // Case without padding should work if stride is 1. Stride > 1 is
