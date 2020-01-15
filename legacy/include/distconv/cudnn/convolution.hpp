@@ -668,11 +668,19 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
         reduce_scatter_chanfilt(m_d_input_all_channels_t, d_input);
       }
     } else {
-      DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardData(
-        m_be.get_handle(), &alpha, m_filter_d, filter.get_const_base_ptr(),
-        m_d_output_d, d_output.get_const_buffer(),
-        m_conv_bwd_d, m_bwd_data_algo, ws, m_ws_size_bwd_data,
-        &beta, m_d_input_d, d_input_ptr));
+      if (!m_deconv) {
+        DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardData(
+            m_be.get_handle(), &alpha, m_filter_d, filter.get_const_base_ptr(),
+            m_d_output_d, d_output.get_const_buffer(),
+            m_conv_bwd_d, m_bwd_data_algo, ws, m_ws_size_bwd_data,
+            &beta, m_d_input_d, d_input_ptr));
+      } else {
+        DISTCONV_CHECK_CUDNN(cudnnConvolutionForward(
+            m_be.get_handle(), &alpha, m_d_output_d, d_output.get_const_buffer(),
+            m_filter_d, filter.get_const_base_ptr(),
+            m_conv_bwd_d, m_fwd_algo, ws, m_ws_size_bwd_data,
+            &beta, m_d_input_d, d_input_ptr));
+      }
     }
     record_end_comp();
     if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {

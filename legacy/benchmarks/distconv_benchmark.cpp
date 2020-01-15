@@ -567,13 +567,10 @@ int test_convolution_backward(Data<NSD, Backend, DataType> &d,
     if (call_halo_exch_separately) {
       conv.backward_data_exchange_halo(d.d_output);
     }
-
     clk_filter.start();
-#if 1
     conv.backward_filter(DataType(1.0), d.input, d.d_output,
                          DataType(0.0), d.d_filter,
                          !cfg.skip_allreduce, cfg.skip_chanfilt_comm);
-#endif
     clk_filter.stop();
     if (cfg.use_bias) {
       clk_bias.start();
@@ -735,10 +732,8 @@ struct ConvolutionTester<NSD, cudnn::BackendCUDNN, DataType> {
           d, cfg, comm, be, conv, prof);
     }
 #endif
-#if 0
     test_convolution_backward<NSD, cudnn::BackendCUDNN, DataType>(
       d, cfg, comm, be, conv, prof);
-#endif
     // This seems necessary to avoid hang using NVSHMEM v0.3.3
     DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
     return 0;
