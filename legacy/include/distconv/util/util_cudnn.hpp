@@ -82,8 +82,13 @@ struct CUDNNConvolutionFwdAlgorithms {
   }
 };
 
-inline std::ostream &operator<<(std::ostream &os, cudnnConvolutionFwdAlgo_t &algo) {
+inline std::ostream &operator<<(std::ostream &os,
+                                const cudnnConvolutionFwdAlgo_t &algo) {
   return os << CUDNNConvolutionFwdAlgorithms::get_name(algo);
+}
+
+inline std::string get_name(const cudnnConvolutionFwdAlgo_t &algo) {
+  return CUDNNConvolutionFwdAlgorithms::get_name(algo);
 }
 
 struct CUDNNConvolutionBwdDataAlgorithms {
@@ -128,8 +133,12 @@ struct CUDNNConvolutionBwdDataAlgorithms {
 };
 
 inline std::ostream &operator<<(std::ostream &os,
-                                cudnnConvolutionBwdDataAlgo_t &algo) {
+                                const cudnnConvolutionBwdDataAlgo_t &algo) {
   return os << CUDNNConvolutionBwdDataAlgorithms::get_name(algo);
+}
+
+inline std::string get_name(const cudnnConvolutionBwdDataAlgo_t &algo) {
+  return CUDNNConvolutionBwdDataAlgorithms::get_name(algo);
 }
 
 struct CUDNNConvolutionBwdFilterAlgorithms {
@@ -182,8 +191,12 @@ struct CUDNNConvolutionBwdFilterAlgorithms {
 };
 
 inline std::ostream &operator<<(std::ostream &os,
-                                cudnnConvolutionBwdFilterAlgo_t &algo) {
+                                const cudnnConvolutionBwdFilterAlgo_t &algo) {
   return os << CUDNNConvolutionBwdFilterAlgorithms::get_name(algo);
+}
+
+inline std::string get_name(const cudnnConvolutionBwdFilterAlgo_t &algo) {
+  return CUDNNConvolutionBwdFilterAlgorithms::get_name(algo);
 }
 
 inline std::ostream &operator<<(std::ostream &os, cudnnTensorFormat_t &fmt) {

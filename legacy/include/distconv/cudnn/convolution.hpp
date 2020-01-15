@@ -1350,6 +1350,17 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
                         void *filter,
                         void *output,
                         size_t ws_size=0) {
+    setup_algorithms_fwd(fwd_algo, input, filter, output, ws_size);
+    setup_algorithms_bwd(bwd_data_algo, bwd_filter_algo, input, filter, output, ws_size);
+  }
+
+  void setup_algorithms_fwd(const std::string &fwd_algo,
+                            void *input,
+                            void *filter,
+                            void *output,
+                            size_t ws_size=0) {
+    // Note that m_bwd algo is set when deconv is used. Support for
+    // deconv is partial.
     if (!m_overlap_halo_exchange_fwd) {
       if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
         get_tmp_tensor_buffer(m_output_all_filters_t);
@@ -1370,32 +1381,28 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
       } else {
         if (!m_deconv) {
           m_fwd_algo = m_be.get_fwd_algorithm(
-              fwd_algo, &m_input_d, input,
-              &m_filter_d, filter,
-              &m_conv_fwd_d, &m_output_d, output,
-              ws_size);
+              fwd_algo, &m_input_d, input, &m_filter_d, filter,
+              &m_conv_fwd_d, &m_output_d, output, ws_size);
         } else {
-          m_fwd_algo = m_be.get_fwd_algorithm(
-              fwd_algo, &m_output_d, output,
-              &m_filter_d, filter,
-              &m_conv_fwd_d, &m_input_d, input,
-              ws_size);
+          m_bwd_data_algo = m_be.get_bwd_data_algorithm(
+              fwd_algo, &m_filter_d, filter, &m_input_d, input,
+              &m_conv_fwd_d, &m_output_d, output, ws_size);
         }
       }
       util::MPIPrintStreamDebug()
           << "Convolution forward algorithm: "
-          << util::CUDNNConvolutionFwdAlgorithms::get_name(m_fwd_algo);
-    } else if (m_interior_req) {
-      m_fwd_algo = m_be.get_fwd_algorithm(
-          fwd_algo, &m_input_interior_d, input,
-          &m_filter_d, filter, &m_conv_fwd_d,
-          &m_output_interior_d, output, ws_size);
-      util::MPIPrintStreamDebug()
-          << "Convolution forward interior algorithm: "
-          << util::CUDNNConvolutionFwdAlgorithms::get_name(m_fwd_algo);
-    }
-    // TODO: Need to support this with chanfilt.
-    if (m_overlap_halo_exchange_fwd) {
+          << (m_deconv ? util::get_name(m_bwd_data_algo) : util::get_name(m_fwd_algo));
+    } else {
+      if (m_interior_req) {
+        m_fwd_algo = m_be.get_fwd_algorithm(
+            fwd_algo, &m_input_interior_d, input,
+            &m_filter_d, filter, &m_conv_fwd_d,
+            &m_output_interior_d, output, ws_size);
+        util::MPIPrintStreamDebug()
+            << "Convolution forward interior algorithm: "
+            << util::get_name(m_fwd_algo);
+      }
+      // TODO: Need to support this with chanfilt.
       apply_to_spatial_sides<ND>(
           [&](int i, Side side) {
             if (m_boundary_req(i, side)) {
@@ -1412,35 +1419,44 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
               util::MPIPrintStreamDebug()
                   << "Convolution forward boundary algorithm for (" << i << ", "
                   << side << "): "
-                  << util::CUDNNConvolutionFwdAlgorithms::get_name(m_fwd_boundary_algos(i, side));
+                  << util::get_name(m_fwd_boundary_algos(i, side));
             }
           });
     }
+  }
 
+  void setup_algorithms_bwd(const std::string &bwd_data_algo,
+                            const std::string &bwd_filter_algo,
+                            void *input,
+                            void *filter,
+                            void *output,
+                            size_t ws_size=0) {
+    // Similarly to setup_algorithms_fwd, m_fwd_algo is set when
+    // deconv is used.
     if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
       get_tmp_tensor_buffer(m_d_output_gathered_t);
       if (!m_skip_bp_data) {
         m_bwd_data_algo = m_be.get_bwd_data_algorithm(
-          bwd_data_algo, &m_filter_d, filter, &m_d_output_gathered_d,
-          m_d_output_gathered_t.get_buffer(),
-          &m_conv_bwd_d, &m_d_input_d, input, ws_size);
+            bwd_data_algo, &m_filter_d, filter, &m_d_output_gathered_d,
+            m_d_output_gathered_t.get_buffer(),
+            &m_conv_bwd_d, &m_d_input_d, input, ws_size);
       }
       m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
-        bwd_filter_algo, &m_input_d, input, &m_d_output_gathered_d,
-        m_d_output_gathered_t.get_buffer(),
-        &m_conv_bwd_filter_d, &m_d_filter_d, filter, ws_size);
+          bwd_filter_algo, &m_input_d, input, &m_d_output_gathered_d,
+          m_d_output_gathered_t.get_buffer(),
+          &m_conv_bwd_filter_d, &m_d_filter_d, filter, ws_size);
       release_tmp_tensor_buffer(m_d_output_gathered_t);
     } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y) {
       if (!m_skip_bp_data) {
         m_bwd_data_algo = m_be.get_bwd_data_algorithm(
-          bwd_data_algo, &m_filter_d, filter, &m_d_output_d, output,
-          &m_conv_bwd_d, &m_d_input_all_channels_d,
-          m_d_input_all_channels_t.get_buffer(), ws_size);
+            bwd_data_algo, &m_filter_d, filter, &m_d_output_d, output,
+            &m_conv_bwd_d, &m_d_input_all_channels_d,
+            m_d_input_all_channels_t.get_buffer(), ws_size);
       }
       m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
-        bwd_filter_algo, &m_input_gathered_d, m_input_gathered_t.get_buffer(),
-        &m_d_output_d, output,
-        &m_conv_bwd_filter_d, &m_d_filter_d, filter, ws_size);
+          bwd_filter_algo, &m_input_gathered_d, m_input_gathered_t.get_buffer(),
+          &m_d_output_d, output,
+          &m_conv_bwd_filter_d, &m_d_filter_d, filter, ws_size);
     } else {
       if (!m_skip_bp_data) {
         if (!m_deconv) {
@@ -1448,9 +1464,9 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
               bwd_data_algo, &m_filter_d, filter, &m_d_output_d, output,
               &m_conv_bwd_d, &m_d_input_d, input, ws_size);
         } else {
-          m_bwd_data_algo = m_be.get_bwd_data_algorithm(
-              bwd_data_algo, &m_filter_d, filter, &m_input_d, input,
-              &m_conv_bwd_d, &m_output_d, output, ws_size);
+          m_fwd_algo = m_be.get_fwd_algorithm(
+              bwd_data_algo, &m_d_output_d, output, &m_filter_d, filter,
+              &m_conv_bwd_d, &m_d_input_d, input, ws_size);
         }
       }
       if (!m_deconv) {
@@ -1465,13 +1481,12 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     }
     if (!m_skip_bp_data) {
       util::MPIPrintStreamDebug()
-        << "Convolution backward data algorithm: "
-        << util::CUDNNConvolutionBwdDataAlgorithms::get_name(m_bwd_data_algo);
+          << "Convolution backward data algorithm: "
+          << (m_deconv ? util::get_name(m_fwd_algo) : util::get_name(m_bwd_data_algo));
     }
     util::MPIPrintStreamDebug()
         << "Convolution backward filter algorithm: "
-        << util::CUDNNConvolutionBwdFilterAlgorithms::get_name(
-          m_bwd_filter_algo);
+        << util::get_name(m_bwd_filter_algo);
   }
 
   void setup_workspace_sizes() {
@@ -1503,14 +1518,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
                                m_be.get_handle(), m_input_gathered_d, m_filter_d, m_conv_fwd_d,
                                m_output_d, m_fwd_algo, &s));
       } else {
-#if 0
-        DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(
-                               m_be.get_handle(), m_input_d, m_filter_d, m_conv_fwd_d,
-                               m_output_d, m_fwd_algo, &s));
-#else
-        s = get_workspace_size_fwd(m_input_d, m_filter_d, m_conv_fwd_d,
-                                   m_output_d);
-#endif
+        s = get_workspace_size_fwd(m_input_d, m_filter_d, m_output_d);
       }
     } else {
       if (m_interior_req) {
@@ -1527,15 +1535,14 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
 
   size_t get_workspace_size_fwd(cudnnTensorDescriptor_t input,
                                 cudnnFilterDescriptor_t filter,
-                                cudnnConvolutionDescriptor_t conv,
                                 cudnnTensorDescriptor_t output) {
     size_t s;
     if (!m_deconv) {
       DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(
-          m_be.get_handle(), input, filter, conv, output, m_fwd_algo, &s));
+          m_be.get_handle(), input, filter, m_conv_fwd_d, output, m_fwd_algo, &s));
     } else {
       DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardDataWorkspaceSize(
-          m_be.get_handle(), filter, input, conv, output, m_bwd_data_algo, &s));
+          m_be.get_handle(), filter, input, m_conv_fwd_d, output, m_bwd_data_algo, &s));
     }
     return s;
   }
@@ -1622,13 +1629,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
                              m_be.get_handle(), m_input_gathered_d, m_d_output_d,
                              m_conv_bwd_filter_d, m_d_filter_d, m_bwd_filter_algo, &s));
     } else {
-#if 0
-      DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(
-                             m_be.get_handle(), m_input_d, m_d_output_d,
-                             m_conv_bwd_filter_d, m_d_filter_d, m_bwd_filter_algo, &s));
-#else
       s = get_workspace_size_bwd_filter(m_input_d, m_d_output_d, m_d_filter_d);
-#endif
     }
     m_ws_size_bwd_filter = s;
   }
