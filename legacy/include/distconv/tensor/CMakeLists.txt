@@ -32,9 +32,9 @@ if (DISTCONV_HAS_P2P)
   list(APPEND THIS_DIR_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/halo_exchange_cuda_hybrid.hpp")
   list(APPEND THIS_DIR_HEADERS
-    "${CMAKE_CURRENT_SOURCE_DIR}/shuffle_mpi_p2p.hpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/shuffle_mpi_cuda_p2p.hpp")
   list(APPEND THIS_DIR_HEADERS
-    "${CMAKE_CURRENT_SOURCE_DIR}/shuffle_mpi_hybrid.hpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/shuffle_mpi_cuda_hybrid.hpp")
 endif ()
 
 if (DISTCONV_HAS_NVSHMEM)
