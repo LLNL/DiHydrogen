@@ -93,22 +93,21 @@ class Pooling<cudnn::BackendCUDNN, ND, DataType> {
     assert_always(util::is_all_elements_equal(strides));
 
     // TODO: only stencil-like windows are supported
-    int_vector stencils;
-    for(auto i = windows.begin(); i != windows.end(); i++) {
-      assert_eq(*i % 2, 1);
-      stencils.push_back((*i - 1) / 2);
+    for (int i = 0; i < NSD; ++i) {
+      auto w = windows[i];
+      if (w % 2) {
+        auto stencil = (w - 1) / 2;
+        // Padding must be zero or match with the stencil size
+        assert_always(pads[i] == 0 || pads[i] == stencil);
+        // TODO: stride limitation
+        assert_always(strides[i] == 1 || strides[i] == stencil + 1);
+      } else {
+        assert_always(w == strides[i]);
+        assert_always(pads[i] == 0);
+      }
     }
 
-    // Padding must be zero or match with the window size
-    for(auto i = pads.begin(); i != pads.end(); i++) {
-      assert_always(*i == 0 || *i == stencils[std::distance(pads.begin(), i)]);
-    }
     bool use_padding = pads[0] != 0;
-
-    // TODO: stride limitation
-    for(auto i = strides.begin(); i != strides.end(); i++) {
-      assert_always(*i == 1 || *i == stencils[std::distance(strides.begin(), i)] + 1);
-    }
 
     // As halo exchanges with shared tensors is not yet implemented,
     // the spatial domain must be partitioned without sharing or

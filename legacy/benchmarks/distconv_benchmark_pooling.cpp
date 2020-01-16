@@ -206,7 +206,7 @@ int test_forward(Data<NSD, Backend, DataType> &d,
     prof.fwd_time.push_back(elapsed);
   }
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
-  util::MPIRootPrintStreamInfo() << "Measurement done\n";
+  util::MPIRootPrintStreamInfo() << "Measurement done";
 
   return 0;
 }
@@ -259,7 +259,7 @@ int test_backward(Data<NSD, Backend, DataType> &d,
     prof.bwd_time.push_back(elapsed);
   }
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
-  util::MPIRootPrintStreamInfo() << "Measurement done\n";
+  util::MPIRootPrintStreamInfo() << "Measurement done";
 
   return 0;
 }

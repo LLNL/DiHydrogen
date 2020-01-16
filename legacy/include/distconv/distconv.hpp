@@ -245,12 +245,16 @@ Tensor create_input_tensor(const int_vector &shape,
   IntVector overlap(nd, 0);
   if (!deconv) {
     for (int i = 0; i < nsd; ++i) {
+      if (locale_shape[i] == 1) continue;
       auto df = internal::get_dilated_filter_size(
           filter_dims[i], dilations[i]);
-      int overlap_i = (df - 1) / 2;
-      assert0((df - 1) % 2);
-      if (locale_shape[i] > 1) {
+      if ((df - 1) % 2) {
+        int overlap_i = (df - 1) / 2;
         overlap[i] = overlap_i;
+      } else {
+        // allows even-shaped filters when a stride of the equal size
+        // is used
+        assert_always(df == strides[i]);
       }
     }
   }
@@ -482,25 +486,28 @@ Tensor create_pooling_output_tensor(const Tensor &input,
   const int nd = input.get_num_dims();
   const int nsd = input.get_num_spatial_dims();
   bool use_padding = pad[0] != 0;
-
-  for (int i = 0; i < nsd; ++i) {
-    assert_always(((window[i] - 1) % 2) == 0);
-    assert_always(pad[i] == 0 || pad[i] * 2 + 1 == window[i]);
-    // padding only for height or width is not considered
-    if (use_padding) {
-      assert_ne((int)pad[i], 0);
-    } else {
-      assert0(pad[i]);
-    }
-  }
   auto output_shape = input.get_shape();
   for (int i = 0; i < nsd; ++i) {
     if (output_shape[i] + pad[i] * 2 < (index_t)window[i]) {
       output_shape[i] = 0;
-    } else {
+      continue;
+    }
+    bool odd = (window[i] - 1) % 2;
+    if (odd) {
+      assert_always(pad[i] == 0 || pad[i] * 2 + 1 == window[i]);
+      // padding only for height or width is not considered
+      if (use_padding) {
+        assert_ne((int)pad[i], 0);
+      } else {
+        assert0(pad[i]);
+      }
       output_shape[i] = util::ceil(
           output_shape[i] - window[i] + 1 + pad[i] * 2,
           (index_t)strides[i]);
+    } else {
+      assert_always(pad[i] == 0);
+      assert_always(strides[i] == window[i]);
+      output_shape[i] /= strides[i];
     }
   }
   auto dist = input.get_distribution();
