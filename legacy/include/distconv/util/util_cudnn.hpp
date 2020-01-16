@@ -38,7 +38,7 @@ inline std::ostream &operator<<(std::ostream &os, cudnnDataType_t &dt) {
 }
 
 struct CUDNNConvolutionFwdAlgorithms {
-  const static int num = 8;
+  const static int num = 10;
   using algo_pair = std::pair<cudnnConvolutionFwdAlgo_t, std::string>;
   algo_pair algos[num] = {
     std::make_pair(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM,
@@ -56,7 +56,11 @@ struct CUDNNConvolutionFwdAlgorithms {
     std::make_pair(CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD,
                    "WINOGRAD"),
     std::make_pair(CUDNN_CONVOLUTION_FWD_ALGO_WINOGRAD_NONFUSED,
-                   "WINOGRAD_NONFUSED")};
+                   "WINOGRAD_NONFUSED"),
+    std::make_pair(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM,
+                   "DEFAULT"),
+    std::make_pair(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM,
+                   "DETERMINISTIC")};
 
   static int get_index(cudnnConvolutionFwdAlgo_t algo) {
     CUDNNConvolutionFwdAlgorithms x;
@@ -80,14 +84,22 @@ struct CUDNNConvolutionFwdAlgorithms {
     CUDNNConvolutionFwdAlgorithms x;
     return x.algos[get_index(name)].first;
   }
+  static std::string get_real_name(const std::string &name) {
+    return get_name(get_algo(name));
+  }
 };
 
-inline std::ostream &operator<<(std::ostream &os, cudnnConvolutionFwdAlgo_t &algo) {
+inline std::ostream &operator<<(std::ostream &os,
+                                const cudnnConvolutionFwdAlgo_t &algo) {
   return os << CUDNNConvolutionFwdAlgorithms::get_name(algo);
 }
 
+inline std::string get_name(const cudnnConvolutionFwdAlgo_t &algo) {
+  return CUDNNConvolutionFwdAlgorithms::get_name(algo);
+}
+
 struct CUDNNConvolutionBwdDataAlgorithms {
-  const static int num = 6;
+  const static int num = 8;
   using algo_pair = std::pair<cudnnConvolutionBwdDataAlgo_t, std::string>;
   algo_pair algos[num] = {
     std::make_pair(CUDNN_CONVOLUTION_BWD_DATA_ALGO_0,
@@ -101,7 +113,11 @@ struct CUDNNConvolutionBwdDataAlgorithms {
     std::make_pair(CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD,
                    "WINOGRAD"),
     std::make_pair(CUDNN_CONVOLUTION_BWD_DATA_ALGO_WINOGRAD_NONFUSED,
-                   "WINOGRAD_NONFUSED")};
+                   "WINOGRAD_NONFUSED"),
+    std::make_pair(CUDNN_CONVOLUTION_BWD_DATA_ALGO_0,
+                   "DEFAULT"),
+    std::make_pair(CUDNN_CONVOLUTION_BWD_DATA_ALGO_1,
+                   "DETERMINISTIC")};
 
   static int get_index(cudnnConvolutionBwdDataAlgo_t algo) {
     CUDNNConvolutionBwdDataAlgorithms x;
@@ -125,15 +141,22 @@ struct CUDNNConvolutionBwdDataAlgorithms {
     CUDNNConvolutionBwdDataAlgorithms x;
     return x.algos[get_index(name)].first;
   }
+  static std::string get_real_name(const std::string &name) {
+    return get_name(get_algo(name));
+  }
 };
 
 inline std::ostream &operator<<(std::ostream &os,
-                                cudnnConvolutionBwdDataAlgo_t &algo) {
+                                const cudnnConvolutionBwdDataAlgo_t &algo) {
   return os << CUDNNConvolutionBwdDataAlgorithms::get_name(algo);
 }
 
+inline std::string get_name(const cudnnConvolutionBwdDataAlgo_t &algo) {
+  return CUDNNConvolutionBwdDataAlgorithms::get_name(algo);
+}
+
 struct CUDNNConvolutionBwdFilterAlgorithms {
-  const static int num = 7;
+  const static int num = 9;
   using algo_pair = std::pair<cudnnConvolutionBwdFilterAlgo_t, std::string>;
   algo_pair algos[num] = {
     std::make_pair(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0,
@@ -151,7 +174,11 @@ struct CUDNNConvolutionBwdFilterAlgorithms {
     std::make_pair(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD,
                    "WINOGRAD"),
     std::make_pair(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_WINOGRAD_NONFUSED,
-                   "WINOGRAD_NONFUSED")};
+                   "WINOGRAD_NONFUSED"),
+    std::make_pair(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0,
+                   "DEFAULT"),
+    std::make_pair(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_1,
+                   "DETERMINISTIC")};
 
   static int get_index(cudnnConvolutionBwdFilterAlgo_t algo) {
     CUDNNConvolutionBwdFilterAlgorithms x;
@@ -179,11 +206,18 @@ struct CUDNNConvolutionBwdFilterAlgorithms {
     assert_always(idx != -1);
     return x.algos[idx].first;
   }
+  static std::string get_real_name(const std::string &name) {
+    return get_name(get_algo(name));
+  }
 };
 
 inline std::ostream &operator<<(std::ostream &os,
-                                cudnnConvolutionBwdFilterAlgo_t &algo) {
+                                const cudnnConvolutionBwdFilterAlgo_t &algo) {
   return os << CUDNNConvolutionBwdFilterAlgorithms::get_name(algo);
+}
+
+inline std::string get_name(const cudnnConvolutionBwdFilterAlgo_t &algo) {
+  return CUDNNConvolutionBwdFilterAlgorithms::get_name(algo);
 }
 
 inline std::ostream &operator<<(std::ostream &os, cudnnTensorFormat_t &fmt) {

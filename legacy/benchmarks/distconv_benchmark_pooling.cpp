@@ -81,7 +81,7 @@ class Data {
     const int_vector dilations(cfg.get_num_spatial_dims(), 1);
     input = create_input_tensor<Tensor>(
         input_shape, locale_shape, window, strides,
-        dilations, MPI_COMM_WORLD);
+        dilations, false, MPI_COMM_WORLD);
     d_input = create_d_input_tensor<Tensor>(input);
     output = create_pooling_output_tensor<Tensor>(input, window, strides, pads);
     d_output = create_pooling_d_output_tensor<Tensor>(output);

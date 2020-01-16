@@ -176,6 +176,8 @@ class BenchmarkConfig {
 
   bool global_stat;
 
+  bool deconv;
+
   // Some initial values are intended to be rewritten by corresponding
   // default/user-given arguments in `cxxopts::ParseResult`.
   BenchmarkConfig(): i_n(-1), i_c(-1), i_s({}),
@@ -210,7 +212,8 @@ class BenchmarkConfig {
             skip_chanfilt_comm(false),
             spin_time_ms(100),
             host(false),
-            global_stat(false) {}
+            global_stat(false),
+            deconv(false) {}
   BenchmarkConfig(const cxxopts::ParseResult &pr, const bool is_conv):
       BenchmarkConfig() {
     // The following arguments are required.
@@ -353,9 +356,9 @@ class BenchmarkConfig {
     }
     if (pr.count("deterministic") > 0 || testing) {
       deterministic = true;
-      conv_fwd_algo = "IMPLICIT_GEMM";
-      conv_bwd_data_algo = "ALGO_1";
-      conv_bwd_filter_algo = "ALGO_1";
+      conv_fwd_algo = "DETERMINISTIC";
+      conv_bwd_data_algo = "DETERMINISTIC";
+      conv_bwd_filter_algo = "DETERMINISTIC";
     }
     if (pr.count("skip-allreduce") > 0) {
       skip_allreduce = true;
@@ -372,6 +375,9 @@ class BenchmarkConfig {
     }
     if (pr.count("global-stat") > 0) {
       global_stat = true;
+    }
+    if (pr.count("deconv") > 0) {
+      deconv = true;
     }
 
     assert_num_spatial_dims();
@@ -416,6 +422,7 @@ class BenchmarkConfig {
        << ", overlap halo exchange: " << overlap_halo_exchange
        << ", testing: " << testing
        << ", global stat: " << global_stat
+       << ", deconv: " << deconv
        << std::endl;
     return os << ss.str();
   }
@@ -548,6 +555,7 @@ inline BenchmarkConfig<NSD> process_opt(int argc, char *argv[], int pid,
       ("spin-time", "Mili seconds to spin", cxxopts::value<int>()->default_value("100"))
       ("host", "Run benchmark on host (only applicable ot shuffle_benchmark")
       ("global-stat", "Use global statistics with batchnorm")
+      ("deconv", "Runs deconvolutions instead of normal convolutions")
       ("help", "Print help")
       ;
   auto result = cmd_opts.parse(argc, argv);

@@ -164,7 +164,7 @@ class Data {
       << " locale_shape: " << util::join_array(locale_shape, " ");
     input = create_input_tensor<Tensor>(
         input_shape, locale_shape, filter_dims, strides,
-        dilations, MPI_COMM_WORLD);
+        dilations, cfg.deconv, MPI_COMM_WORLD);
     d_input = create_d_input_tensor<Tensor>(input);
 
     filter = create_filter_tensor<Tensor>(locale_shape, filter_dims,
@@ -173,11 +173,19 @@ class Data {
                                           cfg.chanfilt_algo);
     d_filter = create_d_filter_tensor<Tensor>(filter);
 
-    output = create_convolution_output_tensor<Tensor>(input, filter,
-                                                      strides, pads, dilations,
-                                                      cfg.num_groups);
-    d_output = create_convolution_d_output_tensor<Tensor>(
-        output, filter, dilations);
+    if (!cfg.deconv) {
+      output = create_convolution_output_tensor<Tensor>(input, filter,
+                                                        strides, pads, dilations,
+                                                        cfg.num_groups);
+      d_output = create_convolution_d_output_tensor<Tensor>(
+          output, filter, dilations);
+    } else {
+      output = create_deconvolution_output_tensor<Tensor>(input, filter,
+                                                          strides, pads, dilations,
+                                                          cfg.num_groups);
+      d_output = create_deconvolution_d_output_tensor<Tensor>(
+          output, filter, dilations);
+    }
 
     if (cfg.use_bias) {
       bias = create_bias_tensor<Tensor>(output);
@@ -559,13 +567,10 @@ int test_convolution_backward(Data<NSD, Backend, DataType> &d,
     if (call_halo_exch_separately) {
       conv.backward_data_exchange_halo(d.d_output);
     }
-
     clk_filter.start();
-#if 1
     conv.backward_filter(DataType(1.0), d.input, d.d_output,
                          DataType(0.0), d.d_filter,
                          !cfg.skip_allreduce, cfg.skip_chanfilt_comm);
-#endif
     clk_filter.stop();
     if (cfg.use_bias) {
       clk_bias.start();
@@ -669,7 +674,8 @@ struct ConvolutionTester<NSD, cudnn::BackendCUDNN, DataType> {
                cfg.dilations,
                cfg.num_groups,
                cfg.conv_fwd_algo, cfg.conv_bwd_data_algo,
-               cfg.conv_bwd_filter_algo, 0);
+               cfg.conv_bwd_filter_algo, 0, false,
+               cfg.deconv);
     if (cfg.use_bias) {
       conv.setup_bias(d.bias);
       conv.setup_bias_gradient(d.d_bias);

@@ -44,7 +44,11 @@ void get_halo_sizes(const tensor::Tensor<DataType, Locale, Allocator> &input,
     if (split_shape[i] == 1) continue;
     auto dilated_filter_dim = internal::get_dilated_filter_size(
         filter_dims[i], dilations[i]);
-    assert0((dilated_filter_dim - 1) % 2);
+    // allow even-shaped filter when no halo needed
+    if (dilated_filter_dim % 2 == 0) {
+      assert_eq(strides[i], dilated_filter_dim);
+      continue;
+    }
     const auto radius = (dilated_filter_dim - 1) / 2;
     const auto s = strides[i];
     const auto off = offset[i];
@@ -188,23 +192,66 @@ tensor::Shape get_convolution_output_local_tensor_shape(
   return output_local_shape;
 }
 
+template <typename DataType, typename Locale, typename Allocator>
+tensor::Shape get_deconvolution_output_local_tensor_shape(
+    const tensor::Tensor<DataType, Locale, Allocator> &input,
+    const int_vector &filter_dims,
+    const int_vector &strides,
+    bool with_padding, const int_vector &dilations, int num_groups) {
+  const int nsd = input.get_num_spatial_dims();
+  const auto input_local_shape = input.get_local_shape();
+  auto output_local_shape = input.get_local_shape();
+  IntVector fwd_halo_send, bwd_halo_send, fwd_halo_recv, bwd_halo_recv;
+  internal::get_halo_sizes(input, IntVector(filter_dims),
+                           IntVector(strides), IntVector(dilations),
+                           fwd_halo_send, bwd_halo_send,
+                           fwd_halo_recv, bwd_halo_recv, with_padding);
+
+  for (int i = 0; i < nsd; ++i) {
+    int dilated_filter_dim = internal::get_dilated_filter_size(
+        filter_dims[i], dilations[i]);
+    int dim_with_halo_padding = input_local_shape[i] +
+        bwd_halo_recv[i] + fwd_halo_recv[i];
+    // Halo size is 0 when not partitioned, but its logical size
+    // includes the padding. At this point, padding size is either
+    // zero or exact match with the stencil size.
+    if (with_padding &&
+        input.get_distribution().get_split_shape()[i] == 1) {
+      dim_with_halo_padding += dilated_filter_dim - 1;
+    }
+    // padding assumed to be zero
+    assert_always(!with_padding);
+    output_local_shape[i] = (dim_with_halo_padding - 1) * strides[i] + dilated_filter_dim;
+  }
+
+  // channel size - only if not doing channel parallelism.
+  auto input_split_shape = input.get_distribution().get_split_shape();
+  // Assumes no channel partitioning
+  assert_always(input_split_shape[-2] == 1);
+  output_local_shape[-2] = *(filter_dims.rbegin() + 1);
+  return output_local_shape;
+}
+
 template <typename Tensor>
 Tensor create_input_tensor(const int_vector &shape,
                            const int_vector &locale_shape,
                            const int_vector &filter_dims,
                            const int_vector &strides,
                            const int_vector &dilations,
+                           bool deconv,
                            MPI_Comm comm) {
   const int nd = shape.size();
   const int nsd = nd - 2;
   IntVector overlap(nd, 0);
-  for (int i = 0; i < nsd; ++i) {
-    auto df = internal::get_dilated_filter_size(
-        filter_dims[i], dilations[i]);
-    int overlap_i = (df - 1) / 2;
-    assert0((df - 1) % 2);
-    if (locale_shape[i] > 1) {
-      overlap[i] = overlap_i;
+  if (!deconv) {
+    for (int i = 0; i < nsd; ++i) {
+      auto df = internal::get_dilated_filter_size(
+          filter_dims[i], dilations[i]);
+      int overlap_i = (df - 1) / 2;
+      assert0((df - 1) % 2);
+      if (locale_shape[i] > 1) {
+        overlap[i] = overlap_i;
+      }
     }
   }
   auto dist = tensor::Distribution::make_overlapped_distribution(
@@ -326,6 +373,46 @@ Tensor create_convolution_output_tensor(
 }
 
 template <typename Tensor>
+Tensor create_deconvolution_output_tensor(
+    const Tensor &input, const Tensor &filter,
+    const int_vector &strides,
+    const int_vector &pad,
+    const int_vector &dilations,
+    int num_groups) {
+  const int nd = input.get_num_dims();
+  const int nsd = input.get_num_spatial_dims();
+  const bool use_padding = pad[0] != 0;
+
+  // no padding is assumed
+  assert_always(!use_padding);
+
+  tensor::Shape output_shape(nd, 0);
+  for (int i = 0; i < nsd; ++i) {
+    auto df = internal::get_dilated_filter_size<int>(
+        filter.get_shape()[i], dilations[i]);
+    output_shape[i] = (input.get_shape()[i] - 1) * strides[i]  + df;
+  }
+  output_shape[-2] = filter.get_shape()[-2];
+  output_shape[-1] = input.get_shape()[-1];
+
+  auto dist = input.get_distribution();
+  dist.clear_overlap();
+
+  util::MPIPrintStreamDebug() << "output_tensor: output_shape: " << output_shape << " dist: " << dist;
+
+  tensor::Shape division_shape =
+      get_deconvolution_output_local_tensor_shape(
+          input, filter.get_shape().template get_vector<int>(),
+          strides, use_padding, dilations, num_groups);
+  tensor::Shape division_block(nd, 0);
+
+  Tensor t = Tensor(output_shape, input.get_locale(),
+                    dist, division_shape, division_block);
+  util::MPIPrintStreamDebug() << "Output tensor: " << t;
+  return t;
+}
+
+template <typename Tensor>
 Tensor create_convolution_d_output_tensor(const Tensor &output,
                                           const Tensor &filter,
                                           const int_vector &dilations) {
@@ -346,6 +433,22 @@ Tensor create_convolution_d_output_tensor(const Tensor &output,
   dist.set_overlap(overlap);
   tensor::Shape division_block(nd, 0);
 
+  Tensor t = Tensor(output.get_shape(), output.get_locale(),
+                    dist, output.get_local_shape(),
+                    division_block);
+  util::MPIPrintStreamDebug() << "D_output tensor: " << t;
+  return t;
+}
+
+template <typename Tensor>
+Tensor create_deconvolution_d_output_tensor(const Tensor &output,
+                                            const Tensor &filter,
+                                            const int_vector &dilations) {
+  // This only works for the U-Net case
+  const int nd = output.get_num_dims();
+  auto dist = output.get_distribution();
+  IntVector overlap(nd, 0);
+  tensor::Shape division_block(nd, 0);
   Tensor t = Tensor(output.get_shape(), output.get_locale(),
                     dist, output.get_local_shape(),
                     division_block);

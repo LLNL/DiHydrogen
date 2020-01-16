@@ -250,21 +250,23 @@ std::ostream &operator<<(std::ostream &os, Opts &o) {
 }
 #endif
 
+template <int NSD>
 class Profile {
  public:
+  const BenchmarkConfig<NSD> &m_cfg;
   std::vector<float> conv_fwd_time;
   std::vector<float> conv_bwd_data_time;
   std::vector<float> conv_bwd_filter_time;
   std::vector<float> conv_bwd_bias_time;
-  Profile() = default;
 
-  template <int NSD>
-  std::ostream &print_as_row(std::ostream &os, const BenchmarkConfig<NSD> &cfg) {
+  Profile(const BenchmarkConfig<NSD> &cfg): m_cfg(cfg) {}
+
+  std::ostream &print_as_row(std::ostream &os) {
     for (size_t i = 0; i < conv_fwd_time.size(); ++i) {
       std::stringstream ss;
-      cfg.print_as_row(ss) << " " << conv_fwd_time[i] << " "
-                           << conv_bwd_data_time[i] << " "
-                           << conv_bwd_filter_time[i];
+      m_cfg.print_as_row(ss) << " " << conv_fwd_time[i] << " "
+                             << conv_bwd_data_time[i] << " "
+                             << conv_bwd_filter_time[i];
       if (i < conv_bwd_bias_time.size()) {
         ss << " " << conv_bwd_bias_time[i];
       }
@@ -272,7 +274,54 @@ class Profile {
     }
     return os;
   }
+
+  void print_summary(std::ostream &os) {
+    using namespace distconv_benchmark;
+    std::cout << "Forward mean: " << get_mean(conv_fwd_time)
+              << ", median: " << get_median(conv_fwd_time)
+              << ", min: " << get_min(conv_fwd_time)
+              << ", max: " << get_max(conv_fwd_time)
+              << "\n";
+    std::cout << "Backward data mean: "
+              << get_mean(conv_bwd_data_time)
+              << ", median: " << get_median(conv_bwd_data_time)
+              << ", min: " << get_min(conv_bwd_data_time)
+              << ", max: " << get_max(conv_bwd_data_time)
+              << "\n";
+    std::cout << "Backward filter mean: "
+              << get_mean(conv_bwd_filter_time)
+              << ", median: " << get_median(conv_bwd_filter_time)
+              << ", min: " << get_min(conv_bwd_filter_time)
+              << ", max: " << get_max(conv_bwd_filter_time)
+              << "\n";
+    if (m_cfg.use_bias) {
+      std::cout << "Backward bias mean: "
+                << get_mean(conv_bwd_bias_time)
+                << ", median: " << get_median(conv_bwd_bias_time)
+                << ", min: " << get_min(conv_bwd_bias_time)
+                << ", max: " << get_max(conv_bwd_bias_time)
+                << "\n";
+    }
+  }
 };
+
+int get_output_dim(int input, int filter, int stride, int dilation,
+                   bool padding, bool deconv) {
+  int output;
+  auto filter_dim = distconv_benchmark::get_dilated_filter_size(filter, dilation);
+  if (!deconv) {
+    output = input;
+    if (!padding) {
+      output -= (filter_dim - 1);
+    }
+    output = (output + stride - 1) / stride;
+  } else {
+    // TODO: padding is not supported
+    assert_always(!padding);
+    output = (input - 1) * stride + filter_dim;
+  }
+  return output;
+}
 
 template <typename REAL>
 class Data {
@@ -318,12 +367,10 @@ class Data {
 
     std::vector<int> output_spatial_dims;
     for (int i = 0; i < cfg.get_num_spatial_dims(); ++i) {
-      int odim = cfg.i_s[i];
-      if (!cfg.use_padding) {
-        odim -= (distconv_benchmark::get_dilated_filter_size(
-            cfg.f_s[i], cfg.dilations[i]) - 1);
-      }
-      output_spatial_dims.push_back((odim + cfg.strides[i] - 1) / cfg.strides[i]);
+      output_spatial_dims.push_back(
+          get_output_dim(cfg.i_s[i], cfg.f_s[i], cfg.strides[i],
+                         cfg.dilations[i], cfg.use_padding, cfg.deconv));
+
     }
 
     DISTCONV_CHECK_CUDNN(cudnnCreateTensorDescriptor(&m_y_d));
@@ -540,30 +587,57 @@ template <int NSD, typename REAL>
 void setup_workspace(const Data<REAL> &d, cudnnConvolutionDescriptor_t conv_desc,
                      const BenchmarkConfig<NSD> &cfg, size_t &ws_size, void *&ws) {
   size_t f_size, bd_size, bf_size;
-  DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(
-      cudnn_h,
-      d.m_x_d,
-      d.m_f_d,
-      conv_desc,
-      d.m_y_d,
-      util::CUDNNConvolutionFwdAlgorithms::get_algo(cfg.conv_fwd_algo),
-      &f_size));
-  DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardDataWorkspaceSize(
-      cudnn_h,
-      d.m_f_d,
-      d.m_dy_d,
-      conv_desc,
-      d.m_dx_d,
-      util::CUDNNConvolutionBwdDataAlgorithms::get_algo(cfg.conv_bwd_data_algo),
-      &bd_size));
-  DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(
-      cudnn_h,
-      d.m_x_d,
-      d.m_dy_d,
-      conv_desc,
-      d.m_df_d,
-      util::CUDNNConvolutionBwdFilterAlgorithms::get_algo(cfg.conv_bwd_filter_algo),
-      &bf_size));
+  if (!cfg.deconv) {
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(
+        cudnn_h,
+        d.m_x_d,
+        d.m_f_d,
+        conv_desc,
+        d.m_y_d,
+        util::CUDNNConvolutionFwdAlgorithms::get_algo(cfg.conv_fwd_algo),
+        &f_size));
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardDataWorkspaceSize(
+        cudnn_h,
+        d.m_f_d,
+        d.m_dy_d,
+        conv_desc,
+        d.m_dx_d,
+        util::CUDNNConvolutionBwdDataAlgorithms::get_algo(cfg.conv_bwd_data_algo),
+        &bd_size));
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(
+        cudnn_h,
+        d.m_x_d,
+        d.m_dy_d,
+        conv_desc,
+        d.m_df_d,
+        util::CUDNNConvolutionBwdFilterAlgorithms::get_algo(cfg.conv_bwd_filter_algo),
+        &bf_size));
+  } else {
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardDataWorkspaceSize(
+        cudnn_h,
+        d.m_f_d,
+        d.m_x_d,
+        conv_desc,
+        d.m_y_d,
+        util::CUDNNConvolutionBwdDataAlgorithms::get_algo(cfg.conv_fwd_algo),
+        &f_size));
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(
+        cudnn_h,
+        d.m_dy_d,
+        d.m_f_d,
+        conv_desc,
+        d.m_dx_d,
+        util::CUDNNConvolutionFwdAlgorithms::get_algo(cfg.conv_bwd_data_algo),
+        &bd_size));
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(
+        cudnn_h,
+        d.m_dy_d,
+        d.m_x_d,
+        conv_desc,
+        d.m_df_d,
+        util::CUDNNConvolutionBwdFilterAlgorithms::get_algo(cfg.conv_bwd_filter_algo),
+        &bf_size));
+  }
   ws_size = 0;
   ws_size = std::max(f_size, bd_size);
   ws_size = std::max(ws_size, bf_size);
@@ -576,16 +650,26 @@ void run_forward_convolution(const Data<REAL> &d, cudnnConvolutionDescriptor_t c
                              const BenchmarkConfig<NSD> &cfg, size_t ws_size, void *ws) {
   REAL zero(0.0);
   REAL one(1.0);
-  DISTCONV_CHECK_CUDNN(cudnnConvolutionForward(
-      cudnn_h, &one, d.m_x_d, d.m_x,
-      d.m_f_d, d.m_f,
-      conv_desc,
-      util::CUDNNConvolutionFwdAlgorithms::get_algo(cfg.conv_fwd_algo),
-      ws, ws_size, &zero,
-      d.m_y_d, d.m_y));
-    if (cfg.use_bias) {
-      DISTCONV_CHECK_CUDNN(cudnnAddTensor(cudnn_h, &one, d.m_b_d, d.m_b, &one,
-                                          d.m_y_d, d.m_y));
+  if (!cfg.deconv) {
+    DISTCONV_CHECK_CUDNN(cudnnConvolutionForward(
+        cudnn_h, &one, d.m_x_d, d.m_x,
+        d.m_f_d, d.m_f,
+        conv_desc,
+        util::CUDNNConvolutionFwdAlgorithms::get_algo(cfg.conv_fwd_algo),
+        ws, ws_size, &zero,
+        d.m_y_d, d.m_y));
+  } else {
+    DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardData(
+        cudnn_h, &one, d.m_f_d, d.m_f,
+        d.m_x_d, d.m_x,
+        conv_desc,
+        util::CUDNNConvolutionBwdDataAlgorithms::get_algo(cfg.conv_fwd_algo),
+        ws, ws_size, &zero,
+        d.m_y_d, d.m_y));
+  }
+  if (cfg.use_bias) {
+    DISTCONV_CHECK_CUDNN(cudnnAddTensor(cudnn_h, &one, d.m_b_d, d.m_b, &one,
+                                        d.m_y_d, d.m_y));
   }
 }
 
@@ -594,13 +678,23 @@ void run_backward_data_convolution(const Data<REAL> &d, cudnnConvolutionDescript
                                    const BenchmarkConfig<NSD> &cfg, size_t ws_size, void *ws) {
   REAL zero(0.0);
   REAL one(1.0);
-  DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardData(
-      cudnn_h, &one, d.m_f_d, d.m_f,
-      d.m_dy_d, d.m_dy,
-      conv_desc,
-      util::CUDNNConvolutionBwdDataAlgorithms::get_algo(cfg.conv_bwd_data_algo),
-      ws, ws_size, &zero,
-      d.m_dx_d, d.m_dx));
+  if (!cfg.deconv) {
+    DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardData(
+        cudnn_h, &one, d.m_f_d, d.m_f,
+        d.m_dy_d, d.m_dy,
+        conv_desc,
+        util::CUDNNConvolutionBwdDataAlgorithms::get_algo(cfg.conv_bwd_data_algo),
+        ws, ws_size, &zero,
+        d.m_dx_d, d.m_dx));
+  } else {
+    DISTCONV_CHECK_CUDNN(cudnnConvolutionForward(
+        cudnn_h, &one, d.m_dy_d, d.m_dy,
+        d.m_f_d, d.m_f,
+        conv_desc,
+        util::CUDNNConvolutionFwdAlgorithms::get_algo(cfg.conv_bwd_data_algo),
+        ws, ws_size, &zero,
+        d.m_dx_d, d.m_dx));
+  }
 }
 
 template <int NSD, typename REAL>
@@ -608,13 +702,23 @@ void run_backward_filter_convolution(const Data<REAL> &d, cudnnConvolutionDescri
                                      const BenchmarkConfig<NSD> &cfg, size_t ws_size, void *ws) {
   REAL zero(0.0);
   REAL one(1.0);
-  DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardFilter(
-      cudnn_h, &one, d.m_x_d, d.m_x,
-      d.m_dy_d, d.m_dy,
-      conv_desc,
-      util::CUDNNConvolutionBwdFilterAlgorithms::get_algo(cfg.conv_bwd_filter_algo),
-      ws, ws_size, &zero,
-      d.m_df_d, d.m_df));
+  if (!cfg.deconv) {
+    DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardFilter(
+        cudnn_h, &one, d.m_x_d, d.m_x,
+        d.m_dy_d, d.m_dy,
+        conv_desc,
+        util::CUDNNConvolutionBwdFilterAlgorithms::get_algo(cfg.conv_bwd_filter_algo),
+        ws, ws_size, &zero,
+        d.m_df_d, d.m_df));
+  } else {
+    DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardFilter(
+        cudnn_h, &one, d.m_dy_d, d.m_dy,
+        d.m_x_d, d.m_x,
+        conv_desc,
+        util::CUDNNConvolutionBwdFilterAlgorithms::get_algo(cfg.conv_bwd_filter_algo),
+        ws, ws_size, &zero,
+        d.m_df_d, d.m_df));
+  }
 }
 
 template <int NSD, typename REAL>
@@ -630,7 +734,7 @@ void measure_forward_convolution(const Data<REAL> &d,
                                  cudnnConvolutionDescriptor_t conv_desc,
                                  size_t ws_size, void *ws,
                                  const BenchmarkConfig<NSD> &cfg,
-                                 Profile &prof) {
+                                 Profile<NSD> &prof) {
   std::vector<util::Clock> clks(cfg.run_count, stream);
   DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
   if (cfg.warming_up_count > 0) std::cout << "Warming up\n";
@@ -657,7 +761,7 @@ void measure_backward_data_convolution(const Data<REAL> &d,
                                        cudnnConvolutionDescriptor_t conv_desc,
                                        size_t ws_size, void *ws,
                                        const BenchmarkConfig<NSD> &cfg,
-                                       Profile &prof) {
+                                       Profile<NSD> &prof) {
   std::vector<util::Clock> clks(cfg.run_count, stream);
   DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
   if (cfg.warming_up_count > 0) std::cout << "Warming up\n";
@@ -684,7 +788,7 @@ void measure_backward_filter_convolution(const Data<REAL> &d,
                                          cudnnConvolutionDescriptor_t conv_desc,
                                          size_t ws_size, void *ws,
                                          const BenchmarkConfig<NSD> &cfg,
-                                         Profile &prof) {
+                                         Profile<NSD> &prof) {
   std::vector<util::Clock> clks(cfg.run_count, stream);
   DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
   if (cfg.warming_up_count > 0) std::cout << "Warming up\n";
@@ -709,7 +813,7 @@ void measure_backward_filter_convolution(const Data<REAL> &d,
 template <int NSD, typename REAL>
 void measure_backward_bias_convolution(const Data<REAL> &d,
                                        const BenchmarkConfig<NSD> &cfg,
-                                       Profile &prof) {
+                                       Profile<NSD> &prof) {
   std::vector<util::Clock> clks(cfg.run_count, stream);
   DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
   if (cfg.warming_up_count > 0) std::cout << "Warming up\n";
@@ -779,12 +883,9 @@ int run(const BenchmarkConfig<NSD> &cfg) {
       cfg.f_k, cfg.i_c, cfg.f_s);
   std::vector<int> output_spatial_dims;
   for (int i = 0; i < cfg.get_num_spatial_dims(); ++i) {
-    int odim = cfg.i_s[i];
-    if (!cfg.use_padding) {
-      odim -= (distconv_benchmark::get_dilated_filter_size(
-          cfg.f_s[i], cfg.dilations[i]) - 1);
-    }
-    output_spatial_dims.push_back((odim + cfg.strides[i] - 1) / cfg.strides[i]);
+    output_spatial_dims.push_back(
+        get_output_dim(cfg.i_s[i], cfg.f_s[i], cfg.strides[i],
+                       cfg.dilations[i], cfg.use_padding, cfg.deconv));
   }
   REAL *output_tensor = make_tensor<REAL>(cfg.i_n, cfg.f_k,
                                           output_spatial_dims);
@@ -823,11 +924,26 @@ int run(const BenchmarkConfig<NSD> &cfg) {
   cudnnConvolutionDescriptor_t conv_desc = get_conv_desc<NSD, REAL>(cfg);
   std::cout << "conv_desc: " << util::tostring(conv_desc) << "\n";
 
+  std::cout
+      << "Forward algo: "
+      << (cfg.deconv ?
+          util::CUDNNConvolutionBwdDataAlgorithms::get_real_name(cfg.conv_fwd_algo) :
+          util::CUDNNConvolutionFwdAlgorithms::get_real_name(cfg.conv_fwd_algo))
+      << "\n"
+      << "Bacward data algo: "
+      << (cfg.deconv ?
+          util::CUDNNConvolutionFwdAlgorithms::get_real_name(cfg.conv_bwd_data_algo) :
+          util::CUDNNConvolutionBwdDataAlgorithms::get_real_name(cfg.conv_bwd_data_algo))
+      << "\n"
+      << "Bacward filter algo: "
+      << util::CUDNNConvolutionBwdFilterAlgorithms::get_real_name(cfg.conv_bwd_filter_algo)
+      << "\n";
+
   size_t ws_size;
   void *ws;
   setup_workspace(d, conv_desc, cfg, ws_size, ws);
 
-  Profile prof;
+  Profile<NSD> prof(cfg);
   measure_forward_convolution(d, conv_desc, ws_size, ws, cfg, prof);
   measure_backward_data_convolution(d, conv_desc, ws_size, ws, cfg, prof);
   measure_backward_filter_convolution(d, conv_desc, ws_size, ws, cfg, prof);
@@ -838,6 +954,8 @@ int run(const BenchmarkConfig<NSD> &cfg) {
   std::cout << "Destroying cudnn handle\n";
   DISTCONV_CHECK_CUDNN(cudnnDestroy(cudnn_h));
 
+  prof.print_summary(std::cout);
+
   std::ostream *output_stream;
   std::ofstream ofs;
   if (cfg.output_file.length() > 0) {
@@ -847,7 +965,7 @@ int run(const BenchmarkConfig<NSD> &cfg) {
     output_stream = &std::cout;
   }
 
-  prof.print_as_row(*output_stream, cfg);
+  prof.print_as_row(*output_stream);
 
   if (cfg.dump_output) {
     size_t output_tensor_size = calc_len(cfg.i_n, cfg.f_k,
@@ -905,8 +1023,7 @@ int main(int argc, char *argv[]) {
   } else if(nsd == 3) {
     run<3>(argc, argv);
   } else {
-    util::MPIRootPrintStreamError() << "Invalid --num-dims: " << nsd;
-    DISTCONV_CHECK_MPI(MPI_Finalize());
+    util::PrintStreamError() << "Invalid --num-dims: " << nsd;
     std::exit(1);
   }
 
