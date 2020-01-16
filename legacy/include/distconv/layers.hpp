@@ -123,10 +123,4 @@ class BatchNormalization {
   BatchNormalization(Backend &backend, DataType decay, DataType epsilon);
 };
 
-template <typename Backend, typename DataType>
-class Deconvolution {
- public:
-  Deconvolution(Backend &backend);
-};
-
 } // namespace distconv

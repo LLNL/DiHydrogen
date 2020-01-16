@@ -567,4 +567,3 @@ class BackendCUDNN {
 #include "distconv/cudnn/relu.hpp"
 #include "distconv/cudnn/leaky_relu.hpp"
 #include "distconv/cudnn/batchnorm.hpp"
-#include "distconv/cudnn/deconvolution.hpp"
