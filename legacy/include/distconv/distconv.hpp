@@ -248,7 +248,7 @@ Tensor create_input_tensor(const int_vector &shape,
       if (locale_shape[i] == 1) continue;
       auto df = internal::get_dilated_filter_size(
           filter_dims[i], dilations[i]);
-      if ((df - 1) % 2) {
+      if (df % 2) {
         int overlap_i = (df - 1) / 2;
         overlap[i] = overlap_i;
       } else {
@@ -492,8 +492,7 @@ Tensor create_pooling_output_tensor(const Tensor &input,
       output_shape[i] = 0;
       continue;
     }
-    bool odd = (window[i] - 1) % 2;
-    if (odd) {
+    if (window[i] % 2) {
       assert_always(pad[i] == 0 || pad[i] * 2 + 1 == window[i]);
       // padding only for height or width is not considered
       if (use_padding) {
