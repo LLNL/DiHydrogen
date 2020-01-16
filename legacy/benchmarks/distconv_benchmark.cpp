@@ -264,12 +264,12 @@ class Data {
   }
 };
 
-template <int NSD, typename Backend, typename DataType, typename ConvType>
+template <int NSD, typename Backend, typename DataType>
 int test_convolution_forward(Data<NSD, Backend, DataType> &d,
                              const BenchmarkConfig<NSD> &cfg,
                              MPI_Comm comm,
                              Backend &be,
-                             ConvType &conv,
+                             Convolution<Backend, NSD+2, DataType> &conv,
                              Profile<NSD> &prof) {
   int pid;
   MPI_Comm_rank(comm, &pid);
