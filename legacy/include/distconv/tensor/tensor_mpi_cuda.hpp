@@ -166,5 +166,17 @@ int CastScaleBias(Tensor<DataType1, LocaleMPI, CUDAAllocator> &t_dest,
                   const DataType1 beta,
                   cudaStream_t s);
 
+template <typename DataType>
+int Concatenate(Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest,
+                const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src1,
+                const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src2,
+                cudaStream_t s);
+
+template <typename DataType>
+int Slice(Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest1,
+          Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest2,
+          const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src,
+          cudaStream_t s);
+
 } // namespace tensor
 } // namespace distconv
