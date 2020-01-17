@@ -120,18 +120,34 @@ DEFINE_CAST_SCALE_BIAS(float, unsigned short)
 
 
 namespace internal {
-template <int ND, typename DataType, int INNER_DIM>
-__global__ void concat_kernel(
-    DataType *dst, Array<ND> dst_shape, Array<ND> dst_strides,
-    const DataType *src1, Array<ND> src1_shape, Array<ND> src1_strides,
-    const DataType *src2, Array<ND> src2_shape, Array<ND> src2_strides,
+
+template <typename DataType1, typename DataType2>
+__device__ __forceinline__ void assign(DataType1 &t1, DataType2 &t2) {
+}
+
+template <typename DataType1, typename DataType2>
+__device__ __forceinline__ void assign(const DataType1 &t1, DataType2 &t2) {
+  t2 = t1;
+}
+
+template <typename DataType1, typename DataType2>
+__device__ __forceinline__ void assign(DataType1 &t1, const DataType2 &t2) {
+  t1 = t2;
+}
+
+template <int ND, int INNER_DIM, typename DataType1, typename DataType2,
+          bool is_concat>
+__global__ void concat_or_slice_kernel(
+    DataType1 *dst, Array<ND> dst_shape, Array<ND> dst_strides,
+    DataType2 *src1, Array<ND> src1_shape, Array<ND> src1_strides,
+    DataType2 *src2, Array<ND> src2_shape, Array<ND> src2_strides,
     int concat_dim) {
   // NOTE: For simplicity, dimension of concat_dim is assumed to be traversed by
   // different thread blocks.
   const int tid = threadIdx.x;
   int bid = blockIdx.x;
   const int block_size = blockDim.x;
-  const DataType *src = nullptr;
+  DataType2 *src = nullptr;
   Array<ND> src_strides;
   Array<ND> src_block_idx;
   Array<ND> dst_block_idx;
@@ -177,17 +193,30 @@ __global__ void concat_kernel(
       src_offset += src_strides[j] * idx_j;
       inner_idx_i /= dst_shape[j];
     }
-    dst[dst_offset] = src[src_offset];
+    assign(dst[dst_offset], src[src_offset]);
   }
 }
 
-} // namespace internal
+template <bool B, typename T>
+struct AddConstIf;
 
-template <typename DataType>
-int Concatenate(Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest,
-                const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src1,
-                const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src2,
-                cudaStream_t s) {
+template <typename T>
+struct AddConstIf<true, T> {
+  using type = typename std::add_const<T>::type;
+};
+
+template <typename T>
+struct AddConstIf<false, T> {
+  using type = T;
+};
+
+
+template <typename DataType, bool IS_CONCAT>
+int ConcatenateOrSlice(
+    typename AddConstIf<!IS_CONCAT, Tensor<DataType, LocaleMPI, CUDAAllocator>>::type &t_dest,
+    typename AddConstIf<IS_CONCAT, Tensor<DataType, LocaleMPI, CUDAAllocator>>::type &t_src1,
+    typename AddConstIf<IS_CONCAT, Tensor<DataType, LocaleMPI, CUDAAllocator>>::type &t_src2,
+    cudaStream_t s) {
   const int nd = t_dest.get_num_dims();
   int block_dim = 256; // tunable
 
@@ -208,13 +237,16 @@ int Concatenate(Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest,
   // TODO: only works for U-Net. Concat on channel dim
   assert_always(concat_dim == nd - 2);
 
+  using DataType1 = typename AddConstIf<!IS_CONCAT, DataType>::type;
+  using DataType2 = typename AddConstIf<IS_CONCAT, DataType>::type;
+
 #define CALL_KERNEL(ND, INNER_DIM)  do {                                \
     assert_always(concat_dim > INNER_DIM);                              \
     int grid_dim = 1;                                                   \
     for (int i = INNER_DIM + 1; i < ND; ++i) {                          \
       grid_dim *= t_dest.get_local_shape()[i];                          \
     }                                                                   \
-    internal::concat_kernel<ND, DataType, INNER_DIM>                    \
+    concat_or_slice_kernel<ND, INNER_DIM, DataType1, DataType2, IS_CONCAT> \
           <<<grid_dim, block_dim, 0, s>>>(                              \
               t_dest.get_base_ptr(), Array<ND>(t_dest.get_local_shape()), \
               Array<ND>(t_dest.get_strides()),                          \
@@ -246,12 +278,36 @@ int Concatenate(Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest,
 #undef CALL_KERNEL
   return 0;
 }
+} // namespace internal
+
+template <typename DataType>
+int Concatenate(Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest,
+                const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src1,
+                const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src2,
+                cudaStream_t s) {
+  return internal::ConcatenateOrSlice<DataType, true>(
+      t_dest, t_src1, t_src2, s);
+}
+
+template <typename DataType>
+int Slice(Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest1,
+          Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest2,
+          const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src,
+          cudaStream_t s) {
+  return internal::ConcatenateOrSlice<DataType, false>(
+      t_src, t_dest1, t_dest2, s);
+}
 
 #define DEFINE_CONCATENATE(TYPE)                                        \
   template                                                              \
   int Concatenate<TYPE>(Tensor<TYPE, LocaleMPI, CUDAAllocator> &t_dest, \
       const Tensor<TYPE, LocaleMPI, CUDAAllocator> &t_src1,             \
                   const Tensor<TYPE, LocaleMPI, CUDAAllocator> &t_src2, \
+                        cudaStream_t s);                                \
+  template                                                              \
+  int Slice<TYPE>(Tensor<TYPE, LocaleMPI, CUDAAllocator> &t_dest1,      \
+                  Tensor<TYPE, LocaleMPI, CUDAAllocator> &t_dest2,      \
+                  const Tensor<TYPE, LocaleMPI, CUDAAllocator> &t_src,  \
                   cudaStream_t s);
 DEFINE_CONCATENATE(float)
 DEFINE_CONCATENATE(double)
