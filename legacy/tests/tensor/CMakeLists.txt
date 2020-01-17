@@ -8,7 +8,8 @@ set(TEST_SOURCES
   test_tensor_mpi_cuda_algorithms.cu
   test_tensor_mpi_shuffle.cpp
   test_tensor_mpi_cuda_shuffle.cu
-  test_halo_exchange_cuda.cu)
+  test_halo_exchange_cuda.cu
+  test_concat_mpi_cuda.cu)
 
 foreach (src ${TEST_SOURCES})
   get_filename_component(target ${src} NAME_WE)
