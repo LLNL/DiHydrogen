@@ -266,11 +266,7 @@ int ConcatenateOrSlice(
       break;
     case 5:
       // Needs more robust tuning
-      if (t_dest.get_shape()[0] < 64) {
-        CALL_KERNEL(5, 2);
-      } else {
-        CALL_KERNEL(5, 3);
-      }
+      CALL_KERNEL(5, 1);
       break;
     default:
       throw std::exception();
