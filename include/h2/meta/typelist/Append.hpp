@@ -1,0 +1,50 @@
+// @H2_LICENSE_TEXT@
+
+#ifndef H2_META_TYPELIST_APPEND_HPP_
+#define H2_META_TYPELIST_APPEND_HPP_
+
+#include "TypeList.hpp"
+#include "h2/meta/core/Lazy.hpp"
+
+namespace h2
+{
+namespace meta
+{
+namespace tlist
+{
+
+/** @brief Join multiple lists into one. */
+template <typename... Lists>
+struct AppendT;
+
+/** @brief Join multiple lists into one */
+template <typename... Lists>
+using Append = Force<AppendT<Lists...>>;
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+
+// Single list
+template <typename... ListTs>
+struct AppendT<TL<ListTs...>>
+{
+    using type = TL<ListTs...>;
+};
+
+// Two lists
+template <typename... ListOneTs, typename... ListTwoTs>
+struct AppendT<TypeList<ListOneTs...>, TypeList<ListTwoTs...>>
+{
+    using type = TL<ListOneTs..., ListTwoTs...>;
+};
+
+// Many lists
+template <typename FirstList, typename... OtherLists>
+struct AppendT<FirstList, OtherLists...>
+    : AppendT<FirstList, Append<OtherLists...>>
+{};
+
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+}// namespace tlist
+}// namespace meta
+}// namespace h2
+#endif // H2_META_TYPELIST_APPEND_HPP_
