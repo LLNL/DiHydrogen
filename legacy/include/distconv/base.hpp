@@ -303,6 +303,7 @@ enum class BatchnormImpl {
   NVSHMEM_RECURSIVE_DOUBLING_HOST,
   NVSHMEM_RECURSIVE_DOUBLING,
   NVSHMEM_RECURSIVE_DOUBLING_BUFFERED,
+  NVSHMEM_RECURSIVE_DOUBLING_BLOCK,
 #endif // DISTCONV_HAS_NVSHMEM
 };
 
@@ -320,6 +321,8 @@ inline std::ostream& operator<<(std::ostream &os, const BatchnormImpl &v) {
     return os << "NVSHMEM_RECURSIVE_DOUBLING";
   } else if (v == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_BUFFERED) {
     return os << "NVSHMEM_RECURSIVE_DOUBLING_BUFFERED";
+  } else if (v == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_BLOCK) {
+    return os << "NVSHMEM_RECURSIVE_DOUBLING_BLOCK";
 #endif // DISTCONV_HAS_NVSHMEM
   } else {
     util::PrintStreamError() << "Unknown batchnorm implementation";
@@ -341,6 +344,8 @@ inline BatchnormImpl GetBatchnormImpl(const std::string &impl) {
     return BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING;
   } else if (impl == "NVSHMEM_RECURSIVE_DOUBLING_BUFFERED") {
     return BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_BUFFERED;
+  } else if (impl == "NVSHMEM_RECURSIVE_DOUBLING_BLOCK") {
+    return BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_BLOCK;
 #endif // DISTCONV_HAS_NVSHMEM
   } else {
     util::PrintStreamError() << "Unknown implementation name for batchnorm: " << impl;
@@ -355,6 +360,7 @@ inline bool IsNVSHMEMUsed(BatchnormImpl m) {
     case BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_HOST:
     case BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING:
     case BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_BUFFERED:
+    case BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_BLOCK:
       return true;
     default:
       return false;

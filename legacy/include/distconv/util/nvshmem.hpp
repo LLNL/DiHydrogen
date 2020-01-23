@@ -172,7 +172,25 @@ struct SyncArray {
 };
 
 #ifdef __NVCC__
-#define DEFINE_PUT_BLOCK(TYPE)                                          \
+#define DEFINE_PUT(TYPE)                                                \
+  inline __device__ void put(TYPE *dest, const TYPE *source,            \
+                             size_t nelems, int pe) {                   \
+    nvshmem_##TYPE##_put(dest, source, nelems, pe);                    \
+  }                                                                     \
+  inline __device__ void put(TYPE##2 *dest,                             \
+                             const TYPE##2 *source,                     \
+                             size_t nelems, int pe) {                   \
+    nvshmem_##TYPE##_put((TYPE*)dest, (const TYPE*)source, nelems * 2, pe); \
+  }                                                                     \
+  inline __device__ void put_nbi(TYPE *dest, const TYPE *source,        \
+                                 size_t nelems, int pe) {               \
+    nvshmem_##TYPE##_put_nbi(dest, source, nelems, pe);                \
+  }                                                                     \
+  inline __device__ void put_nbi(TYPE##2 *dest,                         \
+                                 const TYPE##2 *source,                 \
+                                 size_t nelems, int pe) {               \
+    nvshmem_##TYPE##_put_nbi((TYPE*)dest, (const TYPE*)source, nelems * 2, pe); \
+  }                                                                     \
   inline __device__ void put_block(TYPE *dest, const TYPE *source,      \
                                    size_t nelems, int pe) {             \
     nvshmemx_##TYPE##_put_block(dest, source, nelems, pe);              \
@@ -181,15 +199,7 @@ struct SyncArray {
                                    const TYPE##2 *source,               \
                                    size_t nelems, int pe) {             \
     nvshmemx_##TYPE##_put_block((TYPE*)dest, (const TYPE*)source, nelems * 2, pe); \
-  }
-
-DEFINE_PUT_BLOCK(float)
-DEFINE_PUT_BLOCK(double)
-DEFINE_PUT_BLOCK(int)
-DEFINE_PUT_BLOCK(long)
-#undef DEFINE_PUT_BLOCK
-
-#define DEFINE_PUT_NBI_BLOCK(TYPE)                                      \
+  }                                                                     \
   inline __device__ void put_nbi_block(TYPE *dest, const TYPE *source,  \
                                        size_t nelems, int pe) {         \
     nvshmemx_##TYPE##_put_nbi_block(dest, source, nelems, pe);          \
@@ -199,12 +209,11 @@ DEFINE_PUT_BLOCK(long)
                                        size_t nelems, int pe) {         \
     nvshmemx_##TYPE##_put_nbi_block((TYPE*)dest, (const TYPE*)source, nelems * 2, pe); \
   }
-
-DEFINE_PUT_NBI_BLOCK(float)
-DEFINE_PUT_NBI_BLOCK(double)
-DEFINE_PUT_NBI_BLOCK(int)
-DEFINE_PUT_NBI_BLOCK(long)
-#undef DEFINE_PUT_NBI_BLOCK
+DEFINE_PUT(float)
+DEFINE_PUT(double)
+DEFINE_PUT(int)
+DEFINE_PUT(long)
+#undef DEFINE_PUT
 
 #endif // __NVCC__
 

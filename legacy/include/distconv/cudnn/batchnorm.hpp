@@ -109,6 +109,10 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
       m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
           m_be.get_stream(),
           tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BUFFERED);
+    } else if (m_impl == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_BLOCK) {
+      m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+          m_be.get_stream(),
+          tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BLOCK);
 #endif // DISTCONV_HAS_NVSHMEM
     }
   }

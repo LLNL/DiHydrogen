@@ -232,5 +232,123 @@ DEFINE_RECURSIVE_DOUBLING(int)
 DEFINE_RECURSIVE_DOUBLING(long)
 #undef DEFINE_RECURSIVE_DOUBLING
 
+namespace allreduce_nvshmem {
+// TODO: This should be moved to the header file unless device linking
+// is enabled.
+#ifdef __CUDACC__
+// Assume that the root thread has the partial sum. Those held by
+// other threads are not used. Only the root thread has the valid
+// output value.
+template <typename DataType>
+__device__ DataType recursive_doubling_block(DataType psum,
+                                             size_t num_blocks_per_entry,
+                                             int pid, int np, int num_steps,
+                                             AllreduceNVSHMEMDevice<DataType> &ar) {
+
+  const int tid = threadIdx.x;
+  const int block_offset = blockIdx.x / num_blocks_per_entry;
+  const int sync_idx = block_offset * num_steps;
+  constexpr SyncType st = SyncType::NONE;
+
+  DataType *tmp_buf = ar.m_buf + (num_blocks_per_entry + num_steps) * block_offset;
+  DataType final_sum;
+
+  if (tid == 0) *tmp_buf = psum;
+
+  // TODO: intra-grid partial reduction
+
+  if (tid == 0) {
+    // Inter-device reduction
+    for (int i = 0; i < num_steps; ++i) {
+      int peer = pid ^ (1 << i);
+      put_nbi(tmp_buf + 1, tmp_buf, 1, peer);
+      ar.m_sync.sync(peer, true, true, st, sync_idx + i);
+      tmp_buf[1] += tmp_buf[0];
+      ++tmp_buf;
+    }
+    final_sum = *tmp_buf;
+  }
+
+  // TODO: intra-grid scatter
+  return final_sum;
+}
+#endif // __CUDACC__
+
+template <typename DataType>
+__global__ void recursive_doubling_block_global(const DataType *send_buf,
+                                                DataType *recv_buf,
+                                                size_t num_blocks_per_entry,
+                                                int pid, int np, int num_steps,
+                                                AllreduceNVSHMEMDevice<DataType> ar) {
+  const int block_offset = blockIdx.x / num_blocks_per_entry;
+  DataType psum;
+  if (threadIdx.x == 0) psum = send_buf[block_offset];
+  auto sum = recursive_doubling_block(psum, num_blocks_per_entry,
+                                      pid, np, num_steps, ar);
+  if (threadIdx.x == 0) recv_buf[block_offset] = sum;
+}
+
+template <typename T>
+struct Vector2;
+template <>
+struct Vector2<float> {
+  using type = float2;
+};
+template <>
+struct Vector2<double> {
+  using type = double2;
+};
+template <>
+struct Vector2<int> {
+  using type = int2;
+};
+template <>
+struct Vector2<long> {
+  using type = long2;
+};
+} // namespace allreduce_nvshmem
+
+template <typename DataType>
+void  AllreduceNVSHMEM<DataType>::recursive_doubling_block(
+    const DataType *send_buf, DataType *recv_buf, size_t count) {
+  // TODO: For now, use one block per entry
+  const int num_blocks_per_entry = 1;
+  const int block_size = 32;
+  bool vec2 = (count % 2 == 0);
+  if (vec2) {
+    count /= 2;
+  }
+  const int grid_size = count * num_blocks_per_entry;
+
+  recursive_doubling_block_setup(count, num_blocks_per_entry);
+
+  auto log_np = std::log2((float)m_np);
+  assert_always(std::ceil(log_np) == std::floor(log_np));
+  const int num_steps = log_np;
+
+  if (vec2) {
+    using OpType = typename allreduce_nvshmem::Vector2<DataType>::type;
+    allreduce_nvshmem::recursive_doubling_block_global<OpType><<<
+      grid_size, block_size, 0, m_stream>>>(
+          (const OpType*)send_buf, (OpType*)recv_buf,
+          num_blocks_per_entry, m_pid, m_np, num_steps, get_for_device<OpType>());
+  } else {
+    allreduce_nvshmem::recursive_doubling_block_global<DataType><<<
+      grid_size, block_size, 0, m_stream>>>(
+          send_buf, recv_buf, num_blocks_per_entry,
+          m_pid, m_np, num_steps, get_for_device());
+  }
+}
+
+#define DEFINE_RECURSIVE_DOUBLING(TYPE)                                 \
+  template                                                              \
+  void AllreduceNVSHMEM<TYPE>::recursive_doubling_block(                \
+      const TYPE *send_buf, TYPE *recv_buf, size_t count);
+DEFINE_RECURSIVE_DOUBLING(float)
+DEFINE_RECURSIVE_DOUBLING(double)
+DEFINE_RECURSIVE_DOUBLING(int)
+DEFINE_RECURSIVE_DOUBLING(long)
+#undef DEFINE_RECURSIVE_DOUBLING
+
 } // namespace tensor
 } // namespace distconv

@@ -16,10 +16,19 @@ namespace distconv {
 namespace tensor {
 
 template <typename DataType>
+struct AllreduceNVSHMEMDevice {
+  AllreduceNVSHMEMDevice(DataType *buf, const util::nvshmem::SyncArrayDevice &sync):
+      m_buf(buf), m_sync(sync) {}
+  DataType *m_buf;
+  util::nvshmem::SyncArrayDevice m_sync;
+  __device__ void recursive_doubling();
+};
+
+template <typename DataType>
 class AllreduceNVSHMEM: public Allreduce<DataType> {
  public:
   enum Algo {NAIVE, NATIVE, RECURSIVE_DOUBLING_HOST, RECURSIVE_DOUBLING,
-             RECURSIVE_DOUBLING_BUFFERED};
+             RECURSIVE_DOUBLING_BUFFERED, RECURSIVE_DOUBLING_BLOCK};
   AllreduceNVSHMEM(cudaStream_t stream, Algo algo=NAIVE):
       m_stream(stream), m_algo(algo), m_pid(nvshmem_my_pe()), m_np(nvshmem_n_pes()),
       m_sync(0) {
@@ -50,6 +59,9 @@ class AllreduceNVSHMEM: public Allreduce<DataType> {
         break;
       case RECURSIVE_DOUBLING_BUFFERED:
         recursive_doubling_buffered(send_buf, recv_buf, count);
+        break;
+      case RECURSIVE_DOUBLING_BLOCK:
+        recursive_doubling_block(send_buf, recv_buf, count);
         break;
       default:
         util::MPIRootPrintStreamError() << "Unknown allreduce algorithm";
@@ -199,6 +211,23 @@ class AllreduceNVSHMEM: public Allreduce<DataType> {
   void recursive_doubling(const DataType *send_buf, DataType *recv_buf, size_t count);
   void recursive_doubling_buffered(const DataType *send_buf, DataType *recv_buf,
                                    size_t count);
+
+  // Setup data buffers and sync buffers
+  void recursive_doubling_block_setup(size_t count, size_t num_blocks_per_entry) {
+    auto log_np = std::log2((float)m_np);
+    assert_always(std::ceil(log_np) == std::floor(log_np));
+    const int num_steps = log_np;
+    ensure_buffer((num_blocks_per_entry + num_steps) * count);
+    m_sync.ensure_size(num_steps * count);
+  }
+
+  void recursive_doubling_block(const DataType *send_buf, DataType *recv_buf,
+                                size_t count);
+  template <typename T=DataType>
+  AllreduceNVSHMEMDevice<T> get_for_device() {
+    return AllreduceNVSHMEMDevice<T>(static_cast<T*>(m_buf.get()),
+                                     m_sync.get_for_device());
+  }
 
   void copy(const DataType *src, DataType *dst, size_t count);
   void reduce(const DataType *src, DataType *dst, size_t count);

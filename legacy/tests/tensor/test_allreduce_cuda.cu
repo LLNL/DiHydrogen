@@ -23,6 +23,7 @@ static std::vector<std::string> nvshmem_methods = {
   "AllreduceNVSHMEMRecursiveDoublingHost",
   "AllreduceNVSHMEMRecursiveDoubling",
   "AllreduceNVSHMEMRecursiveDoublingBuffered",
+  "AllreduceNVSHMEMRecursiveDoublingBlock",
 };
 #endif
 
@@ -147,6 +148,9 @@ std::unique_ptr<tensor::Allreduce<DataType>> make_reducer(const std::string name
   } else if (name == "AllreduceNVSHMEMRecursiveDoublingBuffered") {
     return std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
         stream, tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BUFFERED);
+  } else if (name == "AllreduceNVSHMEMRecursiveDoublingBlock") {
+    return std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+        stream, tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BLOCK);
 #endif // DISTCONV_HAS_NVSHMEM
   } else {
     util::MPIRootPrintStreamError() << "Unknown allreducer name: '" << name << "'";
