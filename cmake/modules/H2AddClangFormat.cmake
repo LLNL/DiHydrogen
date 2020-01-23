@@ -62,8 +62,6 @@ if (CLANG_FORMAT_PROGRAM AND CLANG_FORMAT_VERSION_OK)
     if ((TGT_TYPE MATCHES "(STATIC|SHARED|OBJECT|MODULE)_LIBRARY")
         OR (TGT_TYPE MATCHES "EXECUTABLE"))
 
-      message(STATUS "Adding clang-format to ${IN_TARGET}")
-
       unset(TGT_SOURCES_FULL_PATH)
       get_target_property(TGT_SOURCES ${IN_TARGET} SOURCES)
       get_target_property(TGT_SRC_DIR ${IN_TARGET} SOURCE_DIR)
@@ -93,14 +91,13 @@ if (CLANG_FORMAT_PROGRAM AND CLANG_FORMAT_VERSION_OK)
 
         if (src MATCHES ".*BUILD_INTERFACE:(.*)>")
           set(my_src "${CMAKE_MATCH_1}")
-          message("I think the filename is ${CMAKE_MATCH_1}")
         else ()
           set(my_src "${src}")
         endif ()
         get_filename_component(SRC_NAME "${my_src}" NAME)
         # Assume a relative path is
         if (my_src STREQUAL SRC_NAME)
-          message(FATAL_ERROR "AHHHH ${my_src}")
+          message(FATAL_ERROR "Not expecting relative path: ${my_src}")
           list(APPEND TGT_SOURCES_FULL_PATH "${TGT_SRC_DIR}/${my_src}")
         else ()
           list(APPEND TGT_SOURCES_FULL_PATH "${my_src}")
@@ -109,8 +106,6 @@ if (CLANG_FORMAT_PROGRAM AND CLANG_FORMAT_VERSION_OK)
 
       set_property(TARGET clang-format APPEND
         PROPERTY FORMAT_SOURCES "${TGT_SOURCES_FULL_PATH}")
-    else ()
-      message("Target ${IN_TARGET} is ${TGT_TYPE}")
     endif ()
   endmacro ()
 
