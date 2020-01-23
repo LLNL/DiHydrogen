@@ -79,7 +79,6 @@ if (CLANG_FORMAT_PROGRAM AND CLANG_FORMAT_VERSION_OK)
         PROPERTY FORMAT_SOURCES "${TGT_SOURCES_FULL_PATH}")
     elseif (TGT_TYPE MATCHES "INTERFACE_LIBRARY")
       get_target_property(TGT_SOURCES ${IN_TARGET} INTERFACE_SOURCES)
-      message("TGT_SOURCES=${TGT_SOURCES}")
 
       # Sources might be in generator expressions! :/ We want to only
       # change the BUILD_INTERFACE objects with absolute paths.
