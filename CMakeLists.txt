@@ -33,6 +33,10 @@ include(SetupMPI)
 # subsequently fail to find its dependencies.
 #
 
+option(H2_ENABLE_DISTCONV_LEGACY
+  "Enable the legacy DistConv code branch."
+  ON)
+
 option(H2_ENABLE_OPENMP
   "Enable CPU acceleration with OpenMP threads."
   OFF)
@@ -165,15 +169,60 @@ configure_file(
   "${CONFIG_FILE_DIR}/h2_config.hpp.in"
   "${CMAKE_GENERATED_INCLUDE_DIRECTORY}/h2_config.hpp"
   @ONLY)
+install(
+  FILES "${CMAKE_GENERATED_INCLUDE_DIRECTORY}/h2_config.hpp"
+  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+  COMPONENT CORE)
+
+# Add a target to collect things that are fundamental to the library,
+# such as the version.
+add_library(H2Core
+  "${CMAKE_GENERATED_INCLUDE_DIRECTORY}/h2_config.hpp")
 
 add_subdirectory(include/h2)
 add_subdirectory(src)
 
-# Setup the testing
-if (H2_ENABLE_TESTS)
-  include(CTest)
-  add_subdirectory(test)
+target_include_directories(
+  H2Core PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_GENERATED_INCLUDE_DIRECTORY}>
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+
+target_link_libraries(H2Core PUBLIC
+  BLAS::BLAS
+  MPI::MPI_CXX
+  $<TARGET_NAME_IF_EXISTS:Half::Half>
+  $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_CXX>
+  $<TARGET_NAME_IF_EXISTS:cuda::CUDA_CXX>
+  $<TARGET_NAME_IF_EXISTS:rocm::ROCm_CXX>
+  )
+
+if (H2_EXTRA_CXX_FLAGS)
+  target_compile_options(H2Core
+    PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${H2_EXTRA_CXX_FLAGS}>)
 endif ()
+
+set_target_properties(H2Core
+  PROPERTIES
+  CXX_STANDARD 14
+  CXX_EXTENSIONS OFF
+  CXX_STANDARD_REQUIRED ON)
+
+# Compiler flags are not transitive in the install environment; we
+# don't want to force downstreams to, e.g., compile with "-Werror"
+# just because we wanted to compile that way.
+target_link_libraries(H2Core PRIVATE
+  $<BUILD_INTERFACE:$<TARGET_NAME_IF_EXISTS:h2_coverage_flags>>)
+
+install(TARGETS H2Core
+  EXPORT DiHydrogenTargets
+  COMPONENT CXX)
+
+list(APPEND H2_LIBRARIES H2Core)
+
+# Setup the testing
+include(CTest)
+add_subdirectory(test)
 
 # Setup clang format
 if (TARGET clang-format)
@@ -184,7 +233,9 @@ endif ()
 add_subdirectory(doc)
 
 # The legacy distconv code
-add_subdirectory(legacy)
+if (H2_ENABLE_DISTCONV_LEGACY)
+  add_subdirectory(legacy)
+endif ()
 
 # Install target stuff
 include (CMakePackageConfigHelpers)
@@ -229,11 +280,6 @@ configure_package_config_file(
   "${CMAKE_BINARY_DIR}/DiHydrogenConfig.install.cmake"
   INSTALL_DESTINATION ${CMAKE_INSTALL_DIR}
   PATH_VARS INCLUDE_INSTALL_DIRS LIB_INSTALL_DIR)
-
-# Install the configuration headers
-install(FILES
-  "${CMAKE_GENERATED_INCLUDE_DIRECTORY}/h2_config.hpp"
-  DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}")
 
 # Install the CMake stuff
 install(FILES
