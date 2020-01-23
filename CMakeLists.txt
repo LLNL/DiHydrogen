@@ -226,7 +226,8 @@ add_subdirectory(test)
 
 # Setup clang format
 if (TARGET clang-format)
-  add_clang_format_to_all_targets()
+#  add_clang_format_to_targets(TARGETS H2Core H2Meta)
+  add_clang_format_to_all_targets(TARGETS H2Core H2Meta)
 endif ()
 
 # Setup the documentation targets

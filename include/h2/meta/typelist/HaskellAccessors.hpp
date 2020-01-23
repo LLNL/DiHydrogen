@@ -4,7 +4,6 @@
 #define H2_META_TYPELIST_HASKELLACCESSORS_HPP_
 
 #include "TypeList.hpp"
-
 #include "h2/meta/core/Lazy.hpp"
 
 namespace h2
@@ -13,7 +12,6 @@ namespace meta
 {
 namespace tlist
 {
-
 /** @brief Prepend an item to the list. */
 template <typename T, typename List>
 struct PrependT;
@@ -38,7 +36,7 @@ struct InitT;
 
 /** @brief Prepend an item to the list. */
 template <typename T, typename List>
-using Prepend = Force<PrependT<T,List>>;
+using Prepend = Force<PrependT<T, List>>;
 
 /** @brief Get the first item in the list. */
 template <typename List>
@@ -60,14 +58,14 @@ using Init = Force<InitT<List>>;
 
 // Prepend
 template <typename T, typename... Ts>
-struct PrependT<T,TL<Ts...>>
+struct PrependT<T, TL<Ts...>>
 {
-    using type = TL<T,Ts...>;
+    using type = TL<T, Ts...>;
 };
 
 // Head
 template <typename T, typename... Ts>
-struct HeadT<TL<T,Ts...>>
+struct HeadT<TL<T, Ts...>>
 {
     using type = T;
 };
@@ -99,8 +97,7 @@ struct LastT<TL<T>>
 };
 
 template <typename T, typename... Ts>
-struct LastT<TL<T, Ts...>>
-    : LastT<TL<Ts...>>
+struct LastT<TL<T, Ts...>> : LastT<TL<Ts...>>
 {};
 
 // Maybe this shouldn't be here, just error out?
@@ -118,8 +115,7 @@ struct InitT<TL<T>>
 };
 
 template <typename T, typename... Ts>
-struct InitT<TL<T, Ts...>>
-    : PrependT<T, Init<TL<Ts...>>>
+struct InitT<TL<T, Ts...>> : PrependT<T, Init<TL<Ts...>>>
 {};
 
 // Maybe this shouldn't be here, just error out?
@@ -130,7 +126,7 @@ struct InitT<Empty>
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-}// namespace tlist
-}// namespace meta
-}// namespace h2
+} // namespace tlist
+} // namespace meta
+} // namespace h2
 #endif // H2_META_TYPELIST_HASKELLACCESSORS_HPP_

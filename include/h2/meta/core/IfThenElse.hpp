@@ -9,7 +9,6 @@ namespace h2
 {
 namespace meta
 {
-
 template <bool B, typename T, typename F>
 struct IfThenElseT;
 
@@ -30,6 +29,6 @@ struct IfThenElseT<true, T, F>
 };
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
-}// namespace meta
-}// namespace h2
+} // namespace meta
+} // namespace h2
 #endif // H2_META_CORE_IFTHENELSE_HPP_

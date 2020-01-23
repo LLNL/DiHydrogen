@@ -3,9 +3,8 @@
 #ifndef H2_META_TYPELIST_AT_HPP_
 #define H2_META_TYPELIST_AT_HPP_
 
-#include "TypeList.hpp"
 #include "LispAccessors.hpp"
-
+#include "TypeList.hpp"
 #include "h2/meta/core/Lazy.hpp"
 
 namespace h2
@@ -14,7 +13,6 @@ namespace meta
 {
 namespace tlist
 {
-
 /** @brief Extract the type at the given index (0-based) in the list. */
 template <typename List, unsigned long Idx>
 struct AtT;
@@ -27,18 +25,16 @@ using At = Force<AtT<List, Idx>>;
 
 // Base case
 template <typename List>
-struct AtT<List, 0UL>
-    : CarT<List>
+struct AtT<List, 0UL> : CarT<List>
 {};
 
 // Recursive case
 template <typename List, unsigned long Idx>
-struct AtT
-    : AtT<Cdr<List>, Idx - 1>
+struct AtT : AtT<Cdr<List>, Idx - 1>
 {};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-}// namespace tlist
-}// namespace meta
-}// namespace h2
+} // namespace tlist
+} // namespace meta
+} // namespace h2
 #endif // H2_META_TYPELIST_AT_HPP_

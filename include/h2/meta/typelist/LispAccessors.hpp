@@ -3,7 +3,6 @@
 #define H2_META_TYPELIST_LISPACCESSORS_HPP_
 
 #include "TypeList.hpp"
-
 #include "h2/meta/core/Lazy.hpp"
 
 namespace h2
@@ -12,7 +11,6 @@ namespace meta
 {
 namespace tlist
 {
-
 /** @brief The basic Cons operation.
  *  @details Prepend an item to a list.
  *  @tparam T The new item to prepend to the list
@@ -45,7 +43,7 @@ struct CdrT;
  *  @tparam List The list
  */
 template <typename T, typename List>
-using Cons = Force<ConsT<T,List>>;
+using Cons = Force<ConsT<T, List>>;
 
 /** @brief An appending version of the Cons operation.
  *  @details Append an item to a list.
@@ -53,7 +51,7 @@ using Cons = Force<ConsT<T,List>>;
  *  @tparam T The new item to prepend to the list
  */
 template <typename List, typename T>
-using ConsBack = Force<ConsBackT<List,T>>;
+using ConsBack = Force<ConsBackT<List, T>>;
 
 /** @brief Get the first item in a list
  *  @tparam List The list.
@@ -70,46 +68,74 @@ using Cdr = Force<CdrT<List>>;
 // A few Lisp-y things. The CL spec goes out to 4 operations.
 
 // 2 operations
-template <typename List> using Caar = Car<Car<List>>;
-template <typename List> using Cadr = Car<Cdr<List>>;
-template <typename List> using Cdar = Cdr<Car<List>>;
-template <typename List> using Cddr = Cdr<Cdr<List>>;
+template <typename List>
+using Caar = Car<Car<List>>;
+template <typename List>
+using Cadr = Car<Cdr<List>>;
+template <typename List>
+using Cdar = Cdr<Car<List>>;
+template <typename List>
+using Cddr = Cdr<Cdr<List>>;
 
 // 3 operations
-template <typename List> using Caaar = Car<Caar<List>>;
-template <typename List> using Caadr = Car<Cadr<List>>;
-template <typename List> using Cadar = Car<Cdar<List>>;
-template <typename List> using Cdaar = Cdr<Caar<List>>;
-template <typename List> using Caddr = Car<Cddr<List>>;
-template <typename List> using Cddar = Cdr<Cdar<List>>;
-template <typename List> using Cdadr = Cdr<Cadr<List>>;
-template <typename List> using Cdddr = Cdr<Cddr<List>>;
+template <typename List>
+using Caaar = Car<Caar<List>>;
+template <typename List>
+using Caadr = Car<Cadr<List>>;
+template <typename List>
+using Cadar = Car<Cdar<List>>;
+template <typename List>
+using Cdaar = Cdr<Caar<List>>;
+template <typename List>
+using Caddr = Car<Cddr<List>>;
+template <typename List>
+using Cddar = Cdr<Cdar<List>>;
+template <typename List>
+using Cdadr = Cdr<Cadr<List>>;
+template <typename List>
+using Cdddr = Cdr<Cddr<List>>;
 
 // 4 operations
-template <typename List> using Caaaar = Car<Caaar<List>>;
-template <typename List> using Caaadr = Car<Caadr<List>>;
-template <typename List> using Caadar = Car<Cadar<List>>;
-template <typename List> using Cadaar = Car<Cdaar<List>>;
-template <typename List> using Cdaaar = Cdr<Caaar<List>>;
-template <typename List> using Caaddr = Car<Caddr<List>>;
-template <typename List> using Cadadr = Car<Cdadr<List>>;
-template <typename List> using Cdaadr = Cdr<Caadr<List>>;
-template <typename List> using Cdadar = Cdr<Cadar<List>>;
-template <typename List> using Cddaar = Cdr<Cdaar<List>>;
-template <typename List> using Caddar = Car<Cddar<List>>;
-template <typename List> using Cadddr = Car<Cdddr<List>>;
-template <typename List> using Cdaddr = Cdr<Caddr<List>>;
-template <typename List> using Cddadr = Cdr<Cdadr<List>>;
-template <typename List> using Cdddar = Cdr<Cddar<List>>;
-template <typename List> using Cddddr = Cdr<Cdddr<List>>;
+template <typename List>
+using Caaaar = Car<Caaar<List>>;
+template <typename List>
+using Caaadr = Car<Caadr<List>>;
+template <typename List>
+using Caadar = Car<Cadar<List>>;
+template <typename List>
+using Cadaar = Car<Cdaar<List>>;
+template <typename List>
+using Cdaaar = Cdr<Caaar<List>>;
+template <typename List>
+using Caaddr = Car<Caddr<List>>;
+template <typename List>
+using Cadadr = Car<Cdadr<List>>;
+template <typename List>
+using Cdaadr = Cdr<Caadr<List>>;
+template <typename List>
+using Cdadar = Cdr<Cadar<List>>;
+template <typename List>
+using Cddaar = Cdr<Cdaar<List>>;
+template <typename List>
+using Caddar = Car<Cddar<List>>;
+template <typename List>
+using Cadddr = Car<Cdddr<List>>;
+template <typename List>
+using Cdaddr = Cdr<Caddr<List>>;
+template <typename List>
+using Cddadr = Cdr<Cdadr<List>>;
+template <typename List>
+using Cdddar = Cdr<Cddar<List>>;
+template <typename List>
+using Cddddr = Cdr<Cdddr<List>>;
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 // Cons
 template <typename T, typename... Ts>
-struct ConsT<T,TypeList<Ts...>>
+struct ConsT<T, TypeList<Ts...>>
 {
-    using type = TypeList<T,Ts...>;
+    using type = TypeList<T, Ts...>;
 };
 
 // ConsBack
@@ -121,7 +147,7 @@ struct ConsBackT<TypeList<Ts...>, T>
 
 // Car
 template <typename T, typename... Ts>
-struct CarT<TypeList<T,Ts...>>
+struct CarT<TypeList<T, Ts...>>
 {
     using type = T;
 };
@@ -146,7 +172,7 @@ struct CdrT<Empty>
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-}// namespace tlist
-}// namespace meta
-}// namespace h2
+} // namespace tlist
+} // namespace meta
+} // namespace h2
 #endif // H2_META_TYPELIST_LISPACCESSORS_HPP_

@@ -3,10 +3,9 @@
 #ifndef H2_META_PARTIAL_FUNCTIONS_APPLY_HPP_
 #define H2_META_PARTIAL_FUNCTIONS_APPLY_HPP_
 
+#include "Placeholders.hpp"
 #include "h2/meta/Core.hpp"
 #include "h2/meta/TypeList.hpp"
-
-#include "Placeholders.hpp"
 
 namespace h2
 {
@@ -14,7 +13,6 @@ namespace meta
 {
 namespace pfunctions
 {
-
 /** @brief Replace placeholders with formal arguments.
  *
  *  The given function may be fully or partially applied.
@@ -49,7 +47,7 @@ struct ApplyT<F<Params...>, TL<Args...>>
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-}// namespace pfunctions
-}// namespace meta
-}// namespace h2
+} // namespace pfunctions
+} // namespace meta
+} // namespace h2
 #endif // H2_META_PARTIAL_FUNCTIONS_APPLY_HPP_

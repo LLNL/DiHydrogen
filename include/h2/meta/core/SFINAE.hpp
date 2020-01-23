@@ -9,7 +9,6 @@ namespace h2
 {
 namespace meta
 {
-
 /** @brief A SFINAE tool for excluding functions/overloads.
  *
  *  Contains a typedef `type` if the condition is `true`.
@@ -64,7 +63,9 @@ struct SubstitutionSuccess<SubstitutionFailure>
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
-template <bool B, typename ResultT> struct EnableIfT {};
+template <bool B, typename ResultT>
+struct EnableIfT
+{};
 
 template <typename ResultT>
 struct EnableIfT<true, ResultT>
@@ -74,6 +75,6 @@ struct EnableIfT<true, ResultT>
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
-}// namespace meta
-}// namespace h2
+} // namespace meta
+} // namespace h2
 #endif // H2_META_CORE_SFINAE_HPP_

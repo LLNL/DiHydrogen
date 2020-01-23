@@ -14,7 +14,6 @@ namespace pfunctions
 {
 namespace placeholders
 {
-
 /** @brief A placeholder for an argument to a type function.
  *
  *  These are placeholder arguments used in defining functions. This
@@ -58,7 +57,7 @@ template <typename CandidatePH, typename... Replacements>
 using PHReplace = Force<PHReplaceT<CandidatePH, Replacements...>>;
 
 } // namespace placeholders
-}// namespace pfunctions
+} // namespace pfunctions
 
 /** @brief A placeholder wrapper for use in the meta namespace. */
 template <unsigned long Idx>
@@ -69,7 +68,6 @@ namespace pfunctions
 {
 namespace placeholders
 {
-
 // Degenerate case: The candidate is not actually a placeholder
 template <typename PlainOldType, typename... Replacements>
 struct PHReplaceT
@@ -103,13 +101,15 @@ struct PHReplaceT<Placeholder<Idx>, Replacements...>
 private:
     static constexpr unsigned long num_args_ = sizeof...(Replacements);
     static constexpr bool do_arg_replace_ = (Idx < num_args_);
+
 public:
-    using type = IfThenElse<do_arg_replace_,
-                            tlist::At<TL<Replacements...>, Idx>,
-                            Placeholder<Idx - num_args_>>;
+    using type = IfThenElse<
+        do_arg_replace_,
+        tlist::At<TL<Replacements...>, Idx>,
+        Placeholder<Idx - num_args_>>;
 };
 
-}// namespace placeholders
+} // namespace placeholders
 
 // Inject these symbols into the pfunctions namespace
 using placeholders::_1;
@@ -122,8 +122,8 @@ using placeholders::_7;
 using placeholders::_8;
 using placeholders::_9;
 
-}// namespace pfunctions
+} // namespace pfunctions
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-}// namespace meta
-}// namespace h2
+} // namespace meta
+} // namespace h2
 #endif // H2_META_PARTIAL_FUNCTIONS_PLACEHOLDERS_HPP_
