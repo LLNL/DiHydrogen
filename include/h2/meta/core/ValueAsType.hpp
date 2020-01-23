@@ -8,7 +8,6 @@ namespace h2
 {
 namespace meta
 {
-
 /** @brief A constexpr value represented as a type. */
 template <typename T, T Value>
 struct ValueAsTypeT
@@ -30,6 +29,6 @@ using TrueType = ValueAsType<bool, true>;
 /** @brief A representation of boolean `false` values as a type. */
 using FalseType = ValueAsType<bool, false>;
 
-}// namespace meta
-}// namespace h2
+} // namespace meta
+} // namespace h2
 #endif // H2_META_CORE_VALUEASTYPE_HPP_

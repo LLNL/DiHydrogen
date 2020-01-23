@@ -3,9 +3,8 @@
 #ifndef H2_META_TYPELIST_REMOVE_HPP_
 #define H2_META_TYPELIST_REMOVE_HPP_
 
-#include "TypeList.hpp"
 #include "LispAccessors.hpp"
-
+#include "TypeList.hpp"
 #include "h2/meta/core/Lazy.hpp"
 
 namespace h2
@@ -14,14 +13,13 @@ namespace meta
 {
 namespace tlist
 {
-
 /** @brief Remove the first instance of a type from a typelist. */
 template <typename List, typename T>
 struct RemoveT;
 
 /** @brief Remove the first instance of a type from a typelist. */
 template <typename List, typename T>
-using Remove = Force<RemoveT<List,T>>;
+using Remove = Force<RemoveT<List, T>>;
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
@@ -33,19 +31,18 @@ struct RemoveT<Empty, T>
 
 // Match case
 template <typename T, typename... Ts>
-struct RemoveT<TypeList<T,Ts...>, T>
+struct RemoveT<TypeList<T, Ts...>, T>
 {
     using type = TypeList<Ts...>;
 };
 
 // Recursive call
 template <typename S, typename... Ts, typename T>
-struct RemoveT<TypeList<S, Ts...>, T>
-    : ConsT<S, Remove<TypeList<Ts...>, T>>
+struct RemoveT<TypeList<S, Ts...>, T> : ConsT<S, Remove<TypeList<Ts...>, T>>
 {};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-}// namespace tlist
-}// namespace meta
-}// namespace h2
+} // namespace tlist
+} // namespace meta
+} // namespace h2
 #endif // H2_META_TYPELIST_REMOVE_HPP_

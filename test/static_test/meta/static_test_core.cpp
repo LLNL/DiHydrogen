@@ -31,4 +31,4 @@ struct Test
 static_assert(EqV<Force<Test>, int>(), "Force works.");
 static_assert(!EqV<Force<Test>, long>(), "Force works.");
 
-}// namespace static_test_core
+} // namespace static_test_core

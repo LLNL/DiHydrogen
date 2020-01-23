@@ -11,7 +11,6 @@ namespace meta
 {
 namespace pfunctions
 {
-
 /** @brief Function to produce N-ary functions for arbitrary N. */
 template <template <typename...> class F, size_t N>
 struct MakeNaryFunctionT;
@@ -56,7 +55,7 @@ struct MakeNaryFunctionT_Impl<F, ValueList<size_t, ArgIdxs...>>
 {
     using type = F<PH<ArgIdxs>...>;
 };
-}// namespace details
+} // namespace details
 
 template <template <typename...> class F, size_t N>
 struct MakeNaryFunctionT
@@ -64,7 +63,7 @@ struct MakeNaryFunctionT
 {};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-}// namespace pfunctions
-}// namespace meta
-}// namespace h2
+} // namespace pfunctions
+} // namespace meta
+} // namespace h2
 #endif // H2_META_PARTIAL_FUNCTIONS_MAKEFUNCTION_HPP_

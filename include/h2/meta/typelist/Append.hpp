@@ -12,7 +12,6 @@ namespace meta
 {
 namespace tlist
 {
-
 /** @brief Join multiple lists into one. */
 template <typename... Lists>
 struct AppendT;
@@ -44,7 +43,7 @@ struct AppendT<FirstList, OtherLists...>
 {};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-}// namespace tlist
-}// namespace meta
-}// namespace h2
+} // namespace tlist
+} // namespace meta
+} // namespace h2
 #endif // H2_META_TYPELIST_APPEND_HPP_

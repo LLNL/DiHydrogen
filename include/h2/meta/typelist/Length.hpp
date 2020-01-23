@@ -5,7 +5,6 @@
 
 #include "LispAccessors.hpp"
 #include "TypeList.hpp"
-
 #include "h2/meta/core/Lazy.hpp"
 #include "h2/meta/core/ValueAsType.hpp"
 
@@ -21,7 +20,10 @@ struct LengthVT;
 
 /** @brief Get the index of a given type in the list. */
 template <typename List>
-constexpr unsigned long LengthV() { return LengthVT<List>::value; }
+constexpr unsigned long LengthV()
+{
+    return LengthVT<List>::value;
+}
 
 #ifndef H2_USE_CXX17
 template <typename List>
@@ -32,8 +34,7 @@ inline constexpr unsigned long Length = LengthV<List>();
 
 // Base case
 template <>
-struct LengthVT<Empty>
-    : ValueAsType<unsigned long, 0>
+struct LengthVT<Empty> : ValueAsType<unsigned long, 0>
 {};
 
 // Recursive case
@@ -43,7 +44,7 @@ struct LengthVT<TL<T, Ts...>>
 {};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-}// namespace tlist
-}// namespace meta
-}// namespace h2
+} // namespace tlist
+} // namespace meta
+} // namespace h2
 #endif // H2_META_TYPELIST_LENGTH_HPP_

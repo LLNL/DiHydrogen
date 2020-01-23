@@ -9,7 +9,6 @@ namespace h2
 {
 namespace meta
 {
-
 /** @struct TypeList
  *  @brief A basic type list.
  *
@@ -41,7 +40,7 @@ using Empty = TypeList<>;
 /** @brief The empty list. */
 using Nil = Empty;
 
-}// namespace tlist
+} // namespace tlist
 
 // Implementation
 
@@ -50,13 +49,15 @@ using Nil = Empty;
 // This gives typelists boolean value semantics. It's not clear if
 // this matters.
 template <typename... Ts>
-struct TypeList : TrueType {};
+struct TypeList : TrueType
+{};
 
 template <>
-struct TypeList<> : FalseType {};
+struct TypeList<> : FalseType
+{};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
-}// namespace meta
-}// namespace h2
+} // namespace meta
+} // namespace h2
 #endif // H2_META_TYPELIST_TYPELIST_HPP_

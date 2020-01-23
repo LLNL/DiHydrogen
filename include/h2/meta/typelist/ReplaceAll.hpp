@@ -3,9 +3,8 @@
 #ifndef H2_META_TYPELIST_REPLACEALL_HPP_
 #define H2_META_TYPELIST_REPLACEALL_HPP_
 
-#include "TypeList.hpp"
 #include "LispAccessors.hpp"
-
+#include "TypeList.hpp"
 #include "h2/meta/core/Lazy.hpp"
 
 namespace h2
@@ -14,7 +13,6 @@ namespace meta
 {
 namespace tlist
 {
-
 /** @brief Replace all instances of Old with New in List.
  *  @tparam List The list in which to do replacement.
  *  @tparam Old The type to be replaced.
@@ -44,12 +42,11 @@ struct ReplaceAllT<TypeList<Old, Ts...>, Old, New>
 
 // Recursive case
 template <typename List, typename Old, typename New>
-struct ReplaceAllT
-    : ConsT<Car<List>, ReplaceAll<Cdr<List>, Old, New>>
+struct ReplaceAllT : ConsT<Car<List>, ReplaceAll<Cdr<List>, Old, New>>
 {};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-}// namespace tlist
-}// namespace meta
-}// namespace h2
+} // namespace tlist
+} // namespace meta
+} // namespace h2
 #endif // H2_META_TYPELIST_REPLACEALL_HPP_
