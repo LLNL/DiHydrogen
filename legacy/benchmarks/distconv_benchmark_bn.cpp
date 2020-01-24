@@ -250,10 +250,8 @@ int test_forward(Data<NSD, Backend, DataType> &d,
   const bool is_training = true;
 
   for (int i = 0; i < cfg.warming_up_count; ++i) {
-    bn.forward_stage1(d.input, d.mean, d.var, is_training);
-    bn.forward_allreduce(d.mean, d.var, is_training);
-    bn.forward_stage2(d.input, d.mean, d.var, d.running_mean, d.running_var,
-                      d.scale, d.bias, d.output, is_training);
+    bn.forward(d.input, d.mean, d.var, d.running_mean, d.running_var,
+               d.scale, d.bias, d.output, is_training);
   }
 
   be.wait();
@@ -272,23 +270,33 @@ int test_forward(Data<NSD, Backend, DataType> &d,
     }
     // Runs for synchronization
     bn.forward_allreduce(d.mean, d.var, is_training);
+#ifdef DISTCONV_HAS_NVSHMEM
     if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
       util::nvshmem::launch_barrier(be.get_stream());
     }
+#endif // DISTCONV_HAS_NVSHMEM
     // Start measurement
     clk_allreduce.start();
     bn.forward_allreduce(d.mean, d.var, is_training);
     clk_allreduce.stop();
+#ifdef DISTCONV_HAS_NVSHMEM
+    if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+      util::nvshmem::launch_barrier(be.get_stream());
+    }
+#endif // DISTCONV_HAS_NVSHMEM
     clk.start();
-    bn.forward_stage1(d.input, d.mean, d.var, is_training);
-    bn.forward_allreduce(d.mean, d.var, is_training);
-    bn.forward_stage2(d.input, d.mean, d.var, d.running_mean, d.running_var,
-                      d.scale, d.bias, d.output, is_training);
+    bn.forward(d.input, d.mean, d.var, d.running_mean, d.running_var,
+               d.scale, d.bias, d.output, is_training);
     clk.stop();
     prof.fwd_time[i] = clk.get_time();
     prof.fwd_allreduce_time[i] = clk_allreduce.get_time();
   }
 
+#ifdef DISTCONV_HAS_NVSHMEM
+  if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+    util::nvshmem::barrier();
+  }
+#endif // DISTCONV_HAS_NVSHMEM
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
   util::MPIRootPrintStreamInfo() << "Measurement done";
   return 0;
@@ -335,13 +343,20 @@ int test_backward(Data<NSD, Backend, DataType> &d,
     }
     // synchronize the processes
     bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var);
+#ifdef DISTCONV_HAS_NVSHMEM
     if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
       util::nvshmem::launch_barrier(be.get_stream());
     }
+#endif // DISTCONV_HAS_NVSHMEM
     clk_allreduce.start();
     bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var,
                           cfg.skip_weight_allreduce);
     clk_allreduce.stop();
+#ifdef DISTCONV_HAS_NVSHMEM
+    if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+      util::nvshmem::launch_barrier(be.get_stream());
+    }
+#endif // DISTCONV_HAS_NVSHMEM
     clk.start();
     bn.backward_stage1(d.input, d.d_output, d.mean, d.var, d.scale,
                        d.d_scale, d.d_bias, d.d_mean, d.d_var);
@@ -354,6 +369,11 @@ int test_backward(Data<NSD, Backend, DataType> &d,
     prof.bwd_allreduce_time[i] = clk_allreduce.get_time();
   }
 
+#ifdef DISTCONV_HAS_NVSHMEM
+  if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+    util::nvshmem::barrier();
+  }
+#endif // DISTCONV_HAS_NVSHMEM
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
   util::MPIRootPrintStreamInfo() << "Measurement done";
   return 0;

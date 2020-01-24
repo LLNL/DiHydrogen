@@ -92,10 +92,11 @@ __global__ void recursive_doubling_kernel(const DataType *send_buf,
   int sync_idx = blockIdx.x * num_steps;
   send_buf += blockIdx.x * work_per_block;
   recv_buf += blockIdx.x * work_per_block;
-  tmp_buf += blockIdx.x * work_per_block;
+  auto psum = tmp_buf + blockIdx.x * work_per_block * 2;
+  auto put_buf = psum + work_per_block;
   work_per_block = min(work_per_block, count - blockIdx.x * work_per_block);
 
-  copy_block(recv_buf, send_buf, work_per_block);
+  copy_block(psum, send_buf, work_per_block);
 
   constexpr SyncType st = SyncType::NONE;
 
@@ -108,19 +109,17 @@ __global__ void recursive_doubling_kernel(const DataType *send_buf,
       }
     }
     __syncthreads();
-    put_nbi_block(tmp_buf, recv_buf, work_per_block, peer);
+    put_nbi_block(put_buf, psum, work_per_block, peer);
     __syncthreads();
     if (tid == 0) {
       sync.sync(peer, true, true, st, sync_idx + i);
     }
     __syncthreads();
-    reduce_block(tmp_buf, recv_buf, work_per_block);
-    swap(tmp_buf, recv_buf);
+    reduce_block(put_buf, psum, work_per_block);
+    swap(psum, put_buf);
   }
 
-  if (num_steps % 2 != 0) {
-    copy_block(tmp_buf, recv_buf, work_per_block);
-  }
+  copy_block(recv_buf, psum, work_per_block);
 }
 
 } // namespace allreduce_nvshmem
@@ -136,7 +135,7 @@ void AllreduceNVSHMEM<DataType>::recursive_doubling(
   auto log_np = std::log2((float)m_np);
   assert_always(std::ceil(log_np) == std::floor(log_np));
 
-  ensure_buffer(count);
+  ensure_buffer(count * 2);
 
   const int num_steps = log_np;
 
@@ -173,28 +172,28 @@ __global__ void recursive_doubling_buffered(const DataType *send_buf,
   int sync_idx = blockIdx.x * num_steps;
   send_buf += blockIdx.x * work_per_block;
   recv_buf += blockIdx.x * work_per_block;
-  tmp_buf += blockIdx.x * work_per_block * num_steps;
+  auto psum = tmp_buf + blockIdx.x * work_per_block * (num_steps + 1);
+  auto put_buf = psum + work_per_block;
   work_per_block = min(work_per_block, count - blockIdx.x * work_per_block);
 
-  copy_block(recv_buf, send_buf, work_per_block);
+  copy_block(psum, send_buf, work_per_block);
 
   constexpr SyncType st = SyncType::NONE;
 
-  DataType *par_sum = recv_buf;
   for (int i = 0; i < num_steps; ++i) {
     int peer = pid ^ (1 << i);
     __syncthreads();
-    put_nbi_block(tmp_buf, par_sum, work_per_block, peer);
+    put_nbi_block(put_buf, psum, work_per_block, peer);
     __syncthreads();
     if (tid == 0) {
       sync.sync(peer, true, true, st, sync_idx + i);
     }
     __syncthreads();
-    reduce_block(tmp_buf, par_sum, work_per_block);
-    par_sum = tmp_buf;
-    tmp_buf += work_per_block;
+    reduce_block(put_buf, psum, work_per_block);
+    psum = put_buf;
+    put_buf += work_per_block;
   }
-  copy_block(recv_buf, par_sum, work_per_block);
+  copy_block(recv_buf, psum, work_per_block);
 }
 } // namespace allreduce_nvshmem
 
@@ -210,7 +209,9 @@ void AllreduceNVSHMEM<DataType>::recursive_doubling_buffered(
   assert_always(std::ceil(log_np) == std::floor(log_np));
   const int num_steps = log_np;
 
-  ensure_buffer(count * num_steps);
+  ensure_buffer(count * (num_steps + 1));
+
+
 
   // Need to have different sync objects for different thread blocks
   m_sync.ensure_size(num_steps * grid_size);
@@ -233,58 +234,16 @@ DEFINE_RECURSIVE_DOUBLING(long)
 #undef DEFINE_RECURSIVE_DOUBLING
 
 namespace allreduce_nvshmem {
-// TODO: This should be moved to the header file unless device linking
-// is enabled.
-#ifdef __CUDACC__
-// Assume that the root thread has the partial sum. Those held by
-// other threads are not used. Only the root thread has the valid
-// output value.
-template <typename DataType>
-__device__ DataType recursive_doubling_block(DataType psum,
-                                             size_t num_blocks_per_entry,
-                                             int pid, int np, int num_steps,
-                                             AllreduceNVSHMEMDevice<DataType> &ar) {
-
-  const int tid = threadIdx.x;
-  const int block_offset = blockIdx.x / num_blocks_per_entry;
-  const int sync_idx = block_offset * num_steps;
-  constexpr SyncType st = SyncType::NONE;
-
-  DataType *tmp_buf = ar.m_buf + (num_blocks_per_entry + num_steps) * block_offset;
-  DataType final_sum;
-
-  if (tid == 0) *tmp_buf = psum;
-
-  // TODO: intra-grid partial reduction
-
-  if (tid == 0) {
-    // Inter-device reduction
-    for (int i = 0; i < num_steps; ++i) {
-      int peer = pid ^ (1 << i);
-      put_nbi(tmp_buf + 1, tmp_buf, 1, peer);
-      ar.m_sync.sync(peer, true, true, st, sync_idx + i);
-      tmp_buf[1] += tmp_buf[0];
-      ++tmp_buf;
-    }
-    final_sum = *tmp_buf;
-  }
-
-  // TODO: intra-grid scatter
-  return final_sum;
-}
-#endif // __CUDACC__
 
 template <typename DataType>
 __global__ void recursive_doubling_block_global(const DataType *send_buf,
                                                 DataType *recv_buf,
                                                 size_t num_blocks_per_entry,
-                                                int pid, int np, int num_steps,
                                                 AllreduceNVSHMEMDevice<DataType> ar) {
   const int block_offset = blockIdx.x / num_blocks_per_entry;
   DataType psum;
   if (threadIdx.x == 0) psum = send_buf[block_offset];
-  auto sum = recursive_doubling_block(psum, num_blocks_per_entry,
-                                      pid, np, num_steps, ar);
+  auto sum = ar.recursive_doubling_block(psum, num_blocks_per_entry);
   if (threadIdx.x == 0) recv_buf[block_offset] = sum;
 }
 
@@ -314,29 +273,27 @@ void  AllreduceNVSHMEM<DataType>::recursive_doubling_block(
   // TODO: For now, use one block per entry
   const int num_blocks_per_entry = 1;
   const int block_size = 32;
+  
+  recursive_doubling_block_setup(count, num_blocks_per_entry);
+  
   bool vec2 = (count % 2 == 0);
   if (vec2) {
     count /= 2;
   }
+  
   const int grid_size = count * num_blocks_per_entry;
-
-  recursive_doubling_block_setup(count, num_blocks_per_entry);
-
-  auto log_np = std::log2((float)m_np);
-  assert_always(std::ceil(log_np) == std::floor(log_np));
-  const int num_steps = log_np;
 
   if (vec2) {
     using OpType = typename allreduce_nvshmem::Vector2<DataType>::type;
     allreduce_nvshmem::recursive_doubling_block_global<OpType><<<
       grid_size, block_size, 0, m_stream>>>(
           (const OpType*)send_buf, (OpType*)recv_buf,
-          num_blocks_per_entry, m_pid, m_np, num_steps, get_for_device<OpType>());
+          num_blocks_per_entry, get_for_device<OpType>());
   } else {
     allreduce_nvshmem::recursive_doubling_block_global<DataType><<<
       grid_size, block_size, 0, m_stream>>>(
           send_buf, recv_buf, num_blocks_per_entry,
-          m_pid, m_np, num_steps, get_for_device());
+          get_for_device<DataType>());
   }
 }
 

@@ -55,7 +55,7 @@ function validate() {
     local ref=$1
     local out=$2
     local bitwise=$3
-    echo "Comparing $ref and $out"
+    echo "Comparing $ref and $out (type: $type)"
     # Return 0 if they match exactly. Otherwise, use numdiff
     if diff -q $ref $out; then
         return 0

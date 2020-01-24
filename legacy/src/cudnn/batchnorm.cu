@@ -6,6 +6,10 @@
 
 using distconv::tensor::LocaleMPI;
 using distconv::tensor::CUDAAllocator;
+#ifdef DISTCONV_HAS_NVSHMEM
+using distconv::tensor::AllreduceNVSHMEM;
+using distconv::tensor::AllreduceNVSHMEMDevice;
+#endif
 
 template <typename DataType>
 using Tensor = distconv::tensor::Tensor<DataType, LocaleMPI, CUDAAllocator>;
@@ -271,6 +275,177 @@ INSTANTIATE_BATCH_NORMALIZATION(4, double)
 INSTANTIATE_BATCH_NORMALIZATION(5, float)
 INSTANTIATE_BATCH_NORMALIZATION(5, double)
 #undef INSTANTIATE_BATCH_NORMALIZATION
+
+#ifdef DISTCONV_HAS_NVSHMEM
+template <int ND, typename DataType, typename DataType2,
+          typename DataTypeV, int BLOCK_SIZE>
+__global__ void forward_all_kernel(const DataTypeV * __restrict__ input,
+                                   DataType * __restrict__ running_mean,
+                                   DataType * __restrict__ running_var,
+                                   const DataType * __restrict__ scale,
+                                   const DataType * __restrict__ bias,
+                                   DataTypeV * __restrict__ output,
+                                   DataType decay, DataType epsilon,
+                                   const int sample_size,
+                                   const int channel_size,
+                                   const int spatial_size,
+                                   const int spatial_real_size,
+                                   const size_t num_per_sum,
+                                   AllreduceNVSHMEMDevice<DataType2> ar) {
+  __shared__ DataType2 shared_stat[BLOCK_SIZE];
+  const int tid = threadIdx.x;
+  const int bid = blockIdx.x;
+  const int sample_offset = spatial_real_size * channel_size;
+
+  index_t offset = spatial_real_size * bid;
+  DataType2 stat = {DataType(0), DataType(0)};
+
+  for (int s = 0; s < sample_size; ++s) {
+    for (int i = tid; i < spatial_size; i += BLOCK_SIZE) {
+      const auto x = input[offset + i];
+      stat.x += util::sum(x);
+      stat.y += util::sum(x * x);
+    }
+    offset += sample_offset;
+  }
+
+  shared_stat[tid] = stat;
+
+  // Compute channel sum with shared memory reduction
+#pragma unroll
+  for(int stride = BLOCK_SIZE / 2; stride > 0; stride /= 2) {
+    __syncthreads();
+    if(tid < stride) {
+      shared_stat[tid] += shared_stat[tid + stride];
+    }
+  }
+
+  stat = shared_stat[0];
+
+  // Output channel sum to global memory
+  const int ch_idx = blockIdx.x;
+  if(tid == 0) {
+    // Assumes only one block per entry
+    stat = ar.recursive_doubling_block(stat, 1);
+    stat.x = stat.x / num_per_sum;
+    stat.y = stat.y / num_per_sum;
+    auto v = stat.y - stat.x * stat.x;
+    v = max(v, DataType(0));
+    v *= num_per_sum / (num_per_sum - DataType(1));
+    stat.y = v;
+    running_mean[ch_idx] = decay * running_mean[ch_idx] + (DataType(1) - decay) * stat.x;
+    running_var[ch_idx] = decay * running_var[ch_idx] + (DataType(1) - decay) * stat.y;
+
+    stat.y = rsqrt(stat.y + epsilon);
+    shared_stat[0] = stat;
+  }
+  __syncthreads();
+  stat = shared_stat[0];
+
+  // fuse the batch_normalization kernel here
+  const auto scale_ch = scale[ch_idx];
+  const auto bias_ch = bias[ch_idx];
+
+  offset = spatial_real_size * bid;
+
+  for (int s = 0; s < sample_size; ++s) {
+    for (int i = tid; i < spatial_size; i+= BLOCK_SIZE) {
+      auto idx = offset + i;
+      const auto x = input[idx];
+      auto xhat = (x - stat.x) * stat.y;
+      auto y = xhat * scale_ch + bias_ch;
+      output[idx] = y;
+    }
+    offset += sample_offset;
+  }
+}
+
+template <int ND, typename Tensor>
+void forward_all(const Tensor &input, Tensor &mean, Tensor &var,
+                 Tensor &running_mean, Tensor &running_var,
+                 Tensor &scale, Tensor &bias, Tensor &output,
+                 typename Tensor::data_type decay,
+                 typename Tensor::data_type epsilon,
+                 cudaStream_t stream, AllreduceNVSHMEM<typename Tensor::data_type> &ar) {
+  using DataType = typename Tensor::data_type;
+  using DataType2 = typename util::GetVectorType<DataType, 2>::type;
+
+  const auto shape = input.get_local_shape();
+  const auto real_shape = input.get_local_real_shape();
+  const int num_samples = shape[get_sample_dim()];
+  const int num_channels = shape[get_channel_dim()];
+
+  int spatial_size = shape[0] * shape[1];
+  int spatial_real_size = real_shape[0] * real_shape[1];
+  if (ND >= 5) {
+    spatial_size *= shape[2];
+    spatial_real_size *= real_shape[2];
+  }
+
+  // Assumes halo can only be attached to the outermost spatial
+  // dimension
+  auto overlap = input.get_overlap();
+  assert_eq(overlap[0], 0);
+  if (ND >= 5) {
+    assert_eq(overlap[1], 0);
+  }
+
+  constexpr int block_size = 1024;
+  dim3 block_dim(block_size);
+  dim3 grid_dim(num_channels);
+  // CUDA grid dimension limitation
+  assert_always(grid_dim.x < 65535);
+
+  ar.recursive_doubling_block_setup(num_channels * 2, 1);
+
+  auto num_per_sum =  input.get_size() / input.get_shape()[-2];
+
+  assert_always(input.get_local_size() > 0 && input.is_split_root());
+
+  auto ar_dev = ar.template get_for_device<DataType2>();
+  if (spatial_size % 4 == 0 && spatial_real_size % 4 == 0) {
+    spatial_size /= 4;
+    spatial_real_size /= 4;
+    using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
+    forward_all_kernel<ND, DataType, DataType2, DataTypeV, block_size>
+        <<<grid_dim, block_dim, 0, stream>>>(
+            reinterpret_cast<const DataTypeV*>(input.get_const_base_ptr()),
+            running_mean.get_base_ptr(), running_var.get_base_ptr(),
+            scale.get_base_ptr(), bias.get_base_ptr(),
+            reinterpret_cast<DataTypeV*>(output.get_base_ptr()),
+            decay, epsilon, num_samples, num_channels,
+            spatial_size, spatial_real_size, num_per_sum,
+            ar_dev);
+  } else {
+    forward_all_kernel<ND, DataType, DataType2, DataType, block_size>
+        <<<grid_dim, block_dim, 0, stream>>>(
+            input.get_const_base_ptr(),
+            running_mean.get_base_ptr(), running_var.get_base_ptr(),
+            scale.get_base_ptr(), bias.get_base_ptr(),
+            output.get_base_ptr(),
+            decay, epsilon, num_samples, num_channels,
+            spatial_size, spatial_real_size, num_per_sum,
+            ar_dev);
+  }
+}
+
+#define INSTANTIATE_FORWARD(ND, TYPE)                           \
+  template void                                                 \
+  forward_all<ND, Tensor<TYPE>>(                                \
+      const Tensor<TYPE> &input,                                \
+      Tensor<TYPE> &mean, Tensor<TYPE> &var,                    \
+      Tensor<TYPE> &running_mean, Tensor<TYPE> &running_var,    \
+      Tensor<TYPE> &scale, Tensor<TYPE> &bias,                  \
+      Tensor<TYPE> &output,                                     \
+      TYPE decay, TYPE epsilon,                                 \
+      cudaStream_t stream,                                      \
+      AllreduceNVSHMEM<TYPE> &ar);
+INSTANTIATE_FORWARD(4, float)
+INSTANTIATE_FORWARD(4, double)
+INSTANTIATE_FORWARD(5, float)
+INSTANTIATE_FORWARD(5, double)
+#undef INSTANTIATE_FORWARD
+#endif // DISTCONV_HAS_NVSHMEM
 
 template <int ND, typename DataType, int BLOCK_SIZE>
 void __global__ backprop1_kernel(const DataType *input,

@@ -17,11 +17,54 @@ namespace tensor {
 
 template <typename DataType>
 struct AllreduceNVSHMEMDevice {
-  AllreduceNVSHMEMDevice(DataType *buf, const util::nvshmem::SyncArrayDevice &sync):
-      m_buf(buf), m_sync(sync) {}
+  AllreduceNVSHMEMDevice(int pid, int np, DataType *buf,
+                         const util::nvshmem::SyncArrayDevice &sync):
+      m_pid(pid), m_np(np), m_buf(buf), m_sync(sync) {
+    auto log_np = std::log2((float)m_np);
+    assert_always(std::ceil(log_np) == std::floor(log_np));
+    m_num_steps = log_np;
+  }
+  int m_pid;
+  int m_np;
+  int m_num_steps;
   DataType *m_buf;
   util::nvshmem::SyncArrayDevice m_sync;
-  __device__ void recursive_doubling();
+#ifdef __CUDACC__
+  // Assume that the root thread has the partial sum. Those held by
+  // other threads are not used. Only the root thread has the valid
+  // output value.
+  __device__ DataType recursive_doubling_block(DataType psum,
+                                               size_t num_blocks_per_entry) {
+    const int tid = threadIdx.x;
+    const int block_offset =
+        (blockIdx.x + blockIdx.y * gridDim.x +
+         blockIdx.z * gridDim.x * gridDim.y) / num_blocks_per_entry;
+    const int sync_idx = block_offset * m_num_steps;
+    constexpr auto st = util::nvshmem::SyncType::NONE;
+
+    DataType *tmp_buf = m_buf + (num_blocks_per_entry + m_num_steps) * block_offset;
+    DataType final_sum;
+
+    if (tid == 0) *tmp_buf = psum;
+
+    // TODO: intra-grid partial reduction
+
+    if (tid == 0) {
+      // Inter-device reduction
+      for (int i = 0; i < m_num_steps; ++i) {
+        int peer = m_pid ^ (1 << i);
+        put_nbi(tmp_buf + 1, tmp_buf, 1, peer);
+        m_sync.sync(peer, true, true, st, sync_idx + i);
+        tmp_buf[1] += tmp_buf[0];
+        ++tmp_buf;
+      }
+      final_sum = *tmp_buf;
+    }
+
+    // TODO: intra-grid scatter
+    return final_sum;
+  }
+#endif // __CUDACC__
 };
 
 template <typename DataType>
@@ -67,6 +110,22 @@ class AllreduceNVSHMEM: public Allreduce<DataType> {
         util::MPIRootPrintStreamError() << "Unknown allreduce algorithm";
         std::abort();
     }
+  }
+
+  // Setup data buffers and sync buffers
+  void recursive_doubling_block_setup(size_t count, size_t num_blocks_per_entry) {
+    auto log_np = std::log2((float)m_np);
+    assert_always(std::ceil(log_np) == std::floor(log_np));
+    const int num_steps = log_np;
+    ensure_buffer((num_blocks_per_entry + num_steps) * count);
+    m_sync.ensure_size(num_steps * count);
+  }
+
+  //template <typename T=DataType>
+  template <typename T>
+  AllreduceNVSHMEMDevice<T> get_for_device() {
+    return AllreduceNVSHMEMDevice<T>(m_pid, m_np, static_cast<T*>(m_buf.get()),
+                                     m_sync.get_for_device());
   }
 
  protected:
@@ -212,22 +271,8 @@ class AllreduceNVSHMEM: public Allreduce<DataType> {
   void recursive_doubling_buffered(const DataType *send_buf, DataType *recv_buf,
                                    size_t count);
 
-  // Setup data buffers and sync buffers
-  void recursive_doubling_block_setup(size_t count, size_t num_blocks_per_entry) {
-    auto log_np = std::log2((float)m_np);
-    assert_always(std::ceil(log_np) == std::floor(log_np));
-    const int num_steps = log_np;
-    ensure_buffer((num_blocks_per_entry + num_steps) * count);
-    m_sync.ensure_size(num_steps * count);
-  }
-
   void recursive_doubling_block(const DataType *send_buf, DataType *recv_buf,
                                 size_t count);
-  template <typename T=DataType>
-  AllreduceNVSHMEMDevice<T> get_for_device() {
-    return AllreduceNVSHMEMDevice<T>(static_cast<T*>(m_buf.get()),
-                                     m_sync.get_for_device());
-  }
 
   void copy(const DataType *src, DataType *dst, size_t count);
   void reduce(const DataType *src, DataType *dst, size_t count);

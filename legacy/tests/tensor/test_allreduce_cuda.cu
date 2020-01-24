@@ -47,10 +47,12 @@ bool is_nvshmem_method_included(const std::vector<std::string> &methods) {
 
 void alloc_buf(const std::string &method, DataType *&ptr, size_t count) {
   if (is_nvshmem_method(method)) {
+#ifdef DISTCONV_HAS_NVSHMEM
     util::nvshmem::barrier();
     ptr = static_cast<DataType*>(nvshmem_malloc(sizeof(DataType) * count));
     util::nvshmem::barrier();
     //util::MPIPrintStreamInfo() << "NVSHMEM alloc at: " << ptr;
+#endif // DISTCONV_HAS_NVSHMEM
   } else {
     DISTCONV_CHECK_CUDA(cudaMalloc(&ptr, sizeof(DataType) * count));
   }
@@ -58,12 +60,14 @@ void alloc_buf(const std::string &method, DataType *&ptr, size_t count) {
 
 void free_buf(const std::string &method, void *ptr) {
   if (is_nvshmem_method(method)) {
+#ifdef DISTCONV_HAS_NVSHMEM
     //util::MPIPrintStreamInfo() << "Freeing nvshmem buffer: " << ptr;
     util::nvshmem::barrier();
     //util::MPIPrintStreamInfo() << "Freeing nvshmem barrier";
     nvshmem_free(ptr);
     util::nvshmem::barrier();
     //util::MPIPrintStreamInfo() << "Freeing nvshmem done";
+#endif // DISTCONV_HAS_NVSHMEM
   } else {
     DISTCONV_CHECK_CUDA(cudaFree(ptr));
   }
@@ -179,10 +183,9 @@ void test(const std::string &method, int min_count, int max_count, MPI_Comm comm
     DISTCONV_CHECK_CUDA(cudaStreamSynchronize(stream));
     test_verify(output_buf, count, pid, np);
     // test inplace
-    //allreducer->allreduce(input_buf, count);
+    allreducer->allreduce(input_buf, count);
     DISTCONV_CHECK_CUDA(cudaStreamSynchronize(stream));
-    //test_verify(input_buf, count, pid, np);
-    //test_verify(input_buf, 32, pid, np);
+    test_verify(input_buf, count, pid, np);
     test_teardown(method, input_buf, output_buf);
     util::MPIPrintStreamInfo() << "Count: " << count << " done";
   }

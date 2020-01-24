@@ -45,6 +45,23 @@ void batch_normalization(
     typename TensorType::data_type epsilon,
     cudaStream_t stream);
 
+#ifdef DISTCONV_HAS_NVSHMEM
+template <int ND, typename TensorType>
+void forward_all(
+    const TensorType &input,
+    TensorType &mean,
+    TensorType &var,
+    TensorType &running_mean,
+    TensorType &running_var,
+    TensorType &scale,
+    TensorType &bias,
+    TensorType &output,
+    typename TensorType::data_type decay,
+    typename TensorType::data_type epsilon,
+    cudaStream_t stream,
+    tensor::AllreduceNVSHMEM<typename TensorType::data_type> &ar);
+#endif
+
 template <int ND, typename TensorType>
 void backprop1(
     int num_samples,
@@ -110,6 +127,10 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
           m_be.get_stream(),
           tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BUFFERED);
     } else if (m_impl == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_BLOCK) {
+      m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+          m_be.get_stream(),
+          tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BLOCK);
+    } else if (m_impl == BatchnormImpl::FUSED_NVSHMEM_RECURSIVE_DOUBLING) {
       m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
           m_be.get_stream(),
           tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BLOCK);
@@ -197,6 +218,28 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
     return 0;
   }
 
+#ifdef DISTCONV_HAS_NVSHMEM
+  template <typename Tensor>
+  int forward_all(const Tensor &input, Tensor &mean, Tensor &var,
+                  Tensor &running_mean, Tensor &running_var,
+                  Tensor &scale, Tensor &bias, Tensor &output,
+                  bool is_training) {
+    set_num_samples(input.get_local_shape()[-1]);
+    if (is_training) {
+      batchnorm::forward_all<ND, Tensor>(
+          input, mean, var, running_mean, running_var,
+          scale, bias, output,
+          m_decay, m_epsilon, m_be.get_stream(),
+          *static_cast<tensor::AllreduceNVSHMEM<DataType>*>(m_allreducer.get()));
+    } else {
+      util::MPIRootPrintStreamError() << "Not supported";
+      return -1;
+    }
+
+    return 0;
+  }
+#endif
+
   template <typename Tensor>
   int forward(const Tensor &input, Tensor &mean, Tensor &var,
               Tensor &running_mean, Tensor &running_var,
@@ -205,6 +248,13 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
               bool is_training) {
     util::MPIPrintStreamDebug()
         << "BatchNormalization: " << input << ", " << output;
+#ifdef DISTCONV_HAS_NVSHMEM
+    if (m_impl == BatchnormImpl::FUSED_NVSHMEM_RECURSIVE_DOUBLING) {
+      forward_all(input, mean, var, running_mean, running_var,
+                  scale, bias, output, is_training);
+      return 0;
+    }
+#endif // DISTCONV_HAS_NVSHMEM
     forward_stage1(input, mean, var, is_training);
     forward_allreduce(mean, var, is_training);
     forward_stage2(input, mean, var, running_mean, running_var, scale,
