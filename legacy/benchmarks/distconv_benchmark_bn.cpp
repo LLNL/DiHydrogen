@@ -188,8 +188,8 @@ class Data {
     d_bias.zero(); // will be overwritten
     assert0(d_mean_and_var.allocate());
     d_mean_and_var.zero(); // will be overwritten
-    assert0(tensor::View(d_mean, mean_and_var.get_buffer()));
-    assert0(tensor::View(d_var, mean_and_var.get_buffer() +
+    assert0(tensor::View(d_mean, d_mean_and_var.get_buffer()));
+    assert0(tensor::View(d_var, d_mean_and_var.get_buffer() +
                          ch_stat_shape.get_size()));
   }
   bool is_empty() const {
