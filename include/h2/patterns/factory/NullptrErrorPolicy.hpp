@@ -7,7 +7,6 @@ namespace h2
 {
 namespace factory
 {
-
 /** \class NullptrErrorPolicy
  *  \brief Returns a nullptr when given an unknown key.
  */
@@ -18,8 +17,8 @@ struct NullptrErrorPolicy
     {
         return nullptr;
     }
-};// struct NullptrErrorPolicy
+}; // struct NullptrErrorPolicy
 
 } // namespace factory
-} // namaspace h2
+} // namespace h2
 #endif // H2_PATTERNS_FACTORY_NULLPTRERRORPOLICY_HPP_

@@ -12,7 +12,6 @@ namespace h2
 {
 namespace multimethods
 {
-
 /** @brief Dispatch a functor call based on the dynamic type of the arguments.
  *
  *  @tparam FunctorT The type of the functor to dispatch. It must
@@ -219,10 +218,7 @@ namespace multimethods
  *  appropriate.
  *
  */
-template <
-    typename FunctorT,
-    typename ReturnT,
-    typename... ArgumentTs>
+template <typename FunctorT, typename ReturnT, typename... ArgumentTs>
 class SwitchDispatcher;
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -233,12 +229,11 @@ template <
     typename ThisBase,
     typename ThisList,
     typename... ArgumentTs>
-class SwitchDispatcher<FunctorT, ReturnT,
-                       ThisBase, ThisList,
-                       ArgumentTs...>
+class SwitchDispatcher<FunctorT, ReturnT, ThisBase, ThisList, ArgumentTs...>
 {
-    static_assert(sizeof...(ArgumentTs) % 2 == 0,
-                  "Must pass ArgumentTs as (Base, TL<DTypes>).");
+    static_assert(
+        sizeof...(ArgumentTs) % 2 == 0,
+        "Must pass ArgumentTs as (Base, TL<DTypes>).");
 
 public:
     template <typename... Args>
@@ -248,28 +243,24 @@ public:
         using Tail = meta::tlist::Cdr<ThisList>;
 
         if (auto* arg_dc = dynamic_cast<Head*>(&arg))
-            return SwitchDispatcher<FunctorT, ReturnT, ArgumentTs...>::
-                Exec(F, std::forward<Args>(others)..., *arg_dc);
+            return SwitchDispatcher<FunctorT, ReturnT, ArgumentTs...>::Exec(
+                F, std::forward<Args>(others)..., *arg_dc);
         else
-            return SwitchDispatcher<FunctorT, ReturnT,
-                                    ThisBase, Tail,
-                                    ArgumentTs...>::
-                Exec(F, arg, std::forward<Args>(others)...);
+            return SwitchDispatcher<
+                FunctorT, ReturnT, ThisBase, Tail,
+                ArgumentTs...>::Exec(F, arg, std::forward<Args>(others)...);
     }
 };
 
 // Base case
-template <
-    typename FunctorT,
-    typename ReturnT>
+template <typename FunctorT, typename ReturnT>
 class SwitchDispatcher<FunctorT, ReturnT>
 {
     template <typename... Ts>
     using Invocable = meta::IsInvocableVT<FunctorT, Ts...>;
 
 public:
-    template <typename... Args,
-              meta::EnableWhenV<Invocable<Args...>,int> = 0>
+    template <typename... Args, meta::EnableWhenV<Invocable<Args...>, int> = 0>
     static ReturnT Exec(FunctorT F, Args&&... others)
     {
         return F(std::forward<Args>(others)...);
@@ -277,8 +268,9 @@ public:
 
     // All types were deduced, but there is no suitable dispatch for
     // this case.
-    template <typename... Args,
-              meta::EnableUnlessV<Invocable<Args...>,int> = 0>
+    template <
+        typename... Args,
+        meta::EnableUnlessV<Invocable<Args...>, int> = 0>
     static ReturnT Exec(FunctorT F, Args&&... args)
     {
         return F.DispatchError(std::forward<Args>(args)...);
@@ -291,9 +283,12 @@ template <
     typename ReturnT,
     typename ThisBase,
     typename... ArgumentTs>
-class SwitchDispatcher<FunctorT, ReturnT,
-                       ThisBase, meta::tlist::Empty,
-                       ArgumentTs...>
+class SwitchDispatcher<
+    FunctorT,
+    ReturnT,
+    ThisBase,
+    meta::tlist::Empty,
+    ArgumentTs...>
 {
 public:
     template <typename... Args>
@@ -305,6 +300,6 @@ public:
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
-}// namespace multimethods
-}// namespace h2
+} // namespace multimethods
+} // namespace h2
 #endif // H2_PATTERNS_MULTIMETHODS_SWITCHDISPATCHER_HPP_

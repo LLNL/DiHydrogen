@@ -13,7 +13,6 @@ namespace h2
 {
 namespace factory
 {
-
 /** @class PrototypeFactory
  *  @brief Factory that returns copies of prototypes.
  *
@@ -46,13 +45,13 @@ namespace factory
  *  @tparam CopyPolicy    A policy that describes how each prototype is copied.
  *  @tparam ErrorPolicy   The policy for handling errors.
  */
-template <typename AbstractType,
-          typename IdType,
-          typename CopyPolicy,
-          template <typename, typename> class ErrorPolicy = DefaultErrorPolicy>
-class PrototypeFactory
-    : private CopyPolicy,
-      private ErrorPolicy<IdType, AbstractType>
+template <
+    typename AbstractType,
+    typename IdType,
+    typename CopyPolicy,
+    template <typename, typename> class ErrorPolicy = DefaultErrorPolicy>
+class PrototypeFactory : private CopyPolicy,
+                         private ErrorPolicy<IdType, AbstractType>
 {
 public:
     using abstract_type = AbstractType;
@@ -63,39 +62,38 @@ public:
 
 public:
     /** @brief Register a new prototype for things of type @c id. */
-    bool register_prototype(id_type const& id,
-                            std::unique_ptr<abstract_type>&& prototype)
+    bool register_prototype(
+        id_type const& id, std::unique_ptr<abstract_type>&& prototype)
     {
-        return map_.emplace(
-            std::piecewise_construct,
-            std::forward_as_tuple(id),
-            std::forward_as_tuple(std::move(prototype))).second;
+        return map_
+            .emplace(
+                std::piecewise_construct, std::forward_as_tuple(id),
+                std::forward_as_tuple(std::move(prototype)))
+            .second;
     }
 
     /** @brief Register a new prototype for things of type @c id. */
-    bool register_prototype(id_type&& id,
-                            std::unique_ptr<abstract_type>&& prototype)
+    bool
+    register_prototype(id_type&& id, std::unique_ptr<abstract_type>&& prototype)
     {
-        return map_.emplace(
-            std::piecewise_construct,
-            std::forward_as_tuple(std::move(id)),
-            std::forward_as_tuple(std::move(prototype))).second;
+        return map_
+            .emplace(
+                std::piecewise_construct, std::forward_as_tuple(std::move(id)),
+                std::forward_as_tuple(std::move(prototype)))
+            .second;
     }
 
     /** @brief Unregister the current prototype for things of type @c id.
      *  @note This will free the underlying prototype instance.
      */
-    bool unregister(id_type const& id)
-    {
-        return (map_.erase(id) == 1);
-    }
+    bool unregister(id_type const& id) { return (map_.erase(id) == 1); }
 
     /** @brief Construct a new object forwarding extra arguments to
      *  the copy policy.
      */
     template <typename... Ts>
-    std::unique_ptr<AbstractType> copy_prototype(
-        IdType const& id, Ts&&... Args) const
+    std::unique_ptr<AbstractType>
+    copy_prototype(IdType const& id, Ts&&... Args) const
     {
         auto it = map_.find(id);
         if (it != map_.end())
@@ -121,6 +119,6 @@ private:
     map_type map_;
 }; // class PrototypeFactory
 
-}// namespace factory
-}// namespace h2
+} // namespace factory
+} // namespace h2
 #endif /* H2_PATTERNS_FACTORY_PROTOTYPEFACTORY_HPP_ */

@@ -8,7 +8,6 @@ namespace h2
 {
 namespace factory
 {
-
 /** \class DefaultErrorPolicy
  *  \brief Handle unknown keys by throwing exceptions.
  */
@@ -27,8 +26,8 @@ struct DefaultErrorPolicy
     {
         throw UnknownIDError();
     }
-};// struct DefaultErrorPolicy
+}; // struct DefaultErrorPolicy
 
 } // namespace factory
-} // namaspace h2
+} // namespace h2
 #endif // H2_PATTERNS_FACTORY_DEFAULTERRORPOLICY_HPP_

@@ -13,7 +13,6 @@ namespace h2
 {
 namespace factory
 {
-
 /** @class ObjectFactory
  *  @brief Generic factory template.
  *
@@ -22,41 +21,40 @@ namespace factory
  *  @tparam BuilderType   The functor type that builds concrete types.
  *  @tparam ErrorPolicy   The policy for handling errors.
  */
-template <typename AbstractType,
-          typename IdType,
-          typename BuilderType = std::function<std::unique_ptr<AbstractType>()>,
-          template <typename, typename> class ErrorPolicy = DefaultErrorPolicy>
-class ObjectFactory : private ErrorPolicy<IdType,AbstractType>
+template <
+    typename AbstractType,
+    typename IdType,
+    typename BuilderType = std::function<std::unique_ptr<AbstractType>()>,
+    template <typename, typename> class ErrorPolicy = DefaultErrorPolicy>
+class ObjectFactory : private ErrorPolicy<IdType, AbstractType>
 {
 public:
     using abstract_type = AbstractType;
     using id_type = IdType;
     using builder_type = BuilderType;
-    using map_type = std::unordered_map<id_type,builder_type>;
+    using map_type = std::unordered_map<id_type, builder_type>;
     using size_type = typename map_type::size_type;
 
 public:
     /** @brief Register a new builder for things of type @c id */
     bool register_builder(id_type id, builder_type builder)
     {
-        return map_.emplace(
-            std::piecewise_construct,
-            std::forward_as_tuple(std::move(id)),
-            std::forward_as_tuple(std::move(builder))).second;
+        return map_
+            .emplace(
+                std::piecewise_construct, std::forward_as_tuple(std::move(id)),
+                std::forward_as_tuple(std::move(builder)))
+            .second;
     }
 
     /** @brief Unregister the current builder for things of type @c id. */
-    bool unregister(id_type const& id)
-    {
-        return (map_.erase(id) == 1);
-    }
+    bool unregister(id_type const& id) { return (map_.erase(id) == 1); }
 
     /** @brief Construct a new object forwarding extra arguments to
      *  the builder.
      */
     template <typename... Ts>
-    std::unique_ptr<AbstractType> create_object(
-        IdType const& id, Ts&&... Args) const
+    std::unique_ptr<AbstractType>
+    create_object(IdType const& id, Ts&&... Args) const
     {
         auto it = map_.find(id);
         if (it != map_.end())
@@ -82,6 +80,6 @@ private:
     map_type map_;
 };
 
-}// namespace factory
-}// namespace h2
+} // namespace factory
+} // namespace h2
 #endif /* H2_PATTERNS_FACTORY_OBJECTFACTORY_HPP_ */
