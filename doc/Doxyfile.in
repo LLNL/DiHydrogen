@@ -1,6 +1,11 @@
 # Doxyfile 1.8.15
 
-# @H2_LICENSE_TEXT@
+################################################################################
+## Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+## DiHydrogen Project Developers. See the top-level LICENSE file for details.
+##
+## SPDX-License-Identifier: Apache-2.0
+################################################################################
 
 # This file describes the settings to be used by the documentation system
 # doxygen (www.doxygen.org) for a project.

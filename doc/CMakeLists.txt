@@ -1,4 +1,9 @@
-# @H2_LICENSE_TEXT@
+################################################################################
+## Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+## DiHydrogen Project Developers. See the top-level LICENSE file for details.
+##
+## SPDX-License-Identifier: Apache-2.0
+################################################################################
 
 find_package(Doxygen 1.8.5)
 find_package(Sphinx 1.8.0)

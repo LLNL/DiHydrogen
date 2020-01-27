@@ -1,4 +1,9 @@
-# @H2_LICENSE_TEXT@
+################################################################################
+## Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+## DiHydrogen Project Developers. See the top-level LICENSE file for details.
+##
+## SPDX-License-Identifier: Apache-2.0
+################################################################################
 
 # Setup the base prefix for all the includes
 set(H2_CURRENT_INSTALL_PREFIX "${CMAKE_INSTALL_INCLUDEDIR}/utils")

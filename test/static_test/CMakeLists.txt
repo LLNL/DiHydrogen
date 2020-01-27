@@ -1,4 +1,9 @@
-# @H2_LICENSE_TEXT@
+################################################################################
+## Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+## DiHydrogen Project Developers. See the top-level LICENSE file for details.
+##
+## SPDX-License-Identifier: Apache-2.0
+################################################################################
 
 # This library might be empty; definitely shouldn't provide useful
 # symbols -- it's really just a way to "run the tests" for static
