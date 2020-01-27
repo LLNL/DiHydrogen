@@ -3,15 +3,19 @@
 #include <catch2/catch.hpp>
 
 #include <h2/patterns/factory/ObjectFactory.hpp>
+
 #include <typeinfo>
 
 namespace
 {
-struct WidgetBase {
+struct WidgetBase
+{
     virtual ~WidgetBase() = default;
 };
-struct Widget : WidgetBase {};
-struct Gizmo : WidgetBase {};
+struct Widget : WidgetBase
+{};
+struct Gizmo : WidgetBase
+{};
 
 std::unique_ptr<WidgetBase> MakeWidget()
 {
@@ -39,7 +43,8 @@ enum class GenericKey
     GIZMO
 };
 
-template <typename T> struct Key;
+template <typename T>
+struct Key;
 
 template <>
 struct Key<std::string>
@@ -48,12 +53,9 @@ struct Key<std::string>
     {
         switch (key)
         {
-        case GenericKey::WIDGET:
-            return "Widget";
-        case GenericKey::GIZMO:
-            return "Gizmo";
-        case GenericKey::INVALID:
-            return "Invalid";
+        case GenericKey::WIDGET: return "Widget";
+        case GenericKey::GIZMO: return "Gizmo";
+        case GenericKey::INVALID: return "Invalid";
         }
         return "";
     }
@@ -62,63 +64,57 @@ struct Key<std::string>
 template <>
 struct Key<int>
 {
-    static int get(GenericKey key) noexcept
-    {
-        return static_cast<int>(key);
-    }
+    static int get(GenericKey key) noexcept { return static_cast<int>(key); }
 };
 
-}// namespace <anon>
+} // namespace
 
 TEMPLATE_TEST_CASE(
     "testing the factory class", "[factory][utilities]", std::string, int)
 {
-    using WidgetFactory
-        = h2::factory::ObjectFactory<WidgetBase, TestType>;
+    using WidgetFactory = h2::factory::ObjectFactory<WidgetBase, TestType>;
     using key = Key<TestType>;
 
     WidgetFactory factory;
 
     SECTION("New builders are registered")
     {
-        CHECK(factory.register_builder(
-                  key::get(GenericKey::WIDGET), MakeWidget));
+        CHECK(
+            factory.register_builder(key::get(GenericKey::WIDGET), MakeWidget));
 
-        CHECK(factory.register_builder(
-                  key::get(GenericKey::GIZMO), MakeGizmo));
+        CHECK(factory.register_builder(key::get(GenericKey::GIZMO), MakeGizmo));
 
         CHECK(factory.size() == 2UL);
 
         // Verify the keys
         auto names = factory.registered_keys();
         for (auto const& name : names)
-            CHECK((name == key::get(GenericKey::WIDGET)
-                     || name == key::get(GenericKey::GIZMO)));
-
+            CHECK(
+                (name == key::get(GenericKey::WIDGET)
+                 || name == key::get(GenericKey::GIZMO)));
     }
 
     SECTION("A key is used multiple times")
     {
-        CHECK(factory.register_builder(
-                  key::get(GenericKey::GIZMO), MakeGizmo));
+        CHECK(factory.register_builder(key::get(GenericKey::GIZMO), MakeGizmo));
 
-        CHECK_FALSE(factory.register_builder(
-                        key::get(GenericKey::GIZMO), MakeGizmo2));
+        CHECK_FALSE(
+            factory.register_builder(key::get(GenericKey::GIZMO), MakeGizmo2));
 
         CHECK(factory.size() == 1UL);
     }
 
     SECTION("A new object is requested with a valid key")
     {
-        CHECK(factory.register_builder(
-                  key::get(GenericKey::WIDGET), MakeWidget));
+        CHECK(
+            factory.register_builder(key::get(GenericKey::WIDGET), MakeWidget));
 
-        CHECK(factory.register_builder(
-                  key::get(GenericKey::GIZMO), MakeGizmo));
+        CHECK(factory.register_builder(key::get(GenericKey::GIZMO), MakeGizmo));
 
         std::unique_ptr<WidgetBase> g, w;
 
-        REQUIRE_NOTHROW(w = factory.create_object(key::get(GenericKey::WIDGET)));
+        REQUIRE_NOTHROW(
+            w = factory.create_object(key::get(GenericKey::WIDGET)));
         auto const& w_ref = *w;
         CHECK(typeid(w_ref) == typeid(Widget));
 
@@ -129,16 +125,16 @@ TEMPLATE_TEST_CASE(
 
     SECTION("A new object is requested with with an invalid key")
     {
-        CHECK_THROWS_AS(factory.create_object(key::get(GenericKey::INVALID)),
-                        std::exception);
+        CHECK_THROWS_AS(
+            factory.create_object(key::get(GenericKey::INVALID)),
+            std::exception);
     }
 
     SECTION("Keys are removed")
     {
-        CHECK(factory.register_builder(
-                  key::get(GenericKey::WIDGET), MakeWidget));
-        CHECK(factory.register_builder(
-                  key::get(GenericKey::GIZMO), MakeGizmo));
+        CHECK(
+            factory.register_builder(key::get(GenericKey::WIDGET), MakeWidget));
+        CHECK(factory.register_builder(key::get(GenericKey::GIZMO), MakeGizmo));
 
         CHECK(factory.unregister(key::get(GenericKey::WIDGET)));
         CHECK(factory.size() == 1UL);
@@ -153,7 +149,8 @@ TEMPLATE_TEST_CASE(
         SECTION("The remaining builder still works.")
         {
             std::unique_ptr<WidgetBase> g;
-            CHECK_NOTHROW(g = factory.create_object(key::get(GenericKey::GIZMO)));
+            CHECK_NOTHROW(
+                g = factory.create_object(key::get(GenericKey::GIZMO)));
             auto const& g_ref = *g;
             CHECK(typeid(g_ref) == typeid(Gizmo));
         }

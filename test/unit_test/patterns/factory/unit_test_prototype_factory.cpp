@@ -10,12 +10,16 @@
 namespace h2
 {
 template <typename T>
-std::unique_ptr<T> ToUnique(T* ptr) { return std::unique_ptr<T>(ptr); }
+std::unique_ptr<T> ToUnique(T* ptr)
+{
+    return std::unique_ptr<T>(ptr);
 }
+} // namespace h2
 
 namespace
 {
-struct WidgetBase {
+struct WidgetBase
+{
     virtual WidgetBase* Copy() const = 0;
     virtual int Data() const noexcept = 0;
     virtual ~WidgetBase() = default;
@@ -25,9 +29,7 @@ struct Widget : WidgetBase
 {
     Widget() : data_(-1) {}
     Widget(int d) : data_(d) {}
-    Widget* Copy() const override {
-        return new Widget(*this);
-    }
+    Widget* Copy() const override { return new Widget(*this); }
 
     int Data() const noexcept override { return data_; }
     int data_;
@@ -37,10 +39,7 @@ struct Gizmo : WidgetBase
 {
     Gizmo() : data_(-1.f) {}
     Gizmo(int d) : data_(d) {}
-    Gizmo* Copy() const override
-    {
-        return new Gizmo(*this);
-    }
+    Gizmo* Copy() const override { return new Gizmo(*this); }
 
     int Data() const noexcept override { return data_; }
     int data_;
@@ -54,27 +53,25 @@ struct BasicCopyPolicy
     }
 };
 
-}// namespace <anon>
+} // namespace
 
 TEST_CASE("testing the prototype factory class", "[factory][utilities]")
 {
-    using WidgetFactory
-        = h2::factory::PrototypeFactory<
-            WidgetBase, std::string, BasicCopyPolicy>;
+    using WidgetFactory =
+        h2::factory::PrototypeFactory<WidgetBase, std::string, BasicCopyPolicy>;
 
     WidgetFactory factory;
     SECTION("Register new prototypes")
     {
-        CHECK(factory.register_prototype(
-                  "gizmo", h2::ToUnique(new Gizmo(71))));
-        CHECK(factory.register_prototype(
-                  "widget", h2::ToUnique(new Widget(17))));
+        CHECK(factory.register_prototype("gizmo", h2::ToUnique(new Gizmo(71))));
+        CHECK(
+            factory.register_prototype("widget", h2::ToUnique(new Widget(17))));
         CHECK(factory.size() == 2UL);
 
         SECTION("Re-registering a type fails.")
         {
             CHECK_FALSE(factory.register_prototype(
-                            "widget", h2::ToUnique(new Widget(13))));
+                "widget", h2::ToUnique(new Widget(13))));
             CHECK(factory.size() == 2UL);
         }
 

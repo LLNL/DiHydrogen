@@ -10,12 +10,16 @@
 namespace h2
 {
 template <typename T>
-std::unique_ptr<T> ToUnique(T* ptr) { return std::unique_ptr<T>(ptr); }
+std::unique_ptr<T> ToUnique(T* ptr)
+{
+    return std::unique_ptr<T>(ptr);
 }
+} // namespace h2
 
 namespace
 {
-struct WidgetBase {
+struct WidgetBase
+{
     virtual int Data() const noexcept = 0;
     virtual ~WidgetBase() = default;
 };
@@ -60,12 +64,11 @@ std::unique_ptr<WidgetBase> CopyWidget(WidgetBase const& obj)
     return h2::ToUnique(widget.Copy());
 }
 
-}// namespace <anon>
+} // namespace
 
 TEST_CASE("testing the copy factory class", "[factory][utilities]")
 {
-    using WidgetFactory
-        = h2::factory::CopyFactory<WidgetBase>;
+    using WidgetFactory = h2::factory::CopyFactory<WidgetBase>;
 
     WidgetFactory factory;
     SECTION("Register new classes")
