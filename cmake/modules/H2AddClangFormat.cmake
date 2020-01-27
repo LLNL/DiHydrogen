@@ -1,4 +1,9 @@
-# @H2_LICENSE_TEXT@
+################################################################################
+## Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+## DiHydrogen Project Developers. See the top-level LICENSE file for details.
+##
+## SPDX-License-Identifier: Apache-2.0
+################################################################################
 
 get_filename_component(COMPILER_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
 get_filename_component(COMPILER_PREFIX "${COMPILER_BIN_DIR}" DIRECTORY)
