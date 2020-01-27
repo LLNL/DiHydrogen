@@ -37,6 +37,25 @@ install(TARGETS H2Meta
   COMPONENT META
   )
 
+# Some implementations of common design patterns are also provided as
+# header-only templates. They add no additional external-dependency
+# overhead, so they are always exported.
+add_library(H2Patterns INTERFACE)
+
+# Populate the sources
+add_subdirectory(patterns)
+
+target_include_directories(H2Patterns INTERFACE
+  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  )
+
+# Export the patterns target
+install(TARGETS H2Patterns
+  EXPORT ${PROJECT_NAME}Targets
+  COMPONENT PATTERNS
+  )
+
 # Some additional utilities.
 # WARNING: Deprecated. Will be moved to a different target.
 add_subdirectory(utils)

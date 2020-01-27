@@ -43,26 +43,30 @@ set_tests_properties("[==[Testing the Version String.]==]" PROPERTIES
 # Add the sequential Catch2 driver.
 #
 
-add_executable(SeqCatchTestExe
-  SequentialCatchMain.cpp ${H2_SEQUENTIAL_CATCH_TESTS})
-target_link_libraries(SeqCatchTestExe
+add_executable(SeqCatchTests SequentialCatchMain.cpp)
+
+# Add Catch2 unit tests
+add_subdirectory(patterns/factory)
+add_subdirectory(patterns/multimethods)
+
+target_link_libraries(SeqCatchTests
   PRIVATE ${H2_LIBRARIES} Catch2::Catch2)
-set_target_properties(SeqCatchTestExe
+set_target_properties(SeqCatchTests
   PROPERTIES
-  CXX_STANDARD 14
+  CXX_STANDARD 17
   CXX_EXTENSIONS OFF
   CXX_STANDARD_REQUIRED ON)
 
 if (H2_CODE_COVERAGE)
-  add_code_coverage(SeqCatchTestExe coverage)
-  target_link_libraries(SeqCatchTestExe PRIVATE h2_coverage_flags)
+  add_code_coverage(SeqCatchTests coverage)
+  target_link_libraries(SeqCatchTests PRIVATE h2_coverage_flags)
 endif ()
 
 if (H2_EXTRA_CXX_FLAGS)
-  target_compile_options(SeqCatchTestExe
+  target_compile_options(SeqCatchTests
     PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${H2_EXTRA_CXX_FLAGS}>)
 endif ()
 
 if (H2_SEQUENTIAL_CATCH_TESTS)
-  catch_discover_tests(SeqCatchTestExe TEST_PREFIX "Seq--")
+  catch_discover_tests(SeqCatchTests TEST_PREFIX "Seq--")
 endif ()
