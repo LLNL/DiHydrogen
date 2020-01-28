@@ -6,7 +6,7 @@
 ################################################################################
 
 # Append this directory to the current install prefix
-set(H2_CURRENT_INSTALL_PREFIX "${H2_CURRENT_INSTALL_PREFIX}/factory")
+set(H2_CURRENT_INSTALL_PREFIX "${H2_CURRENT_INSTALL_PREFIX}/patterns")
 
 # Nothing to do here; just add subdirectories
 add_subdirectory(factory)

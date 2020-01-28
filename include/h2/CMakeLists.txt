@@ -61,6 +61,12 @@ install(TARGETS H2Patterns
   COMPONENT PATTERNS
   )
 
+set(H2_LIBRARIES
+  H2Meta
+  H2Patterns
+  "${H2_LIBRARIES}"
+  PARENT_SCOPE)
+
 # Some additional utilities.
 # WARNING: Deprecated. Will be moved to a different target.
 add_subdirectory(utils)
