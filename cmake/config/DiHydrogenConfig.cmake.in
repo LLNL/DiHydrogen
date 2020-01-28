@@ -35,8 +35,11 @@ endif ()
 
 if (H2_HAS_CUDA)
   enable_language(CUDA)
+  include(SetupCUDAToolkit)
   find_dependency(CUB)
   find_dependency(cuDNN)
+  find_dependency(P2P)
+  find_dependency(NVSHMEM)
 endif ()
 
 if (H2_HAS_HIP_ROCM)
