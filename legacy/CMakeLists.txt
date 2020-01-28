@@ -49,3 +49,16 @@ install(
   FILES "${CMAKE_GENERATED_INCLUDE_DIRECTORY}/distconv_config.hpp"
   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
+
+add_library(H2DistConv INTERFACE)
+target_link_libraries(H2DistConv INTERFACE distconv)
+
+install(TARGETS H2DistConv distconv
+  EXPORT ${PROJECT_NAME}Targets
+  COMPONENT DISTCONV
+  )
+
+set(H2_LIBRARIES
+  H2DistConv
+  "${H2_LIBRARIES}"
+  PARENT_SCOPE)
