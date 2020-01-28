@@ -51,7 +51,7 @@ install(
   )
 
 add_library(H2DistConv INTERFACE)
-target_link_libraries(H2DistConv distconv)
+target_link_libraries(H2DistConv INTERFACE distconv)
 
 install(TARGETS H2DistConv distconv
   EXPORT ${PROJECT_NAME}Targets
