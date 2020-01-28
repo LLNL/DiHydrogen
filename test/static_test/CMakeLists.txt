@@ -12,3 +12,8 @@
 add_library(StaticTest MODULE "")
 add_subdirectory(meta)
 target_link_libraries(StaticTest PRIVATE H2Meta)
+set_target_properties(StaticTest
+  PROPERTIES
+  CXX_STANDARD 17
+  CXX_EXTENSIONS OFF
+  CXX_STANDARD_REQUIRED ON)
