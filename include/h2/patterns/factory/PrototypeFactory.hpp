@@ -1,3 +1,10 @@
+////////////////////////////////////////////////////////////////////////////////
+// Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+// DiHydrogen Project Developers. See the top-level LICENSE file for details.
+//
+// SPDX-License-Identifier: Apache-2.0
+////////////////////////////////////////////////////////////////////////////////
+
 #ifndef H2_PATTERNS_FACTORY_PROTOTYPEFACTORY_HPP_
 #define H2_PATTERNS_FACTORY_PROTOTYPEFACTORY_HPP_
 

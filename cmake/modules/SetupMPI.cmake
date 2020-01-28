@@ -1,3 +1,10 @@
+################################################################################
+## Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+## DiHydrogen Project Developers. See the top-level LICENSE file for details.
+##
+## SPDX-License-Identifier: Apache-2.0
+################################################################################
+
 # This module configures MPI and ensures the library is setup properly
 
 if (NOT MPI_CXX_FOUND)
