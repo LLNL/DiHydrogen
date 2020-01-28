@@ -20,5 +20,6 @@ target_sources(StaticTest
   static_test_replaceall.cpp
   static_test_select.cpp
   static_test_selectall.cpp
+  static_test_sort.cpp
   static_test_unique.cpp
   )

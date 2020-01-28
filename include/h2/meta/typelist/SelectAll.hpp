@@ -10,7 +10,6 @@
 
 #include "LispAccessors.hpp"
 #include "TypeList.hpp"
-
 #include "h2/meta/core/Lazy.hpp"
 
 namespace h2
@@ -19,7 +18,6 @@ namespace meta
 {
 namespace tlist
 {
-
 /** @brief Select all types from a list that match the predicate.
  *
  *  If no type matches, the empty list is returned.
@@ -39,8 +37,7 @@ struct SelectAllT<Empty, Predicate>
     using type = Empty;
 };
 
-template <typename T, typename... Ts,
-          template <typename> class Predicate>
+template <typename T, typename... Ts, template <typename> class Predicate>
 struct SelectAllT<TL<T, Ts...>, Predicate>
 {
 private:
@@ -48,13 +45,11 @@ private:
     using Rest_ = SelectAll<TL<Ts...>, Predicate>;
 
 public:
-    using type = IfThenElse<Value_,
-                            Cons<T, Rest_>,
-                            Rest_>;
+    using type = IfThenElse<Value_, Cons<T, Rest_>, Rest_>;
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-}// namespace tlist
-}// namespace meta
-}// namespace h2
+} // namespace tlist
+} // namespace meta
+} // namespace h2
 #endif // H2_META_TYPELIST_SELECT_HPP_
