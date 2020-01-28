@@ -32,7 +32,6 @@ struct WidgetBase
 
 struct Widget : WidgetBase
 {
-    Widget() : data_(-1) {}
     Widget(int d) : data_(d) {}
     Widget* Copy() const override { return new Widget(*this); }
 
@@ -42,7 +41,6 @@ struct Widget : WidgetBase
 
 struct Gizmo : WidgetBase
 {
-    Gizmo() : data_(-1.f) {}
     Gizmo(int d) : data_(d) {}
     Gizmo* Copy() const override { return new Gizmo(*this); }
 

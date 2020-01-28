@@ -31,7 +31,6 @@ struct WidgetBase
 
 struct Widget : WidgetBase
 {
-    Widget() : data_(-1) {}
     Widget(int d) : data_(d) {}
     Widget* Copy() const { return new Widget(*this); }
 
@@ -41,7 +40,6 @@ struct Widget : WidgetBase
 
 struct Gizmo : WidgetBase
 {
-    Gizmo() : data_(-1.f) {}
     Gizmo(int d) : data_(d) {}
     std::unique_ptr<Gizmo> Clone() const
     {
@@ -50,11 +48,6 @@ struct Gizmo : WidgetBase
 
     int Data() const noexcept override { return data_; }
     int data_;
-};
-
-struct NoncopyableWidget : WidgetBase
-{
-    int Data() const noexcept override { return 13; }
 };
 
 std::unique_ptr<WidgetBase> CopyGizmo(WidgetBase const& obj)
@@ -105,12 +98,6 @@ TEST_CASE("testing the copy factory class", "[factory][utilities]")
             CHECK(typeid(g2_ref) == typeid(g));
         }
 
-        SECTION("Cannot copy unregistered widgets")
-        {
-            NoncopyableWidget ncw;
-            CHECK_THROWS(factory.copy_object(ncw));
-        }
-
         SECTION("Copy objects through base type")
         {
             auto g = std::unique_ptr<WidgetBase>(new Gizmo(37));
@@ -138,5 +125,10 @@ TEST_CASE("testing the copy factory class", "[factory][utilities]")
             CHECK(factory.unregister(typeid(Gizmo)));
             CHECK(factory.size() == 0UL);
         }
+    }
+    SECTION("Cannot copy unregistered widgets")
+    {
+        Gizmo g(13);
+        CHECK_THROWS(factory.copy_object(g));
     }
 }

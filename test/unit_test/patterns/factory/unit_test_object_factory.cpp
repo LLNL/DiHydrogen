@@ -62,7 +62,6 @@ struct Key<std::string>
         case GenericKey::GIZMO: return "Gizmo";
         case GenericKey::INVALID: return "Invalid";
         }
-        return "";
     }
 };
 
@@ -130,16 +129,16 @@ TEMPLATE_TEST_CASE(
 
     SECTION("A new object is requested with with an invalid key")
     {
-        CHECK_THROWS_AS(
+        CHECK_THROWS_WITH(
             factory.create_object(key::get(GenericKey::INVALID)),
-            std::exception);
+            "Unknown type identifier.");
     }
 
     SECTION("Keys are removed")
     {
         CHECK(
             factory.register_builder(key::get(GenericKey::WIDGET), MakeWidget));
-        CHECK(factory.register_builder(key::get(GenericKey::GIZMO), MakeGizmo));
+        CHECK(factory.register_builder(key::get(GenericKey::GIZMO), MakeGizmo2));
 
         CHECK(factory.unregister(key::get(GenericKey::WIDGET)));
         CHECK(factory.size() == 1UL);
