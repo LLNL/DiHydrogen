@@ -62,6 +62,8 @@ set_target_properties(SeqCatchTests
   CXX_EXTENSIONS OFF
   CXX_STANDARD_REQUIRED ON)
 
+catch_discover_tests(SeqCatchTests)
+
 if (H2_CODE_COVERAGE)
   add_code_coverage(SeqCatchTests coverage)
   target_link_libraries(SeqCatchTests PRIVATE h2_coverage_flags)

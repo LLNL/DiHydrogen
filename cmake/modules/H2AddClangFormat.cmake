@@ -85,31 +85,33 @@ if (CLANG_FORMAT_PROGRAM AND CLANG_FORMAT_VERSION_OK)
     elseif (TGT_TYPE MATCHES "INTERFACE_LIBRARY")
       get_target_property(TGT_SOURCES ${IN_TARGET} INTERFACE_SOURCES)
 
-      # Sources might be in generator expressions! :/ We want to only
-      # change the BUILD_INTERFACE objects with absolute paths.
-      foreach (src IN LISTS TGT_SOURCES)
-        # Skip install files
-        if (src MATCHES ".*INSTALL_INTERFACE.*")
-          continue()
-        endif ()
+      if (TGT_SOURCES)
+        # Sources might be in generator expressions! :/ We want to only
+        # change the BUILD_INTERFACE objects with absolute paths.
+        foreach (src IN LISTS TGT_SOURCES)
+          # Skip install files
+          if (src MATCHES ".*INSTALL_INTERFACE.*")
+            continue()
+          endif ()
 
-        if (src MATCHES ".*BUILD_INTERFACE:(.*)>")
-          set(my_src "${CMAKE_MATCH_1}")
-        else ()
-          set(my_src "${src}")
-        endif ()
-        get_filename_component(SRC_NAME "${my_src}" NAME)
-        # Assume a relative path is
-        if (my_src STREQUAL SRC_NAME)
-          message(FATAL_ERROR "Not expecting relative path: ${my_src}")
-          list(APPEND TGT_SOURCES_FULL_PATH "${TGT_SRC_DIR}/${my_src}")
-        else ()
-          list(APPEND TGT_SOURCES_FULL_PATH "${my_src}")
-        endif ()
-      endforeach ()
+          if (src MATCHES ".*BUILD_INTERFACE:(.*)>")
+            set(my_src "${CMAKE_MATCH_1}")
+          else ()
+            set(my_src "${src}")
+          endif ()
+          get_filename_component(SRC_NAME "${my_src}" NAME)
+          # Assume a relative path is
+          if (my_src STREQUAL SRC_NAME)
+            message(FATAL_ERROR "Not expecting relative path: ${my_src}")
+            list(APPEND TGT_SOURCES_FULL_PATH "${TGT_SRC_DIR}/${my_src}")
+          else ()
+            list(APPEND TGT_SOURCES_FULL_PATH "${my_src}")
+          endif ()
+        endforeach ()
 
-      set_property(TARGET clang-format APPEND
-        PROPERTY FORMAT_SOURCES "${TGT_SOURCES_FULL_PATH}")
+        set_property(TARGET clang-format APPEND
+          PROPERTY FORMAT_SOURCES "${TGT_SOURCES_FULL_PATH}")
+      endif (TGT_SOURCES)
     endif ()
   endmacro ()
 
