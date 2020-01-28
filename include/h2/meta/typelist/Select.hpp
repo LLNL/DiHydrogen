@@ -9,7 +9,6 @@
 #define H2_META_TYPELIST_SELECT_HPP_
 
 #include "TypeList.hpp"
-
 #include "h2/meta/core/Lazy.hpp"
 
 namespace h2
@@ -18,7 +17,6 @@ namespace meta
 {
 namespace tlist
 {
-
 /** @brief Select the first type from a list that matches the predicate.
  *
  *  If no type matches, Nil is returned.
@@ -44,7 +42,7 @@ struct SelectT<TL<T, Ts...>, Predicate>
 {};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-}// namespace tlist
-}// namespace meta
-}// namespace h2
+} // namespace tlist
+} // namespace meta
+} // namespace h2
 #endif // H2_META_TYPELIST_SELECT_HPP_
