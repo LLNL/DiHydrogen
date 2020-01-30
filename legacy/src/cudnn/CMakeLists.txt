@@ -5,6 +5,7 @@ h2_set_full_path(THIS_DIR_CU_SOURCES
   pooling.cu
   batchnorm.cu
   leaky_relu.cu
+  softmax.cu
   )
 
 set(HEADERS "${HEADERS}" "${THIS_DIR_HEADERS}" PARENT_SCOPE)
