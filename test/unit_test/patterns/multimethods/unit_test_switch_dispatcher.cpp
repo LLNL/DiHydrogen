@@ -32,8 +32,7 @@ struct derived_three : base
     static constexpr unsigned value = 64;
 };
 struct derived_four : base
-{
-};
+{};
 
 template <typename T>
 constexpr unsigned First()
@@ -67,9 +66,7 @@ struct DeductionException : std::logic_error
 
 struct DispatchException : std::logic_error
 {
-    DispatchException()
-        : std::logic_error("No viable overload found.")
-    {}
+    DispatchException() : std::logic_error("No viable overload found.") {}
 };
 
 struct TestFunctor
@@ -218,7 +215,6 @@ TEST_CASE("Switch dispatcher", "[h2][utils][multimethods]")
         derived_four d4;
         base* d4_b = &d4;
         CHECK_THROWS_AS(
-            Dispatcher::Exec(f, *d2_b, *d4_b, 13),
-            DeductionException);
+            Dispatcher::Exec(f, *d2_b, *d4_b, 13), DeductionException);
     }
 }

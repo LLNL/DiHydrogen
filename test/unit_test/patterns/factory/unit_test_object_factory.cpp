@@ -138,7 +138,8 @@ TEMPLATE_TEST_CASE(
     {
         CHECK(
             factory.register_builder(key::get(GenericKey::WIDGET), MakeWidget));
-        CHECK(factory.register_builder(key::get(GenericKey::GIZMO), MakeGizmo2));
+        CHECK(
+            factory.register_builder(key::get(GenericKey::GIZMO), MakeGizmo2));
 
         CHECK(factory.unregister(key::get(GenericKey::WIDGET)));
         CHECK(factory.size() == 1UL);

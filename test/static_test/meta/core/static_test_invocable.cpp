@@ -11,7 +11,8 @@ using namespace h2::meta;
 
 namespace
 {
-struct X {};
+struct X
+{};
 
 template <typename T>
 struct Q
