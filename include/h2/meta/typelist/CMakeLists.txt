@@ -27,6 +27,7 @@ h2_add_sources_to_target_and_install(
   ReplaceAll.hpp
   Select.hpp
   SelectAll.hpp
+  Size.hpp
   Sort.hpp
   TypeList.hpp
   Unique.hpp

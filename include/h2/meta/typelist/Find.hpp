@@ -30,10 +30,10 @@ constexpr unsigned long FindV()
     return FindVT<List, T>::value;
 }
 
-#ifndef H2_USE_CXX17
+#ifndef H2_NO_CXX17
 template <typename List, typename T>
 inline constexpr unsigned long Find = FindV<List, T>();
-#endif // H2_USE_CXX17
+#endif // H2_NO_CXX17
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 

@@ -30,10 +30,10 @@ constexpr unsigned long LengthV()
     return LengthVT<List>::value;
 }
 
-#ifndef H2_USE_CXX17
+#ifndef H2_NO_CXX17
 template <typename List>
 inline constexpr unsigned long Length = LengthV<List>();
-#endif // H2_USE_CXX17
+#endif // H2_NO_CXX17
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 

@@ -10,6 +10,7 @@
 
 #include "LispAccessors.hpp"
 #include "TypeList.hpp"
+#include "h2/meta/core/IfThenElse.hpp"
 #include "h2/meta/core/Lazy.hpp"
 
 namespace h2
