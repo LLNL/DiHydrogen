@@ -71,7 +71,7 @@ public:
     }
 
     /** @brief Get the names of all builders known to the factory. */
-    std::list<id_type> registered_keys() const
+    std::list<id_type> registered_ids() const
     {
         std::list<id_type> names;
         for (auto const& x : map_)

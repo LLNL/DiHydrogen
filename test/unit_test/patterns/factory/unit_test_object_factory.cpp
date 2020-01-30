@@ -91,7 +91,7 @@ TEMPLATE_TEST_CASE(
         CHECK(factory.size() == 2UL);
 
         // Verify the keys
-        auto names = factory.registered_keys();
+        auto names = factory.registered_ids();
         for (auto const& name : names)
             CHECK(
                 (name == key::get(GenericKey::WIDGET)
@@ -145,7 +145,7 @@ TEMPLATE_TEST_CASE(
 
         SECTION("The remaining key is correct.")
         {
-            auto names = factory.registered_keys();
+            auto names = factory.registered_ids();
             CHECK(std::distance(names.begin(), names.end()) == 1UL);
             CHECK(names.front() == key::get(GenericKey::GIZMO));
         }

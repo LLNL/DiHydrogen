@@ -97,7 +97,7 @@ TEST_CASE("testing the prototype factory class", "[factory][utilities]")
 
         SECTION("Get list of supported types")
         {
-            auto names = factory.registered_keys();
+            auto names = factory.registered_ids();
 
             CHECK(names.size() == factory.size());
         }
