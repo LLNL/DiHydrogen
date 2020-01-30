@@ -123,4 +123,10 @@ class BatchNormalization {
   BatchNormalization(Backend &backend, DataType decay, DataType epsilon);
 };
 
+template <typename Backend>
+class Softmax {
+ public:
+  Softmax(Backend &backend);
+};
+
 } // namespace distconv
