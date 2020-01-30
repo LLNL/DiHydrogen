@@ -21,7 +21,8 @@ class Softmax<cudnn::BackendCUDNN> {
   }
 
   template <typename Tensor>
-  void setup(const Tensor &input, const Tensor &output) {
+  void setup(const Tensor &input, SoftmaxMode mode) {
+    m_mode = mode;
     auto loc_shape = input.get_locale_shape();
     m_num_procs_per_sample = loc_shape.reduce_sum() / loc_shape[-1];
     if (m_num_procs_per_sample > 1) {
@@ -39,6 +40,7 @@ class Softmax<cudnn::BackendCUDNN> {
 
  protected:
   cudnn::BackendCUDNN &m_be;
+  SoftmaxMode m_mode;
   int m_num_procs_per_sample;
   std::unique_ptr<Al::NCCLBackend::comm_type> m_sample_al;
 

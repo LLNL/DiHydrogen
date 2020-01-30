@@ -123,6 +123,8 @@ class BatchNormalization {
   BatchNormalization(Backend &backend, DataType decay, DataType epsilon);
 };
 
+enum class SoftmaxMode {INSTANCE, CHANNEL};
+
 template <typename Backend>
 class Softmax {
  public:

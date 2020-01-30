@@ -1,5 +1,6 @@
 #include "distconv/cudnn/softmax.hpp"
 #include "distconv/util/util_mpi.hpp"
+#include "distconv/util/util_cuda.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
 
 #include <limits>
@@ -58,6 +59,9 @@ struct div {
 
 template <typename DataType>
 struct sum {
+  __device__ __forceinline__ DataType init() const {
+    return DataType(0);
+  }
   __device__ __forceinline__ DataType operator()(DataType x, DataType y) const {
     return x + y;
   }
@@ -65,6 +69,9 @@ struct sum {
 
 template <typename DataType>
 struct max {
+  __device__ __forceinline__ DataType init() const {
+    return util::min<DataType>();
+  }
   __device__ __forceinline__ DataType operator()(DataType x, DataType y) const {
     return (x >= y) ? x : y;
   }
@@ -129,7 +136,7 @@ __global__ void reduce_per_sample_kernel(const DataType * __restrict__ x,
 
   x += sample_idx * sample_size;
 
-  DataType local_sum = DataType(0);
+  DataType local_sum = reduce.init();
   for (; sample_offset < block_end; sample_offset += BLOCK_SIZE) {
     auto x_i = x[sample_offset];
     local_sum = reduce(local_sum, map(x_i));
@@ -161,7 +168,7 @@ __global__ void reduce_per_sample_kernel(const DataType * __restrict__ x,
   x += sample_idx * sample_size;
   y += sample_idx * sample_size;
 
-  DataType local_sum = DataType(0);
+  DataType local_sum = reduce.init();
   for (; sample_offset < block_end; sample_offset += BLOCK_SIZE) {
     auto x_i = x[sample_offset];
     auto y_i = y[sample_offset];
@@ -225,7 +232,7 @@ __global__ void map_and_reduce_per_sample_kernel(
 
   const auto sample_value = sample_values[sample_idx];
 
-  DataType local_sum = DataType(0);
+  DataType local_sum = reduce.init();
   for (; sample_offset < block_end; sample_offset += BLOCK_SIZE) {
     auto x_i = x[sample_offset];
     x_i = map(x_i, sample_value);
@@ -403,6 +410,145 @@ void bp_compute_gradient(const Tensor &y, const Tensor &dy,
           bp_compute_func<DataType>(get_min<DataType>()));
 }
 
+template <typename DataType, int BLOCK_SIZE>
+__global__ void fp_channel_kernel(const DataType * __restrict__ x,
+                                  size_t spatial_size,
+                                  int num_channels,
+                                  DataType * __restrict__ y) {
+  size_t offset = blockIdx.x * BLOCK_SIZE + threadIdx.x;
+  const size_t sample_size = spatial_size * num_channels;
+  const int sample_idx = blockIdx.y;
+  extern __shared__ DataType x_cache[];
+  const int cache_idx = threadIdx.x;
+  constexpr auto min_output = util::min<DataType>();
+
+  if (offset >= spatial_size) return;
+
+  x += sample_idx * sample_size;
+  y += sample_idx * sample_size;
+
+  // Calc max
+  DataType ch_max = util::min<DataType>();
+  for (int cid = 0; cid < num_channels; ++cid) {
+    auto x_i = x[offset + spatial_size * cid];
+    x_cache[cache_idx + BLOCK_SIZE * cid] = x_i;
+    ch_max = ::max(ch_max, x_i);
+  }
+
+  // Calc exp and sum
+  DataType ch_sum = DataType(0);
+  for (int cid = 0; cid < num_channels; ++cid) {
+    auto ch_off = BLOCK_SIZE * cid;
+    auto x_i = x_cache[cache_idx + ch_off];
+    x_i = exp<DataType>()(x_i - ch_max);
+    x_cache[cache_idx + ch_off] = x_i;
+    ch_off += x_i;
+  }
+
+  ch_sum = 1 / ch_sum;
+  for (int cid = 0; cid < num_channels; ++cid) {
+    auto ch_off = BLOCK_SIZE * cid;
+    auto x_i = x_cache[cache_idx + ch_off];
+    x_i = ::max(x_i * ch_sum, min_output);
+    y[offset + spatial_size * cid] = x_i;
+  }
+}
+
+template <typename Tensor>
+int fp_channel(const Tensor &x, Tensor &y, cudaStream_t stream) {
+  using DataType = typename Tensor::data_type;
+
+  if (x.get_local_size() == 0) {
+    return 0;
+  }
+
+  auto num_samples = x.get_local_shape()[-1];
+  auto num_channels = x.get_local_shape()[-2];
+  size_t spatial_size = x.get_local_size() / num_samples / num_channels;
+  auto num_blocks_per_sample = util::ceil(spatial_size, (size_t)block_size);
+
+  dim3 gdim(num_blocks_per_sample, num_samples);
+  auto shmem_size = num_channels * block_size * sizeof(DataType);
+
+  fp_channel_kernel<DataType, block_size>
+      <<<gdim, block_size, shmem_size, stream>>>(
+          x.get_base_ptr(), spatial_size, num_channels,
+          y.get_base_ptr());
+  DISTCONV_CHECK_CUDA(cudaGetLastError());
+
+  return 0;
+}
+
+template <typename DataType, int BLOCK_SIZE>
+__global__ void bp_channel_kernel(const DataType * __restrict__ y,
+                                  const DataType * __restrict__ dy,
+                                  size_t spatial_size,
+                                  int num_channels,
+                                  DataType * __restrict__ dx) {
+  size_t offset = blockIdx.x * BLOCK_SIZE + threadIdx.x;
+  const size_t sample_size = spatial_size * num_channels;
+  const int sample_idx = blockIdx.y;
+  extern __shared__ DataType cache[];
+  const int cache_idx = threadIdx.x;
+  constexpr auto min_output = util::min<DataType>();
+
+  if (offset >= spatial_size) return;
+
+  y += sample_idx * sample_size;
+  dy += sample_idx * sample_size;
+  dx += sample_idx * sample_size;
+
+  // Calc dotproduct
+  DataType dp = DataType(0);
+  auto cache_offset = cache_idx;
+  for (int cid = 0; cid < num_channels; ++cid) {
+    auto off = offset + spatial_size * cid;
+    auto y_i = y[off];
+    auto dy_i = dy[off];
+    dp += y_i * dy_i;
+    cache[cache_offset] = y_i;
+    cache_offset += BLOCK_SIZE;
+    cache[cache_offset] = dy_i;
+    cache_offset += BLOCK_SIZE;
+  }
+
+  // Compute gradients
+  cache_offset = cache_idx;
+  for (int cid = 0; cid < num_channels; ++cid) {
+    auto y_i = cache[cache_offset];
+    cache_offset += BLOCK_SIZE;
+    auto dy_i = cache[cache_offset];
+    cache_offset += BLOCK_SIZE;
+    auto grad = y_i > min_output ? y_i * (dy_i - dp) : DataType(0);
+    dx[offset + spatial_size * cid] = grad;
+  }
+}
+
+template <typename Tensor>
+int bp_channel(const Tensor &y, const Tensor &dy, Tensor &dx, cudaStream_t stream) {
+  using DataType = typename Tensor::data_type;
+
+  if (dx.get_local_size() == 0) {
+    return 0;
+  }
+
+  auto num_samples = dx.get_local_shape()[-1];
+  auto num_channels = dx.get_local_shape()[-2];
+  size_t spatial_size = dx.get_local_size() / num_samples / num_channels;
+  auto num_blocks_per_sample = util::ceil(spatial_size, (size_t)block_size);
+
+  dim3 gdim(num_blocks_per_sample, num_samples);
+  auto shmem_size = num_channels * block_size * 2 * sizeof(DataType);
+
+  bp_channel_kernel<DataType, block_size>
+      <<<gdim, block_size, shmem_size, stream>>>(
+          y.get_base_ptr(), dy.get_base_ptr(), spatial_size, num_channels,
+          dx.get_base_ptr());
+  DISTCONV_CHECK_CUDA(cudaGetLastError());
+
+  return 0;
+}
+
 } // namespace softmax
 
 template <typename Tensor>
@@ -418,6 +564,10 @@ int SoftmaxCUDNN::forward(const Tensor &x, Tensor &y) {
   }
 
   auto stream = m_be.get_stream();
+
+  if (m_mode == SoftmaxMode::CHANNEL) {
+    return softmax::fp_channel(x, y, stream);
+  }
 
   auto &mempool = internal::RuntimeCUDA::get_device_memory_pool();
   auto ws_size = num_samples * sizeof(DataType);
@@ -460,16 +610,21 @@ int SoftmaxCUDNN::backward(const Tensor &y, const Tensor &dy,
     return 0;
   }
 
+  auto stream = m_be.get_stream();
+
+  if (m_mode == SoftmaxMode::CHANNEL) {
+    return softmax::bp_channel(y, dy, dx, stream);
+  }
+
   auto &mempool = internal::RuntimeCUDA::get_device_memory_pool();
   auto ws_size = num_samples * sizeof(DataType);
-  auto stream = m_be.get_stream();
+
   DataType *sample_dp = static_cast<DataType*>(
       mempool.get(ws_size, stream));
 
   DISTCONV_CHECK_CUDA(cudaMemsetAsync(
       sample_dp, 0, ws_size, stream));
 
-  // compute sample-wise max
   softmax::bp_dotproduct(y, dy, sample_dp, stream);
   allreduce(sample_dp, num_samples, false);
 
