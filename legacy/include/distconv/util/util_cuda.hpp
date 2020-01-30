@@ -10,6 +10,7 @@
 #include <cuda_runtime.h>
 #include <vector>
 #include <iostream>
+#include <cfloat>
 
 #include "nvToolsExt.h"
 
@@ -230,6 +231,21 @@ LIST_OF_VECTOR2_TYPES
 
 LIST_OF_VECTOR4_TYPES
 #undef VECTOR_TYPE_OP
+
+template <typename T> constexpr __device__ __forceinline__ T min();
+template <> constexpr __device__ __forceinline__ float min<float>() {
+  return FLT_MIN;
+}
+template <> constexpr __device__ __forceinline__ double min<double>() {
+  return DBL_MIN;
+}
+template <typename T> constexpr __device__ __forceinline__ T max();
+template <> constexpr __device__ __forceinline__ float max<float>() {
+  return FLT_MAX;
+}
+template <> constexpr __device__ __forceinline__ double max<double>() {
+  return DBL_MAX;
+}
 
 #endif // __NVCC__
 
