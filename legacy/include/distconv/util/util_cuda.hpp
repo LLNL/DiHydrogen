@@ -104,16 +104,22 @@ inline void nvtx_pop() {
   }
 }
 
-#define LIST_OF_VECTOR2_TYPES              \
-  VECTOR_TYPE_OP(int, int2, 2)             \
-  VECTOR_TYPE_OP(long, long2, 2)           \
-  VECTOR_TYPE_OP(float, float2, 2)         \
+#define LIST_OF_ELEMENT_TYPES                   \
+  ELEMENT_TYPE_OP(int)                          \
+  ELEMENT_TYPE_OP(long)                         \
+  ELEMENT_TYPE_OP(float)                        \
+  ELEMENT_TYPE_OP(double)
+
+#define LIST_OF_VECTOR2_TYPES                   \
+  VECTOR_TYPE_OP(int, int2, 2)                  \
+  VECTOR_TYPE_OP(long, long2, 2)                \
+  VECTOR_TYPE_OP(float, float2, 2)              \
   VECTOR_TYPE_OP(double, double2, 2)
 
-#define LIST_OF_VECTOR4_TYPES              \
-  VECTOR_TYPE_OP(int, int4, 4)             \
-  VECTOR_TYPE_OP(long, long4, 4)           \
-  VECTOR_TYPE_OP(float, float4, 4)         \
+#define LIST_OF_VECTOR4_TYPES                   \
+  VECTOR_TYPE_OP(int, int4, 4)                  \
+  VECTOR_TYPE_OP(long, long4, 4)                \
+  VECTOR_TYPE_OP(float, float4, 4)              \
   VECTOR_TYPE_OP(double, double4, 4)
 
 #define LIST_OF_VECTOR_TYPES                    \
@@ -129,10 +135,23 @@ struct GetVectorType {
       ::type;
 };
 
+template <typename VectorType>
+struct GetElementType {
+  using type = typename std::conditional<
+    std::is_const<VectorType>::value,
+    typename std::add_const<typename GetElementType<typename std::remove_const<VectorType>::type>::type>::type,
+    typename GetElementType<typename std::remove_const<VectorType>::type>::type>
+      ::type;
+};
+
 #define VECTOR_TYPE_OP(B, V, W)                 \
   template <>                                   \
   struct GetVectorType<B, W> {                  \
     using type = V;                             \
+  };                                            \
+  template <>                                   \
+  struct GetElementType<V> {                    \
+    using type = B;                             \
   };
 
 LIST_OF_VECTOR_TYPES
@@ -170,63 +189,83 @@ LIST_OF_VECTOR_TYPES
 
 #ifdef __NVCC__
 
+template<typename B, typename V>
+__device__ __forceinline__ V make_vector(B x);
+template<typename B, typename V>
+__device__ __forceinline__ V make_vector(B x, B y);
+template<typename B, typename V>
+__device__ __forceinline__ V make_vector(B x, B y, B z);
+template<typename B, typename V>
+__device__ __forceinline__ V make_vector(B x, B y, B z, B w);
+
+
+#define VECTOR_TYPE_OP(B, V, W)                                         \
+  template<>                                                            \
+  __device__ __forceinline__ V make_vector<B, V>(B x) {                 \
+    return make_##V(x, x);                                              \
+  }                                                                     \
+  template<>                                                            \
+  __device__ __forceinline__ V make_vector<B, V>(B x, B y) {            \
+    return make_##V(x, y);                                              \
+  }
+LIST_OF_VECTOR2_TYPES
+#undef VECTOR_TYPE_OP
+
+#define VECTOR_TYPE_OP(B, V, W)                                         \
+  template<>                                                            \
+  __device__ __forceinline__ V make_vector<B, V>(B x) {                 \
+    return make_##V(x, x, x, x);                                        \
+  }                                                                     \
+  template<>                                                            \
+  __device__ __forceinline__ V make_vector<B, V>(B x, B y, B z, B w) {  \
+    return make_##V(x, y, z, w);                                        \
+  }
+LIST_OF_VECTOR4_TYPES
+#undef VECTOR_TYPE_OP
+
 template <typename T>
-inline __device__ T max(T x, T y) {
+__device__ __forceinline__ T max(T x, T y) {
   return (x > y) ? x : y;
 }
 
-#define VECTOR_TYPE_OP(B, V, W)                 \
-  template <>                                   \
-  inline __device__ V max<V>(V x, V y) {        \
-    V z;                                        \
-    z.x = max(x.x, y.x);                        \
-    z.y = max(x.y, y.y);                        \
-    return z;                                   \
+#define VECTOR_TYPE_OP(B, V, W)                                 \
+  template <>                                                   \
+  __device__ __forceinline__ V max<V>(V x, V y) {               \
+    return make_vector<B, V>(max(x.x, y.x), max(x.y, y.y));     \
   }
 
 LIST_OF_VECTOR2_TYPES
 #undef VECTOR_TYPE_OP
 
-#define VECTOR_TYPE_OP(B, V, W)                 \
-  template <>                                   \
-  inline __device__ V max<V>(V x, V y) {        \
-    V z;                                        \
-    z.x = max(x.x, y.x);                        \
-    z.y = max(x.y, y.y);                        \
-    z.z = max(x.z, y.z);                        \
-    z.w = max(x.w, y.w);                        \
-    return z;                                   \
+#define VECTOR_TYPE_OP(B, V, W)                                 \
+  template <>                                                   \
+  __device__ __forceinline__ V max<V>(V x, V y) {               \
+  return make_vector<B, V>(max(x.x, y.x), max(x.y, y.y),        \
+                           max(x.z, y.z), max(x.w, y.w));       \
   }
 
 LIST_OF_VECTOR4_TYPES
 #undef VECTOR_TYPE_OP
 
 template <typename T>
-inline __device__ T min(T x, T y) {
+__device__ __forceinline__ T min(T x, T y) {
   return (x < y) ? x : y;
 }
 
-#define VECTOR_TYPE_OP(B, V, W)                 \
-  template <>                                   \
-  inline __device__ V min<V>(V x, V y) {        \
-    V z;                                        \
-    z.x = min(x.x, y.x);                        \
-    z.y = min(x.y, y.y);                        \
-    return z;                                   \
+#define VECTOR_TYPE_OP(B, V, W)                                 \
+  template <>                                                   \
+  __device__ __forceinline__ V min<V>(V x, V y) {               \
+    return make_vector<B, V>(min(x.x, y.x), min(x.y, y.y));     \
   }
 
 LIST_OF_VECTOR2_TYPES
 #undef VECTOR_TYPE_OP
 
-#define VECTOR_TYPE_OP(B, V, W)                 \
-  template <>                                   \
-  inline __device__ V min<V>(V x, V y) {        \
-    V z;                                        \
-    z.x = min(x.x, y.x);                        \
-    z.y = min(x.y, y.y);                        \
-    z.z = min(x.z, y.z);                        \
-    z.w = min(x.w, y.w);                        \
-    return z;                                   \
+#define VECTOR_TYPE_OP(B, V, W)                                 \
+  template <>                                                   \
+  __device__ __forceinline__ V min<V>(V x, V y) {               \
+    return make_vector<B, V>(min(x.x, y.x), min(x.y, y.y),      \
+                             min(x.z, y.z), min(x.w, y.w));     \
   }
 
 LIST_OF_VECTOR4_TYPES
@@ -247,26 +286,129 @@ template <> constexpr __device__ __forceinline__ double max<double>() {
   return DBL_MAX;
 }
 
+#define ELEMENT_TYPE_OP(B)                      \
+  __device__ __forceinline__ B sum(B x) {       \
+    return x;                                   \
+  }
+LIST_OF_ELEMENT_TYPES
+#undef ELEMENT_TYPE_OP
+
+#define VECTOR_TYPE_OP(B, V, W)                 \
+  __device__ __forceinline__ B sum(V x) {       \
+    return x.x + x.y;                           \
+  }
+LIST_OF_VECTOR2_TYPES
+#undef VECTOR_TYPE_OP
+
+#define VECTOR_TYPE_OP(B, V, W)                 \
+  __device__ __forceinline__ B sum(V x) {       \
+    return x.x + x.y + x.z + x.w;               \
+  }
+LIST_OF_VECTOR4_TYPES
+#undef VECTOR_TYPE_OP
+
 #endif // __NVCC__
 
 } // namespace util
 
 #ifdef __NVCC__
-#define VECTOR_TYPE_OP(B, V, W)                         \
-  inline __device__ void operator+=(V &x, V y) {        \
-    x.x += y.x;                                         \
-    x.y += y.y;                                         \
+#define VECTOR_TYPE_OP(B, V, W)                                 \
+  __device__ __forceinline__ V operator+(V x, V y) {            \
+    return util::make_vector<B, V>(x.x + y.x, x.y + y.y);       \
+  }                                                             \
+  __device__ __forceinline__ V operator-(V x, V y) {            \
+    return util::make_vector<B, V>(x.x - y.x, x.y - y.y);       \
+  }                                                             \
+  __device__ __forceinline__ V operator*(V x, V y) {            \
+    return util::make_vector<B, V>(x.x * y.x, x.y * y.y);       \
+  }                                                             \
+  __device__ __forceinline__ V operator/(V x, V y) {            \
+    return util::make_vector<B, V>(x.x / y.x, x.y / y.y);       \
+  }                                                             \
+  __device__ __forceinline__ void operator+=(V &x, V y) {       \
+    x.x += y.x;                                                 \
+    x.y += y.y;                                                 \
+  }                                                             \
+  __device__ __forceinline__ void operator-=(V &x, V y) {       \
+    x.x -= y.x;                                                 \
+    x.y -= y.y;                                                 \
+  }                                                             \
+  __device__ __forceinline__ void operator*=(V &x, V y) {       \
+    x.x *= y.x;                                                 \
+    x.y *= y.y;                                                 \
+  }                                                             \
+  __device__ __forceinline__ void operator/=(V &x, V y) {       \
+    x.x /= y.x;                                                 \
+    x.y /= y.y;                                                 \
+  }                                                             \
+  __device__ __forceinline__ V operator+(V x, B y) {            \
+    return util::make_vector<B, V>(x.x + y, x.y + y);           \
+  }                                                             \
+  __device__ __forceinline__ V operator-(V x, B y) {            \
+    return util::make_vector<B, V>(x.x - y, x.y - y);           \
+  }                                                             \
+  __device__ __forceinline__ V operator*(V x, B y) {            \
+    return util::make_vector<B, V>(x.x * y, x.y * y);           \
+  }                                                             \
+  __device__ __forceinline__ V operator/(V x, B y) {            \
+    return util::make_vector<B, V>(x.x / y, x.y / y);           \
   }
 
 LIST_OF_VECTOR2_TYPES
 #undef VECTOR_TYPE_OP
 
-#define VECTOR_TYPE_OP(B, V, W)                         \
-  inline __device__ void operator+=(V &x, V y) {        \
-    x.x += y.x;                                         \
-    x.y += y.y;                                         \
-    x.z += y.z;                                         \
-    x.w += y.w;                                         \
+#define VECTOR_TYPE_OP(B, V, W)                                         \
+  __device__ __forceinline__ V operator+(V x, V y) {                    \
+    return util::make_vector<B, V>(x.x + y.x, x.y + y.y,                \
+                                   x.z + y.z, x.w + y.w);               \
+  }                                                                     \
+  __device__ __forceinline__ V operator-(V x, V y) {                    \
+    return util::make_vector<B, V>(x.x - y.x, x.y - y.y,                \
+                                   x.z - y.z, x.w - y.w);               \
+  }                                                                     \
+  __device__ __forceinline__ V operator*(V x, V y) {                    \
+  return util::make_vector<B, V>(x.x * y.x, x.y * y.y,                  \
+                                 x.z * y.z, x.w * y.w);                 \
+  }                                                                     \
+  __device__ __forceinline__ V operator/(V x, V y) {                    \
+  return util::make_vector<B, V>(x.x / y.x, x.y / y.y,                  \
+                                 x.z / y.z, x.w / y.w);                 \
+  }                                                                     \
+  __device__ __forceinline__ void operator+=(V &x, V y) {               \
+    x.x += y.x;                                                         \
+    x.y += y.y;                                                         \
+    x.z += y.z;                                                         \
+    x.w += y.w;                                                         \
+  }                                                                     \
+  __device__ __forceinline__ void operator-=(V &x, V y) {               \
+    x.x -= y.x;                                                         \
+    x.y -= y.y;                                                         \
+    x.z -= y.z;                                                         \
+    x.w -= y.w;                                                         \
+  }                                                                     \
+  __device__ __forceinline__ void operator*=(V &x, V y) {               \
+    x.x *= y.x;                                                         \
+    x.y *= y.y;                                                         \
+    x.z *= y.z;                                                         \
+    x.w *= y.w;                                                         \
+  }                                                                     \
+  __device__ __forceinline__ void operator/=(V &x, V y) {               \
+    x.x /= y.x;                                                         \
+    x.y /= y.y;                                                         \
+    x.z /= y.z;                                                         \
+    x.w /= y.w;                                                         \
+  }                                                                     \
+  __device__ __forceinline__ V operator+(V x, B y) {                    \
+    return util::make_vector<B, V>(x.x + y, x.y + y, x.z + y, x.w + y); \
+  }                                                                     \
+  __device__ __forceinline__ V operator-(V x, B y) {                    \
+    return util::make_vector<B, V>(x.x - y, x.y - y, x.z - y, x.w - y); \
+  }                                                                     \
+  __device__ __forceinline__ V operator*(V x, B y) {                    \
+    return util::make_vector<B, V>(x.x * y, x.y * y, x.z * y, x.w * y); \
+  }                                                                     \
+  __device__ __forceinline__ V operator/(V x, B y) {                    \
+    return util::make_vector<B, V>(x.x / y, x.y / y, x.z / y, x.w / y); \
   }
 
 LIST_OF_VECTOR4_TYPES
