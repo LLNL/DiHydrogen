@@ -400,7 +400,7 @@ function run_test() {
          $TEST_ARGS \
          > log_reference.txt 2>&1
 
-    ${runcmd_ref} ${REF_BENCHMARK_BIN} \
+    DISTCONV_DISABLE_BN_OPT=1 ${runcmd_ref} ${REF_BENCHMARK_BIN} \
         --proc-size "1,1,$proc_one" \
         $TEST_ARGS \
         >> log_reference.txt 2>&1

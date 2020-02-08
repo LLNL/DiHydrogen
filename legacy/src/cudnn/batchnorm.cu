@@ -18,10 +18,10 @@ namespace distconv {
 namespace batchnorm {
 
 template <int ND, typename DataType, int BLOCK_SIZE>
-__global__ void channel_sums_and_sqsums_kernel(const DataType *input,
-                                               DataType *sums, DataType *sqsums,
-                                               tensor::Array<ND> shape,
-                                               tensor::Array<ND> input_strides) {
+__global__ void channel_sums_and_sqsums_kernel(
+    const DataType * __restrict__ input,
+    DataType * __restrict__ sums, DataType * __restrict__ sqsums,
+    tensor::Array<ND> shape, tensor::Array<ND> input_strides) {
   __shared__ DataType shared_sums[BLOCK_SIZE];
   __shared__ DataType shared_sqsums[BLOCK_SIZE];
 
@@ -74,6 +74,100 @@ __global__ void channel_sums_and_sqsums_kernel(const DataType *input,
   }
 }
 
+template <int ND, typename DataType, int BLOCK_SIZE,
+          typename DataTypeV>
+__global__ void channel_sums_and_sqsums_opt_kernel(
+    const DataTypeV * __restrict__ input,
+    DataType * __restrict__ sums, DataType * __restrict__ sqsums,
+    const int num_channels,
+    const int num_samples,
+    const index_t spatial_size,
+    const index_t spatial_real_size) {
+  __shared__ DataType shared_sums[BLOCK_SIZE];
+  __shared__ DataType shared_sqsums[BLOCK_SIZE];
+
+  const int tid = threadIdx.x;
+  const int idx = threadIdx.x + blockIdx.x * blockDim.x;
+  const int ch_idx = blockIdx.y;
+  const auto sample_offset = spatial_real_size * num_channels;
+
+  auto sum = DataType(0);
+  auto sqsum = DataType(0);
+  index_t offset = spatial_real_size * ch_idx;
+  for (int s = 0; s < num_samples; ++s) {
+    for (int i = idx; i < spatial_size; i += BLOCK_SIZE * gridDim.x) {
+      const auto x = input[offset + i];
+      sum += util::sum(x);
+      sqsum += util::sum(x * x);
+    }
+    offset += sample_offset;
+  }
+
+  shared_sums[tid] = sum;
+  shared_sqsums[tid] = sqsum;
+
+  // Compute channel sum with shared memory reduction
+  // TODO: unroll loops
+  for(int stride = BLOCK_SIZE / 2; stride > 0; stride /= 2) {
+    __syncthreads();
+    if(tid < stride) {
+      shared_sums[tid] += shared_sums[tid + stride];
+      shared_sqsums[tid] += shared_sqsums[tid + stride];
+    }
+  }
+
+  // Output channel sum to global memory
+  if(tid == 0) {
+    atomicAdd(&sums[ch_idx], shared_sums[0]);
+    atomicAdd(&sqsums[ch_idx], shared_sqsums[0]);
+  }
+}
+
+template <int ND, typename Tensor>
+void channel_sums_and_sqsums_opt(int num_samples, const Tensor &input,
+                                 Tensor &sums, Tensor &sqsums,
+                                 cudaStream_t stream) {
+  using DataType = typename Tensor::data_type;
+
+  // Do not contribute to the accumulation if the local tensor is not
+  // a split root.
+  if (input.get_local_size() == 0 || !input.is_split_root()) return;
+
+  const int num_channels = input.get_local_shape()[get_channel_dim()];
+  constexpr int block_size = 256;
+  dim3 block_dim(block_size);
+  constexpr index_t thread_work_size = 8;
+  constexpr auto block_work_size = block_size * thread_work_size;
+  index_t spatial_size = input.get_local_size() / num_channels / num_samples;
+  index_t spatial_real_size = input.get_local_real_size() /
+      num_channels / num_samples;
+  if (spatial_size % 4 == 0 && spatial_real_size % 4 == 0) {
+    using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
+    spatial_size /= 4;
+    spatial_real_size /= 4;
+    auto num_blocks_per_channel = util::ceil(spatial_size, block_work_size);
+    dim3 grid_dim(num_blocks_per_channel, num_channels);
+    channel_sums_and_sqsums_opt_kernel<ND, DataType, block_size, DataTypeV>
+        <<<grid_dim, block_dim, 0, stream>>>(
+            reinterpret_cast<const DataTypeV*>(input.get_const_base_ptr()),
+            sums.get_base_ptr(),
+            sqsums.get_base_ptr(),
+            num_channels, num_samples,
+            spatial_size, spatial_real_size);
+  } else {
+    using DataTypeV = DataType;
+    auto num_blocks_per_channel = util::ceil(spatial_size, block_work_size);
+    dim3 grid_dim(num_blocks_per_channel, num_channels);
+    channel_sums_and_sqsums_opt_kernel<ND, DataType, block_size, DataType>
+        <<<grid_dim, block_dim, 0, stream>>>(
+            input.get_const_base_ptr(),
+            sums.get_base_ptr(),
+            sqsums.get_base_ptr(),
+            num_channels, num_samples,
+            spatial_size, spatial_real_size);
+  }
+}
+
 template <int ND, typename Tensor>
 void channel_sums_and_sqsums(int num_samples, const Tensor &input, Tensor &sums,
                              Tensor &sqsums, cudaStream_t stream) {
@@ -88,6 +182,28 @@ void channel_sums_and_sqsums(int num_samples, const Tensor &input, Tensor &sums,
       sqsums.get_local_pitched_size() * sizeof(DataType),
       stream));
 
+  // Do not contribute to the accumulation if the local tensor is not
+  // a split root.
+  if (input.get_local_size() == 0 || !input.is_split_root()) return;
+
+  auto overlap = input.get_overlap();
+  bool opt_eligible = true;
+  for (int i = 0; i < ND - 3; ++i) {
+    if (overlap[i] != 0) {
+      opt_eligible = false;
+      break;
+    }
+  }
+  if (std::getenv("DISTCONV_DISABLE_BN_OPT")) {
+    util::MPIRootPrintStreamInfo() << "Disable BN optimization";
+    opt_eligible = false;
+  }
+  if (opt_eligible) {
+    channel_sums_and_sqsums_opt<ND, Tensor>(
+        num_samples, input, sums, sqsums, stream);
+    return;
+  }
+
   const int num_channels = input.get_local_shape()[get_channel_dim()];
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
@@ -100,16 +216,12 @@ void channel_sums_and_sqsums(int num_samples, const Tensor &input, Tensor &sums,
   // CUDA grid dimension limitation
   assert_always(num_channels < 65535);
 
-  // Do not contribute to the accumulation if the local tensor is not
-  // a split root.
-  if (input.get_local_size() > 0 && input.is_split_root()) {
-    channel_sums_and_sqsums_kernel<ND, DataType, block_size>
-        <<<grid_dim, block_dim, 0, stream>>>(
-            input.get_const_base_ptr(),
-            sums.get_base_ptr(),
-            sqsums.get_base_ptr(),
-            shape, input_strides);
-  }
+  channel_sums_and_sqsums_kernel<ND, DataType, block_size>
+      <<<grid_dim, block_dim, 0, stream>>>(
+          input.get_const_base_ptr(),
+          sums.get_base_ptr(),
+          sqsums.get_base_ptr(),
+          shape, input_strides);
 }
 
 #define INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(ND, TYPE)           \
@@ -186,16 +298,15 @@ __device__ inline float rsqrt(float x) {
 }
 
 template <int ND, typename DataType>
-void __global__ batch_normalization_kernel(const DataType *input,
-                                           const DataType *global_mean,
-                                           const DataType *global_var,
-                                           const DataType *global_scale,
-                                           const DataType *global_bias,
-                                           DataType *output,
-                                           DataType epsilon,
-                                           tensor::Array<ND> shape,
-                                           tensor::Array<ND> input_strides,
-                                           tensor::Array<ND> output_strides) {
+void __global__ batch_normalization_kernel(
+    const DataType * __restrict__ input,
+    const DataType * __restrict__ global_mean,
+    const DataType * __restrict__ global_var,
+    const DataType * __restrict__ global_scale,
+    const DataType * __restrict__ global_bias,
+    DataType * __restrict__ output, DataType epsilon,
+    tensor::Array<ND> shape, tensor::Array<ND> input_strides,
+    tensor::Array<ND> output_strides) {
   const int ch_idx = blockIdx.y;
   const int num_channels = shape[get_channel_dim()];
   const int num_samples = shape[get_sample_dim()];
@@ -231,14 +342,109 @@ void __global__ batch_normalization_kernel(const DataType *input,
   }
 }
 
+template <int ND, typename DataType, typename DataTypeV>
+void __global__ batch_normalization_opt_kernel(
+    const DataTypeV * __restrict__ input,
+    const DataType * __restrict__ global_mean,
+    const DataType * __restrict__ global_var,
+    const DataType * __restrict__ global_scale,
+    const DataType * __restrict__ global_bias,
+    DataTypeV * __restrict__ output,
+    DataType epsilon,
+    index_t spatial_size,
+    int num_channels) {
+  const auto ch_idx = blockIdx.y;
+  const auto sample_idx = blockIdx.z;
+  const auto mean = global_mean[ch_idx];
+  const auto var = global_var[ch_idx];
+  const auto scale = global_scale[ch_idx];
+  const auto bias = global_bias[ch_idx];
+  const auto inv_stdev = rsqrt(var + epsilon);
+
+  const auto num_threads_per_channel = blockDim.x * gridDim.x;
+
+  auto block_offset = (ch_idx + sample_idx * num_channels) * spatial_size;
+  input += block_offset;
+  output += block_offset;
+
+  for (index_t idx = threadIdx.x + blockIdx.x * blockDim.x;
+       idx < spatial_size; idx += num_threads_per_channel) {
+    auto x = input[idx];
+    auto xhat = (x - mean) * inv_stdev;
+    auto y = xhat * scale + bias;
+    output[idx] = y;
+  }
+}
+
+template <int ND, typename TensorType>
+void batch_normalization_opt(int num_samples, const TensorType &input,
+                             const TensorType &mean, const TensorType &var,
+                             const TensorType &scale, const TensorType &bias,
+                             TensorType &output,
+                             typename TensorType::data_type epsilon,
+                             cudaStream_t stream) {
+  using DataType = typename TensorType::data_type;
+  // local tensors can be empty
+  if (output.get_local_size() == 0) return;
+  assert_eq(num_samples, (int)input.get_local_shape()[get_sample_dim()]);
+  const int num_channels = input.get_local_shape()[get_channel_dim()];
+  constexpr int block_size = 256;
+  dim3 block_dim(block_size);
+  index_t channel_size = input.get_local_size() / num_channels / num_samples;
+  constexpr index_t thread_work_size = 8;
+  constexpr auto block_work_size = block_size * thread_work_size;
+  if (channel_size % 4 == 0) {
+    channel_size /= 4;
+    auto num_blocks_per_channel = util::ceil(channel_size, block_work_size);
+    dim3 grid_dim(num_blocks_per_channel, num_channels, num_samples);
+    using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
+    batch_normalization_opt_kernel<ND, DataType, DataTypeV>
+        <<<grid_dim, block_dim, 0, stream>>>(
+            reinterpret_cast<const DataTypeV*>(input.get_const_buffer()),
+            mean.get_const_base_ptr(),
+            var.get_const_base_ptr(),
+            scale.get_const_base_ptr(),
+            bias.get_const_base_ptr(),
+            reinterpret_cast<DataTypeV*>(output.get_buffer()),
+            epsilon, channel_size, num_channels);
+  } else {
+    auto num_blocks_per_channel = util::ceil(channel_size, block_work_size);
+    dim3 grid_dim(num_blocks_per_channel, num_channels, num_samples);
+    batch_normalization_opt_kernel<ND, DataType, DataType>
+        <<<grid_dim, block_dim, 0, stream>>>(
+            input.get_const_buffer(),
+            mean.get_const_base_ptr(),
+            var.get_const_base_ptr(),
+            scale.get_const_base_ptr(),
+            bias.get_const_base_ptr(),
+            output.get_buffer(), epsilon,
+            channel_size, num_channels);
+  }
+}
+
 template <int ND, typename TensorType>
 void batch_normalization(int num_samples, const TensorType &input,
                          const TensorType &mean, const TensorType &var,
                          const TensorType &scale, const TensorType &bias,
-                         TensorType &output, typename TensorType::data_type epsilon,
+                         TensorType &output,
+                         typename TensorType::data_type epsilon,
                          cudaStream_t stream) {
+  using DataType = typename TensorType::data_type;
+
+  if (input.get_local_real_shape() == output.get_local_real_shape()) {
+    if (std::getenv("DISTCONV_DISABLE_BN_OPT")) {
+      util::MPIRootPrintStreamInfo() << "Disable BN optimization";
+    } else {
+      batch_normalization_opt<ND, TensorType>(
+          num_samples, input, mean, var, scale, bias,
+          output, epsilon, stream);
+      return;
+    }
+  }
+
   // local tensors can be empty
   if (output.get_local_size() == 0) return;
+  assert_eq(num_samples, (int)input.get_local_shape()[get_sample_dim()]);
   const int num_channels = input.get_local_shape()[get_channel_dim()];
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
@@ -250,7 +456,6 @@ void batch_normalization(int num_samples, const TensorType &input,
   // CUDA grid dimension limitation
   assert_always(num_channels < 65535);
   tensor::Array<ND> shape = input.get_local_shape();
-  shape[get_sample_dim()] = num_samples;
   batch_normalization_kernel<<<grid_dim, block_dim, 0, stream>>>(
       input.get_const_base_ptr(),
       mean.get_const_base_ptr(),
@@ -295,7 +500,7 @@ __global__ void forward_all_kernel(const DataTypeV * __restrict__ input,
   __shared__ DataType2 shared_stat[BLOCK_SIZE];
   const int tid = threadIdx.x;
   const int bid = blockIdx.x;
-  const int sample_offset = spatial_real_size * channel_size;
+  const auto sample_offset = spatial_real_size * channel_size;
 
   index_t offset = spatial_real_size * bid;
   DataType2 stat = {DataType(0), DataType(0)};
@@ -448,13 +653,15 @@ INSTANTIATE_FORWARD(5, double)
 #endif // DISTCONV_HAS_NVSHMEM
 
 template <int ND, typename DataType, int BLOCK_SIZE>
-void __global__ backprop1_kernel(const DataType *input,
-                                 const DataType *d_output,
-                                 const DataType *global_mean,
-                                 const DataType *global_var,
-                                 const DataType *global_scale,
-                                 DataType *global_dscale, DataType *global_dbias,
-                                 DataType *global_dmean, DataType *global_dvar,
+void __global__ backprop1_kernel(const DataType * __restrict__ input,
+                                 const DataType * __restrict__ d_output,
+                                 const DataType * __restrict__ global_mean,
+                                 const DataType * __restrict__ global_var,
+                                 const DataType * __restrict__ global_scale,
+                                 DataType * __restrict__ global_dscale,
+                                 DataType * __restrict__ global_dbias,
+                                 DataType * __restrict__ global_dmean,
+                                 DataType * __restrict__ global_dvar,
                                  DataType epsilon, tensor::Array<ND> shape,
                                  tensor::Array<ND> input_strides,
                                  tensor::Array<ND> d_output_strides) {
@@ -531,6 +738,145 @@ void __global__ backprop1_kernel(const DataType *input,
   }
 }
 
+template <int ND, typename DataType, int BLOCK_SIZE, typename DataTypeV>
+void __global__ backprop1_opt_kernel(const DataTypeV * __restrict__ input,
+                                     const DataTypeV * __restrict__ d_output,
+                                     const DataType * __restrict__ global_mean,
+                                     const DataType * __restrict__ global_var,
+                                     const DataType * __restrict__ global_scale,
+                                     DataType * __restrict__ global_dscale,
+                                     DataType * __restrict__ global_dbias,
+                                     DataType * __restrict__ global_dmean,
+                                     DataType * __restrict__ global_dvar,
+                                     DataType epsilon,
+                                     const int num_channels,
+                                     const int num_samples,
+                                     const index_t spatial_size,
+                                     const index_t input_spatial_real_size,
+                                     const index_t output_spatial_real_size) {
+  __shared__ DataType shared_dscale[BLOCK_SIZE];
+  __shared__ DataType shared_dbias[BLOCK_SIZE];
+  __shared__ DataType shared_dmean[BLOCK_SIZE];
+  __shared__ DataType shared_dvar[BLOCK_SIZE];
+
+  const int tid = threadIdx.x;
+  const index_t idx = threadIdx.x + blockIdx.x * blockDim.x;
+  const int ch_idx = blockIdx.y;
+  const auto i_sample_offset = input_spatial_real_size * num_channels;
+  const auto o_sample_offset = output_spatial_real_size * num_channels;
+
+  const auto mean = global_mean[ch_idx];
+  const auto var = global_var[ch_idx];
+  const auto scale = global_scale[ch_idx];
+  const auto inv_stdev = rsqrt(var + epsilon);
+  const auto dvar_factor = inv_stdev * inv_stdev * inv_stdev / 2;
+
+  DataType dscale = DataType(0);
+  DataType dbias = DataType(0);
+  DataType dmean = DataType(0);
+  DataType dvar = DataType(0);
+
+  index_t i_offset = input_spatial_real_size * ch_idx;
+  index_t o_offset = output_spatial_real_size * ch_idx;
+
+  for (int s = 0; s < num_samples; ++s) {
+    for (auto i = idx; i < spatial_size; i += BLOCK_SIZE * gridDim.x) {
+      const auto x = input[i_offset + i];
+      const auto xhat = (x - mean) * inv_stdev;
+      const auto dy = d_output[o_offset + i];
+      dscale += util::sum(dy * xhat);
+      dbias += util::sum(dy);
+      const auto dxhat = dy * scale;
+      dmean -= util::sum(dxhat * inv_stdev);
+      dvar -= util::sum(dxhat * (x - mean) * dvar_factor);
+    }
+    i_offset += i_sample_offset;
+    o_offset += o_sample_offset;
+  }
+
+  shared_dscale[tid] = dscale;
+  shared_dbias[tid] = dbias;
+  shared_dmean[tid] = dmean;
+  shared_dvar[tid] = dvar;
+
+  for(int stride = BLOCK_SIZE / 2; stride > 0; stride /= 2) {
+    __syncthreads();
+    if(tid < stride) {
+      shared_dscale[tid] += shared_dscale[tid + stride];
+      shared_dbias[tid] += shared_dbias[tid + stride];
+      shared_dmean[tid] += shared_dmean[tid + stride];
+      shared_dvar[tid] += shared_dvar[tid + stride];
+    }
+  }
+
+  // Output channel sum to global memory
+  if (tid == 0) {
+    atomicAdd(&global_dscale[ch_idx], shared_dscale[0]);
+    atomicAdd(&global_dbias[ch_idx], shared_dbias[0]);
+    atomicAdd(&global_dmean[ch_idx], shared_dmean[0]);
+    atomicAdd(&global_dvar[ch_idx], shared_dvar[0]);
+  }
+}
+
+template <int ND, typename TensorType>
+void backprop1_opt(int num_samples, const TensorType &input,
+                   const TensorType &d_output, const TensorType &mean,
+                   const TensorType &var, const TensorType &scale,
+                   TensorType &scale_gradient, TensorType &bias_gradient,
+                   TensorType &mean_gradient, TensorType &var_gradient,
+                   typename TensorType::data_type epsilon, cudaStream_t stream) {
+  using DataType = typename TensorType::data_type;
+  const int num_channels = input.get_local_shape()[get_channel_dim()];
+  constexpr int block_size = 256;
+  dim3 block_dim(block_size);
+  constexpr index_t thread_work_size = 8;
+  constexpr auto block_work_size = block_size * thread_work_size;
+  index_t spatial_size = input.get_local_size() / num_channels / num_samples;
+  index_t i_spatial_real_size = input.get_local_real_size() /
+      num_channels / num_samples;
+  index_t o_spatial_real_size = d_output.get_local_real_size() /
+      num_channels / num_samples;
+  if (spatial_size % 4 == 0 && i_spatial_real_size % 4 == 0 &&
+      o_spatial_real_size % 4 == 0) {
+    using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
+    spatial_size /= 4;
+    i_spatial_real_size /= 4;
+    o_spatial_real_size /= 4;
+    auto num_blocks_per_channel = util::ceil(spatial_size, block_work_size);
+    dim3 grid_dim(num_blocks_per_channel, num_channels);
+    backprop1_opt_kernel<ND, DataType, block_size, DataTypeV>
+        <<<grid_dim, block_dim, 0, stream>>>(
+            reinterpret_cast<const DataTypeV*>(input.get_const_base_ptr()),
+            reinterpret_cast<const DataTypeV*>(d_output.get_const_base_ptr()),
+            mean.get_const_base_ptr(),
+            var.get_const_base_ptr(),
+            scale.get_const_base_ptr(),
+            scale_gradient.get_base_ptr(),
+            bias_gradient.get_base_ptr(),
+            mean_gradient.get_base_ptr(),
+            var_gradient.get_base_ptr(),
+            epsilon, num_channels, num_samples,
+            spatial_size, i_spatial_real_size, o_spatial_real_size);
+  } else {
+    using DataTypeV = DataType;
+    auto num_blocks_per_channel = util::ceil(spatial_size, block_work_size);
+    dim3 grid_dim(num_blocks_per_channel, num_channels);
+    backprop1_opt_kernel<ND, DataType, block_size, DataTypeV>
+        <<<grid_dim, block_dim, 0, stream>>>(
+            input.get_const_base_ptr(),
+            d_output.get_const_base_ptr(),
+            mean.get_const_base_ptr(),
+            var.get_const_base_ptr(),
+            scale.get_const_base_ptr(),
+            scale_gradient.get_base_ptr(),
+            bias_gradient.get_base_ptr(),
+            mean_gradient.get_base_ptr(),
+            var_gradient.get_base_ptr(),
+            epsilon, num_channels, num_samples,
+            spatial_size, i_spatial_real_size, o_spatial_real_size);
+  }
+}
+
 template <int ND, typename TensorType>
 void backprop1(int num_samples, const TensorType &input,
                const TensorType &d_output, const TensorType &mean,
@@ -557,6 +903,28 @@ void backprop1(int num_samples, const TensorType &input,
       stream));
 
   if (input.get_local_size() == 0 || !input.is_split_root()) {
+    return;
+  }
+
+  std::vector<IndexVector> overlaps = {input.get_overlap(), d_output.get_overlap()};
+  bool opt_eligible = true;
+  for (auto overlap: overlaps) {
+    for (int i = 0; i < ND - 3; ++i) {
+      if (overlap[i] != 0) {
+        opt_eligible = false;
+        break;
+      }
+    }
+  }
+  if (std::getenv("DISTCONV_DISABLE_BN_OPT")) {
+    util::MPIRootPrintStreamInfo() << "Disable BN optimization";
+    opt_eligible = false;
+  }
+  if (opt_eligible) {
+    backprop1_opt<ND, TensorType>(
+        num_samples, input, d_output, mean, var, scale,
+        scale_gradient, bias_gradient, mean_gradient, var_gradient,
+        epsilon, stream);
     return;
   }
 
@@ -603,15 +971,15 @@ INSTANTIATE_BACKPROP1(5, double)
 #undef INSTANTIATE_BACKPROP1
 
 template <int ND, typename DataType>
-void __global__ backprop2_kernel(const DataType *input,
-                                 const DataType *d_output,
-                                 const DataType *global_mean,
-                                 const DataType *global_var,
-                                 const DataType *global_scale,
-                                 const DataType *global_dmean,
-                                 const DataType *global_dvar,
-                                 DataType *d_input, DataType epsilon,
-                                 index_t num_per_sum,
+void __global__ backprop2_kernel(const DataType * __restrict__ input,
+                                 const DataType * __restrict__ d_output,
+                                 const DataType * __restrict__ global_mean,
+                                 const DataType * __restrict__ global_var,
+                                 const DataType * __restrict__ global_scale,
+                                 const DataType * __restrict__ global_dmean,
+                                 const DataType * __restrict__ global_dvar,
+                                 DataType * __restrict__ d_input,
+                                 DataType epsilon, index_t num_per_sum,
                                  tensor::Array<ND> shape,
                                  tensor::Array<ND> input_strides,
                                  tensor::Array<ND> d_output_strides,
@@ -662,6 +1030,97 @@ void __global__ backprop2_kernel(const DataType *input,
   }
 }
 
+template <int ND, typename DataType, typename DataTypeV>
+void __global__ backprop2_opt_kernel(const DataTypeV * __restrict__ input,
+                                     const DataTypeV * __restrict__ d_output,
+                                     const DataType * __restrict__ global_mean,
+                                     const DataType * __restrict__ global_var,
+                                     const DataType * __restrict__ global_scale,
+                                     const DataType * __restrict__ global_dmean,
+                                     const DataType * __restrict__ global_dvar,
+                                     DataTypeV * __restrict__ d_input,
+                                     DataType epsilon, index_t num_per_sum,
+                                     index_t spatial_size, int num_channels) {
+  const auto ch_idx = blockIdx.y;
+  const auto sample_idx = blockIdx.z;
+  const auto mean = global_mean[ch_idx];
+  const auto var = global_var[ch_idx];
+  const auto scale = global_scale[ch_idx];
+  const auto dmean = global_dmean[ch_idx];
+  const auto dvar = global_dvar[ch_idx];
+  const auto inv_stdev = rsqrt(var + epsilon);
+  const auto dmean_term = dmean / num_per_sum;
+  const auto dvar_term = dvar * 2 / (num_per_sum - 1);
+
+  const auto num_threads_per_channel = blockDim.x * gridDim.x;
+
+  auto block_offset = (ch_idx + sample_idx * num_channels) * spatial_size;
+  input += block_offset;
+  d_output += block_offset;
+  d_input += block_offset;
+
+  for (index_t idx = threadIdx.x + blockIdx.x * blockDim.x;
+       idx < spatial_size; idx += num_threads_per_channel) {
+    const auto x = input[idx];
+    const auto dy = d_output[idx];
+    const auto dxhat = dy * scale;
+    auto dx = dxhat * inv_stdev;
+    dx = dx + dmean_term;
+    dx = dx + (x - mean) * dvar_term;
+    d_input[idx] = dx;
+  }
+}
+
+template <int ND, typename TensorType>
+void backprop2_opt(index_t num_samples, index_t num_per_sum,
+                   const TensorType &input, const TensorType &d_output,
+                   const TensorType &mean, const TensorType &var,
+                   const TensorType &scale, const TensorType &mean_gradient,
+                   const TensorType &var_gradient, TensorType &d_input,
+                   typename TensorType::data_type epsilon, cudaStream_t stream) {
+  using DataType = typename TensorType::data_type;
+  // local tensors can be empty
+  if (input.get_local_size() == 0) return;
+  assert_eq(num_samples, (int)input.get_local_shape()[get_sample_dim()]);
+  const int num_channels = input.get_local_shape()[get_channel_dim()];
+  constexpr int block_size = 256;
+  dim3 block_dim(block_size);
+  index_t channel_size = input.get_local_size() / num_channels / num_samples;
+  constexpr index_t thread_work_size = 8;
+  constexpr auto block_work_size = block_size * thread_work_size;
+  if (channel_size % 4 == 0) {
+    channel_size /= 4;
+    auto num_blocks_per_channel = util::ceil(channel_size, block_work_size);
+    dim3 grid_dim(num_blocks_per_channel, num_channels, num_samples);
+    using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
+    backprop2_opt_kernel<ND, DataType, DataTypeV>
+        <<<grid_dim, block_dim, 0, stream>>>(
+            reinterpret_cast<const DataTypeV*>(input.get_const_buffer()),
+            reinterpret_cast<const DataTypeV*>(d_output.get_const_buffer()),
+            mean.get_const_base_ptr(),
+            var.get_const_base_ptr(),
+            scale.get_const_base_ptr(),
+            mean_gradient.get_const_base_ptr(),
+            var_gradient.get_const_base_ptr(),
+            reinterpret_cast<DataTypeV*>(d_input.get_buffer()),
+            epsilon, num_per_sum, channel_size, num_channels);
+  } else {
+    auto num_blocks_per_channel = util::ceil(channel_size, block_work_size);
+    dim3 grid_dim(num_blocks_per_channel, num_channels, num_samples);
+    backprop2_opt_kernel<ND, DataType, DataType>
+        <<<grid_dim, block_dim, 0, stream>>>(
+            input.get_const_buffer(),
+            d_output.get_const_buffer(),
+            mean.get_const_base_ptr(),
+            var.get_const_base_ptr(),
+            scale.get_const_base_ptr(),
+            mean_gradient.get_const_base_ptr(),
+            var_gradient.get_const_base_ptr(),
+            d_input.get_buffer(),
+            epsilon, num_per_sum, channel_size, num_channels);
+  }
+}
+
 template <int ND, typename TensorType>
 void backprop2(index_t num_samples, index_t num_per_sum,
                const TensorType &input, const TensorType &d_output,
@@ -670,6 +1129,19 @@ void backprop2(index_t num_samples, index_t num_per_sum,
                const TensorType &var_gradient, TensorType &d_input,
                typename TensorType::data_type epsilon, cudaStream_t stream) {
   using DataType = typename TensorType::data_type;
+
+  if (input.get_local_real_shape() == d_output.get_local_real_shape() &&
+      input.get_local_real_shape() == d_input.get_local_real_shape()) {
+    if (std::getenv("DISTCONV_DISABLE_BN_OPT")) {
+      util::MPIRootPrintStreamInfo() << "Disable BN optimization";
+    } else {
+      backprop2_opt<ND, TensorType>(
+          num_samples, num_per_sum, input, d_output, mean, var,
+          scale, mean_gradient, var_gradient, d_input, epsilon, stream);
+      return;
+    }
+  }
+
   if (d_input.get_local_size() == 0) return;
   const int num_channels = input.get_local_shape()[get_channel_dim()];
   constexpr int block_size = 256;
