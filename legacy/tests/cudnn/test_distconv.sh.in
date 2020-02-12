@@ -1,6 +1,6 @@
 #!/bin/bash
 
-BENCHMARK_ROOT=@CMAKE_CURRENT_BINARY_DIR@/../../benchmarks
+BENCHMARK_ROOT=@CMAKE_BINARY_DIR@/bin
 TEST_UTIL=@CMAKE_CURRENT_BINARY_DIR@/../test_util.sh
 TEST_CUDNN_UTIL=@CMAKE_CURRENT_BINARY_DIR@/test_cudnn_util.sh
 DISTCONV_BENCHMARK=${BENCHMARK_ROOT}/distconv_benchmark
@@ -19,6 +19,7 @@ WORK_DIR=./$RUN_ID
 LOG=$WORK_DIR/log
 
 TEST_OP=$TEST_CONV
+DATA_TYPE=float
 MODE_2D=NORMAL
 MODE_3D=NORMAL
 HALO_EXCHANGE_METHODS=(HYBRID)
@@ -31,7 +32,7 @@ FILTER_SIZES=(3 5 7 1)
 STRIDE_SIZES=(1 2)
 PADDING=(1 0)
 NUM_PROCS=(4 64 8)
-NUM_DIMS=(2 3)
+NUM_DIMS=2
 OVERLAP=(1 0)
 BIAS=(1)
 
@@ -57,7 +58,7 @@ function prepare_or_run_test() {
         test_exe=${DISTCONV_BENCHMARK}_bn
         ref_exe=$test_exe
     fi
-    local cmd_arg="$test_exe $ref_exe $TEST_OP $nd $@"
+    local cmd_arg="$test_exe $ref_exe $TEST_OP $DATA_TYPE $nd $@"
     if [[ $nd == 2 ]]; then
         cmd_arg+=" ${MODE_2D}"
     elif [[ $nd == 3 ]]; then
@@ -487,9 +488,11 @@ where ARGS are:
     --all                   Run all tests (can be extremely many)
     --2d                    Run 2D tests
     --3d                    Run 3D tests
+    --double                Use double-precision data (float by default)
     --num-procs N           Run tests with N processes
     --mode mode             Set test input mode
     --halo-exchange-methods Set the halo exchange methods (P2P, AL, HYBRID, NVSHMEM)
+    --bn-implementations    Set the batchnorm implementations (MPI, AL_NCCL)
     --run-as-jobs N         Run tests with N maximum concurrent jobs
     --queue queue-name      Submit jobs to queue-name
     --bias bias-args        Set bias parameters
@@ -516,7 +519,7 @@ mkdir $WORK_DIR
 {
     pushd $WORK_DIR > /dev/null
 
-    OPTS=`getopt -o h --long help,conv,bn,quick,long,all,2d,3d,mode:,overlap:,bias:,num-procs:,run-as-jobs:,halo-exchange-methods:,queue:,print-results: -- "$@"`
+    OPTS=`getopt -o h --long help,conv,bn,quick,long,all,2d,3d,double,mode:,overlap:,bias:,num-procs:,run-as-jobs:,halo-exchange-methods:,bn-implementations:,queue:,print-results: -- "$@"`
     if [ $? != 0 ]; then echo Failed parsing options. >&2; exit 1; fi
     eval set -- $OPTS
     while true; do
@@ -546,11 +549,15 @@ mkdir $WORK_DIR
                 shift
                 ;;
             --2d)
-                NUM_DIMS=(2)
+                NUM_DIMS=2
                 shift
                 ;;
             --3d)
-                NUM_DIMS=(3)
+                NUM_DIMS=3
+                shift
+                ;;
+            --double)
+                DATA_TYPE=double
                 shift
                 ;;
             --mode)
@@ -588,6 +595,10 @@ mkdir $WORK_DIR
                 HALO_EXCHANGE_METHODS=("$2")
                 shift 2
                 ;;
+            --bn-implementations)
+                BN_IMPLS=("$2")
+                shift 2
+                ;;
             --print-results)
                 cd $2
                 print_results
@@ -609,9 +620,7 @@ mkdir $WORK_DIR
 
     adjust_job_options
 
-    for nd in "${NUM_DIMS[@]}"; do
-        run_nd_tests $nd
-    done
+    run_nd_tests $NUM_DIMS
 
     wait_all_jobs
 

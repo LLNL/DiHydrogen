@@ -12,6 +12,8 @@ h2_set_full_path(THIS_DIR_CU_SOURCES
 if (DISTCONV_HAS_NVSHMEM)
   list(APPEND THIS_DIR_CU_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/halo_exchange_cuda_nvshmem.cu")
+  list(APPEND THIS_DIR_CU_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/allreduce_nvshmem.cu")
 endif ()
 
 set(HEADERS "${HEADERS}" "${THIS_DIR_HEADERS}" PARENT_SCOPE)

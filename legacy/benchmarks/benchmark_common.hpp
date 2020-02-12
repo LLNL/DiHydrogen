@@ -163,7 +163,7 @@ class BenchmarkConfig {
 
   bool deterministic;
 
-  bool skip_allreduce;
+  bool skip_weight_allreduce;
   bool skip_halo_exchange;
   bool testing;
 
@@ -205,7 +205,7 @@ class BenchmarkConfig {
             nvtx_marking(false),
             overlap_halo_exchange(false),
             deterministic(false),
-            skip_allreduce(false),
+            skip_weight_allreduce(false),
             skip_halo_exchange(false),
             testing(false),
             chanfilt_algo(distconv::ChannelParallelismAlgorithm::NONE),
@@ -361,7 +361,7 @@ class BenchmarkConfig {
       conv_bwd_filter_algo = "DETERMINISTIC";
     }
     if (pr.count("skip-allreduce") > 0) {
-      skip_allreduce = true;
+      skip_weight_allreduce = true;
     }
     if (pr.count("skip-halo-exchange") > 0) {
       skip_halo_exchange = true;
@@ -546,7 +546,7 @@ inline BenchmarkConfig<NSD> process_opt(int argc, char *argv[], int pid,
       ("nvtx", "Enable NVTX-based region marking")
       ("overlap", "Overlap halo exchanges")
       ("deterministic", "Use deterministic algoirthms")
-      ("skip-allreduce", "Skip allreduces")
+      ("skip-allreduce", "Skip allreduces of weights")
       ("skip-halo-exchange", "Skip halo exchange")
       ("testing", "Run benchmarks as tests",
        cxxopts::value<bool>()->default_value("false"))

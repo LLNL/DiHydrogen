@@ -31,16 +31,22 @@ class Profile {
  public:
   BenchmarkConfig<NSD> m_cfg;
   std::vector<float> fwd_time;
+  std::vector<float> fwd_allreduce_time;
   std::vector<float> bwd_time;
+  std::vector<float> bwd_allreduce_time;
   Profile(const BenchmarkConfig<NSD> &cfg):
       m_cfg(cfg),
       fwd_time(cfg.run_count, 0),
-      bwd_time(cfg.run_count, 0) {}
+      fwd_allreduce_time(cfg.run_count, 0),
+      bwd_time(cfg.run_count, 0),
+      bwd_allreduce_time(cfg.run_count, 0) {}
 
   std::ostream &print_as_row(std::ostream &os) {
     for (size_t i = 0; i < fwd_time.size(); ++i) {
       m_cfg.print_as_row(os) << " " << fwd_time[i]
-                             << " " << bwd_time[i];
+                             << " " << fwd_allreduce_time[i]
+                             << " " << bwd_time[i]
+                             << " " << bwd_allreduce_time[i];
       os << std::endl;
     }
     return os;
@@ -52,11 +58,20 @@ class Profile {
               << ", min: " << get_min(fwd_time)
               << ", max: " << get_max(fwd_time)
               << "\n"
-              << "Backward mean: "
-              << get_mean(bwd_time)
+              << "Forward allreduce mean: " << get_mean(fwd_allreduce_time)
+              << ", median: " << get_median(fwd_allreduce_time)
+              << ", min: " << get_min(fwd_allreduce_time)
+              << ", max: " << get_max(fwd_allreduce_time)
+              << "\n"
+              << "Backward mean: " << get_mean(bwd_time)
               << ", median: " << get_median(bwd_time)
               << ", min: " << get_min(bwd_time)
               << ", max: " << get_max(bwd_time)
+              << "\n"
+              << "Backward allreduce mean: " << get_mean(bwd_allreduce_time)
+              << ", median: " << get_median(bwd_allreduce_time)
+              << ", min: " << get_min(bwd_allreduce_time)
+              << ", max: " << get_max(bwd_allreduce_time)
               << std::endl;
   }
 };
@@ -70,6 +85,7 @@ class Data {
   typename TensorType<Backend, DataType>::type d_input;
   typename TensorType<Backend, DataType>::type output;
   typename TensorType<Backend, DataType>::type d_output;
+  typename TensorType<Backend, DataType>::type mean_and_var;
   typename TensorType<Backend, DataType>::type mean;
   typename TensorType<Backend, DataType>::type var;;
   typename TensorType<Backend, DataType>::type running_mean;
@@ -78,6 +94,7 @@ class Data {
   typename TensorType<Backend, DataType>::type bias;
   typename TensorType<Backend, DataType>::type d_scale;
   typename TensorType<Backend, DataType>::type d_bias;
+  typename TensorType<Backend, DataType>::type d_mean_and_var;
   typename TensorType<Backend, DataType>::type d_mean;
   typename TensorType<Backend, DataType>::type d_var;
 
@@ -121,6 +138,9 @@ class Data {
 
     tensor::Shape ch_stat_shape(NSD + 2, 1);
     ch_stat_shape[-2] = cfg.i_c;
+    tensor::Shape ch_stat_shape2(NSD + 2, 1);
+    ch_stat_shape2[-2] = cfg.i_c * 2;
+    mean_and_var = Tensor(ch_stat_shape2, loc, shared_dist);
     mean = Tensor(ch_stat_shape, loc, shared_dist);
     var = Tensor(ch_stat_shape, loc, shared_dist);
     running_mean = Tensor(ch_stat_shape, loc, shared_dist);
@@ -129,6 +149,7 @@ class Data {
     bias = Tensor(ch_stat_shape, loc, shared_dist);
     d_scale = Tensor(ch_stat_shape, loc, shared_dist);
     d_bias = Tensor(ch_stat_shape, loc, shared_dist);
+    d_mean_and_var = Tensor(ch_stat_shape2, loc, shared_dist);
     d_mean = Tensor(ch_stat_shape, loc, shared_dist);
     d_var = Tensor(ch_stat_shape, loc, shared_dist);
 
@@ -148,10 +169,11 @@ class Data {
     d_input.zero(); // will be overwritten
     assert0(d_output.allocate());
     d_output.zero(); // will be used
-    assert0(mean.allocate());
-    mean.zero(); // will be overwritten
-    assert0(var.allocate());
-    var.zero(); // will be overwritten
+    assert0(mean_and_var.allocate());
+    mean_and_var.zero(); // will be overwritten
+    assert0(tensor::View(mean, mean_and_var.get_buffer()));
+    assert0(tensor::View(var, mean_and_var.get_buffer() +
+                         ch_stat_shape.get_size()));
     assert0(running_mean.allocate());
     running_mean.zero(); // will be incremented
     assert0(running_var.allocate());
@@ -164,10 +186,11 @@ class Data {
     d_scale.zero(); // will be overwritten
     assert0(d_bias.allocate());
     d_bias.zero(); // will be overwritten
-    assert0(d_mean.allocate());
-    d_mean.zero(); // will be overwritten
-    assert0(d_var.allocate());
-    d_var.zero(); // will be overwritten
+    assert0(d_mean_and_var.allocate());
+    d_mean_and_var.zero(); // will be overwritten
+    assert0(tensor::View(d_mean, d_mean_and_var.get_buffer()));
+    assert0(tensor::View(d_var, d_mean_and_var.get_buffer() +
+                         ch_stat_shape.get_size()));
   }
   bool is_empty() const {
     return output.get_size() == 0;
@@ -197,8 +220,10 @@ class Data {
     dump_shared_tensor(var, "var_tensor", dump_binary);
     dump_shared_tensor(running_mean, "running_mean_tensor", dump_binary);
     dump_shared_tensor(running_var, "running_var_tensor", dump_binary);
-    dump_shared_tensor(d_scale, "d_scale_tensor", dump_binary);
-    dump_shared_tensor(d_bias, "d_bias_tensor", dump_binary);
+    if (!m_cfg.skip_weight_allreduce) {
+      dump_shared_tensor(d_scale, "d_scale_tensor", dump_binary);
+      dump_shared_tensor(d_bias, "d_bias_tensor", dump_binary);
+    }
     dump_shared_tensor(d_mean, "d_mean_tensor", dump_binary);
     dump_shared_tensor(d_var, "d_var_tensor", dump_binary);
   }
@@ -222,17 +247,21 @@ int test_forward(Data<NSD, Backend, DataType> &d,
     util::MPIRootPrintStreamInfo() << "Warming up";
   }
 
+  const bool is_training = true;
+
   for (int i = 0; i < cfg.warming_up_count; ++i) {
     bn.forward(d.input, d.mean, d.var, d.running_mean, d.running_var,
-               d.scale, d.bias, d.output, true);
+               d.scale, d.bias, d.output, is_training);
   }
 
   be.wait();
-
   util::MPIRootPrintStreamInfo() << "Starting " << cfg.run_count
                                  << " times of measurement";
 
+  DISTCONV_CHECK_MPI(MPI_Barrier(comm));
+
   Clock<Backend> clk(be);
+  Clock<Backend> clk_allreduce(be);
   for (int i = 0; i < cfg.run_count; ++i) {
     complete_async<Backend>();
     DISTCONV_CHECK_MPI(MPI_Barrier(comm));
@@ -240,19 +269,36 @@ int test_forward(Data<NSD, Backend, DataType> &d,
       spin_async_device(cfg.spin_time_ms, be);
     }
     // Runs for synchronization
-    bn.forward(d.input, d.mean, d.var, d.running_mean, d.running_var,
-               d.scale, d.bias, d.output, true);
+    bn.forward_allreduce(d.mean, d.var, is_training);
+#ifdef DISTCONV_HAS_NVSHMEM
+    if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+      util::nvshmem::launch_barrier(be.get_stream());
+    }
+#endif // DISTCONV_HAS_NVSHMEM
     // Start measurement
+    clk_allreduce.start();
+    bn.forward_allreduce(d.mean, d.var, is_training);
+    clk_allreduce.stop();
+#ifdef DISTCONV_HAS_NVSHMEM
+    if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+      util::nvshmem::launch_barrier(be.get_stream());
+    }
+#endif // DISTCONV_HAS_NVSHMEM
     clk.start();
     bn.forward(d.input, d.mean, d.var, d.running_mean, d.running_var,
-               d.scale, d.bias, d.output, true);
+               d.scale, d.bias, d.output, is_training);
     clk.stop();
-    float elapsed = clk.get_time();
-    prof.fwd_time[i] = elapsed;
+    prof.fwd_time[i] = clk.get_time();
+    prof.fwd_allreduce_time[i] = clk_allreduce.get_time();
   }
 
+#ifdef DISTCONV_HAS_NVSHMEM
+  if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+    util::nvshmem::barrier();
+  }
+#endif // DISTCONV_HAS_NVSHMEM
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
-  util::MPIRootPrintStreamInfo() << "Measurement done\n";
+  util::MPIRootPrintStreamInfo() << "Measurement done";
   return 0;
 }
 
@@ -276,8 +322,8 @@ int test_backward(Data<NSD, Backend, DataType> &d,
 
   for (int i = 0; i < cfg.warming_up_count; ++i) {
     bn.backward_stage1(d.input, d.d_output, d.mean, d.var, d.scale,
-                       d.d_scale, d.d_bias, d.d_mean, d.d_var,
-                       cfg.global_stat);
+                       d.d_scale, d.d_bias, d.d_mean, d.d_var);
+    bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var);
     bn.backward_stage2(d.input, d.d_output, d.mean, d.var, d.scale,
                        d.d_mean, d.d_var, d.d_input);
   }
@@ -288,9 +334,7 @@ int test_backward(Data<NSD, Backend, DataType> &d,
                                  << " times of measurement";
 
   Clock<Backend> clk(be);
-  Clock<Backend> clk_data(be);
-  Clock<Backend> clk_filter(be);
-  Clock<Backend> clk_bias(be);
+  Clock<Backend> clk_allreduce(be);
   for (int i = 0; i < cfg.run_count; ++i) {
     complete_async<Backend>();
     DISTCONV_CHECK_MPI(MPI_Barrier(comm));
@@ -298,20 +342,38 @@ int test_backward(Data<NSD, Backend, DataType> &d,
       spin_async_device(cfg.spin_time_ms, be);
     }
     // synchronize the processes
-    bn.backward_stage1(d.input, d.d_output, d.mean, d.var, d.scale,
-                       d.d_scale, d.d_bias, d.d_mean, d.d_var,
-                       cfg.global_stat);
+    bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var);
+#ifdef DISTCONV_HAS_NVSHMEM
+    if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+      util::nvshmem::launch_barrier(be.get_stream());
+    }
+#endif // DISTCONV_HAS_NVSHMEM
+    clk_allreduce.start();
+    bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var,
+                          cfg.skip_weight_allreduce);
+    clk_allreduce.stop();
+#ifdef DISTCONV_HAS_NVSHMEM
+    if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+      util::nvshmem::launch_barrier(be.get_stream());
+    }
+#endif // DISTCONV_HAS_NVSHMEM
     clk.start();
     bn.backward_stage1(d.input, d.d_output, d.mean, d.var, d.scale,
-                       d.d_scale, d.d_bias, d.d_mean, d.d_var,
-                       cfg.global_stat);
+                       d.d_scale, d.d_bias, d.d_mean, d.d_var);
+    bn.backward_allreduce(d.d_scale, d.d_bias, d.d_mean, d.d_var,
+                          cfg.skip_weight_allreduce);
     bn.backward_stage2(d.input, d.d_output, d.mean, d.var, d.scale,
                        d.d_mean, d.d_var, d.d_input);
     clk.stop();
-    float elapsed = clk.get_time();
-    prof.bwd_time[i] = elapsed;
+    prof.bwd_time[i] = clk.get_time();
+    prof.bwd_allreduce_time[i] = clk_allreduce.get_time();
   }
 
+#ifdef DISTCONV_HAS_NVSHMEM
+  if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+    util::nvshmem::barrier();
+  }
+#endif // DISTCONV_HAS_NVSHMEM
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
   util::MPIRootPrintStreamInfo() << "Measurement done";
   return 0;
@@ -347,13 +409,49 @@ struct BNTester<NSD, cudnn::BackendCUDNN, DataType> {
                            cfg.profiling);
     cudnn::BackendCUDNN be(comm, cudnn_h, be_opts);
     BatchNormalization<cudnn::BackendCUDNN, 2 + NSD, DataType> bn(
-        be, 0.9, 1e-5, std::vector<bool>(2 + NSD, cfg.global_stat),
-        cfg.batchnorm_impl);
+        be, 0.9, 1e-5, cfg.global_stat, cfg.batchnorm_impl);
     bn.set_num_samples(d.input.get_shape()[-1]);
     start_profiler<cudnn::BackendCUDNN>();
     if (cfg.nvtx_marking) {
       be.enable_nvtx_marking();
     }
+
+#ifdef DISTCONV_HAS_NVSHMEM
+    // hack to use NVSHMEM buffers
+    if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
+      // mean and var
+      auto mean_and_var_nvshmem = static_cast<DataType*>(
+          nvshmem_malloc(d.mean_and_var.get_max_local_real_shape().size()
+                         * sizeof(DataType)));
+      assert_always(mean_and_var_nvshmem != nullptr);
+      assert0(tensor::View(d.mean_and_var, mean_and_var_nvshmem));
+      assert0(tensor::View(d.mean, d.mean_and_var.get_buffer()));
+      assert0(tensor::View(d.var, d.mean_and_var.get_buffer() +
+                           d.mean.get_local_real_size()));
+      // d_mean and d_var
+      auto d_mean_and_var_nvshmem = static_cast<DataType*>(
+          nvshmem_malloc(d.d_mean_and_var.get_max_local_real_shape().size()
+                         * sizeof(DataType)));
+      assert_always(d_mean_and_var_nvshmem != nullptr);
+      assert0(tensor::View(d.d_mean_and_var, d_mean_and_var_nvshmem));
+      assert0(tensor::View(d.d_mean, d.d_mean_and_var.get_buffer()));
+      assert0(tensor::View(d.d_var, d.d_mean_and_var.get_buffer() +
+                           d.d_mean.get_local_real_size()));
+      // scale_gradient
+      auto d_scale_nvshmem = static_cast<DataType*>(
+          nvshmem_malloc(d.d_scale.get_max_local_real_shape().size()
+                         * sizeof(DataType)));
+      assert_always(d_scale_nvshmem != nullptr);
+      assert0(tensor::View(d.d_scale, d_scale_nvshmem));
+      // bias_gradient
+      auto d_bias_nvshmem = static_cast<DataType*>(
+          nvshmem_malloc(d.d_bias.get_max_local_real_shape().size()
+                         * sizeof(DataType)));
+      assert_always(d_bias_nvshmem != nullptr);
+      assert0(tensor::View(d.d_bias, d_bias_nvshmem));
+    }
+#endif // DISTCONV_HAS_NVSHMEM
+
     test_forward<NSD, cudnn::BackendCUDNN, DataType>(
         d, cfg, comm, be, bn, prof);
     test_backward<NSD, cudnn::BackendCUDNN, DataType>(
@@ -382,7 +480,7 @@ void run(int argc, char *argv[], int pid, int np) {
   }
 
 #ifdef DISTCONV_HAS_NVSHMEM
-  if (IsNVSHMEMUsed(cfg.halo_exchange_method)) {
+  if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
     util::nvshmem::initialize(MPI_COMM_WORLD);
   }
 #endif // DISTCONV_HAS_NVSHMEM
@@ -392,7 +490,7 @@ void run(int argc, char *argv[], int pid, int np) {
   util::MPIRootPrintStreamInfo() << "Finishing";
 
 #ifdef DISTCONV_HAS_NVSHMEM
-  if (IsNVSHMEMUsed(cfg.halo_exchange_method)) {
+  if (IsNVSHMEMUsed(cfg.batchnorm_impl)) {
     util::nvshmem::finalize();
   }
 #endif // DISTCONV_HAS_NVSHMEM

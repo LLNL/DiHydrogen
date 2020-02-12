@@ -24,6 +24,10 @@ h2_set_full_path(THIS_DIR_HEADERS
   tensor_mpi_cuda.hpp
   tensor_mpi.hpp
   tensor_process.hpp
+  allreduce.hpp
+  allreduce_mpi.hpp
+  allreduce_mpi_cuda.hpp
+  allreduce_al.hpp
   )
 
 if (DISTCONV_HAS_P2P)
@@ -40,6 +44,8 @@ endif ()
 if (DISTCONV_HAS_NVSHMEM)
   list(APPEND THIS_DIR_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/halo_exchange_cuda_nvshmem.hpp")
+  list(APPEND THIS_DIR_HEADERS
+    "${CMAKE_CURRENT_SOURCE_DIR}/allreduce_nvshmem.hpp")
 endif ()
 
 add_subdirectory(algorithms)

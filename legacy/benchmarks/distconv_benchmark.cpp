@@ -418,7 +418,7 @@ int test_convolution_backward_filter(Data<NSD, Backend, DataType> &d,
   }
   for (int i = 0; i < cfg.warming_up_count; ++i) {
     conv.backward_filter(DataType(1.0), d.input, d.d_output,
-                         DataType(0.0), d.d_filter, !cfg.skip_allreduce,
+                         DataType(0.0), d.d_filter, !cfg.skip_weight_allreduce,
                          cfg.skip_chanfilt_comm);
   }
   conv.wait();
@@ -435,7 +435,7 @@ int test_convolution_backward_filter(Data<NSD, Backend, DataType> &d,
     clk.start();
     conv.backward_filter(DataType(1.0), d.input, d.d_output,
                          DataType(0.0), d.d_filter,
-                         !cfg.skip_allreduce, cfg.skip_chanfilt_comm, false);
+                         !cfg.skip_weight_allreduce, cfg.skip_chanfilt_comm, false);
     clk.stop();
     float elapsed = clk.get_time();
     prof.conv_bwd_filter_time[i] = elapsed;
@@ -479,7 +479,7 @@ int test_convolution_backward_bias(Data<NSD, Backend, DataType> &d,
     }
     clk.start();
     conv.backward_bias(DataType(1.0), d.d_output, DataType(0.0),
-                       d.d_bias, !cfg.skip_allreduce);
+                       d.d_bias, !cfg.skip_weight_allreduce);
     clk.stop();
     float elapsed = clk.get_time();
     prof.conv_bwd_bias_time[i] = elapsed;
@@ -519,7 +519,7 @@ int test_convolution_backward(Data<NSD, Backend, DataType> &d,
   for (int i = 0; i < cfg.warming_up_count; ++i) {
     conv.backward_filter(DataType(1.0), d.input, d.d_output,
                          DataType(0.0), d.d_filter,
-                         !cfg.skip_allreduce, cfg.skip_chanfilt_comm);
+                         !cfg.skip_weight_allreduce, cfg.skip_chanfilt_comm);
     if (call_halo_exch_separately) {
       conv.backward_data_exchange_halo(d.d_output);
     }
@@ -528,7 +528,7 @@ int test_convolution_backward(Data<NSD, Backend, DataType> &d,
                        cfg.skip_chanfilt_comm);
     if (cfg.use_bias) {
       conv.backward_bias(DataType(1.0), d.d_output, DataType(0.0),
-                         d.d_bias, !cfg.skip_allreduce);
+                         d.d_bias, !cfg.skip_weight_allreduce);
     }
   }
   conv.wait();
@@ -557,7 +557,7 @@ int test_convolution_backward(Data<NSD, Backend, DataType> &d,
         }
         conv.backward_filter(DataType(1.0), d.input, d.d_output,
                              DataType(0.0), d.d_filter,
-                             !cfg.skip_allreduce, cfg.skip_chanfilt_comm);
+                             !cfg.skip_weight_allreduce, cfg.skip_chanfilt_comm);
         conv.backward_data(DataType(1.0), d.filter, d.d_output,
                            DataType(0.0), d.d_input, cfg.skip_halo_exchange,
                            cfg.skip_chanfilt_comm);
@@ -570,12 +570,12 @@ int test_convolution_backward(Data<NSD, Backend, DataType> &d,
     clk_filter.start();
     conv.backward_filter(DataType(1.0), d.input, d.d_output,
                          DataType(0.0), d.d_filter,
-                         !cfg.skip_allreduce, cfg.skip_chanfilt_comm);
+                         !cfg.skip_weight_allreduce, cfg.skip_chanfilt_comm);
     clk_filter.stop();
     if (cfg.use_bias) {
       clk_bias.start();
       conv.backward_bias(DataType(1.0), d.d_output, DataType(0.0),
-                         d.d_bias, !cfg.skip_allreduce);
+                         d.d_bias, !cfg.skip_weight_allreduce);
       clk_bias.stop();
     }
     clk_data.start();
@@ -593,7 +593,7 @@ int test_convolution_backward(Data<NSD, Backend, DataType> &d,
         }
         conv.backward_filter(DataType(1.0), d.input, d.d_output,
                              DataType(0.0), d.d_filter,
-                             !cfg.skip_allreduce, cfg.skip_chanfilt_comm);
+                             !cfg.skip_weight_allreduce, cfg.skip_chanfilt_comm);
         conv.backward_data(DataType(1.0), d.filter, d.d_output,
                            DataType(0.0), d.d_input, cfg.skip_halo_exchange,
                            cfg.skip_chanfilt_comm);
