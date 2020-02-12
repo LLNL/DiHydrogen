@@ -104,34 +104,34 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
       m_be(backend), m_decay(decay), m_epsilon(epsilon),
       m_global_stats(global_stats), m_impl(impl), m_allreducer(nullptr) {
     if (m_impl == BatchnormImpl::MPI) {
-      m_allreducer = std::make_unique<tensor::AllreduceMPICUDA<DataType>>(
+      m_allreducer = util::make_unique<tensor::AllreduceMPICUDA<DataType>>(
           m_be.get_comm(), m_be.get_stream());
     } else if (m_impl == BatchnormImpl::AL_NCCL) {
-      m_allreducer = std::make_unique<tensor::AllreduceAlNCCL<DataType>>(
+      m_allreducer = util::make_unique<tensor::AllreduceAlNCCL<DataType>>(
           m_be.get_al_nccl_comm());
 #ifdef DISTCONV_HAS_NVSHMEM
     } else if (m_impl == BatchnormImpl::NVSHMEM_NATIVE) {
-      m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+      m_allreducer = util::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
           m_be.get_stream(),
           tensor::AllreduceNVSHMEM<DataType>::NATIVE);
     } else if (m_impl == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_HOST) {
-      m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+      m_allreducer = util::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
           m_be.get_stream(),
           tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_HOST);
     } else if (m_impl == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING) {
-      m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+      m_allreducer = util::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
           m_be.get_stream(),
           tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING);
     } else if (m_impl == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_BUFFERED) {
-      m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+      m_allreducer = util::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
           m_be.get_stream(),
           tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BUFFERED);
     } else if (m_impl == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_BLOCK) {
-      m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+      m_allreducer = util::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
           m_be.get_stream(),
           tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BLOCK);
     } else if (m_impl == BatchnormImpl::FUSED_NVSHMEM_RECURSIVE_DOUBLING) {
-      m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+      m_allreducer = util::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
           m_be.get_stream(),
           tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BLOCK);
 #endif // DISTCONV_HAS_NVSHMEM

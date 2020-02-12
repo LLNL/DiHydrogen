@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <numeric>
 #include <unistd.h>
+#include <memory>
 
 #include "distconv_config.hpp"
 
@@ -324,6 +325,11 @@ inline void *aligned_malloc(size_t s) {
 }
 
 int get_memory_usage();
+
+template <typename T, typename... Ts>
+std::unique_ptr<T> make_unique(Ts&&... params) {
+  return std::unique_ptr<T>(new T(std::forward<Ts>(params)...));
+}
 
 } // namespace util
 } // namespace distconv
