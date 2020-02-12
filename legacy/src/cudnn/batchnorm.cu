@@ -13,35 +13,6 @@ using Tensor = distconv::tensor::Tensor<DataType, LocaleMPI, CUDAAllocator>;
 namespace distconv {
 namespace batchnorm {
 
-// To reduce round-off divergence with the default LBANN code, use the
-// same thread mapping and reduction method as LBANN
-#if 0
-template <typename DataType, typename Allocator>
-void channel_sums_and_sqsums(
-    int num_current_local_samples,
-    Tensor4<DataType, Allocator> &input,
-    Tensor4<DataType, Allocator> &sums,
-    Tensor4<DataType, Allocator> &sqsums,
-    cudaStream_t stream) {
-  // Clear GPU memory
-  DISTCONV_CHECK_CUDA(cudaMemsetAsync(
-      sums.get_buffer(), 0,
-      sums.get_local_pitched_size() * sizeof(DataType),
-      stream));
-  DISTCONV_CHECK_CUDA(cudaMemsetAsync(
-      sqsums.get_buffer(), 0,
-      sqsums.get_local_pitched_size() * sizeof(DataType),
-      stream));
-
-  auto reduction_region = input.get_local_shape();
-  reduction_region[-1] = num_current_local_samples;
-  tensor::TransformReduceSum(input, reduction_region,
-                             sums, [] __device__(DataType x) { return x; },
-                             sqsums, [] __device__(DataType x) { return x * x; },
-                             stream);
-}
-#else
-
 template <int ND, typename DataType, int BLOCK_SIZE>
 __global__ void channel_sums_and_sqsums_kernel(const DataType *input,
                                                DataType *sums, DataType *sqsums,
@@ -145,7 +116,6 @@ void channel_sums_and_sqsums(int num_samples, const Tensor &input, Tensor &sums,
     sqsums.allreduce_shared_regions();
   }
 }
-#endif
 
 #define INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(ND, TYPE)           \
   template void                                                 \
