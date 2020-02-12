@@ -4,6 +4,8 @@
 
 #include <type_traits>
 
+#include <cub/block/block_reduce.cuh>
+
 using distconv::tensor::LocaleMPI;
 using distconv::tensor::CUDAAllocator;
 #ifdef DISTCONV_HAS_NVSHMEM
@@ -22,9 +24,6 @@ __global__ void channel_sums_and_sqsums_kernel(
     const DataType * __restrict__ input,
     DataType * __restrict__ sums, DataType * __restrict__ sqsums,
     tensor::Array<ND> shape, tensor::Array<ND> input_strides) {
-  __shared__ DataType shared_sums[BLOCK_SIZE];
-  __shared__ DataType shared_sqsums[BLOCK_SIZE];
-
   const int tid = threadIdx.x;
   const index_t gidx = threadIdx.x + blockIdx.x * blockDim.x;
   const int ch_idx = blockIdx.y;
@@ -54,23 +53,14 @@ __global__ void channel_sums_and_sqsums_kernel(
     }
   }
 
-  shared_sums[tid] = sum;
-  shared_sqsums[tid] = sqsum;
-
-  // Compute channel sum with shared memory reduction
-  // TODO: unroll loops
-  for(int stride = BLOCK_SIZE / 2; stride > 0; stride /= 2) {
-    __syncthreads();
-    if(tid < stride) {
-      shared_sums[tid] += shared_sums[tid + stride];
-      shared_sqsums[tid] += shared_sqsums[tid + stride];
-    }
-  }
-
+  using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
+  __shared__ typename BlockReduce::TempStorage temp_storage;
+  sum = BlockReduce(temp_storage).Sum(sum);
+  sqsum = BlockReduce(temp_storage).Sum(sqsum);
   // Output channel sum to global memory
   if(tid == 0) {
-    atomicAdd(&sums[ch_idx], shared_sums[0]);
-    atomicAdd(&sqsums[ch_idx], shared_sqsums[0]);
+    atomicAdd(&sums[ch_idx], sum);
+    atomicAdd(&sqsums[ch_idx], sqsum);
   }
 }
 
@@ -83,9 +73,6 @@ __global__ void channel_sums_and_sqsums_opt_kernel(
     const int num_samples,
     const index_t spatial_size,
     const index_t spatial_real_size) {
-  __shared__ DataType shared_sums[BLOCK_SIZE];
-  __shared__ DataType shared_sqsums[BLOCK_SIZE];
-
   const int tid = threadIdx.x;
   const int idx = threadIdx.x + blockIdx.x * blockDim.x;
   const int ch_idx = blockIdx.y;
@@ -103,23 +90,14 @@ __global__ void channel_sums_and_sqsums_opt_kernel(
     offset += sample_offset;
   }
 
-  shared_sums[tid] = sum;
-  shared_sqsums[tid] = sqsum;
-
-  // Compute channel sum with shared memory reduction
-  // TODO: unroll loops
-  for(int stride = BLOCK_SIZE / 2; stride > 0; stride /= 2) {
-    __syncthreads();
-    if(tid < stride) {
-      shared_sums[tid] += shared_sums[tid + stride];
-      shared_sqsums[tid] += shared_sqsums[tid + stride];
-    }
-  }
-
+  using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
+  __shared__ typename BlockReduce::TempStorage temp_storage;
+  sum = BlockReduce(temp_storage).Sum(sum);
+  sqsum = BlockReduce(temp_storage).Sum(sqsum);
   // Output channel sum to global memory
   if(tid == 0) {
-    atomicAdd(&sums[ch_idx], shared_sums[0]);
-    atomicAdd(&sqsums[ch_idx], shared_sqsums[0]);
+    atomicAdd(&sums[ch_idx], sum);
+    atomicAdd(&sqsums[ch_idx], sqsum);
   }
 }
 
@@ -665,11 +643,6 @@ void __global__ backprop1_kernel(const DataType * __restrict__ input,
                                  DataType epsilon, tensor::Array<ND> shape,
                                  tensor::Array<ND> input_strides,
                                  tensor::Array<ND> d_output_strides) {
-  __shared__ DataType shared_dscale[BLOCK_SIZE];
-  __shared__ DataType shared_dbias[BLOCK_SIZE];
-  __shared__ DataType shared_dmean[BLOCK_SIZE];
-  __shared__ DataType shared_dvar[BLOCK_SIZE];
-
   const int tid = threadIdx.x;
   const index_t gidx = threadIdx.x + blockIdx.x * blockDim.x;
   const int ch_idx = blockIdx.y;
@@ -714,27 +687,20 @@ void __global__ backprop1_kernel(const DataType * __restrict__ input,
       d_output_offset += d_output_strides[-1];
     }
   }
-  shared_dscale[tid] = dscale;
-  shared_dbias[tid] = dbias;
-  shared_dmean[tid] = dmean;
-  shared_dvar[tid] = dvar;
 
-  for(int stride = BLOCK_SIZE / 2; stride > 0; stride /= 2) {
-    __syncthreads();
-    if(tid < stride) {
-      shared_dscale[tid] += shared_dscale[tid + stride];
-      shared_dbias[tid] += shared_dbias[tid + stride];
-      shared_dmean[tid] += shared_dmean[tid + stride];
-      shared_dvar[tid] += shared_dvar[tid + stride];
-    }
-  }
+  using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
+  __shared__ typename BlockReduce::TempStorage temp_storage;
+  dscale = BlockReduce(temp_storage).Sum(dscale);
+  dbias = BlockReduce(temp_storage).Sum(dbias);
+  dmean = BlockReduce(temp_storage).Sum(dmean);
+  dvar = BlockReduce(temp_storage).Sum(dvar);
 
   // Output channel sum to global memory
   if (tid == 0) {
-    atomicAdd(&global_dscale[ch_idx], shared_dscale[0]);
-    atomicAdd(&global_dbias[ch_idx], shared_dbias[0]);
-    atomicAdd(&global_dmean[ch_idx], shared_dmean[0]);
-    atomicAdd(&global_dvar[ch_idx], shared_dvar[0]);
+    atomicAdd(&global_dscale[ch_idx], dscale);
+    atomicAdd(&global_dbias[ch_idx], dbias);
+    atomicAdd(&global_dmean[ch_idx], dmean);
+    atomicAdd(&global_dvar[ch_idx], dvar);
   }
 }
 
@@ -754,11 +720,6 @@ void __global__ backprop1_opt_kernel(const DataTypeV * __restrict__ input,
                                      const index_t spatial_size,
                                      const index_t input_spatial_real_size,
                                      const index_t output_spatial_real_size) {
-  __shared__ DataType shared_dscale[BLOCK_SIZE];
-  __shared__ DataType shared_dbias[BLOCK_SIZE];
-  __shared__ DataType shared_dmean[BLOCK_SIZE];
-  __shared__ DataType shared_dvar[BLOCK_SIZE];
-
   const int tid = threadIdx.x;
   const index_t idx = threadIdx.x + blockIdx.x * blockDim.x;
   const int ch_idx = blockIdx.y;
@@ -794,27 +755,19 @@ void __global__ backprop1_opt_kernel(const DataTypeV * __restrict__ input,
     o_offset += o_sample_offset;
   }
 
-  shared_dscale[tid] = dscale;
-  shared_dbias[tid] = dbias;
-  shared_dmean[tid] = dmean;
-  shared_dvar[tid] = dvar;
-
-  for(int stride = BLOCK_SIZE / 2; stride > 0; stride /= 2) {
-    __syncthreads();
-    if(tid < stride) {
-      shared_dscale[tid] += shared_dscale[tid + stride];
-      shared_dbias[tid] += shared_dbias[tid + stride];
-      shared_dmean[tid] += shared_dmean[tid + stride];
-      shared_dvar[tid] += shared_dvar[tid + stride];
-    }
-  }
+  using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
+  __shared__ typename BlockReduce::TempStorage temp_storage;
+  dscale = BlockReduce(temp_storage).Sum(dscale);
+  dbias = BlockReduce(temp_storage).Sum(dbias);
+  dmean = BlockReduce(temp_storage).Sum(dmean);
+  dvar = BlockReduce(temp_storage).Sum(dvar);
 
   // Output channel sum to global memory
   if (tid == 0) {
-    atomicAdd(&global_dscale[ch_idx], shared_dscale[0]);
-    atomicAdd(&global_dbias[ch_idx], shared_dbias[0]);
-    atomicAdd(&global_dmean[ch_idx], shared_dmean[0]);
-    atomicAdd(&global_dvar[ch_idx], shared_dvar[0]);
+    atomicAdd(&global_dscale[ch_idx], dscale);
+    atomicAdd(&global_dbias[ch_idx], dbias);
+    atomicAdd(&global_dmean[ch_idx], dmean);
+    atomicAdd(&global_dvar[ch_idx], dvar);
   }
 }
 
