@@ -131,4 +131,10 @@ class Softmax {
   Softmax(Backend &backend);
 };
 
+template <typename Backend>
+class CrossEntropy {
+ public:
+  CrossEntropy(Backend &backend);
+};
+
 } // namespace distconv
