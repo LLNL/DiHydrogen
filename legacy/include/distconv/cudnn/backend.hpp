@@ -568,3 +568,4 @@ class BackendCUDNN {
 #include "distconv/cudnn/leaky_relu.hpp"
 #include "distconv/cudnn/batchnorm.hpp"
 #include "distconv/cudnn/softmax.hpp"
+#include "distconv/cudnn/cross_entropy.hpp"
