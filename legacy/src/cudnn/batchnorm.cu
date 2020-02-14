@@ -119,7 +119,10 @@ void channel_sums_and_sqsums_opt(int num_samples, const Tensor &input,
   index_t spatial_size = input.get_local_size() / num_channels / num_samples;
   index_t spatial_real_size = input.get_local_real_size() /
       num_channels / num_samples;
-  if (spatial_size % 4 == 0 && spatial_real_size % 4 == 0) {
+  // halo size must be also divisible by a vector width for an
+  // alignment requirement
+  if (spatial_size % 4 == 0 &&
+      ((spatial_real_size - spatial_size) / 2) % 4 == 0) {
     using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
     spatial_size /= 4;
     spatial_real_size /= 4;
@@ -789,8 +792,11 @@ void backprop1_opt(int num_samples, const TensorType &input,
       num_channels / num_samples;
   index_t o_spatial_real_size = d_output.get_local_real_size() /
       num_channels / num_samples;
-  if (spatial_size % 4 == 0 && i_spatial_real_size % 4 == 0 &&
-      o_spatial_real_size % 4 == 0) {
+  // halo size must be also divisible by a vector width for an
+  // alignment requirement
+  if (spatial_size % 4 == 0 &&
+      ((i_spatial_real_size - spatial_size) / 2) % 4 == 0 &&
+      ((o_spatial_real_size - spatial_size) / 2) % 4 == 0) {
     using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
     spatial_size /= 4;
     i_spatial_real_size /= 4;
