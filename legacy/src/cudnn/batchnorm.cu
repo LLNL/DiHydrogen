@@ -54,9 +54,10 @@ __global__ void channel_sums_and_sqsums_kernel(
   }
 
   using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
-  __shared__ typename BlockReduce::TempStorage temp_storage;
-  sum = BlockReduce(temp_storage).Sum(sum);
-  sqsum = BlockReduce(temp_storage).Sum(sqsum);
+  __shared__ typename BlockReduce::TempStorage temp_storage_sum;
+  __shared__ typename BlockReduce::TempStorage temp_storage_sqsum;
+  sum = BlockReduce(temp_storage_sum).Sum(sum);
+  sqsum = BlockReduce(temp_storage_sqsum).Sum(sqsum);
   // Output channel sum to global memory
   if(tid == 0) {
     atomicAdd(&sums[ch_idx], sum);
@@ -91,9 +92,10 @@ __global__ void channel_sums_and_sqsums_opt_kernel(
   }
 
   using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
-  __shared__ typename BlockReduce::TempStorage temp_storage;
-  sum = BlockReduce(temp_storage).Sum(sum);
-  sqsum = BlockReduce(temp_storage).Sum(sqsum);
+  __shared__ typename BlockReduce::TempStorage temp_storage_sum;
+  __shared__ typename BlockReduce::TempStorage temp_storage_sqsum;
+  sum = BlockReduce(temp_storage_sum).Sum(sum);
+  sqsum = BlockReduce(temp_storage_sqsum).Sum(sqsum);
   // Output channel sum to global memory
   if(tid == 0) {
     atomicAdd(&sums[ch_idx], sum);
@@ -692,11 +694,14 @@ void __global__ backprop1_kernel(const DataType * __restrict__ input,
   }
 
   using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
-  __shared__ typename BlockReduce::TempStorage temp_storage;
-  dscale = BlockReduce(temp_storage).Sum(dscale);
-  dbias = BlockReduce(temp_storage).Sum(dbias);
-  dmean = BlockReduce(temp_storage).Sum(dmean);
-  dvar = BlockReduce(temp_storage).Sum(dvar);
+  __shared__ typename BlockReduce::TempStorage temp_storage_scale;
+  __shared__ typename BlockReduce::TempStorage temp_storage_bias;
+  __shared__ typename BlockReduce::TempStorage temp_storage_mean;
+  __shared__ typename BlockReduce::TempStorage temp_storage_var;
+  dscale = BlockReduce(temp_storage_scale).Sum(dscale);
+  dbias = BlockReduce(temp_storage_bias).Sum(dbias);
+  dmean = BlockReduce(temp_storage_mean).Sum(dmean);
+  dvar = BlockReduce(temp_storage_var).Sum(dvar);
 
   // Output channel sum to global memory
   if (tid == 0) {
@@ -759,11 +764,14 @@ void __global__ backprop1_opt_kernel(const DataTypeV * __restrict__ input,
   }
 
   using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
-  __shared__ typename BlockReduce::TempStorage temp_storage;
-  dscale = BlockReduce(temp_storage).Sum(dscale);
-  dbias = BlockReduce(temp_storage).Sum(dbias);
-  dmean = BlockReduce(temp_storage).Sum(dmean);
-  dvar = BlockReduce(temp_storage).Sum(dvar);
+  __shared__ typename BlockReduce::TempStorage temp_storage_scale;
+  __shared__ typename BlockReduce::TempStorage temp_storage_bias;
+  __shared__ typename BlockReduce::TempStorage temp_storage_mean;
+  __shared__ typename BlockReduce::TempStorage temp_storage_var;
+  dscale = BlockReduce(temp_storage_scale).Sum(dscale);
+  dbias = BlockReduce(temp_storage_bias).Sum(dbias);
+  dmean = BlockReduce(temp_storage_mean).Sum(dmean);
+  dvar = BlockReduce(temp_storage_var).Sum(dvar);
 
   // Output channel sum to global memory
   if (tid == 0) {
