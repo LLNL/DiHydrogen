@@ -5,7 +5,7 @@ TEST_UTIL=@CMAKE_CURRENT_BINARY_DIR@/../test_util.sh
 TEST_CUDNN_UTIL=@CMAKE_CURRENT_BINARY_DIR@/test_cudnn_util.sh
 DISTCONV_BENCHMARK=${BENCHMARK_ROOT}/distconv_benchmark
 # TODO: This should check the build environment and use _jsrun only if necessary.
-CUDNN_BENCHMARK=${BENCHMARK_ROOT}/cudnn_benchmark_jsrun.sh
+CUDNN_BENCHMARK=@CMAKE_BINARY_DIR@/legacy/benchmarks/cudnn_benchmark_jsrun.sh
 
 # Main
 set -u
