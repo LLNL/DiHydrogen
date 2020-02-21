@@ -15,15 +15,16 @@
 namespace distconv {
 namespace batchnorm {
 
-template <int ND, typename TensorType>
+template <typename TensorType>
 void channel_sums_and_sqsums(
+    int num_dims,
     int num_samples,
     const TensorType &input,
     TensorType &sums,
     TensorType &sqsums,
     cudaStream_t stream);
 
-template <int ND, typename TensorType>
+template <typename TensorType>
 void sums_to_statistics(
     index_t num_per_sum,
     typename TensorType::data_type decay,
@@ -33,8 +34,9 @@ void sums_to_statistics(
     TensorType &running_var,
     cudaStream_t stream);
 
-template <int ND, typename TensorType>
+template <typename TensorType>
 void batch_normalization(
+    int num_dims,
     int num_samples,
     const TensorType &input,
     const TensorType &mean,
@@ -46,8 +48,9 @@ void batch_normalization(
     cudaStream_t stream);
 
 #ifdef DISTCONV_HAS_NVSHMEM
-template <int ND, typename TensorType>
+template <typename TensorType>
 void forward_all(
+    int num_dims,
     const TensorType &input,
     TensorType &mean,
     TensorType &var,
@@ -62,8 +65,9 @@ void forward_all(
     tensor::AllreduceNVSHMEM<typename TensorType::data_type> &ar);
 #endif
 
-template <int ND, typename TensorType>
+template <typename TensorType>
 void backprop1(
+    int num_dims,
     int num_samples,
     const TensorType &input,
     const TensorType &d_output,
@@ -77,8 +81,9 @@ void backprop1(
     typename TensorType::data_type epsilon,
     cudaStream_t stream);
 
-template <int ND, typename TensorType>
+template <typename TensorType>
 void backprop2(
+    int num_dims,
     index_t num_samples,
     index_t num_per_sum,
     const TensorType &input,
@@ -94,14 +99,15 @@ void backprop2(
 
 } // namespace batchnorm
 
-template <int ND, typename DataType>
-class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
+template <typename DataType>
+class BatchNormalization<cudnn::BackendCUDNN, DataType> {
  public:
   BatchNormalization(cudnn::BackendCUDNN &backend,
+                     int num_dims,
                      DataType decay, DataType epsilon,
                      bool global_stats,
                      BatchnormImpl impl=BatchnormImpl::MPI):
-      m_be(backend), m_decay(decay), m_epsilon(epsilon),
+      m_be(backend), m_num_dims(num_dims), m_decay(decay), m_epsilon(epsilon),
       m_global_stats(global_stats), m_impl(impl), m_allreducer(nullptr) {
     if (m_impl == BatchnormImpl::MPI) {
       m_allreducer = util::make_unique<tensor::AllreduceMPICUDA<DataType>>(
@@ -148,8 +154,9 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
   ~BatchNormalization() {}
 
   BatchNormalization operator=(
-      const BatchNormalization<cudnn::BackendCUDNN, ND, DataType> &x) {
+      const BatchNormalization<cudnn::BackendCUDNN, DataType> &x) {
     assert_always(&m_be == &x.m_be);
+    m_num_dims = x.m_num_dims;
     m_decay = x.m_decay;
     m_epsilon = x.m_epsilon;
     m_num_current_samples = x.m_num_current_samples;
@@ -226,10 +233,9 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
                   bool is_training) {
     set_num_samples(input.get_local_shape()[-1]);
     if (is_training) {
-      batchnorm::forward_all<ND, Tensor>(
-          input, mean, var, running_mean, running_var,
-          scale, bias, output,
-          m_decay, m_epsilon, m_be.get_stream(),
+      batchnorm::forward_all<Tensor>(
+          m_num_dims, input, mean, var, running_mean, running_var,
+          scale, bias, output, m_decay, m_epsilon, m_be.get_stream(),
           *static_cast<tensor::AllreduceNVSHMEM<DataType>*>(m_allreducer.get()));
     } else {
       util::MPIRootPrintStreamError() << "Not supported";
@@ -351,6 +357,7 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
 
  protected:
   cudnn::BackendCUDNN &m_be;
+  int m_num_dims;
   DataType m_decay;
   DataType m_epsilon;
   int m_num_current_samples = 0;
@@ -361,26 +368,26 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
   template <typename Tensor>
   void channel_sums_and_sqsums(const Tensor &input, Tensor &mean,
                                Tensor &var) {
-    batchnorm::channel_sums_and_sqsums<ND, Tensor>(
-        m_num_current_samples, input, mean, var, m_be.get_stream());
+    batchnorm::channel_sums_and_sqsums<Tensor>(
+        m_num_dims, m_num_current_samples, input, mean, var, m_be.get_stream());
   }
 
   template <typename Tensor>
   void sums_to_statistics(index_t num_per_sum, Tensor &mean,
                           Tensor &var, Tensor &running_mean,
                           Tensor &running_var) {
-    batchnorm::sums_to_statistics<ND, Tensor>(num_per_sum, m_decay, mean, var,
-                                              running_mean, running_var,
-                                              m_be.get_stream());
+    batchnorm::sums_to_statistics<Tensor>(num_per_sum, m_decay, mean, var,
+                                          running_mean, running_var,
+                                          m_be.get_stream());
   }
 
   template <typename Tensor>
   void batch_normalization(const Tensor &input, const Tensor &mean,
                            const Tensor &var, const Tensor &scale,
                            const Tensor &bias, Tensor &output) {
-    batchnorm::batch_normalization<ND, Tensor>(m_num_current_samples,
-                                               input, mean, var, scale, bias, output,
-                                               m_epsilon, m_be.get_stream());
+    batchnorm::batch_normalization<Tensor>(m_num_dims, m_num_current_samples,
+                                           input, mean, var, scale, bias, output,
+                                           m_epsilon, m_be.get_stream());
   }
 
   template <typename Tensor>
@@ -389,8 +396,8 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
                  const Tensor &scale, Tensor &scale_gradient,
                  Tensor &bias_gradient, Tensor &mean_gradient,
                  Tensor &var_gradient) {
-    batchnorm::backprop1<ND, Tensor>(
-        m_num_current_samples, input, d_output, mean, var, scale,
+    batchnorm::backprop1<Tensor>(
+        m_num_dims, m_num_current_samples, input, d_output, mean, var, scale,
         scale_gradient, bias_gradient, mean_gradient, var_gradient,
         m_epsilon, m_be.get_stream());
   }
@@ -401,9 +408,10 @@ class BatchNormalization<cudnn::BackendCUDNN, ND, DataType> {
                  const Tensor &var, const Tensor &scale,
                  const Tensor &mean_gradient, const Tensor &var_gradient,
                  Tensor &d_input) {
-    batchnorm::backprop2<ND, Tensor>(
-        m_num_current_samples, num_per_sum, input, d_output, mean, var, scale,
-        mean_gradient, var_gradient, d_input, m_epsilon, m_be.get_stream());
+    batchnorm::backprop2<Tensor>(
+        m_num_dims, m_num_current_samples, num_per_sum, input, d_output,
+        mean, var, scale, mean_gradient, var_gradient, d_input, m_epsilon,
+        m_be.get_stream());
   }
 };
 

@@ -117,10 +117,10 @@ class LeakyReLU {
   LeakyReLU(Backend &backend);
 };
 
-template <typename Backend, int ND, typename DataType>
+template <typename Backend, typename DataType>
 class BatchNormalization {
  public:
-  BatchNormalization(Backend &backend, DataType decay, DataType epsilon);
+  BatchNormalization(Backend &backend, int num_dims, DataType decay, DataType epsilon);
 };
 
 enum class SoftmaxMode {INSTANCE, CHANNEL};
