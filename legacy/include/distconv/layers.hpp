@@ -6,7 +6,7 @@
 
 namespace distconv {
 
-template <typename Backend, int ND, typename DataType>
+template <typename Backend, typename DataType>
 class Convolution {
  public:
   Convolution(Backend &backend);

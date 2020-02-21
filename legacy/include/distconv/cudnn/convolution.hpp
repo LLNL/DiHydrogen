@@ -23,18 +23,18 @@
 
 namespace distconv {
 
-template <int ND, typename DataType>
-class Convolution<cudnn::BackendCUDNN, ND, DataType> {
+template <typename DataType>
+class Convolution<cudnn::BackendCUDNN, DataType> {
   using LocaleMPI = tensor::LocaleMPI;
-  // Number of spatial dimensions
-  constexpr static int NSD = ND - 2;
 
  public:
   Convolution(cudnn::BackendCUDNN &backend,
+              int num_dims,
               HaloExchangeMethod method,
               bool enable_overlap, bool enable_profiling,
               ChannelParallelismAlgorithm chanfilt_algo):
-      m_be(backend), m_skip_bp_data(false),
+      m_be(backend), m_num_dims(num_dims), m_num_spatial_dims(num_dims - 2),
+      m_skip_bp_data(false),
       m_ws_size_fwd(0), m_ws_size_bwd_data(0),
       m_ws_size_bwd_filter(0), m_ws_size_fwd_boundaries(0, 0),
       m_halo_xch_method(method),
@@ -58,7 +58,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
 
     DISTCONV_CHECK_CUDNN(cudnnCreateTensorDescriptor(&m_input_interior_d));
     DISTCONV_CHECK_CUDNN(cudnnCreateTensorDescriptor(&m_output_interior_d));
-    apply_to_spatial_sides<ND>([this](int i, Side side) {
+    apply_to_spatial_sides(m_num_dims, [this](int i, Side side) {
                                  DISTCONV_CHECK_CUDNN(
                                      cudnnCreateTensorDescriptor(&m_input_boundaries_d(i, side)));
                                  DISTCONV_CHECK_CUDNN(
@@ -72,9 +72,10 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
   }
 
   Convolution(cudnn::BackendCUDNN &backend,
+              int num_dims,
               HaloExchangeMethod method,
               ChannelParallelismAlgorithm chanfilt_algo=ChannelParallelismAlgorithm::AUTO):
-      Convolution(backend, method,
+      Convolution(backend, num_dims, method,
                   backend.get_options().m_overlap_halo_exchange,
                   backend.get_options().m_enable_profiling,
                   chanfilt_algo) {}
@@ -100,8 +101,8 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     destroy_profiling_events();
   }
 
-  Convolution<cudnn::BackendCUDNN, ND, DataType> operator=(
-      const Convolution<cudnn::BackendCUDNN, ND, DataType> &x) {
+  Convolution<cudnn::BackendCUDNN, DataType> operator=(
+      const Convolution<cudnn::BackendCUDNN, DataType> &x) {
     assert_always(&m_be == &x.m_be);
     cudnn::copy_tensor_descriptor(m_input_d, x.m_input_d);
     cudnn::copy_tensor_descriptor(m_input_no_halo_d, x.m_input_no_halo_d);
@@ -217,29 +218,28 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
   }
 
   template <typename Allocator>
-  typename std::enable_if<ND == 4 || ND == 5, void>::type
-  setup(tensor::Tensor<DataType, LocaleMPI,
-        Allocator> &input,
-        const tensor::Tensor<DataType, LocaleMPI,
-        Allocator> &filter,
-        const tensor::Tensor<DataType, LocaleMPI,
-        Allocator> &output,
-        const tensor::Tensor<DataType, LocaleMPI,
-        Allocator> &d_input,
-        tensor::Tensor<DataType, LocaleMPI,
-        Allocator> &d_filter,
-        tensor::Tensor<DataType, LocaleMPI,
-        Allocator> &d_output,
-        const int_vector &pads,
-        const int_vector &strides,
-        const int_vector &dilations,
-        int num_groups,
-        const std::string &fwd_algo,
-        const std::string &bwd_data_algo,
-        const std::string &bwd_filter_algo,
-        size_t ws_size,
-        bool skip_bp_data=false,
-        bool deconv=false) {
+  void setup(tensor::Tensor<DataType, LocaleMPI,
+             Allocator> &input,
+             const tensor::Tensor<DataType, LocaleMPI,
+             Allocator> &filter,
+             const tensor::Tensor<DataType, LocaleMPI,
+             Allocator> &output,
+             const tensor::Tensor<DataType, LocaleMPI,
+             Allocator> &d_input,
+             tensor::Tensor<DataType, LocaleMPI,
+             Allocator> &d_filter,
+             tensor::Tensor<DataType, LocaleMPI,
+             Allocator> &d_output,
+             const int_vector &pads,
+             const int_vector &strides,
+             const int_vector &dilations,
+             int num_groups,
+             const std::string &fwd_algo,
+             const std::string &bwd_data_algo,
+             const std::string &bwd_filter_algo,
+             size_t ws_size,
+             bool skip_bp_data=false,
+             bool deconv=false) {
     // NVSHMEM-exchange requires all processes join the allocation of
     // halo buffers, so this must be called even the local buffer is
     // empty.
@@ -257,8 +257,8 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     m_skip_bp_data = skip_bp_data;
     m_deconv = deconv;
 
-    int stencil_dims[NSD];
-    for (int i = 0; i < NSD; ++i) {
+    std::vector<int> stencil_dims(m_num_spatial_dims, 0);
+    for (int i = 0; i < m_num_spatial_dims; ++i) {
       auto window_dim = internal::get_dilated_filter_size(
           (int)filter.get_shape()[i], dilations[i]);
       if (window_dim % 2) {
@@ -272,7 +272,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     }
 
     auto p = pads[0];
-    for (int i = 0; i < NSD; ++i) {
+    for (int i = 0; i < m_num_spatial_dims; ++i) {
       assert_eq(pads[i], p);
       assert_always(pads[i] == stencil_dims[i] || pads[i] == 0);
     }
@@ -289,7 +289,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     if (m_overlap_halo_exchange_fwd) {
       // Disables fwd overlapping for tensors with small spatial domains
       // as it would be unlikely to be profitable.
-      for (int i = 0; i < NSD; ++i) {
+      for (int i = 0; i < m_num_spatial_dims; ++i) {
         // TODO: Parameterize the constant "3"?
         if (input.get_local_shape()[i] < (index_t)stencil_dims[i] * 3) {
           util::MPIRootPrintStreamInfo()
@@ -306,7 +306,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
       // partitioning dimensions must be one.
       auto dist = input.get_distribution();
       int num_partitioned_dims = 0;
-      for (int i = 0; i < NSD; ++i) {
+      for (int i = 0; i < m_num_spatial_dims; ++i) {
         if (dist.get_locale_shape()[i] > 1) ++num_partitioned_dims;
       }
       if (num_partitioned_dims > 1) {
@@ -320,7 +320,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     // Not strictly necessary, but disables overlapping when halo
     // exchange is not necessary
     bool halo_exchange_required = false;
-    for (int i = 0; i < NSD; ++i) {
+    for (int i = 0; i < m_num_spatial_dims; ++i) {
       if (stencil_dims[i] > 0 && input.get_distribution().get_split_shape()[i] > 1) {
         halo_exchange_required = true;
         break;
@@ -514,7 +514,8 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
             m_output_interior_d, output_interior_ptr));
       }
       record_end_comp();
-      apply_to_spatial_sides<ND>(
+      apply_to_spatial_sides(
+          m_num_dims,
           [&](int i, Side side) {
             if (!m_boundary_req(i, side)) return;
             const void *boundary_input_ptr = input.get_const_buffer()
@@ -744,7 +745,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
       if (ws == nullptr) return -1;
 
       // Zero-clear the halo region of the d_output
-      for (int dim = 0; dim < NSD; ++dim) {
+      for (int dim = 0; dim < m_num_spatial_dims; ++dim) {
         const auto &dist = d_output.get_distribution();
         if (dist.is_distributed(dim) && dist.get_locale_shape()[dim] > 1 &&
             dist.get_overlap(dim) > 0) {
@@ -887,6 +888,8 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
 
  protected:
   cudnn::BackendCUDNN &m_be;
+  const int m_num_dims;
+  const int m_num_spatial_dims;
   bool m_skip_bp_data;
   bool m_deconv;
   cudnnTensorDescriptor_t m_input_d;
@@ -994,12 +997,12 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     DISTCONV_CHECK_CUDA(cudaEventCreate(&m_event_comp_end));
     DISTCONV_CHECK_CUDA(cudaEventCreate(&m_event_exchange_start));
     DISTCONV_CHECK_CUDA(cudaEventCreate(&m_event_exchange_end));
-    apply_to_spatial_sides<ND>([this](int i, Side side) {
-                                 DISTCONV_CHECK_CUDA(cudaEventCreate(
-                                     &m_event_start_boundaries(i, side)));
-                                 DISTCONV_CHECK_CUDA(cudaEventCreate(
-                                     &m_event_end_boundaries(i, side)));
-                               });
+    apply_to_spatial_sides(m_num_dims, [this](int i, Side side) {
+                                         DISTCONV_CHECK_CUDA(cudaEventCreate(
+                                             &m_event_start_boundaries(i, side)));
+                                         DISTCONV_CHECK_CUDA(cudaEventCreate(
+                                             &m_event_end_boundaries(i, side)));
+                                       });
   }
 
   void record_start_comp() {
@@ -1062,7 +1065,8 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     if (has_boundary) {
       if ((is_forward && m_overlap_halo_exchange_fwd) ||
           (!is_forward && m_overlap_halo_exchange_bwd)) {
-        apply_to_spatial_sides<ND>(
+        apply_to_spatial_sides(
+            m_num_dims,
             [&ss, this](int i, Side side) {
               if (!m_boundary_req(i, side)) return;
               float elapsed;
@@ -1083,7 +1087,8 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     DISTCONV_CHECK_CUDA(cudaEventDestroy(m_event_comp_end));
     DISTCONV_CHECK_CUDA(cudaEventDestroy(m_event_exchange_start));
     DISTCONV_CHECK_CUDA(cudaEventDestroy(m_event_exchange_end));
-    apply_to_spatial_sides<ND>(
+    apply_to_spatial_sides(
+        m_num_dims,
         [this](int i, Side side) {
           DISTCONV_CHECK_CUDA(cudaEventDestroy(
               m_event_start_boundaries(i, side)));
@@ -1093,21 +1098,20 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
   }
 
   template <typename Allocator>
-  typename std::enable_if<ND == 4 || ND == 5, void>::type
-  setup_tensor_descriptors(const tensor::Tensor<DataType, LocaleMPI,
-                           Allocator> &input,
-                           const tensor::Tensor<DataType, LocaleMPI,
-                           Allocator> &filter,
-                           const tensor::Tensor<DataType, LocaleMPI,
-                           Allocator> &output,
-                           const tensor::Tensor<DataType, LocaleMPI,
-                           Allocator> &d_input,
-                           const tensor::Tensor<DataType, LocaleMPI,
-                           Allocator> &d_filter,
-                           const tensor::Tensor<DataType, LocaleMPI,
-                           Allocator> &d_output,
-                           const int_vector &strides,
-                           const int_vector &dilations) {
+  void setup_tensor_descriptors(const tensor::Tensor<DataType, LocaleMPI,
+                                Allocator> &input,
+                                const tensor::Tensor<DataType, LocaleMPI,
+                                Allocator> &filter,
+                                const tensor::Tensor<DataType, LocaleMPI,
+                                Allocator> &output,
+                                const tensor::Tensor<DataType, LocaleMPI,
+                                Allocator> &d_input,
+                                const tensor::Tensor<DataType, LocaleMPI,
+                                Allocator> &d_filter,
+                                const tensor::Tensor<DataType, LocaleMPI,
+                                Allocator> &d_output,
+                                const int_vector &strides,
+                                const int_vector &dilations) {
     cudnn::setup_tensor_descriptor(m_input_d, input,
                                    m_halo_fwd_recv, m_halo_bwd_recv);
     cudnn::setup_tensor_descriptor(m_input_no_halo_d, input, false);
@@ -1135,7 +1139,8 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     if (m_overlap_halo_exchange_fwd) {
       util::MPIPrintStreamDebug() << "input interior: "
                                   << m_input_interior_d;
-      apply_to_spatial_sides<ND>(
+      apply_to_spatial_sides(
+          m_num_dims,
           [this](int i, Side side) {
             if (m_boundary_req(i, side)) {
               util::MPIPrintStreamDebug() << "input boundary for dimension "
@@ -1153,7 +1158,8 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     if (m_overlap_halo_exchange_fwd) {
       util::MPIPrintStreamDebug() << "output interior: "
                                   << m_output_interior_d;
-      apply_to_spatial_sides<ND>(
+      apply_to_spatial_sides(
+          m_num_dims,
           [this](int i , Side side) {
             if (m_boundary_req(i, side)) {
               util::MPIPrintStreamDebug() << "output boundary for dimension "
@@ -1183,9 +1189,10 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
                              const int_vector &dilations) {
     auto input_shape = input.get_local_shape();
     auto output_shape = output.get_local_shape();
-    IndexVector input_interior_idx(ND, 0);
-    IndexVector output_interior_idx(ND, 0);
-    apply_to_spatial_sides<ND>(
+    IndexVector input_interior_idx(m_num_dims, 0);
+    IndexVector output_interior_idx(m_num_dims, 0);
+    apply_to_spatial_sides(
+        m_num_dims,
         [&](int dim, Side side) {
           auto filter_dim = internal::get_dilated_filter_size(
               static_cast<int>(filter.get_shape()[dim]), dilations[dim]);
@@ -1420,7 +1427,8 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
             << util::get_name(m_fwd_algo);
       }
       // TODO: Need to support this with chanfilt.
-      apply_to_spatial_sides<ND>(
+      apply_to_spatial_sides(
+          m_num_dims,
           [&](int i, Side side) {
             if (m_boundary_req(i, side)) {
               // The workspace is reserved for the interior
@@ -1567,7 +1575,8 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
   void setup_workspace_size_fwd_boundaries() {
     // TODO: Handle with chanfilt.
     if (!m_overlap_halo_exchange_fwd) return;
-    apply_to_spatial_sides<ND>(
+    apply_to_spatial_sides(
+        m_num_dims,
         [this](int i, Side side) {
           if (m_boundary_req(i, side)) {
             size_t s;
@@ -1671,14 +1680,14 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
   void setup_filter_descriptor(cudnnFilterDescriptor_t &desc, const TensorType &tensor) {
     cudnnDataType_t dt = util::get_cudnn_type<typename TensorType::data_type>();
     const int_vector shape = tensor.get_local_real_shape().template get_vector<int>();
-    assert_eq((unsigned int) ND, shape.size());
+    assert_eq((unsigned int) m_num_dims, shape.size());
     DISTCONV_CHECK_CUDNN(cudnnSetFilterNdDescriptor(
-        desc, dt, CUDNN_TENSOR_NCHW, ND,
+        desc, dt, CUDNN_TENSOR_NCHW, m_num_dims,
         util::reverse(shape).data()));
   }
 
-  void setup_convolution_descriptor(const tensor::Array<ND> &overlap,
-                                    const tensor::Array<ND> &filter_shape,
+  void setup_convolution_descriptor(const IntVector &overlap,
+                                    const tensor::Shape &filter_shape,
                                     const int_vector &pads,
                                     const int_vector &strides,
                                     const int_vector &dilations,
@@ -1690,7 +1699,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     cudnnConvolutionMode_t mode = CUDNN_CROSS_CORRELATION;
     cudnnDataType_t dt = util::get_cudnn_type<DataType>();
 
-    for (int i = 0; i < NSD; ++i) {
+    for (int i = 0; i < m_num_spatial_dims; ++i) {
       auto df = internal::get_dilated_filter_size((int)filter_shape[i],
                                                   dilations[i]);
       if (!(pads[i] * 2 + 1 == df || pads[i] == 0)) {
@@ -1703,7 +1712,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     }
 
     auto stencil_dims = filter_shape;
-    for (int i = 0; i < NSD; ++i) {
+    for (int i = 0; i < m_num_spatial_dims; ++i) {
       auto window_dim = internal::get_dilated_filter_size<int>(
           stencil_dims[i], dilations[i]);
       if (window_dim % 2) {
@@ -1716,7 +1725,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
 
     // Case without padding should work if stride is 1. Stride > 1 is
     // not considered yet. Should be fine if it's a 1x1 filter.
-    for (int i = 0; i < NSD; ++i) {
+    for (int i = 0; i < m_num_spatial_dims; ++i) {
       assert_always(pads[i] != 0 || strides[i] == 1 || stencil_dims[i] == 0);
     }
 
@@ -1725,7 +1734,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
 
     // TODO: stride when padding size is zero
     // NOTE: padding == 0 likely not working
-    for (int i = 0; i < NSD; ++i) {
+    for (int i = 0; i < m_num_spatial_dims; ++i) {
       if (pads[i] == 0) {
         pads_bp.push_back(stencil_dims[i]);
       } else {
@@ -1733,7 +1742,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
       }
     }
 
-    for (int i = 0; i < NSD; ++i) {
+    for (int i = 0; i < m_num_spatial_dims; ++i) {
       // when the input tensor is extended with halo, no padding is
       // necessary
       if (overlap[i] > 0) {
@@ -1751,14 +1760,14 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     const auto r_dilations = util::reverse(dilations);
 
     DISTCONV_CHECK_CUDNN(cudnnSetConvolutionNdDescriptor(
-        desc, NSD,
+        desc, m_num_spatial_dims,
         r_pads_fp.data(), r_strides.data(), r_dilations.data(),
         mode, dt));
     DISTCONV_CHECK_CUDNN(cudnnSetConvolutionGroupCount(desc, num_groups));
 
     if (!m_skip_bp_data) {
       DISTCONV_CHECK_CUDNN(cudnnSetConvolutionNdDescriptor(
-          desc_bp_data, NSD,
+          desc_bp_data, m_num_spatial_dims,
           r_pads_bp.data(), r_strides.data(), r_dilations.data(),
           mode, dt));
       DISTCONV_CHECK_CUDNN(cudnnSetConvolutionGroupCount(
@@ -1774,7 +1783,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     // work. Instead, take the whole area as input including halo, and
     // zero-clear it before.
     DISTCONV_CHECK_CUDNN(cudnnSetConvolutionNdDescriptor(
-        desc_bp_filter, NSD,
+        desc_bp_filter, m_num_spatial_dims,
         r_pads_bp.data(), r_strides.data(), r_dilations.data(),
         mode, dt));
     DISTCONV_CHECK_CUDNN(cudnnSetConvolutionGroupCount(desc_bp_filter, num_groups));
@@ -1861,11 +1870,12 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
 
 
   void wait_boundaries(cudaStream_t s) {
-    apply_to_spatial_sides<ND>([&](int i, Side side) {
-                                 if (m_boundary_req(i, side)) {
-                                   util::wait_stream(m_boundary_streams(i, side), s);
-                                 }
-                               });
+    apply_to_spatial_sides(m_num_dims,
+                           [&](int i, Side side) {
+                             if (m_boundary_req(i, side)) {
+                               util::wait_stream(m_boundary_streams(i, side), s);
+                             }
+                           });
   }
 
   int get_input_halo_recv(int dim, Side side) {
@@ -1893,7 +1903,7 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
           - input_boundary_dim + input.get_overlap()[dim];
       m_input_boundary_offsets(dim, side) =
           input.get_local_offset(input_boundary_idx, true);
-      IndexVector output_boundary_idx(ND, 0);
+      IndexVector output_boundary_idx(m_num_dims, 0);
       output_boundary_idx[dim] =
           output.get_local_shape()[dim] - output_boundary_dim;
       m_output_boundary_offsets(dim, side) =
@@ -1901,15 +1911,17 @@ class Convolution<cudnn::BackendCUDNN, ND, DataType> {
     }
   }
 
-  void setup_boundary_streams(const tensor::Array<ND> &split_idx) {
-    apply_to_spatial_sides<ND>([this](int i, Side side) {
-                                 int idx = get_boundary_stream_index(i, side);
-                                 m_boundary_streams(i, side) =
-                                     m_be.get_internal_stream_pr(idx);
-                                 m_boundary_comms(i, side) =
-                                     m_be.get_internal_al_mpi_cuda_comm(idx);
-                               });
-    for (int i = 0; i < NSD; ++i) {
+  void setup_boundary_streams(const IndexVector &split_idx) {
+    apply_to_spatial_sides(
+        m_num_dims,
+        [this](int i, Side side) {
+          int idx = get_boundary_stream_index(i, side);
+          m_boundary_streams(i, side) =
+              m_be.get_internal_stream_pr(idx);
+          m_boundary_comms(i, side) =
+              m_be.get_internal_al_mpi_cuda_comm(idx);
+        });
+    for (int i = 0; i < m_num_spatial_dims; ++i) {
       if (split_idx[i] % 2) {
         std::swap(m_boundary_streams(i, LHS), m_boundary_streams(i, RHS));
         std::swap(m_boundary_comms(i, LHS), m_boundary_comms(i, RHS));

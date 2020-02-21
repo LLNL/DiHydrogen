@@ -269,7 +269,7 @@ int test_convolution_forward(Data<NSD, Backend, DataType> &d,
                              const BenchmarkConfig<NSD> &cfg,
                              MPI_Comm comm,
                              Backend &be,
-                             Convolution<Backend, NSD+2, DataType> &conv,
+                             Convolution<Backend, DataType> &conv,
                              Profile<NSD> &prof) {
   int pid;
   MPI_Comm_rank(comm, &pid);
@@ -335,7 +335,7 @@ int test_convolution_backward_data(Data<NSD, Backend, DataType> &d,
                                    const BenchmarkConfig<NSD> &cfg,
                                    MPI_Comm comm,
                                    Backend &be,
-                                   Convolution<Backend, NSD+2, DataType> &conv,
+                                   Convolution<Backend, DataType> &conv,
                                    Profile<NSD> &prof) {
   int pid;
   MPI_Comm_rank(comm, &pid);
@@ -404,7 +404,7 @@ int test_convolution_backward_filter(Data<NSD, Backend, DataType> &d,
                                      const BenchmarkConfig<NSD> &cfg,
                                      MPI_Comm comm,
                                      Backend &be,
-                                     Convolution<Backend, NSD+2, DataType> &conv,
+                                     Convolution<Backend, DataType> &conv,
                                      Profile<NSD> &prof) {
   int pid;
   MPI_Comm_rank(comm, &pid);
@@ -451,7 +451,7 @@ int test_convolution_backward_bias(Data<NSD, Backend, DataType> &d,
                                    const BenchmarkConfig<NSD> &cfg,
                                    MPI_Comm comm,
                                    Backend &be,
-                                   Convolution<Backend, NSD+2, DataType> &conv,
+                                   Convolution<Backend, DataType> &conv,
                                    Profile<NSD> &prof) {
   int pid;
   MPI_Comm_rank(comm, &pid);
@@ -495,7 +495,7 @@ int test_convolution_backward(Data<NSD, Backend, DataType> &d,
                               const BenchmarkConfig<NSD> &cfg,
                               MPI_Comm comm,
                               Backend &be,
-                              Convolution<Backend, NSD+2, DataType> &conv,
+                              Convolution<Backend, DataType> &conv,
                               Profile<NSD> &prof) {
   int pid;
   MPI_Comm_rank(comm, &pid);
@@ -624,8 +624,8 @@ struct ConvolutionTester<NSD, ref::Backend, DataType> {
                  MPI_Comm comm,
                  Profile<NSD> &prof) {
     ref::Backend be;
-    Convolution<ref::Backend, 2 + NSD, DataType> conv(
-        be, cfg.halo_exchange_method);
+    Convolution<ref::Backend, DataType> conv(
+        be, 2 + NSD, cfg.halo_exchange_method);
     conv.setup(d.input, d.filter, d.output,
                d.d_input, d.d_filter, d.d_output,
                cfg.pads,
@@ -665,8 +665,8 @@ struct ConvolutionTester<NSD, cudnn::BackendCUDNN, DataType> {
                            cfg.deterministic,
                            cfg.profiling);
     cudnn::BackendCUDNN be(comm, cudnn_h, be_opts);
-    Convolution<cudnn::BackendCUDNN, 2 + NSD, DataType> conv(
-      be, cfg.halo_exchange_method, cfg.chanfilt_algo);
+    Convolution<cudnn::BackendCUDNN, DataType> conv(
+        be, 2 + NSD, cfg.halo_exchange_method, cfg.chanfilt_algo);
     conv.setup(d.input, d.filter, d.output,
                d.d_input, d.d_filter, d.d_output,
                cfg.pads,
