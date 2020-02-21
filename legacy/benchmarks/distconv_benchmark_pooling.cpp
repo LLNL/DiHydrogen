@@ -173,7 +173,7 @@ int test_forward(Data<NSD, Backend, DataType> &d,
   util::MPIRootPrintStreamInfo()
       << "Executing test_forward with " << be.get_name();
 
-  Pooling<Backend, 2 + NSD, DataType> pooling(be, cfg.halo_exchange_method);
+  Pooling<Backend, DataType> pooling(be, 2 + NSD, cfg.halo_exchange_method);
   pooling.setup(d.input, d.output, d.d_input, d.d_output,
                 cfg.f_s, cfg.pads,
                 cfg.strides, cfg.pooling_mode);
@@ -223,7 +223,7 @@ int test_backward(Data<NSD, Backend, DataType> &d,
   util::MPIRootPrintStreamInfo()
       << "Executing test_backward with " << be.get_name();
 
-  Pooling<Backend, 2 + NSD, DataType> pooling(be, cfg.halo_exchange_method);
+  Pooling<Backend, DataType> pooling(be, 2 + NSD, cfg.halo_exchange_method);
   pooling.setup(d.input, d.output, d.d_input, d.d_output,
                 cfg.f_s,
                 cfg.pads,

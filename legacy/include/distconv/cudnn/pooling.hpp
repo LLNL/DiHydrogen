@@ -36,15 +36,16 @@ static inline cudnnPoolingMode_t get_cudnn_pooling_mode(
 
 } // namespace cudnn
 
-template <int ND, typename DataType>
-class Pooling<cudnn::BackendCUDNN, ND, DataType> {
+template <typename DataType>
+class Pooling<cudnn::BackendCUDNN, DataType> {
   using LocaleMPI = tensor::LocaleMPI;
-  constexpr static int NSD = ND - 2;
 
  public:
   Pooling(cudnn::BackendCUDNN &backend,
+          int num_dims,
           HaloExchangeMethod method):
-      m_be(backend), m_halo_xch_method(method) {
+      m_be(backend), m_num_dims(num_dims), m_num_spatial_dims(num_dims - 2),
+      m_halo_xch_method(method) {
     DISTCONV_CHECK_CUDNN(cudnnCreateTensorDescriptor(&m_input_d));
     DISTCONV_CHECK_CUDNN(cudnnCreateTensorDescriptor(&m_output_d));
     DISTCONV_CHECK_CUDNN(cudnnCreateTensorDescriptor(&m_d_input_d));
@@ -60,9 +61,10 @@ class Pooling<cudnn::BackendCUDNN, ND, DataType> {
     DISTCONV_CHECK_CUDNN(cudnnDestroyPoolingDescriptor(m_pooling_d));
   }
 
-  Pooling<cudnn::BackendCUDNN, ND, DataType> operator=(
-      const Pooling<cudnn::BackendCUDNN, ND, DataType> &x) {
+  Pooling<cudnn::BackendCUDNN, DataType> operator=(
+      const Pooling<cudnn::BackendCUDNN, DataType> &x) {
     assert_always(&m_be == &x.m_be);
+    m_num_dims = x.m_num_dims;
     cudnn::copy_tensor_descriptor(m_input_d, x.m_input_d);
     cudnn::copy_tensor_descriptor(m_output_d, x.m_output_d);
     cudnn::copy_tensor_descriptor(m_d_input_d, x.m_d_input_d);
@@ -82,9 +84,9 @@ class Pooling<cudnn::BackendCUDNN, ND, DataType> {
              const std::string &mode) {
     {
       // All of the dimensions must be the same
-      assert_eq((unsigned int) NSD, windows.size());
-      assert_eq((unsigned int) NSD, pads.size());
-      assert_eq((unsigned int) NSD, strides.size());
+      assert_eq((unsigned int) m_num_spatial_dims, windows.size());
+      assert_eq((unsigned int) m_num_spatial_dims, pads.size());
+      assert_eq((unsigned int) m_num_spatial_dims, strides.size());
     }
 
     // TODO: asymmetric not supported
@@ -93,7 +95,7 @@ class Pooling<cudnn::BackendCUDNN, ND, DataType> {
     assert_always(util::is_all_elements_equal(strides));
 
     // TODO: only stencil-like windows are supported
-    for (int i = 0; i < NSD; ++i) {
+    for (int i = 0; i < m_num_spatial_dims; ++i) {
       auto w = windows[i];
       if (w % 2) {
         auto stencil = (w - 1) / 2;
@@ -113,7 +115,7 @@ class Pooling<cudnn::BackendCUDNN, ND, DataType> {
     // the spatial domain must be partitioned without sharing or
     // aggregated to the rank-0 process (so that no halo exchange is
     // done).
-    for (int i = 0; i < NSD; ++i) {
+    for (int i = 0; i < m_num_spatial_dims; ++i) {
       if (input.get_distribution().is_shared(i)) {
         assert_always(input.get_distribution().get_split_shape()[i]
                       == 1);
@@ -127,7 +129,7 @@ class Pooling<cudnn::BackendCUDNN, ND, DataType> {
     assert_eq(output.get_distribution(), output.get_distribution());
 
     {
-      const int_vector dilations(NSD, 1);
+      const int_vector dilations(m_num_spatial_dims, 1);
       internal::get_halo_sizes(input,
                                IntVector(windows),
                                IntVector(strides),
@@ -293,6 +295,8 @@ class Pooling<cudnn::BackendCUDNN, ND, DataType> {
   }
  protected:
   cudnn::BackendCUDNN &m_be;
+  const int m_num_dims;
+  const int m_num_spatial_dims;
   IntVector m_halo_fwd_send;
   IntVector m_halo_bwd_send;
   IntVector m_halo_fwd_recv;
@@ -336,7 +340,7 @@ class Pooling<cudnn::BackendCUDNN, ND, DataType> {
     cudnnNanPropagation_t max_pooling_nan_opt = CUDNN_PROPAGATE_NAN;
     DISTCONV_CHECK_CUDNN(
         cudnnSetPoolingNdDescriptor(pool_d, m_mode, max_pooling_nan_opt,
-                                    NSD,
+                                    m_num_spatial_dims,
                                     util::reverse(windows).data(),
                                     util::reverse(pads).data(),
                                     util::reverse(strides).data()));
@@ -344,9 +348,9 @@ class Pooling<cudnn::BackendCUDNN, ND, DataType> {
 
   template <typename Tensor>
   void bp_accumulate_sum(Tensor &tensor,
-                         const tensor::Array<ND> dst,
-                         const tensor::Array<ND> src,
-                         const tensor::Array<ND> shape);
+                         const IndexVector &dst,
+                         const IndexVector &src,
+                         const tensor::Shape &shape);
 
   template <typename Allocator>
   void setup_halo_xch(tensor::Tensor<DataType, LocaleMPI,
@@ -413,13 +417,15 @@ class Pooling<cudnn::BackendCUDNN, ND, DataType> {
     }
   }
 
-  void setup_boundary_streams(const tensor::Array<ND> &split_idx) {
-    apply_to_spatial_sides<ND>([this](int i, Side side) {
-                                 int idx = get_boundary_stream_index(i, side);
-                                 m_boundary_comms(i, side) =
-                                     m_be.get_internal_al_mpi_cuda_comm(idx);
-                               });
-    for (int i = 0; i < NSD; ++i) {
+  void setup_boundary_streams(const IndexVector &split_idx) {
+    apply_to_spatial_sides(
+        m_num_dims,
+        [this](int i, Side side) {
+          int idx = get_boundary_stream_index(i, side);
+          m_boundary_comms(i, side) =
+              m_be.get_internal_al_mpi_cuda_comm(idx);
+        });
+    for (int i = 0; i < m_num_spatial_dims; ++i) {
       if (split_idx[i] % 2) {
         std::swap(m_boundary_comms(i, LHS), m_boundary_comms(i, RHS));
       }
