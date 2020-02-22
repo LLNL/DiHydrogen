@@ -333,11 +333,11 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
     }
 
     if (m_overlap_halo_exchange_fwd) {
-      util::MPIRootPrintStreamInfo()
+      util::MPIRootPrintStreamDebug()
           << "Overlapping of halo exchanges in forward convolution enabled";
     }
     if (m_overlap_halo_exchange_bwd) {
-      util::MPIRootPrintStreamInfo()
+      util::MPIRootPrintStreamDebug()
           << "Overlapping of halo exchanges in backward convolution enabled";
     }
 
@@ -373,7 +373,7 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
     actual_ws_size *= m_be.get_options().m_ws_capacity_factor;
     actual_ws_size = mempool.get_max_allocatable_size(actual_ws_size);
 
-    util::MPIRootPrintStreamInfo()
+    util::MPIRootPrintStreamDebug()
         << "Requested workspace size: " << ws_size
         << " (" << int(ws_size / 1024.0 / 1024.0)
         << " MB), actual size: " << actual_ws_size
@@ -1794,7 +1794,8 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
                       Allocator> &input,
                       tensor::Tensor<DataType, LocaleMPI,
                       Allocator> &d_output) {
-    util::MPIRootPrintStreamInfo() << "Using " << m_halo_xch_method << " in halo exchange";
+    util::MPIRootPrintStreamDebug() << "Using " << m_halo_xch_method
+                                    << " in halo exchange";
     switch (m_halo_xch_method) {
       case HaloExchangeMethod::MPI:
         m_halo_xch_input.reset(new HaloExchangeMPI(input));
