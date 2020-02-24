@@ -41,9 +41,9 @@ __global__ void bp_accumulate_sum_kernel(DataType *tensor,
 
 template <int ND, typename DataType>
 void bp_accumulate_sum_nd(Tensor<DataType> &tensor,
-                          const Array<ND> dst,
-                          const Array<ND> src,
-                          const Array<ND> shape) {
+                          const dc::IndexVector &dst,
+                          const dc::IndexVector &src,
+                          const dc::tensor::Shape &shape) {
   auto size = shape.get_size();
   const int bsize = 256;
   int gsize = (size + bsize - 1) / bsize;
@@ -95,44 +95,32 @@ void bp_accumulate_sum_nd(Tensor<DataType> &tensor,
 
 namespace distconv {
 
-template <> template <>
-void Pooling<cudnn::BackendCUDNN, 4, float>::bp_accumulate_sum<Tensor<float>>(
-    Tensor<float> &tensor,
-    const Array<4> dst,
-    const Array<4> src,
-    const Array<4> shape) {
-  bp_accumulate_sum_nd<4, float>(tensor, dst, src, shape);
+template <typename DataType> template <typename Tensor>
+void Pooling<cudnn::BackendCUDNN, DataType>::bp_accumulate_sum<Tensor>(
+    Tensor &tensor,
+    const IndexVector &dst,
+    const IndexVector &src,
+    const tensor::Shape &shape) {
+  switch (m_num_dims) {
+    case 4:
+      bp_accumulate_sum_nd<4, DataType>(tensor, dst, src, shape);
+      break;
+    case 5:
+      bp_accumulate_sum_nd<5, DataType>(tensor, dst, src, shape);
+      break;
+  }
   return;
 }
 
-template <> template <>
-void Pooling<cudnn::BackendCUDNN, 4, double>::bp_accumulate_sum<Tensor<double>>(
-    Tensor<double> &tensor,
-    const Array<4> dst,
-    const Array<4> src,
-    const Array<4> shape) {
-  bp_accumulate_sum_nd<4, double>(tensor, dst, src, shape);
-  return;
-}
-
-template <> template <>
-void Pooling<cudnn::BackendCUDNN, 5, float>::bp_accumulate_sum<Tensor<float>>(
-    Tensor<float> &tensor,
-    const Array<5> dst,
-    const Array<5> src,
-    const Array<5> shape) {
-  bp_accumulate_sum_nd<5, float>(tensor, dst, src, shape);
-  return;
-}
-
-template <> template <>
-void Pooling<cudnn::BackendCUDNN, 5, double>::bp_accumulate_sum<Tensor<double>>(
-    Tensor<double> &tensor,
-    const Array<5> dst,
-    const Array<5> src,
-    const Array<5> shape) {
-  bp_accumulate_sum_nd<5, double>(tensor, dst, src, shape);
-  return;
-}
+#define INSTANTIATE_BP_ACCUMULATE_SUM(TYPE)                             \
+  template <> template <>                                               \
+  void Pooling<cudnn::BackendCUDNN, TYPE>::bp_accumulate_sum<Tensor<TYPE>>( \
+      Tensor<TYPE> &tensor,                                             \
+      const IndexVector &dst,                                           \
+      const IndexVector &src,                                           \
+      const tensor::Shape &shape);
+INSTANTIATE_BP_ACCUMULATE_SUM(float)
+INSTANTIATE_BP_ACCUMULATE_SUM(double)
+#undef INSTANTIATE_BP_ACCUMULATE_SUM
 
 } // namespace distconv

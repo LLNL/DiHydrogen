@@ -207,16 +207,27 @@ void channel_sums_and_sqsums(int num_samples, const Tensor &input, Tensor &sums,
           shape, input_strides);
 }
 
-#define INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(ND, TYPE)           \
+template <typename Tensor>
+void channel_sums_and_sqsums(int num_dims, int num_samples, const Tensor &input,
+                             Tensor &sums, Tensor &sqsums, cudaStream_t stream) {
+  switch (num_dims) {
+    case 4:
+      channel_sums_and_sqsums<4, Tensor>(num_samples, input, sums, sqsums, stream);
+      break;
+    case 5:
+      channel_sums_and_sqsums<5, Tensor>(num_samples, input, sums, sqsums, stream);
+      break;
+  }
+}
+
+#define INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(TYPE)               \
   template void                                                 \
-  channel_sums_and_sqsums<ND, Tensor<TYPE>>(                    \
-      int num_samples,                                          \
+  channel_sums_and_sqsums<Tensor<TYPE>>(                        \
+      int num_dims, int num_samples,                            \
       const Tensor<TYPE> &input,   Tensor<TYPE> &sums,          \
       Tensor<TYPE> &sqsums, cudaStream_t stream);
-INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(4, float)
-INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(4, double)
-INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(5, float)
-INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(5, double)
+INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(float)
+INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(double)
 #undef INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS
 
 template <typename DataType>
@@ -242,7 +253,7 @@ struct sums_to_statistics_functor {
   }
 };
 
-template <int ND, typename TensorType>
+template <typename TensorType>
 void sums_to_statistics(index_t num_per_sum, typename TensorType::data_type decay,
                         TensorType &global_mean, TensorType &global_var,
                         TensorType &running_mean, TensorType &running_var,
@@ -263,17 +274,15 @@ void sums_to_statistics(index_t num_per_sum, typename TensorType::data_type deca
   }
 }
 
-#define INSTANTIATE_SUMS_TO_STATISTICS(ND, TYPE)                \
+#define INSTANTIATE_SUMS_TO_STATISTICS(TYPE)                    \
   template                                                      \
-  void sums_to_statistics<ND, Tensor<TYPE>>(                    \
+  void sums_to_statistics<Tensor<TYPE>>(                        \
       index_t num_per_sum, TYPE decay,                          \
       Tensor<TYPE> &global_mean, Tensor<TYPE> &global_var,      \
       Tensor<TYPE> &running_mean, Tensor<TYPE> &running_var,    \
       cudaStream_t stream);
-INSTANTIATE_SUMS_TO_STATISTICS(4, float)
-INSTANTIATE_SUMS_TO_STATISTICS(4, double)
-INSTANTIATE_SUMS_TO_STATISTICS(5, float)
-INSTANTIATE_SUMS_TO_STATISTICS(5, double)
+INSTANTIATE_SUMS_TO_STATISTICS(float)
+INSTANTIATE_SUMS_TO_STATISTICS(double)
 #undef INSTANTIATE_SUMS_TO_STATISTICS
 
 __device__ inline float rsqrt(float x) {
@@ -450,18 +459,37 @@ void batch_normalization(int num_samples, const TensorType &input,
       input_strides, output_strides);
 }
 
-#define INSTANTIATE_BATCH_NORMALIZATION(ND, TYPE)               \
+template <typename TensorType>
+void batch_normalization(int num_dims, int num_samples, const TensorType &input,
+                         const TensorType &mean, const TensorType &var,
+                         const TensorType &scale, const TensorType &bias,
+                         TensorType &output,
+                         typename TensorType::data_type epsilon,
+                         cudaStream_t stream) {
+  switch (num_dims) {
+    case 4:
+      batch_normalization<4, TensorType>(
+          num_samples, input, mean, var,
+          scale, bias, output, epsilon, stream);
+      break;
+    case 5:
+      batch_normalization<5, TensorType>(
+          num_samples, input, mean, var,
+          scale, bias, output, epsilon, stream);
+      break;
+  }
+}
+
+#define INSTANTIATE_BATCH_NORMALIZATION(TYPE)                   \
   template                                                      \
-  void batch_normalization<ND, Tensor<TYPE>>(                   \
-      int num_samples,                                          \
+  void batch_normalization<Tensor<TYPE>>(                       \
+      int num_dims, int num_samples,                            \
       const Tensor<TYPE> &input, const Tensor<TYPE> &mean,      \
       const Tensor<TYPE> &var, const Tensor<TYPE> &scale,       \
       const Tensor<TYPE> &bias, Tensor<TYPE> &output,           \
       TYPE epsilon, cudaStream_t stream);
-INSTANTIATE_BATCH_NORMALIZATION(4, float)
-INSTANTIATE_BATCH_NORMALIZATION(4, double)
-INSTANTIATE_BATCH_NORMALIZATION(5, float)
-INSTANTIATE_BATCH_NORMALIZATION(5, double)
+INSTANTIATE_BATCH_NORMALIZATION(float)
+INSTANTIATE_BATCH_NORMALIZATION(double)
 #undef INSTANTIATE_BATCH_NORMALIZATION
 
 #ifdef DISTCONV_HAS_NVSHMEM
@@ -617,9 +645,29 @@ void forward_all(const Tensor &input, Tensor &mean, Tensor &var,
   }
 }
 
-#define INSTANTIATE_FORWARD(ND, TYPE)                           \
+template <typename Tensor>
+void forward_all(int num_dims, const Tensor &input, Tensor &mean, Tensor &var,
+                 Tensor &running_mean, Tensor &running_var,
+                 Tensor &scale, Tensor &bias, Tensor &output,
+                 typename Tensor::data_type decay,
+                 typename Tensor::data_type epsilon,
+                 cudaStream_t stream, AllreduceNVSHMEM<typename Tensor::data_type> &ar) {
+  switch (num_dims) {
+    case 4:
+      forward_all<4, Tensor>(input, mean, var, running_mean, running_var,
+                             scale, bias, output, decay, epsilon, stream, ar);
+      break;
+    case 5:
+      forward_all<5, Tensor>(input, mean, var, running_mean, running_var,
+                             scale, bias, output, decay, epsilon, stream, ar);
+      break;
+  }
+}
+
+#define INSTANTIATE_FORWARD(TYPE)                               \
   template void                                                 \
-  forward_all<ND, Tensor<TYPE>>(                                \
+  forward_all<Tensor<TYPE>>(                                    \
+      int num_dims,                                             \
       const Tensor<TYPE> &input,                                \
       Tensor<TYPE> &mean, Tensor<TYPE> &var,                    \
       Tensor<TYPE> &running_mean, Tensor<TYPE> &running_var,    \
@@ -628,10 +676,8 @@ void forward_all(const Tensor &input, Tensor &mean, Tensor &var,
       TYPE decay, TYPE epsilon,                                 \
       cudaStream_t stream,                                      \
       AllreduceNVSHMEM<TYPE> &ar);
-INSTANTIATE_FORWARD(4, float)
-INSTANTIATE_FORWARD(4, double)
-INSTANTIATE_FORWARD(5, float)
-INSTANTIATE_FORWARD(5, double)
+INSTANTIATE_FORWARD(float)
+INSTANTIATE_FORWARD(double)
 #undef INSTANTIATE_FORWARD
 #endif // DISTCONV_HAS_NVSHMEM
 
@@ -921,20 +967,39 @@ void backprop1(int num_samples, const TensorType &input,
       input_strides, d_output_strides);
 }
 
-#define INSTANTIATE_BACKPROP1(ND, TYPE)                         \
+template <typename TensorType>
+void backprop1(int num_dims, int num_samples, const TensorType &input,
+               const TensorType &d_output, const TensorType &mean,
+               const TensorType &var, const TensorType &scale,
+               TensorType &scale_gradient, TensorType &bias_gradient,
+               TensorType &mean_gradient, TensorType &var_gradient,
+               typename TensorType::data_type epsilon, cudaStream_t stream) {
+  switch (num_dims) {
+    case 4:
+      backprop1<4, TensorType>(num_samples, input, d_output,
+                               mean, var, scale, scale_gradient, bias_gradient,
+                               mean_gradient, var_gradient, epsilon, stream);
+      break;
+    case 5:
+      backprop1<5, TensorType>(num_samples, input, d_output,
+                               mean, var, scale, scale_gradient, bias_gradient,
+                               mean_gradient, var_gradient, epsilon, stream);
+      break;
+  }
+}
+
+#define INSTANTIATE_BACKPROP1(TYPE)                             \
   template                                                      \
-  void backprop1<ND, Tensor<TYPE>>(                             \
-      int num_samples,                                          \
+  void backprop1<Tensor<TYPE>>(                                 \
+      int num_dims, int num_samples,                            \
       const Tensor<TYPE> &input, const Tensor<TYPE> &d_output,  \
       const Tensor<TYPE> &mean, const Tensor<TYPE> &var,        \
       const Tensor<TYPE> &scale, Tensor<TYPE> &scale_gradient,  \
       Tensor<TYPE> &bias_gradient, Tensor<TYPE> &mean_gradient, \
       Tensor<TYPE> &var_gradient, TYPE epsilon,                 \
       cudaStream_t stream);
-INSTANTIATE_BACKPROP1(4, float)
-INSTANTIATE_BACKPROP1(4, double)
-INSTANTIATE_BACKPROP1(5, float)
-INSTANTIATE_BACKPROP1(5, double)
+INSTANTIATE_BACKPROP1(float)
+INSTANTIATE_BACKPROP1(double)
 #undef INSTANTIATE_BACKPROP1
 
 template <int ND, typename DataType>
@@ -1136,19 +1201,38 @@ void backprop2(index_t num_samples, index_t num_per_sum,
       input_strides, d_output_strides, d_input_strides);
 }
 
-#define INSTANTIATE_BACKPROP2(ND, TYPE)                                 \
+template <typename TensorType>
+void backprop2(int num_dims, index_t num_samples, index_t num_per_sum,
+               const TensorType &input, const TensorType &d_output,
+               const TensorType &mean, const TensorType &var,
+               const TensorType &scale, const TensorType &mean_gradient,
+               const TensorType &var_gradient, TensorType &d_input,
+               typename TensorType::data_type epsilon, cudaStream_t stream) {
+  switch (num_dims) {
+    case 4:
+      backprop2<4, TensorType>(num_samples, num_per_sum, input, d_output,
+                               mean, var, scale, mean_gradient,
+                               var_gradient, d_input, epsilon, stream);
+      break;
+    case 5:
+      backprop2<5, TensorType>(num_samples, num_per_sum, input, d_output,
+                               mean, var, scale, mean_gradient,
+                               var_gradient, d_input, epsilon, stream);
+      break;
+  }
+}
+
+#define INSTANTIATE_BACKPROP2(TYPE)                                     \
   template                                                              \
-  void backprop2<ND, Tensor<TYPE>>(                                     \
-      index_t num_samples, index_t num_per_sum,                         \
+  void backprop2<Tensor<TYPE>>(                                         \
+      int num_dims, index_t num_samples, index_t num_per_sum,           \
       const Tensor<TYPE> &input, const Tensor<TYPE> &d_output,          \
       const Tensor<TYPE> &mean, const Tensor<TYPE> &var,                \
       const Tensor<TYPE> &scale, const Tensor<TYPE> &mean_gradient,     \
       const Tensor<TYPE> &var_gradient, Tensor<TYPE> &d_input,          \
       TYPE epsilon, cudaStream_t stream);
-INSTANTIATE_BACKPROP2(4, float)
-INSTANTIATE_BACKPROP2(4, double)
-INSTANTIATE_BACKPROP2(5, float)
-INSTANTIATE_BACKPROP2(5, double)
+INSTANTIATE_BACKPROP2(float)
+INSTANTIATE_BACKPROP2(double)
 #undef INSTANTIATE_BACKPROP2
 
 } // namespace batchnorm

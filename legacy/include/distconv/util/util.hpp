@@ -138,6 +138,11 @@ class PrintStream<true> {
     m_printed_newline = x[std::strlen(x)-1] == '\n';
     return *this;
   }
+  PrintStream<true> &operator<<(const std::string &x) {
+    ss << x;
+    m_printed_newline = x.back() == '\n';
+    return *this;
+  }
   template <typename X>
   PrintStream<true> &operator<<(const X &x) {
     ss << x;

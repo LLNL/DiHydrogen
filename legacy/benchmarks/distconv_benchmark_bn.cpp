@@ -234,7 +234,7 @@ int test_forward(Data<NSD, Backend, DataType> &d,
                  const BenchmarkConfig<NSD> &cfg,
                  MPI_Comm comm,
                  Backend &be,
-                 BatchNormalization<Backend, NSD+2, DataType> &bn,
+                 BatchNormalization<Backend, DataType> &bn,
                  Profile<NSD> &prof) {
   int pid;
   MPI_Comm_rank(comm, &pid);
@@ -307,7 +307,7 @@ int test_backward(Data<NSD, Backend, DataType> &d,
                   const BenchmarkConfig<NSD> &cfg,
                   MPI_Comm comm,
                   Backend &be,
-                  BatchNormalization<Backend, NSD+2, DataType> &bn,
+                  BatchNormalization<Backend, DataType> &bn,
                   Profile<NSD> &prof) {
   int pid;
   MPI_Comm_rank(comm, &pid);
@@ -408,8 +408,8 @@ struct BNTester<NSD, cudnn::BackendCUDNN, DataType> {
                            cfg.deterministic,
                            cfg.profiling);
     cudnn::BackendCUDNN be(comm, cudnn_h, be_opts);
-    BatchNormalization<cudnn::BackendCUDNN, 2 + NSD, DataType> bn(
-        be, 0.9, 1e-5, cfg.global_stat, cfg.batchnorm_impl);
+    BatchNormalization<cudnn::BackendCUDNN, DataType> bn(
+        be, 2 + NSD, 0.9, 1e-5, cfg.global_stat, cfg.batchnorm_impl);
     bn.set_num_samples(d.input.get_shape()[-1]);
     start_profiler<cudnn::BackendCUDNN>();
     if (cfg.nvtx_marking) {

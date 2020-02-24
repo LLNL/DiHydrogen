@@ -6,7 +6,7 @@
 
 namespace distconv {
 
-template <typename Backend, int ND, typename DataType>
+template <typename Backend, typename DataType>
 class Convolution {
  public:
   Convolution(Backend &backend);
@@ -79,10 +79,10 @@ class Convolution {
   void set_num_samples(int);
 };
 
-template <typename Backend, int ND, typename DataType>
+template <typename Backend, typename DataType>
 class Pooling {
  public:
-  Pooling(Backend &backend);
+  Pooling(Backend &backend, int num_dims);
 
   template <typename Tensor>
   void setup();
@@ -117,10 +117,10 @@ class LeakyReLU {
   LeakyReLU(Backend &backend);
 };
 
-template <typename Backend, int ND, typename DataType>
+template <typename Backend, typename DataType>
 class BatchNormalization {
  public:
-  BatchNormalization(Backend &backend, DataType decay, DataType epsilon);
+  BatchNormalization(Backend &backend, int num_dims, DataType decay, DataType epsilon);
 };
 
 enum class SoftmaxMode {INSTANCE, CHANNEL};
