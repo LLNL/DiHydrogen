@@ -134,7 +134,6 @@ if (H2_ENABLE_CUDA)
   if (CMAKE_CUDA_COMPILER)
     set(H2_HAS_CUDA TRUE)
   endif ()
-  find_package(P2P)
   find_package(NVSHMEM)
 endif (H2_ENABLE_CUDA)
 

@@ -16,6 +16,9 @@
 #endif
 #cmakedefine DISTCONV_HAS_CUDNN
 #cmakedefine DISTCONV_HAS_P2P
+#ifdef DISTCONV_DEBUG
+#define P2P_DEBUG
+#endif // DISTCONV_DEBUG
 #cmakedefine DISTCONV_HAS_NVSHMEM
 
 #cmakedefine DISTCONV_OPTIMIZE_FIND_DESTINATION
