@@ -9,6 +9,9 @@
 #include "distconv/tensor/halo_exchange_cuda_p2p.hpp"
 #include "distconv/tensor/halo_exchange_cuda_hybrid.hpp"
 #endif // DISTCONV_HAS_P2P
+#ifdef DISTCONV_HAS_NVSHMEM
+#include "distconv/tensor/halo_exchange_cuda_nvshmem.hpp"
+#endif // DISTCONV_HAS_NVSHMEM
 
 namespace distconv {
 namespace cudnn {
@@ -326,6 +329,18 @@ class Pooling<cudnn::BackendCUDNN, DataType> {
                                                         tensor::CUDAAllocator,
                                                         Al::MPICUDABackend>;
 #endif // DISTCONV_HAS_P2P
+#ifdef DISTCONV_HAS_NVSHMEM
+  using HaloExchangeNVSHMEM = tensor::HaloExchangeNVSHMEM<
+    DataType, tensor::CUDAAllocator, Al::MPICUDABackend>;
+#ifdef DISTCONV_HAS_CUDA_GRAPH
+  using HaloExchangeNVSHMEMGraph = tensor::HaloExchangeNVSHMEMGraph<
+    DataType, tensor::CUDAAllocator, Al::MPICUDABackend>;
+#endif // DISTCONV_HAS_CUDA_GRAPH
+  using HaloExchangeNVSHMEMDirect = tensor::HaloExchangeNVSHMEMDirect<
+    DataType, tensor::CUDAAllocator, Al::MPICUDABackend>;
+  using HaloExchangeNVSHMEMFusedNotify = tensor::HaloExchangeNVSHMEMFusedNotify<
+    DataType, tensor::CUDAAllocator, Al::MPICUDABackend>;
+#endif // DISTCONV_HAS_NVSHMEM
   std::unique_ptr<HaloExchange> m_halo_xch_input;
   std::unique_ptr<HaloExchange> m_halo_xch_d_input;
   BoundaryAttributesV<std::shared_ptr<Al::MPICUDABackend::comm_type>> m_boundary_comms;
@@ -357,28 +372,53 @@ class Pooling<cudnn::BackendCUDNN, DataType> {
                       Allocator> &input,
                       tensor::Tensor<DataType, LocaleMPI,
                       Allocator> &d_input) {
-    if (m_halo_xch_method == HaloExchangeMethod::MPI) {
-      util::MPIRootPrintStreamDebug() << "Using MPI in halo exchange";
-      m_halo_xch_input.reset(new HaloExchangeMPI(input));
-      m_halo_xch_d_input.reset(new HaloExchangeMPI(d_input));
-    } else if (m_halo_xch_method == HaloExchangeMethod::AL) {
-      util::MPIRootPrintStreamDebug() << "Using AL in halo exchange";
-      m_halo_xch_input.reset(new HaloExchangeAL(input));
-      m_halo_xch_d_input.reset(new HaloExchangeAL(d_input));
+    switch (m_halo_xch_method) {
+      case HaloExchangeMethod::MPI:
+        util::MPIRootPrintStreamDebug() << "Using MPI in halo exchange";
+        m_halo_xch_input.reset(new HaloExchangeMPI(input));
+        m_halo_xch_d_input.reset(new HaloExchangeMPI(d_input));
+        break;
+      case HaloExchangeMethod::AL:
+        util::MPIRootPrintStreamDebug() << "Using AL in halo exchange";
+        m_halo_xch_input.reset(new HaloExchangeAL(input));
+        m_halo_xch_d_input.reset(new HaloExchangeAL(d_input));
+        break;
 #ifdef DISTCONV_HAS_P2P
-    } else if (m_halo_xch_method == HaloExchangeMethod::P2P) {
-      util::MPIRootPrintStreamDebug() << "Using P2P in halo exchange";
-      m_halo_xch_input.reset(new HaloExchangeP2P(input, m_be.get_p2p()));
-      m_halo_xch_d_input.reset(new HaloExchangeP2P(d_input, m_be.get_p2p()));
-    } else if (m_halo_xch_method == HaloExchangeMethod::HYBRID) {
-      util::MPIRootPrintStreamDebug() << "Using hybrid of AL and P2P in halo exchange";
-      m_halo_xch_input.reset(new HaloExchangeHybrid(input, m_be.get_p2p()));
-      m_halo_xch_d_input.reset(new HaloExchangeHybrid(d_input, m_be.get_p2p()));
+      case HaloExchangeMethod::P2P:
+        util::MPIRootPrintStreamDebug() << "Using P2P in halo exchange";
+        m_halo_xch_input.reset(new HaloExchangeP2P(input, m_be.get_p2p()));
+        m_halo_xch_d_input.reset(new HaloExchangeP2P(d_input, m_be.get_p2p()));
+        break;
+      case HaloExchangeMethod::HYBRID:
+        util::MPIRootPrintStreamDebug() << "Using hybrid of AL and P2P in halo exchange";
+        m_halo_xch_input.reset(new HaloExchangeHybrid(input, m_be.get_p2p()));
+        m_halo_xch_d_input.reset(new HaloExchangeHybrid(d_input, m_be.get_p2p()));
+        break;
 #endif // DISTCONV_HAS_P2P
-    } else {
-      util::MPIPrintStreamError() << "Invalid halo exchange method: "
-                                  << m_halo_xch_method;
-      std::abort();
+#ifdef DISTCONV_HAS_NVSHMEM
+      case HaloExchangeMethod::NVSHMEM:
+        m_halo_xch_input.reset(new HaloExchangeNVSHMEM(input));
+        m_halo_xch_d_input.reset(new HaloExchangeNVSHMEM(d_input));
+        break;
+#ifdef DISTCONV_HAS_CUDA_GRAPH
+      case HaloExchangeMethod::NVSHMEM_GRAPH:
+        m_halo_xch_input.reset(new HaloExchangeNVSHMEMGraph(input));
+        m_halo_xch_d_input.reset(new HaloExchangeNVSHMEMGraph(d_input));
+        break;
+#endif // DISTCONV_HAS_CUDA_GRAPH
+      case HaloExchangeMethod::NVSHMEM_DIRECT:
+        m_halo_xch_input.reset(new HaloExchangeNVSHMEMDirect(input));
+        m_halo_xch_d_input.reset(new HaloExchangeNVSHMEMDirect(d_input));
+        break;
+      case HaloExchangeMethod::NVSHMEM_FUSED_NOTIFY:
+        m_halo_xch_input.reset(new HaloExchangeNVSHMEMFusedNotify(input));
+        m_halo_xch_d_input.reset(new HaloExchangeNVSHMEMFusedNotify(d_input));
+        break;
+#endif // DISTCONV_HAS_NVSHMEM
+      default:
+        util::MPIPrintStreamError() << "Invalid halo exchange method: "
+                                    << m_halo_xch_method;
+        std::abort();
     }
   }
 
