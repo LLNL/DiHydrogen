@@ -93,6 +93,22 @@ struct atomic_max<float> {
   }
 };
 
+template <>
+struct atomic_max<double> {
+  __device__ __forceinline__ double operator()(double *addr, double value) const {
+    // https://stackoverflow.com/questions/17399119/cant-we-use-atomic-operations-for-floating-point-variables-in-cuda
+    long long *addr_as_ll = (long long*)addr;
+    long long old = *addr_as_ll, assumed;
+    do {
+      assumed = old;
+      auto m = fmax(value, __longlong_as_double(assumed));
+      old = atomicCAS((unsigned long long*)addr_as_ll,
+                      assumed, (__double_as_longlong(m)));
+    } while (assumed != old);
+    return __longlong_as_double(old);
+  }
+};
+
 template <typename DataType>
 struct atomic_add {
   __device__ __forceinline__ DataType operator()(DataType *addr,
@@ -418,7 +434,9 @@ __global__ void fp_channel_kernel(const DataType * __restrict__ x,
   size_t offset = blockIdx.x * BLOCK_SIZE + threadIdx.x;
   const size_t sample_size = spatial_size * num_channels;
   const int sample_idx = blockIdx.y;
-  extern __shared__ DataType x_cache[];
+  // https://stackoverflow.com/questions/27570552/templated-cuda-kernel-with-dynamic-shared-memory
+  extern __shared__ __align__(sizeof(DataType)) unsigned char x_cache_char[];
+  DataType *x_cache = reinterpret_cast<DataType*>(x_cache_char);
   const int cache_idx = threadIdx.x;
   constexpr auto min_output = util::min<DataType>();
 
@@ -488,7 +506,8 @@ __global__ void bp_channel_kernel(const DataType * __restrict__ y,
   size_t offset = blockIdx.x * BLOCK_SIZE + threadIdx.x;
   const size_t sample_size = spatial_size * num_channels;
   const int sample_idx = blockIdx.y;
-  extern __shared__ DataType cache[];
+  extern __shared__ __align__(sizeof(DataType)) unsigned char cache_char[];
+  DataType *cache = reinterpret_cast<DataType*>(cache_char);
   const int cache_idx = threadIdx.x;
   constexpr auto min_output = util::min<DataType>();
 
@@ -634,13 +653,16 @@ int SoftmaxCUDNN::backward(const Tensor &y, const Tensor &dy,
   return 0;
 }
 
-template
-int SoftmaxCUDNN::forward<TensorCUDA<float>>(const TensorCUDA<float> &x,
-                                             TensorCUDA<float> &y);
-
-template
-int SoftmaxCUDNN::backward<TensorCUDA<float>>(const TensorCUDA<float> &y,
-                                              const TensorCUDA<float> &dy,
-                                              TensorCUDA<float> &dx);
+#define PROTO(T)                                                        \
+  template                                                              \
+  int SoftmaxCUDNN::forward<TensorCUDA<T>>(const TensorCUDA<T> &x,      \
+                                           TensorCUDA<T> &y);           \
+  template                                                              \
+  int SoftmaxCUDNN::backward<TensorCUDA<T>>(const TensorCUDA<T> &y,     \
+                                            const TensorCUDA<T> &dy,    \
+                                            TensorCUDA<T> &dx);
+PROTO(float)
+PROTO(double)
+#undef PROTO
 
 } // namespace distconv
