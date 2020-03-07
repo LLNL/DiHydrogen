@@ -172,15 +172,17 @@ int CrossEntopyCUDNN::backward(const Tensor &x_pred, const Tensor &x_truth,
   return 0;
 }
 
-template
-int CrossEntopyCUDNN::forward<TensorCUDA<float>>(
-    const TensorCUDA<float> &x_pred, const TensorCUDA<float> &x_truth,
-    TensorCUDA<float> &y);
+#define PROTO(T)                                                        \
+  template int CrossEntopyCUDNN::forward<TensorCUDA<T>>(                \
+      const TensorCUDA<T> &x_pred, const TensorCUDA<T> &x_truth,        \
+      TensorCUDA<T> &y);                                                \
+  template int CrossEntopyCUDNN::backward<TensorCUDA<T>>(               \
+      const TensorCUDA<T> &x_pred, const TensorCUDA<T> &x_truth,        \
+      const TensorCUDA<T> &dy, TensorCUDA<T> &dx_pred,                  \
+      TensorCUDA<T> &dx_truth);
 
-template
-int CrossEntopyCUDNN::backward<TensorCUDA<float>>(
-    const TensorCUDA<float> &x_pred, const TensorCUDA<float> &x_truth,
-    const TensorCUDA<float> &dy, TensorCUDA<float> &dx_pred,
-    TensorCUDA<float> &dx_truth);
+PROTO(float)
+PROTO(double)
+#undef PROTO
 
 } // namespace distconv
