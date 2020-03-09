@@ -5,6 +5,7 @@ target_include_directories(compare_binary_files PUBLIC
 
 add_subdirectory(tensor)
 add_subdirectory(cudnn)
+add_subdirectory(p2p)
 
 configure_file(test_util.sh.in
   test_util.sh @ONLY)

@@ -6,6 +6,9 @@ h2_set_full_path(THIS_DIR_SOURCES
 add_subdirectory(tensor)
 add_subdirectory(cudnn)
 add_subdirectory(util)
+if (DISTCONV_HAS_P2P)
+  add_subdirectory(p2p)
+endif ()
 
 add_library(distconv
   ${SOURCES} ${THIS_DIR_SOURCES}
@@ -28,9 +31,6 @@ target_link_libraries(distconv PUBLIC MPI::MPI_CXX)
 target_link_libraries(distconv PUBLIC cuda::toolkit)
 target_link_libraries(distconv PUBLIC cuda::CUB)
 target_link_libraries(distconv PUBLIC cuda::cuDNN)
-if (P2P_FOUND)
-  target_link_libraries(distconv PUBLIC P2P::P2P)
-endif ()
 target_link_libraries(distconv PUBLIC ${Aluminum_LIBRARIES})
 if (NVSHMEM_FOUND)
   target_link_libraries(distconv PUBLIC NVSHMEM::NVSHMEM)

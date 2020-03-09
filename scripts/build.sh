@@ -52,7 +52,7 @@ INSTALL_DIR=${PWD}/install/$UNIQUE_PATH
 
 # Build options (off when undefined)
 ENABLE_NVSHMEM=
-ENABLE_P2P=
+ENABLE_P2P=ON
 
 # External library paths
 Aluminum_DIR=${Aluminum_DIR:-$HOME/wsa/aluminum/install/$UNIQUE_PATH}
@@ -67,12 +67,13 @@ $(basename $0) ARGS
 
 where ARGS are:
     --with-nvshmem [DIR]    Enable NVSHMEM using one installed at DIR
-    --with-p2p [DIR]        Enable P2P using one installed at DIR
+    --with-p2p              Enable P2P
+    --without-p2p           Disable P2P
     --help                  Display help message
 EOM
 }
 
-OPTS=$(getopt -o h -l help,with-al::,with-p2p::,with-nvshmem:: -n $0 -- "$@")
+OPTS=$(getopt -o h -l help,with-al::,with-p2p,without-p2p,with-nvshmem:: -n $0 -- "$@")
 if [ $? != 0 ]; then echo Failed parsing options.; exit 1; fi
 eval set -- $OPTS
 while true; do
@@ -91,11 +92,12 @@ while true; do
             shift 2
             ;;
         --with-p2p)
-            ENABLE_P2P=1
-            if [[ $2 ]]; then
-                P2P_DIR=$2
-            fi
-            shift 2
+            ENABLE_P2P=ON
+            shift
+            ;;
+        --without-p2p)
+            ENABLE_P2P=OFF
+            shift
             ;;
         -h|--help)
             print_usage
@@ -115,16 +117,6 @@ done
 if [[ ! -d $Aluminum_DIR ]]; then
     echo "Error! Aluminum not found (Aluminum_DIR: $Aluminum_DIR)"
     exit 1
-fi
-if [[ $ENABLE_P2P ]]; then
-    if [[ ! -d $P2P_DIR ]]; then
-        echo "Error! P2P requested but not found (P2P_DIR: $P2P_DIR)"
-        exit 1
-    fi
-    echo "P2P enabled with $P2P_DIR"
-else
-    P2P_DIR=
-    echo "P2P disabled"
 fi
 if [[ $ENABLE_NVSHMEM ]]; then
     if [[ ! -d $NVSHMEM_DIR ]]; then
@@ -148,7 +140,7 @@ cmake ${SRC_DIR} \
       -DCMAKE_CUDA_HOST_COMPILER=$(which $CXX_COMPILER) \
       -DH2_ENABLE_CUDA=ON \
       -DAluminum_DIR=$Aluminum_DIR \
-      -DP2P_DIR=$P2P_DIR \
+      -DH2_ENABLE_P2P=$ENABLE_P2P \
       -DNVSHMEM_DIR=$NVSHMEM_DIR \
       -DCUB_DIR=$CUB_DIR \
       -DCatch2_DIR=/usr/workspace/wsb/brain/catch2/lib64/cmake/Catch2 \
