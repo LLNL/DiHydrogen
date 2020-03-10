@@ -29,9 +29,15 @@ struct CopyFunctor;
 
 } // namespace internal
 
+class AbstractTensor {
+ public:
+  AbstractTensor() = default;
+  virtual ~AbstractTensor() = default;
+};
+
 template <typename DataType, typename Locale,
           typename Allocator>
-class Tensor {
+class Tensor: public AbstractTensor {
   using TensorImplType = TensorImpl<Tensor<DataType, Locale, Allocator>>;
   friend TensorImplType;
   template <typename TensorTypeX, typename TensorTypeY>
