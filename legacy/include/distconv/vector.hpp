@@ -113,6 +113,9 @@ class Vector {
    */
   reference operator[](int idx) {
     idx = idx < 0 ? length() + idx : idx;
+    assert_always(idx >= 0);
+    assert_always(length() > 0);
+    assert_always(idx < length());
     return m_data.at(idx);
   }
 
@@ -126,6 +129,9 @@ class Vector {
    */
   const_reference operator[](int idx) const {
     idx = idx < 0 ? length() + idx : idx;
+    assert_always(idx >= 0);
+    assert_always(length() > 0);
+    assert_always(idx < length());
     return m_data.at(idx);
   }
 
