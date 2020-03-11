@@ -27,8 +27,9 @@ class CrossEntropy<cudnn::BackendCUDNN> {
     assert_eq(x_pred.get_locale_shape(),
               x_truth.get_locale_shape());
     // Must have the same global and locale shapes
-    assert_eq(x_pred.get_shape(), x_truth.get_shape());
-    assert_eq(x_pred.get_local_shape(), x_truth.get_local_shape());
+    // FIXME: Comapre spatial shapes when label-based CE is enabled.
+    // assert_eq(x_pred.get_shape(), x_truth.get_shape());
+    // assert_eq(x_pred.get_local_shape(), x_truth.get_local_shape());
     // No halo for simplicity
     assert_eq(x_pred.get_local_shape(),
               x_pred.get_local_real_shape());

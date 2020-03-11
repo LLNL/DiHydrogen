@@ -26,6 +26,8 @@ __global__ void fp_local(const DataType * __restrict__ prediction,
                          const DataType * __restrict__ ground_truth,
                          DataType * __restrict__ y,
                          index_t sample_size,
+                         index_t sample_spatial_size,
+                         index_t sample_channel_size,
                          int thread_work_size) {
   const int tid = threadIdx.x;
   const int sample_idx = blockIdx.y;
@@ -40,7 +42,14 @@ __global__ void fp_local(const DataType * __restrict__ prediction,
 
   auto psum = DataType(0.);
   for (; offset < offset_limit; offset += offset_stride) {
-    const auto xhat = ground_truth[offset];
+    // FIXME: Use the default implementation when label-based CE is disabled.
+    const auto spatial = offset%sample_spatial_size;
+    const auto channel = (offset/sample_spatial_size)%sample_channel_size;
+    const auto sample = offset/sample_spatial_size/sample_channel_size;
+    const auto offset_truth = spatial+sample*sample_spatial_size;
+    const auto truth_label = ground_truth[offset_truth];
+    const DataType xhat = DataType(truth_label == channel ? 1. : 0.);
+    // const auto xhat = ground_truth[offset];
     if (xhat > DataType(0.)) {
       const auto x = prediction[offset];
       psum += - xhat * log(x);
@@ -68,6 +77,8 @@ __global__ void bp_local(const DataType * __restrict__ x_pred,
                          DataType * __restrict__ dx_pred,
                          DataType * __restrict__ dx_truth,
                          index_t sample_size,
+                         index_t sample_spatial_size,
+                         index_t sample_channel_size,
                          int thread_work_size) {
   const int tid = threadIdx.x;
   const int sample_idx = blockIdx.y;
@@ -84,11 +95,17 @@ __global__ void bp_local(const DataType * __restrict__ x_pred,
 
   const auto dy_sample = dy[sample_idx];
   for (; offset < offset_limit; offset += offset_stride) {
+    // FIXME: Use the default implementation when label-based CE is disabled.
+    const auto spatial = offset%sample_spatial_size;
+    const auto channel = (offset/sample_spatial_size)%sample_channel_size;
+    const auto sample = offset/sample_spatial_size/sample_channel_size;
+    const auto offset_truth = spatial+sample*sample_spatial_size;
     const auto x = x_pred[offset];
-    const auto xhat = x_truth[offset];
+    const auto truth_label = x_truth[offset_truth];
+    const auto xhat = DataType(truth_label == channel ? 1. : 0.);
     dx_pred[offset] = (xhat > DataType(0.)) ?
         - dy_sample * xhat / x : DataType(0.);
-    dx_truth[offset] = - dy_sample * log(x);
+    // dx_truth[offset] = - dy_sample * log(x);
   }
 }
 
@@ -126,7 +143,8 @@ int CrossEntopyCUDNN::forward(const Tensor &x_pred, const Tensor &x_truth,
     cross_entropy::fp_local<DataType, block_size>
         <<<gdim, bdim, 0, m_be.get_stream()>>>(
             x_pred.get_const_buffer(), x_truth.get_const_buffer(),
-            y.get_buffer(), sample_size, thread_work_size);
+            y.get_buffer(), sample_size, sample_spatial_size,
+            sample_channel_size, thread_work_size);
   }
 
   if (m_num_procs_per_sample > 1) {
@@ -168,7 +186,8 @@ int CrossEntopyCUDNN::backward(const Tensor &x_pred, const Tensor &x_truth,
           x_pred.get_const_buffer(), x_truth.get_const_buffer(),
           dy.get_const_buffer(),
           dx_pred.get_buffer(), dx_truth.get_buffer(),
-          sample_size, thread_work_size);
+          sample_size, sample_spatial_size, sample_channel_size,
+          thread_work_size);
   return 0;
 }
 
