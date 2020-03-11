@@ -140,6 +140,12 @@ int CrossEntopyCUDNN::forward(const Tensor &x_pred, const Tensor &x_truth,
     dim3 bdim(block_size);
     dim3 gdim(num_blocks_per_sample, num_samples);
 
+    // TODO: Support ND tensors
+    assert_eq(x_pred.get_local_shape().num_dims(), 5);
+    const auto sample_channel_size = x_pred.get_local_shape()[3];
+    const auto sample_spatial_size = sample_size / sample_channel_size;
+    assert_eq(sample_channel_size*sample_spatial_size, sample_size);
+
     cross_entropy::fp_local<DataType, block_size>
         <<<gdim, bdim, 0, m_be.get_stream()>>>(
             x_pred.get_const_buffer(), x_truth.get_const_buffer(),
@@ -180,6 +186,12 @@ int CrossEntopyCUDNN::backward(const Tensor &x_pred, const Tensor &x_truth,
 
   dim3 bdim(block_size);
   dim3 gdim(num_blocks_per_sample, num_samples);
+
+  // TODO: Support ND tensors
+  assert_eq(x_pred.get_local_shape().num_dims(), 5);
+  const auto sample_channel_size = x_pred.get_local_shape()[3];
+  const auto sample_spatial_size = sample_size / sample_channel_size;
+  assert_eq(sample_channel_size*sample_spatial_size, sample_size);
 
   cross_entropy::bp_local<DataType, block_size>
       <<<gdim, bdim, 0, m_be.get_stream()>>>(
