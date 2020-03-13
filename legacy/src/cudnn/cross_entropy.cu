@@ -49,7 +49,7 @@ __global__ void fp_local(const DataType * __restrict__ prediction,
       const auto channel = (offset/sample_spatial_size)%sample_channel_size;
       const auto sample = offset/sample_spatial_size/sample_channel_size;
       const auto offset_truth = spatial+sample*sample_spatial_size;
-      const auto truth_label = ground_truth[offset_truth];
+      const int truth_label = ground_truth[offset_truth];
       xhat = DataType(truth_label == channel ? 1. : 0.);
     } else {
       xhat = ground_truth[offset];
@@ -107,7 +107,7 @@ __global__ void bp_local(const DataType * __restrict__ x_pred,
       const auto channel = (offset/sample_spatial_size)%sample_channel_size;
       const auto sample = offset/sample_spatial_size/sample_channel_size;
       const auto offset_truth = spatial+sample*sample_spatial_size;
-      const auto truth_label = x_truth[offset_truth];
+      const int truth_label = x_truth[offset_truth];
       xhat = DataType(truth_label == channel ? 1. : 0.);
     } else {
       xhat = x_truth[offset];
