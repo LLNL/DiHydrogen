@@ -460,7 +460,7 @@ __global__ void fp_channel_kernel(const DataType * __restrict__ x,
     auto x_i = x_cache[cache_idx + ch_off];
     x_i = exp<DataType>()(x_i - ch_max);
     x_cache[cache_idx + ch_off] = x_i;
-    ch_off += x_i;
+    ch_sum += x_i;
   }
 
   ch_sum = 1 / ch_sum;
