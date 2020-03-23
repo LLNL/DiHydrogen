@@ -277,6 +277,23 @@ inline std::ostream& operator<<(std::ostream &os, const ShuffleMethod &m) {
   }
 }
 
+inline ShuffleMethod GetShuffleMethod(const std::string &method) {
+  if (method == "MPI") {
+    return ShuffleMethod::MPI;
+  } else if (method == "AL") {
+    return ShuffleMethod::AL;
+#ifdef DISTCONV_HAS_P2P
+  } else if (method == "P2P") {
+    return ShuffleMethod::P2P;
+  } else if (method == "HYBRID") {
+    return ShuffleMethod::HYBRID;
+#endif // DISTCONV_HAS_P2P
+  } else {
+    util::PrintStreamError() << "Unknown shuffle method: " << method;
+    std::abort();
+  }
+}
+
 enum class ChannelParallelismAlgorithm {NONE, AUTO, X, Y, W};
 
 inline std::ostream& operator<<(std::ostream& os, const ChannelParallelismAlgorithm &a) {
