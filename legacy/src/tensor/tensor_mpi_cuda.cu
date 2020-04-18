@@ -100,6 +100,8 @@ DEFINE_SCALE(int)
   }
 DEFINE_CAST(float, short)
 DEFINE_CAST(float, unsigned short)
+DEFINE_CAST(double, short)
+DEFINE_CAST(double, unsigned short)
 #undef DEFINE_CAST
 
 #define DEFINE_CAST_SCALE_BIAS(T1, T2) \
@@ -116,6 +118,9 @@ DEFINE_CAST(float, unsigned short)
 DEFINE_CAST_SCALE_BIAS(float, float)
 DEFINE_CAST_SCALE_BIAS(float, short)
 DEFINE_CAST_SCALE_BIAS(float, unsigned short)
+DEFINE_CAST_SCALE_BIAS(double, double)
+DEFINE_CAST_SCALE_BIAS(double, short)
+DEFINE_CAST_SCALE_BIAS(double, unsigned short)
 #undef DEFINE_CAST_SCALE_BIAS
 
 
