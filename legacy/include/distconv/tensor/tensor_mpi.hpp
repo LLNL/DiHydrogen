@@ -209,7 +209,7 @@ class TensorImpl<Tensor<DataType, LocaleMPI, Allocator>> {
 
   Shape get_max_local_real_shape() const {
     auto s = get_max_local_shape();
-    for (int i = 0; i < m_tensor->get_num_dims(); ++i) { 
+    for (int i = 0; i < m_tensor->get_num_dims(); ++i) {
       s[i] += m_tensor->get_halo_width(i) * 2;
     }
     return s;
@@ -1004,29 +1004,51 @@ struct CopyLocalFunctor {
   int operator()(Tensor<DataType, LocaleMPI, AllocDest> &t_dst,
                  const Tensor<DataType, LocaleMPI, AllocSrc> &t_src,
                  StreamType stream) {
-    auto local_shape = t_src.get_local_shape();
+    const int nd = t_src.get_num_dims();
+    const auto local_shape = t_src.get_local_shape();
     assert_eq(local_shape, t_dst.get_local_shape());
+    assert_eq(nd, t_dst.get_num_dims());
+    assert_always(nd >= 2);
     auto tr_shape = local_shape;
+    if (t_src.get_halo_width(0) == 0 && t_src.get_halo_width(1) == 0 &&
+        t_dst.get_halo_width(0) == 0 && t_dst.get_halo_width(1) == 0 &&
+        nd >= 3) {
+      return copy_opt(t_dst, t_src, stream);
+    }
     // Use the 2D copy feature of Memory for the first 2 dimensions
     tr_shape[0] = 1;
     tr_shape[1] = 1;
-    size_t num_chunks = tr_shape.size();
-    int src_offset = 0;
-    int dst_offset = 0;
-    for (int i = 2; i < t_src.get_num_dims(); ++i) {
-      src_offset += t_src.get_halo_width(i) * tr_shape[i-1];
-      dst_offset += t_dst.get_halo_width(i) * tr_shape[i-1];
-    }
-    for (size_t i = 0; i < num_chunks; ++i) {
+    for (auto it = tr_shape.index_begin(); it != tr_shape.index_end();
+         ++it) {
       Copy(t_dst.get_data(), t_src.get_data(),
            local_shape[0] * sizeof(DataType),
            local_shape[1],
-           t_dst.get_halo_width(0) * sizeof(DataType),
-           t_dst.get_halo_width(1) +
-           t_dst.get_local_real_shape()[1] * (i + dst_offset),
-           t_src.get_halo_width(0) * sizeof(DataType),
-           t_src.get_halo_width(1) +
-           t_src.get_local_real_shape()[1] * (i + src_offset),
+           (t_dst.get_local_offset(*it) + t_dst.get_halo_width(0))
+           * sizeof(DataType),
+           t_dst.get_halo_width(1),
+           (t_src.get_local_offset(*it) + t_src.get_halo_width(0))
+           * sizeof(DataType),
+           t_src.get_halo_width(1),
+           stream);
+    }
+    return 0;
+  }
+
+  int copy_opt(Tensor<DataType, LocaleMPI, AllocDest> &t_dst,
+               const Tensor<DataType, LocaleMPI, AllocSrc> &t_src,
+               StreamType stream) {
+    const auto local_shape = t_src.get_local_shape();
+    auto tr_shape = local_shape;
+    tr_shape[0] = 1;
+    tr_shape[1] = 1;
+    tr_shape[2] = 1;
+    for (auto it = tr_shape.index_begin(); it != tr_shape.index_end();
+         ++it) {
+      auto x_len = local_shape[0] * sizeof(DataType);
+      auto y_len = local_shape[1] * local_shape[2];
+      Copy(t_dst.get_data(), t_src.get_data(),
+           x_len, y_len, t_dst.get_local_offset(*it) * sizeof(DataType), 0,
+           t_src.get_local_offset(*it) * sizeof(DataType), 0,
            stream);
     }
     return 0;
@@ -1121,7 +1143,7 @@ inline int Copy(Tensor<DataType, LocaleMPI, AllocDest> &t_dest,
   }
 
   util::MPIPrintStreamDebug() << "Falling back to CopyByShuffle";
-  
+
   // the tensors are distributed differently. use copy_by_shuffle
   return internal::CopyByShuffle(t_dest, t_src, stream);
 }
