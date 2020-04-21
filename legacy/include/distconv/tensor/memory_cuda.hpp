@@ -153,22 +153,17 @@ Copy(Memory<AllocDst> &dst,
   size_t dst_offset = x_dst_offset + dst.get_pitch() * y_dst_offset;
   void *dst_ptr = (char*)dst.get() + dst_offset;
   const void *src_ptr = (char*)src.get() + src_offset;
-#if 0
-  util::PrintStreamDebug()
-      << "cudaMemcpy2D. "
-      << "dst pitch: " << dst.get_pitch()
-      << ", src pitch: " << src.get_pitch()
-      << ", x_len: " << x_len
-      << ", y_len: " << y_len
-      << ", dst ptr: " << dst_ptr
-      << ", src ptr: " << src_ptr
-      << "\n";
-#endif
   cudaStream_t s = get_cuda_stream(stream);
-  TENSOR_CHECK_CUDA(cudaMemcpy2DAsync(dst_ptr, dst.get_pitch(),
-                                      src_ptr, src.get_pitch(),
-                                      x_len, y_len, cudaMemcpyDefault,
-                                      s));
+  if (dst.get_pitch() == x_len && src.get_pitch() == x_len) {
+    // Just use cudaMemcpy when possible
+    TENSOR_CHECK_CUDA(cudaMemcpyAsync(dst_ptr, src_ptr, x_len * y_len,
+                                      cudaMemcpyDefault, s));
+  } else {
+    TENSOR_CHECK_CUDA(cudaMemcpy2DAsync(dst_ptr, dst.get_pitch(),
+                                        src_ptr, src.get_pitch(),
+                                        x_len, y_len, cudaMemcpyDefault,
+                                        s));
+  }
   return 0;
 }
 
