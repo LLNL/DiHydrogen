@@ -72,7 +72,7 @@ class CrossEntropy<cudnn::BackendCUDNN> {
 
   template <typename Tensor>
   int backward(const Tensor &x_pred, const Tensor &x_truth,
-               const Tensor &dy, Tensor &dx_pred,
+               Tensor &dy, Tensor &dx_pred,
                Tensor &dx_truth);
 
  protected:

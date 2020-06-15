@@ -173,11 +173,18 @@ int CrossEntopyCUDNN::forward(const Tensor &x_pred, const Tensor &x_truth,
 
 template <typename Tensor>
 int CrossEntopyCUDNN::backward(const Tensor &x_pred, const Tensor &x_truth,
-                               const Tensor &dy, Tensor &dx_pred,
+                               Tensor &dy, Tensor &dx_pred,
                                Tensor &dx_truth) {
   using DataType = typename Tensor::data_type;
   util::MPIPrintStreamDebug()
       << "Cross entropy BP: " << dy << ", " << dx_pred << ", " << dx_truth;
+
+  if (m_num_procs_per_sample > 1) {
+    const auto num_samples = x_pred.get_local_shape()[-1];
+    Al::Bcast<Al::NCCLBackend, DataType>(
+        dy.get_buffer(), num_samples, 0,
+        *m_al.get());
+  }
 
   constexpr int block_size = 256;
   constexpr int thread_work_size = 8;
@@ -216,7 +223,7 @@ int CrossEntopyCUDNN::backward(const Tensor &x_pred, const Tensor &x_truth,
       TensorCUDA<T> &y);                                                \
   template int CrossEntopyCUDNN::backward<TensorCUDA<T>>(               \
       const TensorCUDA<T> &x_pred, const TensorCUDA<T> &x_truth,        \
-      const TensorCUDA<T> &dy, TensorCUDA<T> &dx_pred,                  \
+      TensorCUDA<T> &dy, TensorCUDA<T> &dx_pred,                        \
       TensorCUDA<T> &dx_truth);
 
 PROTO(float)
