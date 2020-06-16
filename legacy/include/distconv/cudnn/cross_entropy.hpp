@@ -11,7 +11,7 @@ namespace distconv {
 template <>
 class CrossEntropy<cudnn::BackendCUDNN> {
  public:
-  CrossEntropy(cudnn::BackendCUDNN &backend, const bool use_labels): m_be(backend), m_use_labels(use_labels) {}
+  CrossEntropy(cudnn::BackendCUDNN &backend, const bool use_labels=false): m_be(backend), m_use_labels(use_labels) {}
 
   ~CrossEntropy() = default;
 
