@@ -60,6 +60,7 @@ cudnnConvolutionFwdAlgo_t BackendCUDNN::get_fwd_algorithm_by_heuristics(
     const cudnnConvolutionDescriptor_t &conv_desc,
     const cudnnTensorDescriptor_t &output_desc,
     size_t ws_size) {
+#if CUDNN_MAJOR < 8
   cudnnConvolutionFwdAlgo_t algo;
   DISTCONV_CHECK_CUDNN(
       cudnnGetConvolutionForwardAlgorithm(
@@ -67,6 +68,13 @@ cudnnConvolutionFwdAlgo_t BackendCUDNN::get_fwd_algorithm_by_heuristics(
           output_desc, CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT,
           ws_size ? ws_size : CONVOLUTION_WORKSPACE_SIZE, &algo));
   return algo;
+
+#else // CUDNN_MAJOR < 8
+  util::MPIPrintStreamError() << "cudnnGetConvolutionForwardAlgorithm is deprecated."
+                              << " Use cudnnFindConvolutionForwardAlgorithm instead.";
+  throw std::exception();
+
+#endif // CUDNN_MAJOR < 8
 }
 
 template <typename AlgoType, typename PerfType>
@@ -217,6 +225,7 @@ cudnnConvolutionBwdDataAlgo_t BackendCUDNN::get_bwd_data_algorithm_by_heuristics
     const cudnnConvolutionDescriptor_t &conv_desc,
     const cudnnTensorDescriptor_t &d_input_desc,
     size_t ws_size) {
+#if CUDNN_MAJOR < 8
   cudnnConvolutionBwdDataAlgo_t algo;
   DISTCONV_CHECK_CUDNN(
       cudnnGetConvolutionBackwardDataAlgorithm(
@@ -224,6 +233,13 @@ cudnnConvolutionBwdDataAlgo_t BackendCUDNN::get_bwd_data_algorithm_by_heuristics
           d_input_desc, CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT,
           ws_size ? ws_size : CONVOLUTION_WORKSPACE_SIZE, &algo));
   return algo;
+
+#else // CUDNN_MAJOR < 8
+  util::MPIPrintStreamError() << "cudnnGetConvolutionBackwardDataAlgorithm is deprecated."
+                              << " Use cudnnFindConvolutionBackwardDataAlgorithm instead.";
+  throw std::exception();
+
+#endif // CUDNN_MAJOR < 8
 }
 
 cudnnConvolutionBwdDataAlgo_t BackendCUDNN::autotune_bwd_data_algorithm(
@@ -351,6 +367,7 @@ BackendCUDNN::get_bwd_filter_algorithm_by_heuristics(
     const cudnnConvolutionDescriptor_t &conv_desc,
     const cudnnFilterDescriptor_t &d_filter_desc,
     size_t ws_size) {
+#if CUDNN_MAJOR < 8
   cudnnConvolutionBwdFilterAlgo_t algo;
   DISTCONV_CHECK_CUDNN(
       cudnnGetConvolutionBackwardFilterAlgorithm(
@@ -359,6 +376,13 @@ BackendCUDNN::get_bwd_filter_algorithm_by_heuristics(
           CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT,
           ws_size ? ws_size : CONVOLUTION_WORKSPACE_SIZE, &algo));
   return algo;
+
+#else // CUDNN_MAJOR < 8
+  util::MPIPrintStreamError() << "cudnnGetConvolutionBackwardFilterAlgorithm is deprecated."
+                              << " Use cudnnFindConvolutionBackwardFilterAlgorithm instead.";
+  throw std::exception();
+
+#endif // CUDNN_MAJOR < 8
 }
 
 cudnnConvolutionBwdFilterAlgo_t BackendCUDNN::autotune_bwd_filter_algorithm(
