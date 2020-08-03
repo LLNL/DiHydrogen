@@ -70,9 +70,30 @@ cudnnConvolutionFwdAlgo_t BackendCUDNN::get_fwd_algorithm_by_heuristics(
   return algo;
 
 #else // CUDNN_MAJOR < 8
-  util::MPIPrintStreamError() << "cudnnGetConvolutionForwardAlgorithm is deprecated."
-                              << " Use cudnnFindConvolutionForwardAlgorithm instead.";
-  throw std::exception();
+  int algo_count;
+  DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardAlgorithmMaxCount(
+      get_handle(), &algo_count));
+  cudnnConvolutionFwdAlgoPerf_t *perf_results = new
+                  cudnnConvolutionFwdAlgoPerf_t[algo_count];
+  int tested_algo_count = 0;
+  DISTCONV_CHECK_CUDNN(
+      cudnnGetConvolutionForwardAlgorithm_v7(
+          get_handle(), input_desc, filter_desc, conv_desc,
+          output_desc, algo_count, &tested_algo_count,
+          perf_results));
+
+  cudnnConvolutionFwdAlgo_t algo;
+  for(int i = 0; i < tested_algo_count; i++) {
+    if(perf_results[i].memory <= ws_size) {
+      algo = perf_results[i].algo;
+      delete[] perf_results;
+      return algo;
+    }
+  }
+
+  util::MPIPrintStreamError()
+      << "No forward algorithm found for CUDNN";
+  std::abort();
 
 #endif // CUDNN_MAJOR < 8
 }
@@ -235,9 +256,30 @@ cudnnConvolutionBwdDataAlgo_t BackendCUDNN::get_bwd_data_algorithm_by_heuristics
   return algo;
 
 #else // CUDNN_MAJOR < 8
-  util::MPIPrintStreamError() << "cudnnGetConvolutionBackwardDataAlgorithm is deprecated."
-                              << " Use cudnnFindConvolutionBackwardDataAlgorithm instead.";
-  throw std::exception();
+  int algo_count;
+  DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(
+      get_handle(), &algo_count));
+  cudnnConvolutionBwdDataAlgoPerf_t *perf_results = new
+                  cudnnConvolutionBwdDataAlgoPerf_t[algo_count];
+  int tested_algo_count = 0;
+  DISTCONV_CHECK_CUDNN(
+      cudnnGetConvolutionBackwardDataAlgorithm_v7(
+          get_handle(), filter_desc, d_output_desc, conv_desc,
+          d_input_desc, algo_count, &tested_algo_count,
+          perf_results));
+
+  cudnnConvolutionBwdDataAlgo_t algo;
+  for(int i = 0; i < tested_algo_count; i++) {
+    if(perf_results[i].memory <= ws_size) {
+      algo = perf_results[i].algo;
+      delete[] perf_results;
+      return algo;
+    }
+  }
+
+  util::MPIPrintStreamError()
+      << "No backward data algorithm found for CUDNN";
+  std::abort();
 
 #endif // CUDNN_MAJOR < 8
 }
@@ -378,9 +420,30 @@ BackendCUDNN::get_bwd_filter_algorithm_by_heuristics(
   return algo;
 
 #else // CUDNN_MAJOR < 8
-  util::MPIPrintStreamError() << "cudnnGetConvolutionBackwardFilterAlgorithm is deprecated."
-                              << " Use cudnnFindConvolutionBackwardFilterAlgorithm instead.";
-  throw std::exception();
+  int algo_count;
+  DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(
+      get_handle(), &algo_count));
+  cudnnConvolutionBwdFilterAlgoPerf_t *perf_results = new
+                  cudnnConvolutionBwdFilterAlgoPerf_t[algo_count];
+  int tested_algo_count = 0;
+  DISTCONV_CHECK_CUDNN(
+      cudnnGetConvolutionBackwardFilterAlgorithm_v7(
+          get_handle(), input_desc, d_output_desc, conv_desc,
+          d_filter_desc, algo_count, &tested_algo_count,
+          perf_results));
+
+  cudnnConvolutionBwdFilterAlgo_t algo;
+  for(int i = 0; i < tested_algo_count; i++) {
+    if(perf_results[i].memory <= ws_size) {
+      algo = perf_results[i].algo;
+      delete[] perf_results;
+      return algo;
+    }
+  }
+
+  util::MPIPrintStreamError()
+      << "No backward filter algorithm found for CUDNN";
+  std::abort();
 
 #endif // CUDNN_MAJOR < 8
 }
