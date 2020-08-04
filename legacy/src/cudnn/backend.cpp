@@ -60,6 +60,7 @@ cudnnConvolutionFwdAlgo_t BackendCUDNN::get_fwd_algorithm_by_heuristics(
     const cudnnConvolutionDescriptor_t &conv_desc,
     const cudnnTensorDescriptor_t &output_desc,
     size_t ws_size) {
+#if CUDNN_MAJOR < 8
   cudnnConvolutionFwdAlgo_t algo;
   DISTCONV_CHECK_CUDNN(
       cudnnGetConvolutionForwardAlgorithm(
@@ -67,6 +68,34 @@ cudnnConvolutionFwdAlgo_t BackendCUDNN::get_fwd_algorithm_by_heuristics(
           output_desc, CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT,
           ws_size ? ws_size : CONVOLUTION_WORKSPACE_SIZE, &algo));
   return algo;
+
+#else // CUDNN_MAJOR < 8
+  int algo_count;
+  DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardAlgorithmMaxCount(
+      get_handle(), &algo_count));
+  cudnnConvolutionFwdAlgoPerf_t *perf_results = new
+                  cudnnConvolutionFwdAlgoPerf_t[algo_count];
+  int tested_algo_count = 0;
+  DISTCONV_CHECK_CUDNN(
+      cudnnGetConvolutionForwardAlgorithm_v7(
+          get_handle(), input_desc, filter_desc, conv_desc,
+          output_desc, algo_count, &tested_algo_count,
+          perf_results));
+
+  cudnnConvolutionFwdAlgo_t algo;
+  for(int i = 0; i < tested_algo_count; i++) {
+    if(perf_results[i].memory <= ws_size) {
+      algo = perf_results[i].algo;
+      delete[] perf_results;
+      return algo;
+    }
+  }
+
+  util::MPIPrintStreamError()
+      << "No forward algorithm found for CUDNN";
+  std::abort();
+
+#endif // CUDNN_MAJOR < 8
 }
 
 template <typename AlgoType, typename PerfType>
@@ -217,6 +246,7 @@ cudnnConvolutionBwdDataAlgo_t BackendCUDNN::get_bwd_data_algorithm_by_heuristics
     const cudnnConvolutionDescriptor_t &conv_desc,
     const cudnnTensorDescriptor_t &d_input_desc,
     size_t ws_size) {
+#if CUDNN_MAJOR < 8
   cudnnConvolutionBwdDataAlgo_t algo;
   DISTCONV_CHECK_CUDNN(
       cudnnGetConvolutionBackwardDataAlgorithm(
@@ -224,6 +254,34 @@ cudnnConvolutionBwdDataAlgo_t BackendCUDNN::get_bwd_data_algorithm_by_heuristics
           d_input_desc, CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT,
           ws_size ? ws_size : CONVOLUTION_WORKSPACE_SIZE, &algo));
   return algo;
+
+#else // CUDNN_MAJOR < 8
+  int algo_count;
+  DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(
+      get_handle(), &algo_count));
+  cudnnConvolutionBwdDataAlgoPerf_t *perf_results = new
+                  cudnnConvolutionBwdDataAlgoPerf_t[algo_count];
+  int tested_algo_count = 0;
+  DISTCONV_CHECK_CUDNN(
+      cudnnGetConvolutionBackwardDataAlgorithm_v7(
+          get_handle(), filter_desc, d_output_desc, conv_desc,
+          d_input_desc, algo_count, &tested_algo_count,
+          perf_results));
+
+  cudnnConvolutionBwdDataAlgo_t algo;
+  for(int i = 0; i < tested_algo_count; i++) {
+    if(perf_results[i].memory <= ws_size) {
+      algo = perf_results[i].algo;
+      delete[] perf_results;
+      return algo;
+    }
+  }
+
+  util::MPIPrintStreamError()
+      << "No backward data algorithm found for CUDNN";
+  std::abort();
+
+#endif // CUDNN_MAJOR < 8
 }
 
 cudnnConvolutionBwdDataAlgo_t BackendCUDNN::autotune_bwd_data_algorithm(
@@ -351,6 +409,7 @@ BackendCUDNN::get_bwd_filter_algorithm_by_heuristics(
     const cudnnConvolutionDescriptor_t &conv_desc,
     const cudnnFilterDescriptor_t &d_filter_desc,
     size_t ws_size) {
+#if CUDNN_MAJOR < 8
   cudnnConvolutionBwdFilterAlgo_t algo;
   DISTCONV_CHECK_CUDNN(
       cudnnGetConvolutionBackwardFilterAlgorithm(
@@ -359,6 +418,34 @@ BackendCUDNN::get_bwd_filter_algorithm_by_heuristics(
           CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT,
           ws_size ? ws_size : CONVOLUTION_WORKSPACE_SIZE, &algo));
   return algo;
+
+#else // CUDNN_MAJOR < 8
+  int algo_count;
+  DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(
+      get_handle(), &algo_count));
+  cudnnConvolutionBwdFilterAlgoPerf_t *perf_results = new
+                  cudnnConvolutionBwdFilterAlgoPerf_t[algo_count];
+  int tested_algo_count = 0;
+  DISTCONV_CHECK_CUDNN(
+      cudnnGetConvolutionBackwardFilterAlgorithm_v7(
+          get_handle(), input_desc, d_output_desc, conv_desc,
+          d_filter_desc, algo_count, &tested_algo_count,
+          perf_results));
+
+  cudnnConvolutionBwdFilterAlgo_t algo;
+  for(int i = 0; i < tested_algo_count; i++) {
+    if(perf_results[i].memory <= ws_size) {
+      algo = perf_results[i].algo;
+      delete[] perf_results;
+      return algo;
+    }
+  }
+
+  util::MPIPrintStreamError()
+      << "No backward filter algorithm found for CUDNN";
+  std::abort();
+
+#endif // CUDNN_MAJOR < 8
 }
 
 cudnnConvolutionBwdFilterAlgo_t BackendCUDNN::autotune_bwd_filter_algorithm(
