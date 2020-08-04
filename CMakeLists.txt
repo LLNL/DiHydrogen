@@ -119,11 +119,6 @@ if (BLASImpl_FOUND)
   message(STATUS "Found BLAS: ${BLAS_LIBRARIES}")
 endif ()
 
-# DiHydrogen will use MPI-3 features extensively. Until proven
-# otherwise, assume that the CMake module version checking is
-# accurate.
-find_package(MPI 3.0.0 COMPONENTS CXX REQUIRED)
-
 # Other device features
 if (H2_ENABLE_CUDA)
   enable_language(CUDA)
@@ -158,6 +153,21 @@ find_package(Aluminum NO_MODULE QUIET
   NO_DEFAULT_PATH)
 if (NOT Aluminum_FOUND)
   find_package(Aluminum NO_MODULE REQUIRED)
+endif ()
+
+# DiHydrogen will use MPI-3 features extensively. Until proven
+# otherwise, assume that the CMake module version checking is
+# accurate.
+if (NOT TARGET MPI::MPI_CXX)
+  find_package(MPI 3.0.0 COMPONENTS CXX REQUIRED)
+endif ()
+get_target_property(
+  __mpi_compile_options MPI::MPI_CXX INTERFACE_COMPILE_OPTIONS)
+if (__mpi_compile_options)
+  set_property(TARGET MPI::MPI_CXX PROPERTY
+    INTERFACE_COMPILE_OPTIONS
+    $<$<COMPILE_LANGUAGE:CXX>:${__mpi_compile_options}>)
+  unset(__mpi_compile_options)
 endif ()
 
 # Decide where to put generated include files.
