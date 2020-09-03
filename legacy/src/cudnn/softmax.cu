@@ -110,10 +110,10 @@ struct atomic_max<double> {
 };
 
 template <typename DataType>
-struct atomic_add {
+struct atomic_add_fn {
   __device__ __forceinline__ DataType operator()(DataType *addr,
                                                  DataType value) const {
-    return atomicAdd(addr, value);
+    return atomic_add(addr, value);
   }
 };
 
@@ -332,10 +332,10 @@ void compute_exp(const Tensor &x, const DataType *sample_max,
   map_and_reduce_per_sample_kernel
       <DataType, block_size,
        exp_shifted<DataType>, sum<DataType>,
-       atomic_add<DataType>>
+       atomic_add_fn<DataType>>
       <<<gdim, block_size, 0, stream>>>(
           x.get_base_ptr(), sample_size, sample_max,
-          exp_shifted<DataType>(), sum<DataType>(), atomic_add<DataType>(),
+          exp_shifted<DataType>(), sum<DataType>(), atomic_add_fn<DataType>(),
           y.get_base_ptr(), sample_exp);
 }
 
@@ -383,10 +383,10 @@ void bp_dotproduct(const Tensor &y, const Tensor &dy, DataType *sample_dp,
 
   reduce_per_sample_kernel
       <DataType, block_size,
-       mul<DataType>, sum<DataType>, atomic_add<DataType>>
+       mul<DataType>, sum<DataType>, atomic_add_fn<DataType>>
       <<<gdim, block_size, 0, stream>>>(
           y.get_base_ptr(), dy.get_base_ptr(), sample_size,
-          mul<DataType>(), sum<DataType>(), atomic_add<DataType>(),
+          mul<DataType>(), sum<DataType>(), atomic_add_fn<DataType>(),
           sample_dp);
 }
 
