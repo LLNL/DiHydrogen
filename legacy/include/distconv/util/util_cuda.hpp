@@ -39,6 +39,51 @@
 #define DISTCONV_CUDA_MALLOC(p, s)                              \
   distconv::util::cuda_malloc((void**)p, s, __FILE__, __LINE__)
 
+#ifdef __CUDACC__
+template <typename T>
+__device__ __forceinline__ T atomic_add(T* address, T value)
+{
+  return atomicAdd(address, value);
+}
+
+// Handle fp16
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 700 && __CUDA_ARCH__ >= 530
+#include <cuda_fp16.h>
+__device__ __forceinline__ __half atomic_add(__half* address, __half val)
+{
+  unsigned int* address_as_uint = (unsigned int*) address;
+  unsigned int old = *address_as_uint;
+  __half* old_as_half = (__half*) &old;
+  unsigned int assumed;
+  unsigned int updated;
+  __half* updated_as_half = (__half*) &updated;
+  do {
+    assumed = old;
+    updated = old;
+    *updated_as_half += val;
+    old = atomicCAS(address_as_uint, assumed, updated);
+  } while (assumed != old);
+  return *old_as_half;
+}
+#endif // defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 700 && __CUDA_ARCH__ >= 530
+
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
+__device__ __forceinline__ double atomic_add(double* address, double val)
+{
+  unsigned long long int* address_as_ull =
+    (unsigned long long int*)address;
+  unsigned long long int old = *address_as_ull, assumed;
+  do {
+    assumed = old;
+    old = atomicCAS(address_as_ull, assumed,
+                    __double_as_longlong(val +
+                                         __longlong_as_double(assumed)));
+  } while (assumed != old);
+  return __longlong_as_double(old);
+}
+#endif // defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
+#endif // __CUDACC__
+
 namespace distconv {
 namespace util {
 

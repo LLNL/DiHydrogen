@@ -65,7 +65,7 @@ __global__ void fp_local(const DataType * __restrict__ prediction,
   psum = BlockReduce(temp_storage).Sum(psum);
 
   if (tid == 0) {
-    atomicAdd(&y[sample_idx], psum);
+    atomic_add(&y[sample_idx], psum);
   }
 }
 

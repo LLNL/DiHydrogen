@@ -60,8 +60,8 @@ __global__ void channel_sums_and_sqsums_kernel(
   sqsum = BlockReduce(temp_storage_sqsum).Sum(sqsum);
   // Output channel sum to global memory
   if(tid == 0) {
-    atomicAdd(&sums[ch_idx], sum);
-    atomicAdd(&sqsums[ch_idx], sqsum);
+    atomic_add(&sums[ch_idx], sum);
+    atomic_add(&sqsums[ch_idx], sqsum);
   }
 }
 
@@ -98,8 +98,8 @@ __global__ void channel_sums_and_sqsums_opt_kernel(
   sqsum = BlockReduce(temp_storage_sqsum).Sum(sqsum);
   // Output channel sum to global memory
   if(tid == 0) {
-    atomicAdd(&sums[ch_idx], sum);
-    atomicAdd(&sqsums[ch_idx], sqsum);
+    atomic_add(&sums[ch_idx], sum);
+    atomic_add(&sqsums[ch_idx], sqsum);
   }
 }
 
@@ -751,10 +751,10 @@ void __global__ backprop1_kernel(const DataType * __restrict__ input,
 
   // Output channel sum to global memory
   if (tid == 0) {
-    atomicAdd(&global_dscale[ch_idx], dscale);
-    atomicAdd(&global_dbias[ch_idx], dbias);
-    atomicAdd(&global_dmean[ch_idx], dmean);
-    atomicAdd(&global_dvar[ch_idx], dvar);
+    atomic_add(&global_dscale[ch_idx], dscale);
+    atomic_add(&global_dbias[ch_idx], dbias);
+    atomic_add(&global_dmean[ch_idx], dmean);
+    atomic_add(&global_dvar[ch_idx], dvar);
   }
 }
 
@@ -821,10 +821,10 @@ void __global__ backprop1_opt_kernel(const DataTypeV * __restrict__ input,
 
   // Output channel sum to global memory
   if (tid == 0) {
-    atomicAdd(&global_dscale[ch_idx], dscale);
-    atomicAdd(&global_dbias[ch_idx], dbias);
-    atomicAdd(&global_dmean[ch_idx], dmean);
-    atomicAdd(&global_dvar[ch_idx], dvar);
+    atomic_add(&global_dscale[ch_idx], dscale);
+    atomic_add(&global_dbias[ch_idx], dbias);
+    atomic_add(&global_dmean[ch_idx], dmean);
+    atomic_add(&global_dvar[ch_idx], dvar);
   }
 }
 
