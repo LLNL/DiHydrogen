@@ -25,7 +25,10 @@ template <typename DataType, int BLOCK_SIZE>
 __global__ void fp_local(const DataType * __restrict__ prediction,
                          const DataType * __restrict__ ground_truth,
                          DataType * __restrict__ y,
-                         index_t sample_size,
+                         const index_t sample_size,
+                         const index_t sample_spatial_size,
+                         const index_t sample_channel_size,
+                         const bool use_labels,
                          int thread_work_size) {
   const int tid = threadIdx.x;
   const int sample_idx = blockIdx.y;
@@ -40,7 +43,17 @@ __global__ void fp_local(const DataType * __restrict__ prediction,
 
   auto psum = DataType(0.);
   for (; offset < offset_limit; offset += offset_stride) {
-    const auto xhat = ground_truth[offset];
+    DataType xhat;
+    if(use_labels) {
+      const auto spatial = offset%sample_spatial_size;
+      const auto channel = (offset/sample_spatial_size)%sample_channel_size;
+      const auto sample = offset/sample_spatial_size/sample_channel_size;
+      const auto offset_truth = spatial+sample*sample_spatial_size;
+      const int truth_label = ground_truth[offset_truth];
+      xhat = DataType(truth_label == channel ? 1. : 0.);
+    } else {
+      xhat = ground_truth[offset];
+    }
     if (xhat > DataType(0.)) {
       const auto x = prediction[offset];
       psum += - xhat * log(x);
@@ -67,7 +80,10 @@ __global__ void bp_local(const DataType * __restrict__ x_pred,
                          const DataType * __restrict__ dy,
                          DataType * __restrict__ dx_pred,
                          DataType * __restrict__ dx_truth,
-                         index_t sample_size,
+                         const index_t sample_size,
+                         const index_t sample_spatial_size,
+                         const index_t sample_channel_size,
+                         const bool use_labels,
                          int thread_work_size) {
   const int tid = threadIdx.x;
   const int sample_idx = blockIdx.y;
@@ -85,10 +101,22 @@ __global__ void bp_local(const DataType * __restrict__ x_pred,
   const auto dy_sample = dy[sample_idx];
   for (; offset < offset_limit; offset += offset_stride) {
     const auto x = x_pred[offset];
-    const auto xhat = x_truth[offset];
+    DataType xhat;
+    if(use_labels) {
+      const auto spatial = offset%sample_spatial_size;
+      const auto channel = (offset/sample_spatial_size)%sample_channel_size;
+      const auto sample = offset/sample_spatial_size/sample_channel_size;
+      const auto offset_truth = spatial+sample*sample_spatial_size;
+      const int truth_label = x_truth[offset_truth];
+      xhat = DataType(truth_label == channel ? 1. : 0.);
+    } else {
+      xhat = x_truth[offset];
+    }
     dx_pred[offset] = (xhat > DataType(0.)) ?
         - dy_sample * xhat / x : DataType(0.);
-    dx_truth[offset] = - dy_sample * log(x);
+    if(!use_labels) {
+      dx_truth[offset] = - dy_sample * log(x);
+    }
   }
 }
 
@@ -123,10 +151,15 @@ int CrossEntopyCUDNN::forward(const Tensor &x_pred, const Tensor &x_truth,
     dim3 bdim(block_size);
     dim3 gdim(num_blocks_per_sample, num_samples);
 
+    const auto sample_channel_size = x_pred.get_local_shape()[x_pred.get_num_spatial_dims()];
+    const auto sample_spatial_size = sample_size / sample_channel_size;
+    assert_eq(sample_channel_size*sample_spatial_size, sample_size);
+
     cross_entropy::fp_local<DataType, block_size>
         <<<gdim, bdim, 0, m_be.get_stream()>>>(
             x_pred.get_const_buffer(), x_truth.get_const_buffer(),
-            y.get_buffer(), sample_size, thread_work_size);
+            y.get_buffer(), sample_size, sample_spatial_size,
+            sample_channel_size, m_use_labels, thread_work_size);
   }
 
   if (m_num_procs_per_sample > 1) {
@@ -140,11 +173,18 @@ int CrossEntopyCUDNN::forward(const Tensor &x_pred, const Tensor &x_truth,
 
 template <typename Tensor>
 int CrossEntopyCUDNN::backward(const Tensor &x_pred, const Tensor &x_truth,
-                               const Tensor &dy, Tensor &dx_pred,
+                               Tensor &dy, Tensor &dx_pred,
                                Tensor &dx_truth) {
   using DataType = typename Tensor::data_type;
   util::MPIPrintStreamDebug()
       << "Cross entropy BP: " << dy << ", " << dx_pred << ", " << dx_truth;
+
+  if (m_num_procs_per_sample > 1) {
+    const auto num_samples = x_pred.get_local_shape()[-1];
+    Al::Bcast<Al::NCCLBackend, DataType>(
+        dy.get_buffer(), num_samples, 0,
+        *m_al.get());
+  }
 
   constexpr int block_size = 256;
   constexpr int thread_work_size = 8;
@@ -163,12 +203,17 @@ int CrossEntopyCUDNN::backward(const Tensor &x_pred, const Tensor &x_truth,
   dim3 bdim(block_size);
   dim3 gdim(num_blocks_per_sample, num_samples);
 
+  const auto sample_channel_size = x_pred.get_local_shape()[x_pred.get_num_spatial_dims()];
+  const auto sample_spatial_size = sample_size / sample_channel_size;
+  assert_eq(sample_channel_size*sample_spatial_size, sample_size);
+
   cross_entropy::bp_local<DataType, block_size>
       <<<gdim, bdim, 0, m_be.get_stream()>>>(
           x_pred.get_const_buffer(), x_truth.get_const_buffer(),
           dy.get_const_buffer(),
           dx_pred.get_buffer(), dx_truth.get_buffer(),
-          sample_size, thread_work_size);
+          sample_size, sample_spatial_size, sample_channel_size,
+          m_use_labels, thread_work_size);
   return 0;
 }
 
@@ -178,7 +223,7 @@ int CrossEntopyCUDNN::backward(const Tensor &x_pred, const Tensor &x_truth,
       TensorCUDA<T> &y);                                                \
   template int CrossEntopyCUDNN::backward<TensorCUDA<T>>(               \
       const TensorCUDA<T> &x_pred, const TensorCUDA<T> &x_truth,        \
-      const TensorCUDA<T> &dy, TensorCUDA<T> &dx_pred,                  \
+      TensorCUDA<T> &dy, TensorCUDA<T> &dx_pred,                        \
       TensorCUDA<T> &dx_truth);
 
 PROTO(float)
