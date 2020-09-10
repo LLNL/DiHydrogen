@@ -12,7 +12,7 @@ int get_number_of_gpus() {
     std::cout << "Number of GPUs set by TENSOR_NUM_GPUS\n";
     num_gpus = atoi(env);
   } else {
-    DISTCONV_CHECK_CUDA(cudaGetDeviceCount(&num_gpus));    
+    DISTCONV_CHECK_CUDA(cudaGetDeviceCount(&num_gpus));
   }
   return num_gpus;
 }
@@ -31,7 +31,7 @@ int get_local_rank() {
 int get_local_size() {
   char *env = getenv("MV2_COMM_WORLD_LOCAL_SIZE");
   if (!env) env = getenv("OMPI_COMM_WORLD_LOCAL_SIZE");
-  if (!env) env = getenv("SLURM_TASKS_PER_NODE");  
+  if (!env) env = getenv("SLURM_TASKS_PER_NODE");
   if (!env) {
     std::cerr << "Can't determine local size\n";
     abort();
@@ -76,7 +76,7 @@ cudaError_t cuda_malloc(void **ptr, size_t size,
     int threshold = 0;
     try {
       threshold = std::stoi(std::string(log_env));
-    } catch (std::invalid_argument) {
+    } catch (std::invalid_argument const&) {
     }
     int size_in_mb = size / (1024 * 1024);
     if (size_in_mb >= threshold) {

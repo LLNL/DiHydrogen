@@ -51,8 +51,8 @@ __global__ void transform_kernel(
   }
 }
 
-template <typename DataType, int BLOCK_SIZE, int INNER_DIM,
-          typename TransformFunc>
+template <int BLOCK_SIZE, int INNER_DIM,
+          typename DataType, typename TransformFunc>
 void transform(Shape shape, IndexVector strides, DataType *data,
                TransformFunc op, int thread_work_size, int num_inner_blocks,
                const dim3 &grid_dims, const dim3 &block_dims,
@@ -123,8 +123,8 @@ __global__ void transform_kernel(Array<ND> shape, Array<ND> strides,
   }
 }
 
-template <typename DataType1, typename DataType2, int BLOCK_SIZE, int INNER_DIM,
-          typename TransformFunc>
+template <int BLOCK_SIZE, int INNER_DIM,
+          typename DataType1, typename DataType2, typename TransformFunc>
 void transform(Shape shape, IndexVector strides,
                DataType1 *data1, DataType2 *data2,
                TransformFunc op,
@@ -201,8 +201,9 @@ __global__ void transform_kernel(Array<ND> shape, Array<ND> strides,
   }
 }
 
-template <typename DataType1, typename DataType2, typename DataType3,
-          int BLOCK_SIZE, int INNER_DIM, typename TransformFunc>
+template <int BLOCK_SIZE, int INNER_DIM,
+          typename DataType1, typename DataType2, typename DataType3,
+          typename TransformFunc>
 void transform(Shape shape, IndexVector strides,
                DataType1 *data1, DataType2 *data2,
                DataType3 *data3,
@@ -283,8 +284,9 @@ __global__ void transform_kernel(Array<ND> shape, Array<ND> strides,
   }
 }
 
-template <typename DataType1, typename DataType2, typename DataType3,
-          typename DataType4, int BLOCK_SIZE, int INNER_DIM,
+template <int BLOCK_SIZE, int INNER_DIM,
+          typename DataType1, typename DataType2,
+          typename DataType3, typename DataType4,
           typename TransformFunc>
 void transform(Shape shape, IndexVector strides,
                DataType1 *data1, DataType2 *data2,
@@ -358,10 +360,9 @@ Transform(Tensor &tensor, TransformFunc op,
         "Tensors with 6 or larger number of dimensions not supported.";
     throw std::exception();
   }
-  using DataType = typename Tensor::data_type;
 
 #define CALL_TRANFORM(INNER_DIM)                                        \
-  algo::transform<DataType, block_size, INNER_DIM, TransformFunc>(      \
+  algo::transform<block_size, INNER_DIM>(                               \
       shape, strides, tensor.get_base_ptr(), op,                        \
       thread_work_size, num_inner_blocks, grid_dims, block_dims, stream)
 
@@ -437,17 +438,9 @@ Transform(Tensor1 &tensor1, Tensor2 &tensor2,
         "Tensors with 6 or larger number of dimensions not supported.";
     throw std::exception();
   }
-  using DataType1 = typename std::conditional<
-    std::is_const<Tensor1>::value,
-    typename std::add_const<typename std::remove_const<Tensor1>::type::data_type>::type,
-    typename Tensor1::data_type>::type;
-  using DataType2 = typename std::conditional<
-    std::is_const<Tensor2>::value,
-    typename std::add_const<typename std::remove_const<Tensor2>::type::data_type>::type,
-    typename Tensor2::data_type>::type;
 
 #define CALL_TRANFORM(INNER_DIM) \
-  algo::transform<DataType1, DataType2, block_size, INNER_DIM, TransformFunc>( \
+  algo::transform<block_size, INNER_DIM>( \
       shape, strides, tensor1.get_base_ptr(), tensor2.get_base_ptr(),   \
       op, thread_work_size, num_inner_blocks, grid_dims, block_dims, stream);
   switch (inner_dim) {
@@ -519,9 +512,6 @@ Transform(Tensor1 &tensor1, Tensor2 &tensor2, Tensor3 &tensor3,
                               << ", inner dim: " << inner_dim
                               << ", num_inner_blocks: " << num_inner_blocks;
 
-  using DataType1 = typename Tensor1::data_type;
-  using DataType2 = typename Tensor2::data_type;
-  using DataType3 = typename Tensor3::data_type;
   if (tensor1.get_num_dims() > 5) {
     // The below switch block assumes ND <= 5. Otherwise, inner_dim
     // can be >= 5, and the default case would hit. Simply repeating
@@ -531,8 +521,7 @@ Transform(Tensor1 &tensor1, Tensor2 &tensor2, Tensor3 &tensor3,
     throw std::exception();
   }
 #define CALL_TRANFORM(INNER_DIM)                                        \
-  algo::transform<DataType1, DataType2, DataType3, block_size,          \
-                  INNER_DIM, TransformFunc>(                            \
+  algo::transform<block_size, INNER_DIM>(                               \
       shape, strides, tensor1.get_base_ptr(), tensor2.get_base_ptr(),   \
       tensor3.get_base_ptr(), op, thread_work_size, num_inner_blocks,   \
       grid_dims, block_dims, stream)
@@ -620,13 +609,8 @@ Transform(Tensor1 &tensor1, Tensor2 &tensor2, Tensor3 &tensor3,
         "Tensors with 6 or larger number of dimensions not supported.";
     throw std::exception();
   }
-  using DataType1 = typename Tensor1::data_type;
-  using DataType2 = typename Tensor2::data_type;
-  using DataType3 = typename Tensor3::data_type;
-  using DataType4 = typename Tensor4::data_type;
 #define CALL_TRANFORM(INNER_DIM)                                        \
-  algo::transform<DataType1, DataType2, DataType3, DataType4,           \
-                  block_size, INNER_DIM, TransformFunc>(                \
+  algo::transform<block_size, INNER_DIM>(                               \
       shape, strides, tensor1.get_base_ptr(), tensor2.get_base_ptr(),   \
       tensor3.get_base_ptr(), tensor4.get_base_ptr(),                   \
       op, thread_work_size, num_inner_blocks, grid_dims, block_dims, stream);

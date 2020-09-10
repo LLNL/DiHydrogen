@@ -140,8 +140,8 @@ __device__ __forceinline__ void assign(DataType1 &t1, const DataType2 &t2) {
   t1 = t2;
 }
 
-template <int ND, int INNER_DIM, typename DataType1, typename DataType2,
-          bool is_concat>
+template <int ND, int INNER_DIM, bool is_concat,
+          typename DataType1, typename DataType2>
 __global__ void concat_or_slice_kernel(
     DataType1 *dst, Array<ND> dst_shape, Array<ND> dst_strides,
     DataType2 *src1, Array<ND> src1_shape, Array<ND> src1_strides,
@@ -242,16 +242,13 @@ int ConcatenateOrSlice(
   // TODO: only works for U-Net. Concat on channel dim
   assert_always(concat_dim == nd - 2);
 
-  using DataType1 = typename AddConstIf<!IS_CONCAT, DataType>::type;
-  using DataType2 = typename AddConstIf<IS_CONCAT, DataType>::type;
-
 #define CALL_KERNEL(ND, INNER_DIM)  do {                                \
     assert_always(concat_dim > INNER_DIM);                              \
     int grid_dim = 1;                                                   \
     for (int i = INNER_DIM + 1; i < ND; ++i) {                          \
       grid_dim *= t_dest.get_local_shape()[i];                          \
     }                                                                   \
-    concat_or_slice_kernel<ND, INNER_DIM, DataType1, DataType2, IS_CONCAT> \
+    concat_or_slice_kernel<ND, INNER_DIM, IS_CONCAT>                    \
           <<<grid_dim, block_dim, 0, s>>>(                              \
               t_dest.get_base_ptr(), Array<ND>(t_dest.get_local_shape()), \
               Array<ND>(t_dest.get_strides()),                          \
