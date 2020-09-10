@@ -146,13 +146,14 @@ if (H2_HAS_CUDA OR H2_HAS_HIP_ROCM)
   set(H2_HAS_GPU TRUE)
 endif ()
 
-find_package(Aluminum NO_MODULE QUIET
+set(H2_MINIMUM_ALUMINUM_VERSION 0.5.0)
+find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET
   HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
   $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
   PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
   NO_DEFAULT_PATH)
 if (NOT Aluminum_FOUND)
-  find_package(Aluminum NO_MODULE REQUIRED)
+  find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION NO_MODULE REQUIRED)
 endif ()
 
 # DiHydrogen will use MPI-3 features extensively. Until proven
