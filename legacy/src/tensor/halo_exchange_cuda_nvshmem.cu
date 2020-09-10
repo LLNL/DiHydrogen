@@ -12,7 +12,7 @@ namespace tensor {
 
 #define DEFINE_FUNC(TYPE)                                               \
   template <>                                                           \
-  void HaloExchangeNVSHMEMDirect<TYPE, CUDAAllocator, Al::MPICUDABackend>::pack_and_put( \
+  void HaloExchangeNVSHMEMDirect<TYPE, CUDAAllocator, Al::HostTransferBackend>::pack_and_put( \
       int dim, Side side, int width, cudaStream_t stream,               \
       void *buf, bool is_reverse,                                       \
       void *dst, int peer) {                                            \
@@ -26,7 +26,7 @@ LIST_OF_TYPES
 
 #define DEFINE_FUNC(TYPE)                                               \
   template <>                                                           \
-  void HaloExchangeNVSHMEMFusedNotify<TYPE, CUDAAllocator, Al::MPICUDABackend>:: \
+  void HaloExchangeNVSHMEMFusedNotify<TYPE, CUDAAllocator, Al::HostTransferBackend>:: \
   pack_put_notify(                                                      \
       int dim, Side side, int width, cudaStream_t stream,               \
       void *buf, bool is_reverse,                                       \
@@ -43,7 +43,7 @@ LIST_OF_TYPES
 
 #define DEFINE_FUNC(TYPE)                                               \
   template <>                                                           \
-  void HaloExchangeNVSHMEMFusedNotify<TYPE, CUDAAllocator, Al::MPICUDABackend>:: \
+  void HaloExchangeNVSHMEMFusedNotify<TYPE, CUDAAllocator, Al::HostTransferBackend>:: \
   wait_and_unpack(                                                      \
       int dim, Side side, int width, cudaStream_t stream,               \
       void *buf, bool is_reverse, HaloExchangeAccumOp op) {             \
