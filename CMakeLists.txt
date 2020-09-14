@@ -153,7 +153,7 @@ find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET
   PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
   NO_DEFAULT_PATH)
 if (NOT Aluminum_FOUND)
-  find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION NO_MODULE REQUIRED)
+  find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE REQUIRED)
 endif ()
 
 # DiHydrogen will use MPI-3 features extensively. Until proven
