@@ -1,0 +1,44 @@
+============================== Release Notes: v0.1 ==============================
+
+Initial release of the DiHydrogen Distributed Tensor Library.
+
+DiHydrogen is the second version of the Hydrogen fork of the
+well-known distributed linear algebra library, Elemental. DiHydrogen
+aims to be a basic distributed multilinear algebra interface with a
+particular emphasis on the needs of the distributed machine learning
+effort, LBANN.
+
+API:
+
+Performance optimizations:
+
+Internal features:
+ - Support for the DistConv legacy library
+ - Added multi-dimensional tensor class
+ - Added support for older CUDA architectures v3.0+
+ - Use CUB for memory management
+ - Support for point-to-point (P2P) library
+ - Support for NVSHMEM halo exchange
+
+DistConv Legacy:
+ - batchnorm
+ - channel-wise softmax
+ - concat
+ - convolution
+ - deconv
+ - leaky-relu
+ - pooling
+ - relu
+ - slice
+ - softmax
+
+Build system:
+ - Require C++14
+ - Added support for cuDNN v8
+
+Bug fixes:
+ - Fixed build issues with GCC8
+
+Retired features:
+
+
