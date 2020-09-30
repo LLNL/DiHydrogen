@@ -21,7 +21,7 @@ using DataType = float;
 
 using namespace distconv;
 using namespace distconv::tensor;
-using AlBackend = Al::MPICUDABackend;
+using AlBackend = Al::HostTransferBackend;
 
 MPI_Comm local_comm;
 int local_comm_size;

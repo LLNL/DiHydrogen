@@ -25,16 +25,17 @@ set(H2_DISTCONV_HAS_P2P @P2P_FOUND@)
 set(H2_DISTCONV_HAS_NVSHMEM @NVSHMEM_FOUND@)
 
 set(_BUILD_AL_DIR "@Aluminum_DIR@")
-find_package(Aluminum NO_MODULE QUIET
+set(_MIN_AL_VERSION "@H2_MINIMUM_ALUMINUM_VERSION@")
+find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
   HINTS "${_BUILD_AL_DIR}"
   NO_DEFAULT_PATH)
-find_package(Aluminum NO_MODULE QUIET
+find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
   HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
   $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
   PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
   NO_DEFAULT_PATH)
 if (NOT Aluminum_FOUND)
-  find_package(Aluminum NO_MODULE REQUIRED)
+  find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE REQUIRED)
 endif ()
 
 find_dependency(BLASImpl)

@@ -26,7 +26,7 @@
 using DataType = float;
 using namespace distconv;
 using distconv::tensor::Shape;
-using AlBackend = Al::MPICUDABackend;
+using AlBackend = Al::HostTransferBackend;
 
 namespace distconv_benchmark {
 
