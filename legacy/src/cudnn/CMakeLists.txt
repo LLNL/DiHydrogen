@@ -5,6 +5,7 @@ h2_set_full_path(THIS_DIR_CU_SOURCES
   pooling.cu
   batchnorm.cu
   leaky_relu.cu
+  mean_squared_error.cu
   softmax.cu
   cross_entropy.cu
   )
