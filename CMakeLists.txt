@@ -134,9 +134,11 @@ endif (H2_ENABLE_CUDA)
 
 # This is a placeholder.
 if (H2_ENABLE_HIP_ROCM)
-  message(FATAL_ERROR
-    "ROCm support is not yet available. Please reconfigure with "
-    "-DH2_ENABLE_ROCM=OFF")
+  if (H2_ENABLE_DISTCONV_LEGACY)
+    message(FATAL_ERROR
+      "ROCm support with DistConv is not yet available. Please reconfigure with "
+      "-DH2_ENABLE_HIP_ROCM=OFF")
+  endif (H2_ENABLE_DISTCONV_LEGACY)
   if (HIP_FOUND)
     set(H2_HAS_HIP_ROCM TRUE)
   endif (HIP_FOUND)
