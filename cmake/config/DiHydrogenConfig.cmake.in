@@ -24,19 +24,41 @@ set(H2_HAS_HIP_ROCM @H2_HAS_HIP_ROCM@)
 set(H2_DISTCONV_HAS_P2P @P2P_FOUND@)
 set(H2_DISTCONV_HAS_NVSHMEM @NVSHMEM_FOUND@)
 
-set(_BUILD_AL_DIR "@Aluminum_DIR@")
-set(_MIN_AL_VERSION "@H2_MINIMUM_ALUMINUM_VERSION@")
-find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
-  HINTS "${_BUILD_AL_DIR}"
-  NO_DEFAULT_PATH)
-find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
-  HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
-  $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
-  PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
-  NO_DEFAULT_PATH)
-if (NOT Aluminum_FOUND)
-  find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE REQUIRED)
-endif ()
+set(_H2_HAVE_ALUMINUM @H2_HAVE_ALUMINUM@)
+set(_H2_HAVE_NCCL2 @H2_HAVE_NCCL2@)
+set(_H2_HAVE_AL_MPI_CUDA @H2_HAVE_AL_MPI_CUDA@)
+set(_H2_HAVE_AL_HOST_XFER @H2_HAVE_AL_HOST_XFER@)
+if (_H2_HAVE_ALUMINUM)
+  set(_BUILD_AL_DIR "@Aluminum_DIR@")
+  set(_MIN_AL_VERSION "@H2_MINIMUM_ALUMINUM_VERSION@")
+  find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
+    HINTS "${_BUILD_AL_DIR}"
+    NO_DEFAULT_PATH)
+  find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
+    HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
+    $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
+    PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
+    NO_DEFAULT_PATH)
+  if (NOT Aluminum_FOUND)
+    find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE REQUIRED)
+  endif ()
+
+  if (_H2_HAVE_NCCL2 AND NOT AL_HAS_NCCL)
+    message(FATAL_ERROR
+      "Hydrogen expects NCCL2 support "
+      "but Aluminum does not have NCCL2 support.")
+  endif ()
+  if (_H2_HAVE_AL_HOST_XFER AND NOT AL_HAS_HOST_TRANSFER)
+    message(FATAL_ERROR
+      "Hydrogen expects HostTransfer support "
+      "but Aluminum does not have HostTransfer support.")
+  endif ()
+  if (_H2_HAVE_AL_MPI_CUDA AND NOT AL_HAS_MPI_CUDA)
+    message(FATAL_ERROR
+      "Hydrogen expects MPI-CUDA support "
+      "but Aluminum does not have MPI-CUDA support.")
+  endif ()
+endif (_H2_HAVE_ALUMINUM)
 
 find_dependency(BLASImpl)
 find_dependency(MPI)

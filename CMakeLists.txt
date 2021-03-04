@@ -38,6 +38,10 @@ include(SetupMPI)
 # subsequently fail to find its dependencies.
 #
 
+option(H2_ENABLE_ALUMINUM
+  "Enable the Aluminum package for improved Allreduces."
+  OFF)
+
 option(H2_ENABLE_DISTCONV_LEGACY
   "Enable the legacy DistConv code branch."
   ON)
@@ -146,15 +150,51 @@ if (H2_HAS_CUDA OR H2_HAS_HIP_ROCM)
   set(H2_HAS_GPU TRUE)
 endif ()
 
-set(H2_MINIMUM_ALUMINUM_VERSION 0.7.0)
-find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET
-  HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
-  $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
-  PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
-  NO_DEFAULT_PATH)
-if (NOT Aluminum_FOUND)
-  find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE REQUIRED)
-endif ()
+if (H2_ENABLE_ALUMINUM)
+  set(H2_MINIMUM_ALUMINUM_VERSION 0.7.0)
+  find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET
+    HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
+    $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
+    PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
+    NO_DEFAULT_PATH)
+  if (NOT Aluminum_FOUND)
+    find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE REQUIRED)
+  endif ()
+
+  if (Aluminum_FOUND)
+    set(H2_HAVE_ALUMINUM TRUE)
+    message(STATUS "Found Aluminum: ${Aluminum_DIR}")
+
+    if (H2_HAVE_GPU AND AL_HAS_NCCL)
+      set(H2_HAVE_NCCL2 TRUE)
+      message(STATUS "Aluminum detected with NCCL2 backend support.")
+    else ()
+      set(H2_HAVE_NCCL2 FALSE)
+    endif (H2_HAVE_GPU AND AL_HAS_NCCL)
+
+    if (H2_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+      set(H2_HAVE_AL_HOST_XFER TRUE)
+      message(STATUS "Aluminum detected with HostTransfer backend support.")
+    else ()
+      set(H2_HAVE_AL_HOST_XFER FALSE)
+    endif (H2_HAVE_GPU AND AL_HAS_HOST_TRANSFER)
+
+    if (H2_HAVE_GPU AND AL_HAS_MPI_CUDA)
+      set(H2_HAVE_AL_MPI_CUDA TRUE)
+      message(STATUS "Aluminum detected with MPI-CUDA backend support.")
+    else ()
+      set(H2_HAVE_AL_MPI_CUDA FALSE)
+    endif (H2_HAVE_GPU AND AL_HAS_MPI_CUDA)
+  else ()
+    set(H2_HAVE_ALUMINUM FALSE)
+    set(H2_HAVE_NCCL2 FALSE)
+    set(H2_HAVE_AL_MPI_CUDA FALSE)
+    set(H2_ENABLE_ALUMINUM FALSE)
+    message(FATAL_ERROR "Aluminum support requested but not found. "
+      "Please set Aluminum_DIR to point to the installation prefix "
+      "for Aluminum.")
+  endif (Aluminum_FOUND)
+endif (H2_ENABLE_ALUMINUM)
 
 # DiHydrogen will use MPI-3 features extensively. Until proven
 # otherwise, assume that the CMake module version checking is
