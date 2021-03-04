@@ -17,6 +17,8 @@ set(H2_VERSION ${PACKAGE_VERSION})
 # Verify the dependencies of H2
 include(CMakeFindDependencyMacro)
 
+set(H2_HAS_DISTCONV @H2_ENABLE_DISTCONV_LEGACY@)
+set(H2_HAS_ALUMINUM @H2_HAS_ALUMINUM@)
 set(H2_HAS_OPENMP @H2_HAS_OPENMP@)
 set(H2_HAS_HALF @H2_HAS_HALF@)
 set(H2_HAS_CUDA @H2_HAS_CUDA@)
@@ -24,22 +26,25 @@ set(H2_HAS_HIP_ROCM @H2_HAS_HIP_ROCM@)
 set(H2_DISTCONV_HAS_P2P @P2P_FOUND@)
 set(H2_DISTCONV_HAS_NVSHMEM @NVSHMEM_FOUND@)
 
-set(_BUILD_AL_DIR "@Aluminum_DIR@")
-set(_MIN_AL_VERSION "@H2_MINIMUM_ALUMINUM_VERSION@")
-find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
-  HINTS "${_BUILD_AL_DIR}"
-  NO_DEFAULT_PATH)
-find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
-  HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
-  $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
-  PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
-  NO_DEFAULT_PATH)
-if (NOT Aluminum_FOUND)
-  find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE REQUIRED)
+if (H2_HAS_ALUMINUM)
+  set(_BUILD_AL_DIR "@Aluminum_DIR@")
+  set(_MIN_AL_VERSION "@H2_MINIMUM_ALUMINUM_VERSION@")
+  find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
+    HINTS "${_BUILD_AL_DIR}"
+    NO_DEFAULT_PATH)
+  find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
+    HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
+    $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
+    PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
+    NO_DEFAULT_PATH)
+  if (NOT Aluminum_FOUND)
+    find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE REQUIRED)
+  endif ()
 endif ()
 
-find_dependency(BLASImpl)
-find_dependency(MPI)
+if (H2_HAS_DISTCONV)
+  find_dependency(MPI)
+endif ()
 
 if (H2_HAS_OPENMP)
   find_dependency(OpenMP)
