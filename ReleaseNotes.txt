@@ -1,3 +1,20 @@
+============================== Release Notes: v0.2.1 ==============================
+
+API:
+
+Performance optimizations:
+
+Internal features:
+ - Updated to support the Aluminum v0.7 API
+ - Aluminum is now only required when DistConv Legacy is enabled
+
+Build system:
+ - Require Aluminum v0.7.0
+
+Bug fixes:
+
+Retired features:
+
 ============================== Release Notes: v0.2.0 ==============================
 
 API:
