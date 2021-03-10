@@ -5,6 +5,7 @@ h2_set_full_path(THIS_DIR_HEADERS
   pooling.hpp
   relu.hpp
   leaky_relu.hpp
+  mean_squared_error.hpp
   softmax.hpp
   cross_entropy.hpp
   )

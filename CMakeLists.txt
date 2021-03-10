@@ -11,7 +11,7 @@ cmake_minimum_required(VERSION 3.14.0)
 cmake_policy(SET CMP0074 OLD)
 
 project(DiHydrogen
-  VERSION 0.2.0
+  VERSION 0.2.1
   DESCRIPTION "A distributed multilinear algebra interface library."
   HOMEPAGE_URL "https://github.com/llnl/DiHydrogen"
   LANGUAGES CXX)
@@ -27,12 +27,6 @@ endif ()
 
 string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
 
-include(GNUInstallDirs)
-include(H2CMakeUtils)
-include(H2CXXFeatureDetection)
-include(SetupCXX)
-include(SetupMPI)
-
 #
 # It will be treated as a FATAL_ERROR to enable any feature and then
 # subsequently fail to find its dependencies.
@@ -40,19 +34,26 @@ include(SetupMPI)
 
 option(H2_ENABLE_DISTCONV_LEGACY
   "Enable the legacy DistConv code branch."
-  ON)
-
-option(H2_ENABLE_OPENMP
-  "Enable CPU acceleration with OpenMP threads."
   OFF)
 
-option(H2_ENABLE_FP16
-  "Enable FP16 support on the CPU. Requires the Half library."
-  OFF)
+# These might become full-fledged options later.
+set(H2_ENABLE_ALUMINUM ${H2_ENABLE_DISTCONV_LEGACY}
+  CACHE BOOL "Use the Aluminum library for communications.")
 
-option(H2_ENABLE_CUDA
-  "Search for and enable CUDA language features in DiHydrogen."
-  OFF)
+set(H2_ENABLE_OPENMP ${H2_ENABLE_DISTCONV_LEGACY}
+  CACHE BOOL "Enable CPU acceleration with OpenMP threads.")
+
+set(H2_ENABLE_CUDA ${H2_ENABLE_DISTCONV_LEGACY}
+  CACHE BOOL
+  "Search for and enable CUDA language features in DiHydrogen.")
+
+include(GNUInstallDirs)
+include(H2CMakeUtils)
+include(H2CXXFeatureDetection)
+include(SetupCXX)
+if (H2_ENABLE_DISTCONV_LEGACY)
+include(SetupMPI)
+endif ()
 
 option(H2_ENABLE_HIP_ROCM
   "Search for and enable ROCm/HIP language features in DiHydrogen."
@@ -60,7 +61,7 @@ option(H2_ENABLE_HIP_ROCM
 
 option(H2_DEVELOPER_BUILD
   "Enable extra warnings and force tests to be enabled."
-  ON)
+  OFF)
 
 option(H2_ENABLE_CODE_COVERAGE
   "Enable code coverage instrumentation. Requires compiler support."
@@ -75,6 +76,11 @@ option(H2_ENABLE_WERROR
   OFF)
 
 # Check option consistency
+if (H2_ENABLE_HIP_ROCM)
+  message(FATAL_ERROR
+    "There is no ROCm support, yet.")
+endif ()
+
 if (H2_ENABLE_CUDA AND H2_ENABLE_HIP_ROCM)
   message(FATAL_ERROR
     "CUDA and ROCm support are mutually exclusive. Please only enable "
@@ -114,12 +120,7 @@ if (H2_ENABLE_CODE_COVERAGE)
 endif ()
 
 # Required dependencies
-find_package(BLASImpl QUIET REQUIRED)
-if (BLASImpl_FOUND)
-  message(STATUS "Found BLAS: ${BLAS_LIBRARIES}")
-endif ()
 
-# Other device features
 if (H2_ENABLE_CUDA)
   enable_language(CUDA)
   include(SetupCUDAToolkit)
@@ -134,9 +135,11 @@ endif (H2_ENABLE_CUDA)
 
 # This is a placeholder.
 if (H2_ENABLE_HIP_ROCM)
-  message(FATAL_ERROR
-    "ROCm support is not yet available. Please reconfigure with "
-    "-DH2_ENABLE_ROCM=OFF")
+  if (H2_ENABLE_DISTCONV_LEGACY)
+    message(FATAL_ERROR
+      "ROCm support with DistConv is not yet available. Please reconfigure with "
+      "-DH2_ENABLE_HIP_ROCM=OFF")
+  endif (H2_ENABLE_DISTCONV_LEGACY)
   if (HIP_FOUND)
     set(H2_HAS_HIP_ROCM TRUE)
   endif (HIP_FOUND)
@@ -146,29 +149,34 @@ if (H2_HAS_CUDA OR H2_HAS_HIP_ROCM)
   set(H2_HAS_GPU TRUE)
 endif ()
 
-set(H2_MINIMUM_ALUMINUM_VERSION 0.5.0)
-find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET
-  HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
-  $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
-  PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
-  NO_DEFAULT_PATH)
-if (NOT Aluminum_FOUND)
-  find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE REQUIRED)
+if (H2_ENABLE_ALUMINUM)
+  set(H2_MINIMUM_ALUMINUM_VERSION 0.7.0)
+  find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET
+    HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
+    $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
+    PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
+    NO_DEFAULT_PATH)
+  if (NOT Aluminum_FOUND)
+    find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE REQUIRED)
+  endif ()
+  set(H2_HAS_ALUMINUM ${Aluminum_FOUND})
 endif ()
 
 # DiHydrogen will use MPI-3 features extensively. Until proven
 # otherwise, assume that the CMake module version checking is
 # accurate.
-if (NOT TARGET MPI::MPI_CXX)
-  find_package(MPI 3.0.0 COMPONENTS CXX REQUIRED)
-endif ()
-get_target_property(
-  __mpi_compile_options MPI::MPI_CXX INTERFACE_COMPILE_OPTIONS)
-if (__mpi_compile_options)
-  set_property(TARGET MPI::MPI_CXX PROPERTY
-    INTERFACE_COMPILE_OPTIONS
-    $<$<COMPILE_LANGUAGE:CXX>:${__mpi_compile_options}>)
-  unset(__mpi_compile_options)
+if (H2_ENABLE_DISTCONV_LEGACY)
+  if (NOT TARGET MPI::MPI_CXX)
+    find_package(MPI 3.0.0 COMPONENTS CXX REQUIRED)
+  endif ()
+  get_target_property(
+    __mpi_compile_options MPI::MPI_CXX INTERFACE_COMPILE_OPTIONS)
+  if (__mpi_compile_options)
+    set_property(TARGET MPI::MPI_CXX PROPERTY
+      INTERFACE_COMPILE_OPTIONS
+      $<$<COMPILE_LANGUAGE:CXX>:${__mpi_compile_options}>)
+    unset(__mpi_compile_options)
+  endif ()
 endif ()
 
 # Decide where to put generated include files.
@@ -204,8 +212,6 @@ target_include_directories(
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 target_link_libraries(H2Core PUBLIC
-  BLAS::BLAS
-  MPI::MPI_CXX
   $<TARGET_NAME_IF_EXISTS:Half::Half>
   $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_CXX>
   $<TARGET_NAME_IF_EXISTS:cuda::CUDA_CXX>

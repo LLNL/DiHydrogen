@@ -137,4 +137,10 @@ class CrossEntropy {
   CrossEntropy(Backend &backend);
 };
 
+template <typename Backend>
+class MeanSquaredError {
+ public:
+  MeanSquaredError(Backend &backend);
+};
+
 } // namespace distconv
