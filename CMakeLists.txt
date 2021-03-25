@@ -150,16 +150,32 @@ if (H2_HAS_CUDA OR H2_HAS_HIP_ROCM)
 endif ()
 
 if (H2_ENABLE_ALUMINUM)
-  set(H2_MINIMUM_ALUMINUM_VERSION 0.7.0)
+  set(H2_MINIMUM_ALUMINUM_VERSION 1.0.0)
   find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET
     HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
     $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
     PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
     NO_DEFAULT_PATH)
+  find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET)
   if (NOT Aluminum_FOUND)
-    find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE REQUIRED)
+    set(H2_MINIMUM_ALUMINUM_VERSION 0.7.0)
+
+    find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET
+      HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
+      $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
+      PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
+      NO_DEFAULT_PATH)
+    find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET)
   endif ()
-  set(H2_HAS_ALUMINUM ${Aluminum_FOUND})
+
+  if (Aluminum_FOUND)
+    message(STATUS
+      "Found Aluminum@${ALUMINUM_VERSION}: ${Aluminum_DIR}")
+    set(H2_HAS_ALUMINUM ${Aluminum_FOUND})
+  else ()
+    message(FATAL_ERROR
+      "Aluminum support is required but not found.")
+  endif ()
 endif ()
 
 # DiHydrogen will use MPI-3 features extensively. Until proven
