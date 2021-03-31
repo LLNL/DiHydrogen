@@ -76,11 +76,6 @@ option(H2_ENABLE_WERROR
   OFF)
 
 # Check option consistency
-if (H2_ENABLE_HIP_ROCM)
-  message(FATAL_ERROR
-    "There is no ROCm support, yet.")
-endif ()
-
 if (H2_ENABLE_CUDA AND H2_ENABLE_HIP_ROCM)
   message(FATAL_ERROR
     "CUDA and ROCm support are mutually exclusive. Please only enable "
