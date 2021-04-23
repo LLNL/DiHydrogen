@@ -198,7 +198,6 @@ tensor::Shape get_deconvolution_output_local_tensor_shape(
     const int_vector &filter_dims,
     const int_vector &strides,
     bool with_padding, const int_vector &dilations, int num_groups) {
-  // assert_always(dilations == 1); /// @todo Check properly
   const int nsd = input.get_num_spatial_dims();
   const auto input_local_shape = input.get_local_shape();
   auto output_local_shape = input.get_local_shape();
