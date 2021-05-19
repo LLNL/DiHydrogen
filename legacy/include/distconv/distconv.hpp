@@ -198,8 +198,6 @@ tensor::Shape get_deconvolution_output_local_tensor_shape(
     const int_vector &filter_dims,
     const int_vector &strides,
     bool with_padding, const int_vector &dilations, int num_groups) {
-  // Padding is not considered yet
-  assert_always(!with_padding);
   const int nsd = input.get_num_spatial_dims();
   const auto input_local_shape = input.get_local_shape();
   auto output_local_shape = input.get_local_shape();
@@ -210,27 +208,38 @@ tensor::Shape get_deconvolution_output_local_tensor_shape(
                            fwd_halo_recv, bwd_halo_recv, with_padding);
 
   for (int i = 0; i < nsd; ++i) {
+    util::MPIPrintStreamDebug()
+        << "i: " << i
+        << ", input_local_shape: " << input_local_shape[i]
+        << ", bwd_halo_recv: " << bwd_halo_recv[i]
+        << ", fwd_halo_recv: " << fwd_halo_recv[i]
+        << ", filter_dims: " << filter_dims[i]
+        << ", padding: " << with_padding;
     int dilated_filter_dim = internal::get_dilated_filter_size(
         filter_dims[i], dilations[i]);
-    int dim_with_halo_padding = input_local_shape[i] +
-        bwd_halo_recv[i] + fwd_halo_recv[i];
+    int dim = (input_local_shape[i]-1) * strides[i] + dilated_filter_dim;
+    dim -= bwd_halo_recv[i] + fwd_halo_recv[i];
     // Halo size is 0 when not partitioned, but its logical size
     // includes the padding. At this point, padding size is either
     // zero or exact match with the stencil size.
     if (with_padding &&
         input.get_distribution().get_split_shape()[i] == 1) {
-      dim_with_halo_padding += dilated_filter_dim - 1;
+      dim -= dilated_filter_dim - 1;
     }
-    // padding assumed to be zero
-    assert_always(!with_padding);
-    output_local_shape[i] = (dim_with_halo_padding - 1) * strides[i] + dilated_filter_dim;
+    output_local_shape[i] = dim;
   }
 
   // channel size - only if not doing channel parallelism.
   auto input_split_shape = input.get_distribution().get_split_shape();
-  // Assumes no channel partitioning
-  assert_always(input_split_shape[-2] == 1);
-  output_local_shape[-2] = *(filter_dims.rbegin() + 1);
+  if (input_split_shape[-2] == 1) {
+    assert_eq((int)output_local_shape[-2],
+              filter_dims.back() * num_groups);
+    output_local_shape[-2] = *(filter_dims.rbegin() + 1);
+  } else {
+    assert0(*(filter_dims.rbegin()+1) % input_split_shape[-2]);
+    output_local_shape[-2] = *(filter_dims.rbegin()+1) / input_split_shape[-2];
+  }
+
   return output_local_shape;
 }
 
