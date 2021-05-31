@@ -167,10 +167,10 @@ class Data {
         dilations, cfg.deconv, MPI_COMM_WORLD);
     d_input = create_d_input_tensor<Tensor>(input);
 
-    filter = create_filter_tensor<Tensor>(locale_shape, filter_dims,
+    filter = create_filter_tensor<Tensor>(locale_shape, filter_dims, input,
                                           cfg.i_c, cfg.f_k, cfg.num_groups,
                                           MPI_COMM_WORLD,
-                                          cfg.chanfilt_algo);
+                                          cfg.chanfilt_algo, cfg.p_f);
     d_filter = create_d_filter_tensor<Tensor>(filter);
 
     if (!cfg.deconv) {

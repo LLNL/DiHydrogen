@@ -423,7 +423,8 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
       tensor::Tensor<DataType, LocaleMPI, Allocator> &output,
       bool skip_halo_exchange=false,
       bool skip_chanfilt_comm=false,
-      bool dump_profile=false) {
+      bool dump_profile=false,
+      bool inference=false) {
 
     if (input.get_local_size() == 0 ||
         filter.get_local_size() == 0 ||
@@ -439,14 +440,21 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
 
     set_num_samples(input.get_local_shape()[-1]);
 
-    if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
+    if (m_chanfilt_algo == ChannelParallelismAlgorithm::X ||
+        m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
       get_tmp_tensor_buffer(m_output_all_filters_t);
+    }
+    if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y ||
+        m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+      // This is retained until back-filter completes unless doing inference.
+      get_tmp_tensor_buffer(m_input_gathered_t);
     }
 
     if (!skip_chanfilt_comm &&
-        m_chanfilt_algo == ChannelParallelismAlgorithm::Y) {
+        (m_chanfilt_algo == ChannelParallelismAlgorithm::Y ||
+         m_chanfilt_algo == ChannelParallelismAlgorithm::W)) {
       // Allgather to assemble x by channels.
-      allgather_chanfilt(input, m_input_gathered_t);
+      allgather_chanfilt(input, m_input_gathered_t, true);
     }
 
     void *ws = internal::RuntimeCUDA::get_device_memory_pool().get(
@@ -466,6 +474,12 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
     if (!m_overlap_halo_exchange_fwd) {
       record_start_comp();
       if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
+        ensure_tensors_conform(
+          input, m_output_all_filters_t, filter,
+          "stationary-x forward");
+        ensure_tensor_descriptors_conform(
+          m_input_d, m_output_all_filters_d, m_filter_d,
+          "stationary-x forward");
         DISTCONV_CHECK_CUDNN(cudnnConvolutionForward(
           m_be.get_handle(), &alpha, m_input_d, input_ptr,
           m_filter_d, filter.get_const_base_ptr(), m_conv_fwd_d,
@@ -474,15 +488,42 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
           m_output_all_filters_t.get_base_ptr()));
       } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y) {
         // TODO: Support halos.
+        ensure_tensors_conform(
+          m_input_gathered_t, output, filter,
+          "stationary-y forward");
+        ensure_tensor_descriptors_conform(
+          m_input_gathered_d, m_output_d, m_filter_d,
+          "stationary-y forward");
         DISTCONV_CHECK_CUDNN(cudnnConvolutionForward(
           m_be.get_handle(), &alpha,
           m_input_gathered_d, m_input_gathered_t.get_base_ptr(),
           m_filter_d, filter.get_const_base_ptr(), m_conv_fwd_d,
           m_fwd_algo, ws, m_ws_size_fwd,
           &beta, m_output_d, output.get_base_ptr()));
+      } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+        // TODO: Support halos.
+        ensure_tensors_conform(
+          m_input_gathered_t, m_output_all_filters_t, filter,
+          "stationary-w forward");
+        ensure_tensor_descriptors_conform(
+          m_input_gathered_d, m_output_all_filters_d, m_filter_d,
+          "stationary-w forward");
+        DISTCONV_CHECK_CUDNN(cudnnConvolutionForward(
+          m_be.get_handle(), &alpha,
+          m_input_gathered_d, m_input_gathered_t.get_base_ptr(),
+          m_filter_d, filter.get_const_base_ptr(), m_conv_fwd_d,
+          m_fwd_algo, ws, m_ws_size_fwd,
+          &beta, m_output_all_filters_d,
+          m_output_all_filters_t.get_base_ptr()));
       } else {
         // REFACTORING: Temporary adds deconv only this case
         if (!m_deconv) {
+          ensure_tensors_conform(
+            input, output, filter,
+            "forward");
+          ensure_tensor_descriptors_conform(
+            m_input_d, m_output_d, m_filter_d,
+            "forward");
           DISTCONV_CHECK_CUDNN(cudnnConvolutionForward(
               m_be.get_handle(), &alpha, m_input_d, input_ptr,
               m_filter_d, filter.get_const_base_ptr(), m_conv_fwd_d,
@@ -547,13 +588,21 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
     }
 
     if (!skip_chanfilt_comm &&
-        m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
+        (m_chanfilt_algo == ChannelParallelismAlgorithm::X ||
+         m_chanfilt_algo == ChannelParallelismAlgorithm::W)) {
       // Reduce-scatter to complete the sum over channels.
-      reduce_scatter_chanfilt(m_output_all_filters_t, output);
+      reduce_scatter_chanfilt(m_output_all_filters_t, output, false);
     }
 
-    if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
+    if (m_chanfilt_algo == ChannelParallelismAlgorithm::X ||
+        m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
       release_tmp_tensor_buffer(m_output_all_filters_t);
+    }
+
+    if (inference &&
+        (m_chanfilt_algo == ChannelParallelismAlgorithm::Y ||
+         m_chanfilt_algo == ChannelParallelismAlgorithm::W)) {
+      release_tmp_tensor_buffer(m_input_gathered_t);
     }
 
     internal::RuntimeCUDA::get_device_memory_pool().release(ws);
@@ -629,9 +678,14 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
     }
 
     // Handle case where backward_filter was not called.
-    if (m_chanfilt_algo == ChannelParallelismAlgorithm::X &&
+    if ((m_chanfilt_algo == ChannelParallelismAlgorithm::X ||
+         m_chanfilt_algo == ChannelParallelismAlgorithm::W) &&
         m_d_output_gathered_t.get_buffer() == nullptr) {
       get_tmp_tensor_buffer(m_d_output_gathered_t);
+    }
+    if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y ||
+        m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+      get_tmp_tensor_buffer(m_d_input_all_channels_t);
     }
 
     if (!m_overlap_halo_exchange_bwd && !skip_halo_exchange) {
@@ -651,12 +705,25 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
 
     record_start_comp();
     if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
+      ensure_tensors_conform(
+        d_input, m_d_output_gathered_t, filter,
+        "stationary-x backward-data");
+      ensure_tensor_descriptors_conform(
+          m_d_input_d, m_d_output_gathered_d, m_filter_d,
+          "stationary-x backward-data");
+      // Assumes d_output was allgathered by backward_filter.
       DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardData(
         m_be.get_handle(), &alpha, m_filter_d, filter.get_const_base_ptr(),
         m_d_output_gathered_d, m_d_output_gathered_t.get_const_buffer(),
         m_conv_bwd_d, m_bwd_data_algo, ws, m_ws_size_bwd_data,
         &beta, m_d_input_d, d_input_ptr));
     } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y) {
+      ensure_tensors_conform(
+        m_d_input_all_channels_t, d_output, filter,
+        "stationary-y backward-data");
+      ensure_tensor_descriptors_conform(
+          m_d_input_all_channels_d, m_d_output_d, m_filter_d,
+          "stationary-y backward-data");
       // TODO: Handle halos.
       DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardData(
         m_be.get_handle(), &alpha, m_filter_d, filter.get_const_base_ptr(),
@@ -664,12 +731,29 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
         m_conv_bwd_d, m_bwd_data_algo, ws, m_ws_size_bwd_data,
         &beta, m_d_input_all_channels_d,
         m_d_input_all_channels_t.get_base_ptr()));
-      // Reduce-scatter to complete the sum over filters.
-      if (!skip_chanfilt_comm) {
-        reduce_scatter_chanfilt(m_d_input_all_channels_t, d_input);
-      }
+    } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+      ensure_tensors_conform(
+        m_d_input_all_channels_t, m_d_output_gathered_t, filter,
+        "stationary-w backward-data");
+      ensure_tensor_descriptors_conform(
+          m_d_input_all_channels_d, m_d_output_gathered_d, m_filter_d,
+          "stationary-w backward-data");
+      // TODO: Handle halos.
+      // Assumes d_output was allgathered by backward_filter.
+      DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardData(
+        m_be.get_handle(), &alpha, m_filter_d, filter.get_const_base_ptr(),
+        m_d_output_gathered_d, m_d_output_gathered_t.get_const_buffer(),
+        m_conv_bwd_d, m_bwd_data_algo, ws, m_ws_size_bwd_data,
+        &beta, m_d_input_all_channels_d,
+        m_d_input_all_channels_t.get_base_ptr()));
     } else {
       if (!m_deconv) {
+        ensure_tensors_conform(
+          d_input, d_output, filter,
+          "backward-data");
+        ensure_tensor_descriptors_conform(
+          m_d_input_d, m_d_output_d, m_filter_d,
+          "backward-data");
         DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardData(
             m_be.get_handle(), &alpha, m_filter_d, filter.get_const_base_ptr(),
             m_d_output_d, d_output.get_const_buffer(),
@@ -683,9 +767,20 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
             &beta, m_d_input_d, d_input_ptr));
       }
     }
+    if (!skip_chanfilt_comm &&
+        (m_chanfilt_algo == ChannelParallelismAlgorithm::Y ||
+         m_chanfilt_algo == ChannelParallelismAlgorithm::W)) {
+      // Reduce-scatter to complete the sum over filters.
+      reduce_scatter_chanfilt(m_d_input_all_channels_t, d_input, true);
+    }
     record_end_comp();
-    if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
+    if (m_chanfilt_algo == ChannelParallelismAlgorithm::X ||
+        m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
       release_tmp_tensor_buffer(m_d_output_gathered_t);
+    }
+    if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y ||
+        m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+      release_tmp_tensor_buffer(m_d_input_all_channels_t);
     }
     internal::RuntimeCUDA::get_device_memory_pool().release(ws);
 
@@ -715,7 +810,8 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
 
     set_num_samples(input.get_local_shape()[-1]);
 
-    if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
+    if (m_chanfilt_algo == ChannelParallelismAlgorithm::X ||
+        m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
       // This is released by backward data.
       if (m_d_output_gathered_t.get_buffer() == nullptr) {
         get_tmp_tensor_buffer(m_d_output_gathered_t);
@@ -723,10 +819,18 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
     }
 
     if (!skip_chanfilt_comm &&
-        m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
+        (m_chanfilt_algo == ChannelParallelismAlgorithm::X ||
+         m_chanfilt_algo == ChannelParallelismAlgorithm::W)) {
       // TODO: backward_data relies on this.
       // Allgather to assemble dL/dy by filters.
-      allgather_chanfilt(d_output, m_d_output_gathered_t);
+      allgather_chanfilt(d_output, m_d_output_gathered_t, false);
+    }
+
+    // Handle case where forward was not called.
+    if ((m_chanfilt_algo == ChannelParallelismAlgorithm::Y ||
+         m_chanfilt_algo == ChannelParallelismAlgorithm::W) &&
+        m_input_gathered_t.get_buffer() == nullptr) {
+      get_tmp_tensor_buffer(m_input_gathered_t);
     }
 
     // Is there any case where d_filter is empty?
@@ -760,6 +864,12 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
       assert_always(d_filter.get_buffer() != nullptr);
       util::MPIPrintStreamDebug() << "Running Bp filter";
       if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
+        ensure_tensors_conform(
+          input, m_d_output_gathered_t, d_filter,
+          "stationary-x backward-filter");
+        ensure_tensor_descriptors_conform(
+          m_input_d, m_d_output_gathered_d, m_filter_d,
+          "stationary-x backward-filter");
         DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardFilter(
           m_be.get_handle(), &alpha, m_input_d,
           input_ptr,
@@ -767,14 +877,39 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
           m_conv_bwd_filter_d, m_bwd_filter_algo, ws, m_ws_size_bwd_filter,
           &beta, m_d_filter_d, d_filter.get_buffer()));
       } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y) {
+        ensure_tensors_conform(
+          m_input_gathered_t, d_output, d_filter,
+          "stationary-y backward-filter");
+        ensure_tensor_descriptors_conform(
+          m_input_gathered_d, m_d_output_d, m_filter_d,
+          "stationary-y backward-filter");
         DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardFilter(
           m_be.get_handle(), &alpha, m_input_gathered_d,
           m_input_gathered_t.get_base_ptr(),
           m_d_output_d, d_output.get_const_buffer(),
           m_conv_bwd_filter_d, m_bwd_filter_algo, ws, m_ws_size_bwd_filter,
           &beta, m_d_filter_d, d_filter.get_buffer()));
+      } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+        ensure_tensors_conform(
+          m_input_gathered_t, m_d_output_gathered_t, d_filter,
+          "stationary-w backward-filter");
+        ensure_tensor_descriptors_conform(
+          m_input_gathered_d, m_d_output_gathered_d, m_filter_d,
+          "stationary-w backward-filter");
+        DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardFilter(
+          m_be.get_handle(), &alpha, m_input_gathered_d,
+          m_input_gathered_t.get_base_ptr(),
+          m_d_output_gathered_d, m_d_output_gathered_t.get_const_buffer(),
+          m_conv_bwd_filter_d, m_bwd_filter_algo, ws, m_ws_size_bwd_filter,
+          &beta, m_d_filter_d, d_filter.get_buffer()));
       } else {
         if (!m_deconv) {
+          ensure_tensors_conform(
+            input, d_output, d_filter,
+            "backward-filter");
+          ensure_tensor_descriptors_conform(
+            m_input_d, m_d_output_d, m_filter_d,
+            "backward-filter");
           DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardFilter(
               m_be.get_handle(), &alpha, m_input_d,
               input_ptr,
@@ -794,6 +929,11 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
       internal::RuntimeCUDA::get_device_memory_pool().release(ws);
 
       util::MPIPrintStreamDebug() << "Bp filter done";
+    }
+
+    if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y ||
+        m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+      release_tmp_tensor_buffer(m_input_gathered_t);
     }
 
     record_end_comp();
@@ -855,10 +995,13 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
         cudnn::set_tensor_num_samples(m_d_input_d, n);
       }
       cudnn::set_tensor_num_samples(m_d_output_d, n);
-      if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
+      if (m_chanfilt_algo == ChannelParallelismAlgorithm::X ||
+          m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
         cudnn::set_tensor_num_samples(m_output_all_filters_d, n);
         cudnn::set_tensor_num_samples(m_d_output_gathered_d, n);
-      } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y) {
+      }
+      if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y ||
+          m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
         cudnn::set_tensor_num_samples(m_input_gathered_d, n);
         cudnn::set_tensor_num_samples(m_d_input_all_channels_d, n);
       }
@@ -1271,7 +1414,6 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
                               Allocator> &d_filter,
                               const tensor::Tensor<DataType, LocaleMPI,
                               Allocator> &d_output) {
-    // TODO: Support stationary-w.
     if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
       {
         auto dist = tensor::Distribution::make_shared_distribution(
@@ -1314,12 +1456,12 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
         m_input_gathered_t = tensor::Tensor<DataType, LocaleMPI, Allocator>(
           input.get_shape(), input.get_locale(), dist,
           local_shape, tensor::Shape(input.get_num_dims(), 0));
-        assert0(m_input_gathered_t.allocate());
-        m_input_gathered_t.zero();
         util::MPIPrintStreamDebug() << "input_gathered tensor: " << m_input_gathered_t;
+        get_tmp_tensor_buffer(m_input_gathered_t);
         cudnn::setup_tensor_descriptor(m_input_gathered_d,
                                        m_input_gathered_t,
                                        m_input_gathered_t.get_local_shape());
+        release_tmp_tensor_buffer(m_input_gathered_t);
         util::MPIPrintStreamDebug() << "input_gathered descriptor: " << m_input_gathered_d;
       }
       {
@@ -1330,12 +1472,79 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
         m_d_input_all_channels_t = tensor::Tensor<DataType, LocaleMPI, Allocator>(
           d_input.get_shape(), d_input.get_locale(), dist,
           local_shape, tensor::Shape(d_input.get_num_dims(), 0));
-        assert0(m_d_input_all_channels_t.allocate());
-        m_d_input_all_channels_t.zero();
         util::MPIPrintStreamDebug() << "d_input_all_channels tensor: " << m_d_input_all_channels_t;
+        get_tmp_tensor_buffer(m_d_input_all_channels_t);
         cudnn::setup_tensor_descriptor(m_d_input_all_channels_d,
                                        m_d_input_all_channels_t,
                                        m_d_input_all_channels_t.get_local_shape());
+        release_tmp_tensor_buffer(m_d_input_all_channels_t);
+        util::MPIPrintStreamDebug() << "d_input_all_channels descriptor: " << m_d_input_all_channels_d;
+      }
+    } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+      const auto filter_dim = filter.get_distribution().get_split_shape()[-1];
+      const auto channel_dim = filter.get_distribution().get_split_shape()[-2];
+      {
+        auto dist = tensor::Distribution::make_shared_distribution(
+          input.get_distribution().get_locale_shape());
+        auto local_shape = input.get_local_shape();
+        local_shape[-2] = input.get_shape()[-2] / channel_dim;
+        m_input_gathered_t = tensor::Tensor<DataType, LocaleMPI, Allocator>(
+          input.get_shape(), input.get_locale(), dist,
+          local_shape, tensor::Shape(input.get_num_dims(), 0));
+        util::MPIPrintStreamDebug() << "input_gathered tensor: " << m_input_gathered_t;
+        get_tmp_tensor_buffer(m_input_gathered_t);
+        cudnn::setup_tensor_descriptor(m_input_gathered_d,
+                                       m_input_gathered_t,
+                                       m_input_gathered_t.get_local_shape());
+        release_tmp_tensor_buffer(m_input_gathered_t);
+        util::MPIPrintStreamDebug() << "input_gathered descriptor: " << m_input_gathered_d;
+      }
+      {
+        auto dist = tensor::Distribution::make_shared_distribution(
+          output.get_distribution().get_locale_shape());
+        auto local_shape = output.get_local_shape();
+        local_shape[-2] = output.get_shape()[-2] / filter_dim;
+        m_output_all_filters_t = tensor::Tensor<DataType, LocaleMPI, Allocator>(
+          output.get_shape(), output.get_locale(), dist,
+          local_shape, tensor::Shape(output.get_num_dims(), 0));
+        util::MPIPrintStreamDebug() << "output_all_filters tensor: " << m_output_all_filters_t;
+        get_tmp_tensor_buffer(m_output_all_filters_t);
+        cudnn::setup_tensor_descriptor(m_output_all_filters_d,
+                                       m_output_all_filters_t,
+                                       m_output_all_filters_t.get_local_shape());
+        release_tmp_tensor_buffer(m_output_all_filters_t);
+        util::MPIPrintStreamDebug() << "output_all_filters descriptor: " << m_output_all_filters_d;
+      }
+      {
+        auto dist = tensor::Distribution::make_shared_distribution(
+          d_output.get_distribution().get_locale_shape());
+        auto local_shape = d_output.get_local_shape();
+        local_shape[-2] = d_output.get_shape()[-2] / filter_dim;
+        m_d_output_gathered_t = tensor::Tensor<DataType, LocaleMPI, Allocator>(
+          d_output.get_shape(), d_output.get_locale(), dist,
+          local_shape, tensor::Shape(d_output.get_num_dims(), 0));
+        util::MPIPrintStreamDebug() << "d_output_gathered tensor: " << m_d_output_gathered_t;
+        get_tmp_tensor_buffer(m_d_output_gathered_t);
+        cudnn::setup_tensor_descriptor(m_d_output_gathered_d,
+                                       m_d_output_gathered_t,
+                                       m_d_output_gathered_t.get_local_shape());
+        release_tmp_tensor_buffer(m_d_output_gathered_t);
+        util::MPIPrintStreamDebug() << "d_output_gathered descriptor: " << m_d_output_gathered_d;
+      }
+      {
+        auto dist = tensor::Distribution::make_shared_distribution(
+          d_input.get_distribution().get_locale_shape());
+        auto local_shape = d_input.get_local_shape();
+        local_shape[-2] = d_input.get_shape()[-2] / channel_dim;
+        m_d_input_all_channels_t = tensor::Tensor<DataType, LocaleMPI, Allocator>(
+          d_input.get_shape(), d_input.get_locale(), dist,
+          local_shape, tensor::Shape(d_input.get_num_dims(), 0));
+        util::MPIPrintStreamDebug() << "d_input_all_channels tensor: " << m_d_input_all_channels_t;
+        get_tmp_tensor_buffer(m_d_input_all_channels_t);
+        cudnn::setup_tensor_descriptor(m_d_input_all_channels_d,
+                                       m_d_input_all_channels_t,
+                                       m_d_input_all_channels_t.get_local_shape());
+        release_tmp_tensor_buffer(m_d_input_all_channels_t);
         util::MPIPrintStreamDebug() << "d_input_all_channels descriptor: " << m_d_input_all_channels_d;
       }
     }
@@ -1350,20 +1559,30 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
       return;
     }
     m_chanfilt_segments = input.get_distribution().get_split_shape()[-2];
-    if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
-      if (m_be.get_segmented_ar_comm(m_chanfilt_segments) == nullptr) {
-        m_be.init_segmented_ar_comm(m_chanfilt_segments,
-                                    filter.get_sub_locale_except_dim(-2).get_comm());
-      }
-    } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y) {
-      if (m_be.get_segmented_ar_comm(m_chanfilt_segments) == nullptr) {
-        m_be.init_segmented_ar_comm(m_chanfilt_segments,
-                                    filter.get_sub_locale_except_dim(-1).get_comm());
-      }
+    // All variants use the same communicator for allreduces.
+    if (m_be.get_segmented_ar_comm(m_chanfilt_segments) == nullptr) {
+      m_be.init_segmented_ar_comm(m_chanfilt_segments,
+                                  input.get_sub_locale_except_dim(-2).get_comm());
     }
-    if (m_be.get_chanfilt_comm(m_chanfilt_segments) == nullptr) {
-      m_be.init_chanfilt_comm(m_chanfilt_segments,
-                              input.get_sub_locale(-2).get_comm());
+    if (m_chanfilt_algo == ChannelParallelismAlgorithm::X ||
+        m_chanfilt_algo == ChannelParallelismAlgorithm::Y) {
+      if (m_be.get_chanfilt_channel_comm(m_chanfilt_segments) == nullptr) {
+        m_be.init_chanfilt_channel_comm(m_chanfilt_segments,
+                                        input.get_sub_locale(-2).get_comm());
+      }
+      if (m_be.get_chanfilt_filter_comm(m_chanfilt_segments) == nullptr) {
+        m_be.init_chanfilt_filter_comm(m_chanfilt_segments,
+                                       input.get_sub_locale(-2).get_comm());
+      }
+    } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+      if (m_be.get_chanfilt_channel_comm(m_chanfilt_segments) == nullptr) {
+        m_be.init_chanfilt_channel_comm(m_chanfilt_segments,
+                                        filter.get_sub_locale(-1).get_comm());
+      }
+      if (m_be.get_chanfilt_filter_comm(m_chanfilt_segments) == nullptr) {
+        m_be.init_chanfilt_filter_comm(m_chanfilt_segments,
+                                       filter.get_sub_locale(-2).get_comm());
+      }
     }
   }
 
@@ -1387,6 +1606,9 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
     // deconv is partial.
     if (!m_overlap_halo_exchange_fwd) {
       if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
+        ensure_tensor_descriptors_conform(
+          m_input_d, m_output_all_filters_d, m_filter_d,
+          "stationary-x setup algos forward");
         get_tmp_tensor_buffer(m_output_all_filters_t);
         m_fwd_algo = m_be.get_fwd_algorithm(
           fwd_algo, &m_input_d, input,
@@ -1396,14 +1618,37 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
           ws_size);
         release_tmp_tensor_buffer(m_output_all_filters_t);
       } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y) {
+        ensure_tensor_descriptors_conform(
+          m_input_gathered_d, m_output_d, m_filter_d,
+          "stationary-y setup algos forward");
+        get_tmp_tensor_buffer(m_input_gathered_t);
         m_fwd_algo = m_be.get_fwd_algorithm(
           fwd_algo, &m_input_gathered_d,
           m_input_gathered_t.get_buffer(),
           &m_filter_d, filter,
           &m_conv_fwd_d, &m_output_d, output,
           ws_size);
+        release_tmp_tensor_buffer(m_input_gathered_t);
+      } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+        ensure_tensor_descriptors_conform(
+          m_input_gathered_d, m_output_all_filters_d, m_filter_d,
+          "stationary-w setup algos forward");
+        get_tmp_tensor_buffer(m_input_gathered_t);
+        get_tmp_tensor_buffer(m_output_all_filters_t);
+        m_fwd_algo = m_be.get_fwd_algorithm(
+          fwd_algo, &m_input_gathered_d,
+          m_input_gathered_t.get_buffer(),
+          &m_filter_d, filter,
+          &m_conv_fwd_d, &m_output_all_filters_d,
+          m_output_all_filters_t.get_buffer(),
+          ws_size);
+        release_tmp_tensor_buffer(m_input_gathered_t);
+        release_tmp_tensor_buffer(m_output_all_filters_t);
       } else {
         if (!m_deconv) {
+          ensure_tensor_descriptors_conform(
+            m_input_d, m_output_d, m_filter_d,
+            "setup algos forward");
           m_fwd_algo = m_be.get_fwd_algorithm(
               fwd_algo, &m_input_d, input, &m_filter_d, filter,
               &m_conv_fwd_d, &m_output_d, output, ws_size);
@@ -1461,30 +1706,73 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
     if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
       get_tmp_tensor_buffer(m_d_output_gathered_t);
       if (!m_skip_bp_data) {
+        ensure_tensor_descriptors_conform(
+          m_d_input_d, m_d_output_gathered_d, m_filter_d,
+          "stationary-x setup algos backward-data");
         m_bwd_data_algo = m_be.get_bwd_data_algorithm(
             bwd_data_algo, &m_filter_d, filter, &m_d_output_gathered_d,
             m_d_output_gathered_t.get_buffer(),
             &m_conv_bwd_d, &m_d_input_d, input, ws_size);
       }
+      ensure_tensor_descriptors_conform(
+          m_input_d, m_d_output_gathered_d, m_filter_d,
+          "stationary-x setup algos backward-filter");
       m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
           bwd_filter_algo, &m_input_d, input, &m_d_output_gathered_d,
           m_d_output_gathered_t.get_buffer(),
           &m_conv_bwd_filter_d, &m_d_filter_d, filter, ws_size);
       release_tmp_tensor_buffer(m_d_output_gathered_t);
     } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y) {
+      get_tmp_tensor_buffer(m_input_gathered_t);
+      get_tmp_tensor_buffer(m_d_input_all_channels_t);
       if (!m_skip_bp_data) {
+        ensure_tensor_descriptors_conform(
+          m_d_input_all_channels_d, m_d_output_d, m_filter_d,
+          "stationary-y setup algos backward-data");
         m_bwd_data_algo = m_be.get_bwd_data_algorithm(
             bwd_data_algo, &m_filter_d, filter, &m_d_output_d, output,
             &m_conv_bwd_d, &m_d_input_all_channels_d,
             m_d_input_all_channels_t.get_buffer(), ws_size);
       }
+      ensure_tensor_descriptors_conform(
+          m_input_gathered_d, m_d_output_d, m_filter_d,
+          "stationary-y setup algos backward-filter");
       m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
           bwd_filter_algo, &m_input_gathered_d, m_input_gathered_t.get_buffer(),
           &m_d_output_d, output,
           &m_conv_bwd_filter_d, &m_d_filter_d, filter, ws_size);
+      release_tmp_tensor_buffer(m_input_gathered_t);
+      release_tmp_tensor_buffer(m_d_input_all_channels_t);
+    } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+      get_tmp_tensor_buffer(m_input_gathered_t);
+      get_tmp_tensor_buffer(m_d_output_gathered_t);
+      get_tmp_tensor_buffer(m_d_input_all_channels_t);
+      if (!m_skip_bp_data) {
+        ensure_tensor_descriptors_conform(
+          m_d_input_all_channels_d, m_d_output_gathered_d, m_filter_d,
+          "stationary-w setup algos backward-data");
+        m_bwd_data_algo = m_be.get_bwd_data_algorithm(
+          bwd_data_algo, &m_filter_d, filter, &m_d_output_gathered_d,
+          m_d_output_gathered_t.get_buffer(),
+          &m_conv_bwd_d, &m_d_input_all_channels_d,
+          m_d_input_all_channels_t.get_buffer(), ws_size);
+      }
+      ensure_tensor_descriptors_conform(
+          m_input_gathered_d, m_d_output_gathered_d, m_filter_d,
+          "stationary-w setup algos backward-filter");
+      m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
+        bwd_filter_algo, &m_input_gathered_d, m_input_gathered_t.get_buffer(),
+        &m_d_output_gathered_d, m_d_output_gathered_t.get_buffer(),
+        &m_conv_bwd_filter_d, &m_d_filter_d, filter, ws_size);
+      release_tmp_tensor_buffer(m_input_gathered_t);
+      release_tmp_tensor_buffer(m_d_output_gathered_t);
+      release_tmp_tensor_buffer(m_d_input_all_channels_t);
     } else {
       if (!m_skip_bp_data) {
         if (!m_deconv) {
+          ensure_tensor_descriptors_conform(
+            m_d_input_d, m_d_output_d, m_filter_d,
+            "setup algos backward-data");
           m_bwd_data_algo = m_be.get_bwd_data_algorithm(
               bwd_data_algo, &m_filter_d, filter, &m_d_output_d, output,
               &m_conv_bwd_d, &m_d_input_d, input, ws_size);
@@ -1495,6 +1783,9 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
         }
       }
       if (!m_deconv) {
+        ensure_tensor_descriptors_conform(
+          m_input_d, m_d_output_d, m_filter_d,
+          "setup algos backward-filter");
         m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
             bwd_filter_algo, &m_input_d, input, &m_d_output_d, output,
             &m_conv_bwd_filter_d, &m_d_filter_d, filter, ws_size);
@@ -1531,18 +1822,30 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
         << ", output: " << m_output_d;
     if (!m_overlap_halo_exchange_fwd) {
       if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
-        util::MPIPrintStreamDebug() << "output_all_filters_d: "
-                                    << m_output_all_filters_d;
+        ensure_tensor_descriptors_conform(
+          m_input_d, m_output_all_filters_d, m_filter_d,
+          "stationary-x workspace forward");
         DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(
                                m_be.get_handle(), m_input_d, m_filter_d, m_conv_fwd_d,
                                m_output_all_filters_d, m_fwd_algo, &s));
       } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y) {
-        util::MPIPrintStreamDebug() << "m_input_gathered_d: "
-                                    << m_input_gathered_d;
+        ensure_tensor_descriptors_conform(
+          m_input_gathered_d, m_output_d, m_filter_d,
+          "stationary-y workspace forward");
         DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(
                                m_be.get_handle(), m_input_gathered_d, m_filter_d, m_conv_fwd_d,
                                m_output_d, m_fwd_algo, &s));
+      } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+        ensure_tensor_descriptors_conform(
+          m_input_gathered_d, m_output_all_filters_d, m_filter_d,
+          "stationary-w workspace forward");
+        DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(
+                               m_be.get_handle(), m_input_gathered_d, m_filter_d, m_conv_fwd_d,
+                               m_output_all_filters_d, m_fwd_algo, &s));
       } else {
+        ensure_tensor_descriptors_conform(
+          m_input_d, m_output_d, m_filter_d,
+          "workspace forward");
         s = get_workspace_size_fwd(m_input_d, m_filter_d, m_output_d);
       }
     } else {
@@ -1594,16 +1897,33 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
     size_t s;
     cudnnStatus_t err = CUDNN_STATUS_SUCCESS;
     if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
+      ensure_tensor_descriptors_conform(
+        m_d_input_d, m_d_output_gathered_d, m_filter_d,
+        "stationary-x workspace backward-data");
       err = cudnnGetConvolutionBackwardDataWorkspaceSize(
         m_be.get_handle(), m_filter_d, m_d_output_gathered_d,
         m_conv_bwd_d,
         m_d_input_d, m_bwd_data_algo, &s);
     } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y) {
+      ensure_tensor_descriptors_conform(
+        m_d_input_all_channels_d, m_d_output_d, m_filter_d,
+        "stationary-y workspace backward-data");
       err = cudnnGetConvolutionBackwardDataWorkspaceSize(
         m_be.get_handle(), m_filter_d, m_d_output_d,
         m_conv_bwd_d,
         m_d_input_all_channels_d, m_bwd_data_algo, &s);
+    } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+      ensure_tensor_descriptors_conform(
+        m_d_input_all_channels_d, m_d_output_gathered_d, m_filter_d,
+        "stationary-w workspace backward-data");
+      err = cudnnGetConvolutionBackwardDataWorkspaceSize(
+        m_be.get_handle(), m_filter_d, m_d_output_gathered_d,
+        m_conv_bwd_d,
+        m_d_input_all_channels_d, m_bwd_data_algo, &s);
     } else {
+      ensure_tensor_descriptors_conform(
+        m_d_input_d, m_d_output_d, m_filter_d,
+        "workspace backward-data");
       s = get_workspace_size_bwd_data(m_filter_d, m_d_output_d, m_d_input_d);
     }
     if (err != CUDNN_STATUS_SUCCESS) {
@@ -1643,18 +1963,30 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
         << ", conv desc: " << m_conv_bwd_filter_d
         << ", d_filter: " << m_d_filter_d;
     if (m_chanfilt_algo == ChannelParallelismAlgorithm::X) {
-      util::MPIPrintStreamDebug() << "m_d_output_gathered_d: "
-                                  << m_d_output_gathered_d;
+      ensure_tensor_descriptors_conform(
+        m_input_d, m_d_output_gathered_d, m_d_filter_d,
+        "stationary-x workspace backward-filter");
       DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(
                              m_be.get_handle(), m_input_d, m_d_output_gathered_d,
                              m_conv_bwd_filter_d, m_d_filter_d, m_bwd_filter_algo, &s));
     } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y) {
-      util::MPIPrintStreamDebug() << "m_input_gathered_d: "
-                                  << m_input_gathered_d;
+      ensure_tensor_descriptors_conform(
+        m_input_gathered_d, m_d_output_d, m_d_filter_d,
+        "stationary-y workspace backward-filter");
       DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(
                              m_be.get_handle(), m_input_gathered_d, m_d_output_d,
                              m_conv_bwd_filter_d, m_d_filter_d, m_bwd_filter_algo, &s));
+    } else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
+      ensure_tensor_descriptors_conform(
+        m_input_gathered_d, m_d_output_gathered_d, m_d_filter_d,
+        "stationary-w workspace backward-filter");
+      DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(
+                             m_be.get_handle(), m_input_gathered_d, m_d_output_gathered_d,
+                             m_conv_bwd_filter_d, m_d_filter_d, m_bwd_filter_algo, &s));
     } else {
+      ensure_tensor_descriptors_conform(
+        m_input_d, m_d_output_d, m_d_filter_d,
+        "workspace backward-filter");
       s = get_workspace_size_bwd_filter(m_input_d, m_d_output_d, m_d_filter_d);
     }
     m_ws_size_bwd_filter = s;
@@ -1970,10 +2302,6 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
       std::cerr << "Channel/filter parallelism algorithm is NONE, but channels are partitioned\n";
       std::abort();
     }
-    if (m_chanfilt_algo == ChannelParallelismAlgorithm::W) {
-      std::cerr << "Unsupported channel/filter parallelism " << m_chanfilt_algo << "\n";
-      std::abort();
-    }
     if (m_chanfilt_algo == ChannelParallelismAlgorithm::AUTO) {
       // Force this for now.
       m_chanfilt_algo = ChannelParallelismAlgorithm::X;
@@ -1984,20 +2312,28 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
   template <typename Allocator>
   void allgather_chanfilt(
     tensor::Tensor<DataType, LocaleMPI, Allocator> &src,
-    tensor::Tensor<DataType, LocaleMPI, Allocator> &dst) {
-    m_channel_exchange.allgather(src, dst,
-                                 *m_be.get_chanfilt_comm(m_chanfilt_segments),
-                                 m_be.get_stream());
+    tensor::Tensor<DataType, LocaleMPI, Allocator> &dst,
+    bool channel) {
+    m_channel_exchange.allgather(
+      src, dst,
+      channel ?
+      *m_be.get_chanfilt_channel_comm(m_chanfilt_segments) :
+      *m_be.get_chanfilt_filter_comm(m_chanfilt_segments),
+      m_be.get_stream());
   }
 
   /** Reduce-scatter the channel/filter dimension of src into dst. */
   template <typename Allocator>
   void reduce_scatter_chanfilt(
     tensor::Tensor<DataType, LocaleMPI, Allocator> &src,
-    tensor::Tensor<DataType, LocaleMPI, Allocator> &dst) {
-    m_channel_exchange.reduce_scatter(src, dst,
-                                      *m_be.get_chanfilt_comm(m_chanfilt_segments),
-                                      m_be.get_stream());
+    tensor::Tensor<DataType, LocaleMPI, Allocator> &dst,
+    bool channel) {
+    m_channel_exchange.reduce_scatter(
+      src, dst,
+      channel ?
+      *m_be.get_chanfilt_channel_comm(m_chanfilt_segments) :
+      *m_be.get_chanfilt_filter_comm(m_chanfilt_segments),
+      m_be.get_stream());
   }
 
   /** Get a temporary buffer and set t to view it. */
@@ -2015,6 +2351,69 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
     tensor::Tensor<DataType, LocaleMPI, Allocator> &t) {
     internal::RuntimeCUDA::get_device_memory_pool().release(t.get_buffer());
     tensor::View(t, (DataType *) nullptr);
+  }
+
+  /**
+   * Ensure tensor dimensions match.
+   *
+   * channel_tensor is either x or dL/dx.
+   * filter_tensor is either y or dL/dy.
+   * weights_tensor is either w or dL/dw.
+   */
+  template <typename Allocator>
+  void ensure_tensors_conform(
+    const tensor::Tensor<DataType, LocaleMPI, Allocator> &channel_tensor,
+    const tensor::Tensor<DataType, LocaleMPI, Allocator> &filter_tensor,
+    const tensor::Tensor<DataType, LocaleMPI, Allocator> &weights_tensor,
+    const std::string &context) {
+    auto c_shape = channel_tensor.get_local_shape();
+    auto f_shape = filter_tensor.get_local_shape();
+    auto w_shape = weights_tensor.get_local_shape();
+    if (c_shape[-2] != w_shape[-2] || f_shape[-2] != w_shape[-1]) {
+      util::MPIPrintStreamError()
+        << context << ": tensors do not match:\n"
+        << " channel_tensor: " << channel_tensor << "\n"
+        << " filter_tensor: " << filter_tensor << "\n"
+        << " weights_tensor: " << weights_tensor;
+      std::abort();
+    }
+  }
+
+  /** Like ensure_tensors_conform but for descriptors. */
+  void ensure_tensor_descriptors_conform(
+    const cudnnTensorDescriptor_t &channel_d,
+    const cudnnTensorDescriptor_t &filter_d,
+    const cudnnFilterDescriptor_t &weights_d,
+    const std::string &context) {
+    if (m_num_dims == 4) {
+      if (cudnn::get_tensor_dimension(channel_d, -2) !=
+          cudnn::get_filter_descriptor_dimension<4>(weights_d, -2) ||
+          cudnn::get_tensor_dimension(filter_d, -2) !=
+          cudnn::get_filter_descriptor_dimension<4>(weights_d, -1)) {
+        util::MPIPrintStreamError()
+          << context << ": descriptors do not match:\n"
+          << " channel: " << channel_d << "\n"
+          << " filter: " << filter_d << "\n"
+          << " weights: " << weights_d;
+        std::abort();
+      }
+    } else if (m_num_dims == 5) {
+      if (cudnn::get_tensor_dimension(channel_d, -2) !=
+          cudnn::get_filter_descriptor_dimension<5>(weights_d, -2) ||
+          cudnn::get_tensor_dimension(filter_d, -2) !=
+          cudnn::get_filter_descriptor_dimension<5>(weights_d, -1)) {
+        util::MPIPrintStreamError()
+          << context << ": descriptors do not match:\n"
+          << " channel: " << channel_d << "\n"
+          << " filter: " << filter_d << "\n"
+          << " weights: " << weights_d;
+        std::abort();
+    } else {
+      util::MPIPrintStreamError()
+        << "Unsupported num_dims " << m_num_dims;
+      std::abort();
+      }
+    }
   }
 
 };

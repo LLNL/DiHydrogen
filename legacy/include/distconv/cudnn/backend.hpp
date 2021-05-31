@@ -100,6 +100,7 @@ inline int get_tensor_dimension(const cudnnTensorDescriptor_t &desc, int d) {
   int nbdims;
   DISTCONV_CHECK_CUDNN(
       cudnnGetTensorNdDescriptor(desc, nb_dims_requested, &dt, &nbdims, dims, strides));
+  d = d < 0 ? nbdims + d : d;
   assert_always(d < nbdims);
   return dims[nbdims-d-1];
 }
@@ -112,6 +113,7 @@ inline void set_tensor_dimension(cudnnTensorDescriptor_t &desc,
   int nbdims;
   DISTCONV_CHECK_CUDNN(
       cudnnGetTensorNdDescriptor(desc, nb_dims_requested, &dt, &nbdims, dims, strides));
+  d = d < 0 ? nbdims + d : d;
   assert_always(d < nbdims);
   dims[nbdims-d-1] = n;
   DISTCONV_CHECK_CUDNN(
@@ -159,6 +161,20 @@ inline void copy_filter_descriptor(cudnnFilterDescriptor_t &dst,
       cudnnGetFilterNdDescriptor(src, nb_dims_requested, &dt, &fmt, &nbdims, dims));
   DISTCONV_CHECK_CUDNN(
       cudnnSetFilterNdDescriptor(dst, dt, fmt, nbdims, dims));
+}
+
+template <int ND>
+inline int get_filter_descriptor_dimension(const cudnnFilterDescriptor_t &desc,
+                                           int d) {
+  cudnnDataType_t dt;
+  int dims[nb_dims_requested];
+  int nbdims;
+  cudnnTensorFormat_t fmt;
+  DISTCONV_CHECK_CUDNN(
+      cudnnGetFilterNdDescriptor(desc, ND, &dt, &fmt, &nbdims, dims));
+  d = d < 0 ? nbdims + d : d;
+  assert_always(d < nbdims);
+  return dims[nbdims-d-1];
 }
 
 inline void copy_convolution_descriptor(
@@ -420,12 +436,24 @@ class BackendCUDNN {
       void *d_filter,
       size_t ws_size);
 
-  void init_chanfilt_comm(index_t seg, MPI_Comm comm) {
-    assert0(m_chanfilt_comms.count(seg));
-    util::MPIPrintStreamDebug()
-      << "Setting up new chanfilt comm for segments=" << seg;
-    m_chanfilt_comms[seg] = std::unique_ptr<Al::NCCLBackend::comm_type>(
+  void init_chanfilt_channel_comm(index_t seg, MPI_Comm comm) {
+    assert0(m_chanfilt_channel_comms.count(seg));
+    m_chanfilt_channel_comms[seg] = std::unique_ptr<Al::NCCLBackend::comm_type>(
       new Al::NCCLBackend::comm_type(comm, get_stream()));
+    util::MPIPrintStreamDebug()
+      << "Setting up new chanfilt channel comm for segments=" << seg
+      << " rank=" << m_chanfilt_channel_comms[seg]->rank()
+      << " of " << m_chanfilt_channel_comms[seg]->size();
+  }
+
+  void init_chanfilt_filter_comm(index_t seg, MPI_Comm comm) {
+    assert0(m_chanfilt_filter_comms.count(seg));
+    m_chanfilt_filter_comms[seg] = std::unique_ptr<Al::NCCLBackend::comm_type>(
+      new Al::NCCLBackend::comm_type(comm, get_stream()));
+    util::MPIPrintStreamDebug()
+      << "Setting up new chanfilt filter comm for segments=" << seg
+      << " rank=" << m_chanfilt_filter_comms[seg]->rank()
+      << " of " << m_chanfilt_filter_comms[seg]->size();
   }
 
   void init_segmented_ar_comm(index_t seg, MPI_Comm comm) {
@@ -436,9 +464,16 @@ class BackendCUDNN {
       new Al::NCCLBackend::comm_type(comm, get_stream()));
   }
 
-  Al::NCCLBackend::comm_type *get_chanfilt_comm(index_t seg) {
-    if (m_chanfilt_comms.count(seg) > 0) {
-      return m_chanfilt_comms[seg].get();
+  Al::NCCLBackend::comm_type *get_chanfilt_channel_comm(index_t seg) {
+    if (m_chanfilt_channel_comms.count(seg) > 0) {
+      return m_chanfilt_channel_comms[seg].get();
+    }
+    return nullptr;
+  }
+
+  Al::NCCLBackend::comm_type *get_chanfilt_filter_comm(index_t seg) {
+    if (m_chanfilt_filter_comms.count(seg) > 0) {
+      return m_chanfilt_filter_comms[seg].get();
     }
     return nullptr;
   }
@@ -476,7 +511,11 @@ class BackendCUDNN {
   Options m_opts;
 
   // Segmented communicators for channel/filter communication.
-  std::unordered_map<index_t, std::unique_ptr<Al::NCCLBackend::comm_type>> m_chanfilt_comms;
+  // Communicators for ranks within a single channel/filter domain with the same
+  // channel indices on the filter tensor.
+  std::unordered_map<index_t, std::unique_ptr<Al::NCCLBackend::comm_type>> m_chanfilt_channel_comms;
+  // Same filter indices on the filter tensor.
+  std::unordered_map<index_t, std::unique_ptr<Al::NCCLBackend::comm_type>> m_chanfilt_filter_comms;
   std::unordered_map<index_t, std::unique_ptr<Al::NCCLBackend::comm_type>> m_segmented_ar_comms;
 
   void init(MPI_Comm comm) {
