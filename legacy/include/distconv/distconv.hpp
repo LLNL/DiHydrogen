@@ -284,9 +284,11 @@ Tensor create_d_input_tensor(const Tensor &input) {
 template <typename Tensor>
 Tensor create_filter_tensor(const int_vector &locale_shape,
                             const int_vector &filter_dims,
+                            const Tensor &input,
                             index_t num_channels, index_t num_filters,
                             int num_groups, MPI_Comm comm,
-                            ChannelParallelismAlgorithm chanfilt_algo) {
+                            ChannelParallelismAlgorithm chanfilt_algo,
+                            int filter_dim = 0) {
   const int nd = locale_shape.size();
   const int nsd = nd - 2;
   assert_eq(nsd, (int)filter_dims.size());
@@ -299,12 +301,28 @@ Tensor create_filter_tensor(const int_vector &locale_shape,
   if (filter_locale_shape[-2] > 1) {
     // Handle channel/filter parallelism.
     assert(num_groups == 1);  // No grouped convolution for now.
-    // TODO: Support stationary-w.
     if (chanfilt_algo == ChannelParallelismAlgorithm::X) {
+      filter_locale_shape[-1] = 1;
       split_shape[-2] = filter_locale_shape[-2];
     } else if (chanfilt_algo == ChannelParallelismAlgorithm::Y) {
-      std::swap(filter_locale_shape[-2], filter_locale_shape[-1]);
+      // This is specified with the channel dimension on input.
+      filter_locale_shape[-1] = filter_locale_shape[-2];
+      filter_locale_shape[-2] = 1;
       split_shape[-1] = filter_locale_shape[-1];
+    } else if (chanfilt_algo == ChannelParallelismAlgorithm::W) {
+      if (static_cast<size_t>(filter_dim) > filter_locale_shape[-2] ||
+          filter_locale_shape[-2] % filter_dim != 0) {
+        std::cerr << "Invalid filter_dim: channel="
+                  << filter_locale_shape[-2]
+                  << " filter=" << filter_dim << "\n";
+        abort();
+      }
+      // The channel dimension of input is split based on
+      // filter_dim.
+      filter_locale_shape[-1] = filter_dim;
+      filter_locale_shape[-2] /= filter_dim;
+      split_shape[-1] = filter_locale_shape[-1];
+      split_shape[-2] = filter_locale_shape[-2];
     }
   }
   filter_shape[-2] = num_channels / num_groups;
@@ -314,7 +332,7 @@ Tensor create_filter_tensor(const int_vector &locale_shape,
   util::MPIPrintStreamDebug()
     << "Filter locale shape: " << dist.get_locale_shape()
     << " split shape: " << dist.get_split_shape();
-  Tensor t = Tensor(filter_shape, tensor::LocaleMPI(comm),
+  Tensor t = Tensor(filter_shape, input.get_sub_locale_except_dim(-1),
                     dist);
   util::MPIPrintStreamDebug() << "Filter tensor: " << t;
   return t;
