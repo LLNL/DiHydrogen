@@ -88,6 +88,13 @@ void get_halo_sizes(const tensor::Tensor<DataType, Locale, Allocator> &input,
       const auto offset_from_next_stride = (s - (yp1 % s)) % s;
       fwd_halo_send[i] = radius - offset_from_next_stride;
     }
+
+    // Make sure halo sizes are non-negative
+    fwd_halo_send[i] = std::max(fwd_halo_send[i], 0);
+    fwd_halo_recv[i] = std::max(fwd_halo_recv[i], 0);
+    bwd_halo_send[i] = std::max(bwd_halo_send[i], 0);
+    bwd_halo_recv[i] = std::max(bwd_halo_recv[i], 0);
+
   }
 }
 
