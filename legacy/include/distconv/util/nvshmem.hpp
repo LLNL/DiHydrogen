@@ -61,7 +61,7 @@ struct PairwiseSyncDevice {
 
   __device__ __forceinline__ void wait() {
     const auto counter = *m_local_counter;
-    nvshmem_wait_until(m_shmem_counter, NVSHMEM_CMP_GE, counter);
+    nvshmem_long_wait_until((long *)m_shmem_counter, NVSHMEM_CMP_GE, counter);
   }
 
   __device__ __forceinline__ void inc_counter() {
@@ -128,7 +128,7 @@ struct SyncArrayDevice {
 
   __device__ __forceinline__ void wait(int idx) {
     const auto counter = m_local_counter[idx];
-    nvshmem_wait_until(m_shmem_counter + idx, NVSHMEM_CMP_GE, counter);
+    nvshmem_long_wait_until((long *)m_shmem_counter + idx, NVSHMEM_CMP_GE, counter);
   }
 
   __device__ __forceinline__ void inc_counter(int idx) {
@@ -217,13 +217,12 @@ DEFINE_PUT(long)
 
 #endif // __NVCC__
 
+// Set the team to all possible PEs. May affect correctness but builds succesfully 
 #define DEFINE_SUM_TO_ALL(TYPE)                                         \
   inline void sum_to_all_on_stream(TYPE *target, const TYPE *source, int nreduce, \
                                    int PE_start, int logPE_stride, int PE_size, \
-                                   TYPE *pWrk, long *pSync, cudaStream_t s) { \
-    nvshmemx_##TYPE##_sum_to_all_on_stream(                             \
-        target, source, nreduce, PE_start,                              \
-        logPE_stride, PE_size, pWrk, pSync, s);                         \
+                                   TYPE *pWrk, long *pSync, cudaStream_t s) {   \
+    nvshmemx_##TYPE##_sum_reduce_on_stream(NVSHMEM_TEAM_WORLD,target, source, nreduce, s); \
   }
 DEFINE_SUM_TO_ALL(float)
 DEFINE_SUM_TO_ALL(double)
