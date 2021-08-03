@@ -2408,11 +2408,11 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
           << " filter: " << filter_d << "\n"
           << " weights: " << weights_d;
         std::abort();
+      }
     } else {
       util::MPIPrintStreamError()
         << "Unsupported num_dims " << m_num_dims;
       std::abort();
-      }
     }
   }
 
