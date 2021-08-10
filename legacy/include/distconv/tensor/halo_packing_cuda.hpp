@@ -149,7 +149,7 @@ struct PackAndPutBlockFunctor {
   static constexpr HaloTraversalOpGroup group = HaloTraversalOpGroup::BLOCK;
   static constexpr bool has_pre_grid = false;
   static constexpr bool has_post_grid = false;
-  static constexpr bool modifies_tensor = false;
+  static constexpr bool modifies_tensor = true;
   DataType *m_buf;
   DataType *m_dst;
   int m_peer;
@@ -189,7 +189,7 @@ struct PackPutNotifyBlockFunctor {
   static constexpr HaloTraversalOpGroup group = HaloTraversalOpGroup::BLOCK;
   static constexpr bool has_pre_grid = false;
   static constexpr bool has_post_grid = true;
-  static constexpr bool modifies_tensor = false;
+  static constexpr bool modifies_tensor = true;
   DataType *m_buf;
   DataType *m_dst;
   int m_peer;
