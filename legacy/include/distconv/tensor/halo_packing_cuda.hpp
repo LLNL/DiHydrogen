@@ -65,6 +65,7 @@ struct PackFunctor {
   static constexpr bool has_pre_grid = false;
   static constexpr bool has_post_grid = false;
   static constexpr bool modifies_tensor = true;
+
   DataType *m_buf;
   PackFunctor(DataType *buf): m_buf(buf) {}
   template <typename T> __device__
@@ -149,7 +150,8 @@ struct PackAndPutBlockFunctor {
   static constexpr HaloTraversalOpGroup group = HaloTraversalOpGroup::BLOCK;
   static constexpr bool has_pre_grid = false;
   static constexpr bool has_post_grid = false;
-  static constexpr bool modifies_tensor = true;
+  static constexpr bool modifies_tensor = false;
+
   DataType *m_buf;
   DataType *m_dst;
   int m_peer;
@@ -189,7 +191,8 @@ struct PackPutNotifyBlockFunctor {
   static constexpr HaloTraversalOpGroup group = HaloTraversalOpGroup::BLOCK;
   static constexpr bool has_pre_grid = false;
   static constexpr bool has_post_grid = true;
-  static constexpr bool modifies_tensor = true;
+  static constexpr bool modifies_tensor = false;
+
   DataType *m_buf;
   DataType *m_dst;
   int m_peer;
@@ -240,6 +243,7 @@ struct WaitAndUnpackFunctor {
   static constexpr bool has_pre_grid = true;
   static constexpr bool has_post_grid = false;
   static constexpr bool modifies_tensor = true;
+
   DataType *m_buf;
   util::nvshmem::PairwiseSyncDevice m_sync;
   WaitAndUnpackFunctor(DataType *buf, util::nvshmem::PairwiseSync &sync):

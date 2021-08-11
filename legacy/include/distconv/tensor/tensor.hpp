@@ -48,6 +48,7 @@ class Tensor: public AbstractTensor {
  public:
 
   using data_type = DataType;
+  using const_data_type = DataType const;
   using locale_type = Locale;
   using allocator_type = Allocator;
 
