@@ -655,9 +655,9 @@ void TraverseHalo(Tensor &tensor, int dim,
                   bool inner, OpType op,
                   cudaStream_t s) {
   // ConstDataType is const DataType if the operation only reads the tensor.
-  using ConstDataType = typename std::conditional<
-    OpType::modifies_tensor, typename Tensor::data_type,
-    typename std::add_const<typename Tensor::data_type>::type>::type;
+  using ConstDataType = std::conditional_t<OpType::modifies_tensor,
+                                           typename Tensor::data_type,
+                                           typename Tensor::const_data_type>;
   const int num_dims = tensor.get_num_dims();
   int available_halo_width = tensor.get_halo_width(dim);
   assert_always(halo_width <= available_halo_width);

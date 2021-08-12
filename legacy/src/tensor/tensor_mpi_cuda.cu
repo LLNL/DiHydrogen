@@ -20,6 +20,7 @@ struct ClearHaloFunctor {
   static constexpr bool has_pre_grid = false;
   static constexpr bool has_post_grid = false;
   static constexpr bool modifies_tensor = true;
+
   ClearHaloFunctor() {}
   __device__ void operator()(DataType &x, size_t) {
     x = DataType(0);
