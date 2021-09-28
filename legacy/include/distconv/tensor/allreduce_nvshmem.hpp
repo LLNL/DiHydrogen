@@ -53,7 +53,7 @@ struct AllreduceNVSHMEMDevice {
       // Inter-device reduction
       for (int i = 0; i < m_num_steps; ++i) {
         int peer = m_pid ^ (1 << i);
-        put_nbi(tmp_buf + 1, tmp_buf, 1, peer);
+        util::nvshmem::put_nbi(tmp_buf + 1, tmp_buf, 1, peer);
         m_sync.sync(peer, true, true, st, sync_idx + i);
         tmp_buf[1] += tmp_buf[0];
         ++tmp_buf;
