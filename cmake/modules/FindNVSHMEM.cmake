@@ -71,10 +71,12 @@ mark_as_advanced(FORCE NVSHMEM_LIBRARY)
 if (NVSHMEM_FOUND)
   set_property(TARGET cuda::toolkit APPEND PROPERTY
     INTERFACE_LINK_LIBRARIES ${CUDA_cudadevrt_LIBRARY})
+  # Build static libraries to get around a bug in NVSHMEM
+  set(BUILD_SHARED_LIBS OFF)
   # Workaround for separable compilation with cooperative threading. see
   # https://stackoverflow.com/questions/53492528/cooperative-groupsthis-grid-causes-any-cuda-api-call-to-return-unknown-erro.
   # Adding this to INTERFACE_COMPILE_OPTIONS does not seem to solve the problem.
   # It seems that CMake does not add necessary options for device linking when cuda_add_executable/library is NOT used. See also
   # https://github.com/dealii/dealii/pull/5405
-  string(APPEND CMAKE_CUDA_FLAGS "-gencode arch=compute_70,code=sm_70")
+  string(APPEND CMAKE_CUDA_FLAGS "-gencode arch=compute_70,code=compute_70")
 endif ()

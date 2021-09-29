@@ -9,6 +9,7 @@
 #ifndef NVSHMEM_TARGET
 #define NVSHMEM_TARGET
 #endif
+#define NVSHMEM_USE_NCCL
 #include "nvshmem.h"
 #include "nvshmemx.h"
 #endif // DISTCONV_HAS_NVSHMEM
@@ -217,7 +218,7 @@ DEFINE_PUT(long)
 
 #endif // __NVCC__
 
-// Set the team to all possible PEs. May affect correctness but builds succesfully 
+// Set the team to all possible PEs. May affect correctness but builds succesfully
 #define DEFINE_SUM_TO_ALL(TYPE)                                         \
   inline void sum_to_all_on_stream(TYPE *target, const TYPE *source, int nreduce, \
                                    int PE_start, int logPE_stride, int PE_size, \
