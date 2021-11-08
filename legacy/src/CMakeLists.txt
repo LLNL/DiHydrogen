@@ -38,6 +38,6 @@ endif ()
 
 set_target_properties(distconv
   PROPERTIES
-  CXX_STANDARD 14
+  CXX_STANDARD 17
   CXX_EXTENSIONS OFF
   CXX_STANDARD_REQUIRED ON)

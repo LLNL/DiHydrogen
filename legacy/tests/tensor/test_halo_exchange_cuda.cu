@@ -505,12 +505,12 @@ int test_halo_exchange(const Array<ND> &shape,
     dims.push_back(i);
   cudaStream_t stream_main;
   cudaStreamCreate(&stream_main);
-  BoundaryAttributesV<std::shared_ptr<Al::HostTransferBackend::comm_type>> comms;
+  BoundaryAttributesV<std::shared_ptr<Al::NCCLBackend::comm_type>> comms;
   apply_to_spatial_sides(ND, [&](int i, Side side) {
       cudaStream_t stream;
       cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
       comms(i, side) =
-          std::make_shared<Al::HostTransferBackend::comm_type>(
+          std::make_shared<Al::NCCLBackend::comm_type>(
               tensor.get_locale().get_comm(), stream);
     });
   for (int i = 0; i < ND - 2; ++i) {
@@ -519,7 +519,7 @@ int test_halo_exchange(const Array<ND> &shape,
     }
   }
 
-  HaloExchange<DataType, CUDAAllocator, Al::HostTransferBackend> *halo_exc = nullptr;
+  HaloExchange<DataType, CUDAAllocator, Al::NCCLBackend> *halo_exc = nullptr;
 #ifdef DISTCONV_HAS_P2P
   p2p::P2P p2p(MPI_COMM_WORLD);
 #endif
@@ -527,47 +527,47 @@ int test_halo_exchange(const Array<ND> &shape,
   switch (method) {
     case HaloExchangeMethod::MPI:
       halo_exc = new HaloExchangeMPI<
-        DataType, CUDAAllocator, Al::HostTransferBackend>(tensor);
+        DataType, CUDAAllocator, Al::NCCLBackend>(tensor);
       util::MPIRootPrintStreamInfo() << "HaloExchangeMPI created";
       break;
     case HaloExchangeMethod::AL:
       halo_exc = new HaloExchangeAL<DataType, CUDAAllocator,
-                                    Al::HostTransferBackend>(tensor);
+                                    Al::NCCLBackend>(tensor);
       util::MPIRootPrintStreamInfo() << "HaloExchangeAL created";
       break;
 #ifdef DISTCONV_HAS_P2P
     case HaloExchangeMethod::P2P:
       halo_exc = new HaloExchangeP2P<
-        DataType, CUDAAllocator, Al::HostTransferBackend>(tensor, p2p);
+        DataType, CUDAAllocator, Al::NCCLBackend>(tensor, p2p);
       util::MPIRootPrintStreamInfo() << "HaloExchangeP2P created";
       break;
     case HaloExchangeMethod::HYBRID:
       halo_exc = new HaloExchangeHybrid<DataType, CUDAAllocator,
-                                        Al::HostTransferBackend>(tensor, p2p);
+                                        Al::NCCLBackend>(tensor, p2p);
       util::MPIRootPrintStreamInfo() << "HaloExchangeHybrid created";
       break;
 #endif // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
     case HaloExchangeMethod::NVSHMEM:
       halo_exc = new HaloExchangeNVSHMEM<DataType, CUDAAllocator,
-                                         Al::HostTransferBackend>(tensor);
+                                         Al::NCCLBackend>(tensor);
       util::MPIRootPrintStreamInfo() << "HaloExchangeNVSHMEM created";
       break;
 #ifdef DISTCONV_HAS_CUDA_GRAPH
     case HaloExchangeMethod::NVSHMEM_GRAPH:
       halo_exc = new HaloExchangeNVSHMEMGraph<DataType, CUDAAllocator,
-                                              Al::HostTransferBackend>(tensor);
+                                              Al::NCCLBackend>(tensor);
       util::MPIRootPrintStreamInfo() << "HaloExchangeNVSHMEMGraph created";
       break;
 #endif // DISTCONV_HAS_CUDA_GRAPH
     case HaloExchangeMethod::NVSHMEM_DIRECT:
       halo_exc = new HaloExchangeNVSHMEMDirect<DataType, CUDAAllocator,
-                                               Al::HostTransferBackend>(tensor);
+                                               Al::NCCLBackend>(tensor);
       util::MPIRootPrintStreamInfo() << "HaloExchangeNVSHMEMDirect created";
       break;
     case HaloExchangeMethod::NVSHMEM_FUSED_NOTIFY:
       halo_exc = new HaloExchangeNVSHMEMFusedNotify<DataType, CUDAAllocator,
-                                                    Al::HostTransferBackend>(tensor);
+                                                    Al::NCCLBackend>(tensor);
       util::MPIRootPrintStreamInfo() << "HaloExchangeNVSHMEMFusedNotify created";
       break;
 #endif // DISTCONV_HAS_NVSHMEM
@@ -676,12 +676,12 @@ int test_halo_exchange_reverse(const Array<ND> &shape,
     dims.push_back(i);
   cudaStream_t stream_main;
   cudaStreamCreate(&stream_main);
-  SpatialAttributes<ND, std::shared_ptr<Al::HostTransferBackend::comm_type>> comms;
+  SpatialAttributes<ND, std::shared_ptr<Al::NCCLBackend::comm_type>> comms;
   apply_to_spatial_sides<ND>([&](int i, Side side) {
       cudaStream_t stream;
       cudaStreamCreate(&stream);
       comms(i, side) =
-          std::make_shared<Al::HostTransferBackend::comm_type>(
+          std::make_shared<Al::NCCLBackend::comm_type>(
               tensor.get_locale().get_comm(), stream);
     });
   for (int i = 0; i < ND - 2; ++i) {
@@ -690,7 +690,7 @@ int test_halo_exchange_reverse(const Array<ND> &shape,
     }
   }
 
-  HaloExchange<DataType, CUDAAllocator, Al::HostTransferBackend> *halo_exc = nullptr;
+  HaloExchange<DataType, CUDAAllocator, Al::NCCLBackend> *halo_exc = nullptr;
 #ifdef DISTCONV_HAS_P2P
   p2p::P2P p2p(MPI_COMM_WORLD);
 #endif // DISTCONV_HAS_P2P
@@ -698,47 +698,47 @@ int test_halo_exchange_reverse(const Array<ND> &shape,
   switch (method) {
     case HaloExchangeMethod::MPI:
       halo_exc = new HaloExchangeMPI<DataType, CUDAAllocator,
-                                     Al::HostTransferBackend>(tensor);
+                                     Al::NCCLBackend>(tensor);
       util::MPIRootPrintStreamInfo() << "HaloExchangeMPI created";
       break;
     case HaloExchangeMethod::AL:
       halo_exc = new HaloExchangeAL<DataType, CUDAAllocator,
-                                    Al::HostTransferBackend>(tensor);
+                                    Al::NCCLBackend>(tensor);
       util::MPIRootPrintStreamInfo() << "HaloExchangeAL created";
       break;
 #ifdef DISTCONV_HAS_P2P
     case HaloExchangeMethod::P2P:
       halo_exc = new HaloExchangeP2P<DataType, CUDAAllocator,
-                                     Al::HostTransferBackend>(tensor, p2p);
+                                     Al::NCCLBackend>(tensor, p2p);
       util::MPIRootPrintStreamInfo() << "HaloExchangeP2P created";
       break;
     case HaloExchangeMethod::HYBRID:
       halo_exc = new HaloExchangeHybrid<DataType, CUDAAllocator,
-                                        Al::HostTransferBackend>(tensor, p2p);
+                                        Al::NCCLBackend>(tensor, p2p);
       util::MPIRootPrintStreamInfo() << "HaloExchangeHybrid created";
       break;
 #endif // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
     case HaloExchangeMethod::NVSHMEM:
       halo_exc = new HaloExchangeNVSHMEM<DataType, CUDAAllocator,
-                                         Al::HostTransferBackend>(tensor);
+                                         Al::NCCLBackend>(tensor);
       util::MPIRootPrintStreamInfo() << "HaloExchangeNVSHMEM created";
       break;
 #ifdef DISTCONV_HAS_CUDA_GRAPH
     case HaloExchangeMethod::NVSHMEM_GRAPH:
       halo_exc = new HaloExchangeNVSHMEMGraph<DataType, CUDAAllocator,
-                                              Al::HostTransferBackend>(tensor);
+                                              Al::NCCLBackend>(tensor);
       util::MPIRootPrintStreamInfo() << "HaloExchangeNVSHMEMGraph created";
       break;
 #endif // DISTCONV_HAS_CUDA_GRAPH
     case HaloExchangeMethod::NVSHMEM_DIRECT:
       halo_exc = new HaloExchangeNVSHMEMDirect<DataType, CUDAAllocator,
-                                               Al::HostTransferBackend>(tensor);
+                                               Al::NCCLBackend>(tensor);
       util::MPIRootPrintStreamInfo() << "HaloExchangeNVSHMEMDirect created";
       break;
     case HaloExchangeMethod::NVSHMEM_FUSED_NOTIFY:
       halo_exc = new HaloExchangeNVSHMEMFusedNotify<DataType, CUDAAllocator,
-                                                    Al::HostTransferBackend>(tensor);
+                                                    Al::NCCLBackend>(tensor);
       util::MPIRootPrintStreamInfo() << "HaloExchangeNVSHMEMFusedNotify created";
       break;
 #endif // DISTCONV_HAS_NVSHMEM

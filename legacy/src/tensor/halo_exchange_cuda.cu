@@ -9,7 +9,7 @@ namespace distconv {
 namespace tensor {
 
 template <>
-void HaloExchange<float, CUDAAllocator, Al::HostTransferBackend>::pack_or_unpack(
+void HaloExchange<float, CUDAAllocator, Al::NCCLBackend>::pack_or_unpack(
     int dim, Side side, int width, cudaStream_t stream,
     void *buf, bool is_pack, bool is_reverse,
     HaloExchangeAccumOp op) {
@@ -19,7 +19,7 @@ void HaloExchange<float, CUDAAllocator, Al::HostTransferBackend>::pack_or_unpack
 }
 
 template <>
-void HaloExchange<double, CUDAAllocator, Al::HostTransferBackend>::pack_or_unpack(
+void HaloExchange<double, CUDAAllocator, Al::NCCLBackend>::pack_or_unpack(
     int dim, Side side, int width, cudaStream_t stream,
     void *buf, bool is_pack, bool is_reverse,
     HaloExchangeAccumOp op) {

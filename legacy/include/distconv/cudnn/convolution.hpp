@@ -1063,35 +1063,35 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
   HaloExchangeMethod m_halo_xch_method;
   using HaloExchange = tensor::HaloExchange<DataType,
                                             tensor::CUDAAllocator,
-                                            Al::HostTransferBackend>;
+                                            Al::NCCLBackend>;
   using HaloExchangeMPI = tensor::HaloExchangeMPI<DataType,
                                                   tensor::CUDAAllocator,
-                                                  Al::HostTransferBackend>;
+                                                  Al::NCCLBackend>;
   using HaloExchangeAL = tensor::HaloExchangeAL<DataType,
                                                 tensor::CUDAAllocator,
-                                                Al::HostTransferBackend>;
+                                                Al::NCCLBackend>;
 #ifdef DISTCONV_HAS_P2P
   using HaloExchangeP2P = tensor::HaloExchangeP2P<DataType,
                                                   tensor::CUDAAllocator,
-                                                  Al::HostTransferBackend>;
+                                                  Al::NCCLBackend>;
   using HaloExchangeHybrid = tensor::HaloExchangeHybrid<DataType,
                                                         tensor::CUDAAllocator,
-                                                        Al::HostTransferBackend>;
+                                                        Al::NCCLBackend>;
 #endif // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
   using HaloExchangeNVSHMEM = tensor::HaloExchangeNVSHMEM<DataType,
                                                           tensor::CUDAAllocator,
-                                                          Al::HostTransferBackend>;
+                                                          Al::NCCLBackend>;
 #ifdef DISTCONV_HAS_CUDA_GRAPH
   using HaloExchangeNVSHMEMGraph = tensor::HaloExchangeNVSHMEMGraph<DataType,
                                                                     tensor::CUDAAllocator,
-                                                                    Al::HostTransferBackend>;
+                                                                    Al::NCCLBackend>;
 #endif // DISTCONV_HAS_CUDA_GRAPH
   using HaloExchangeNVSHMEMDirect = tensor::HaloExchangeNVSHMEMDirect<DataType,
                                                                       tensor::CUDAAllocator,
-                                                                      Al::HostTransferBackend>;
+                                                                      Al::NCCLBackend>;
   using HaloExchangeNVSHMEMFusedNotify = tensor::HaloExchangeNVSHMEMFusedNotify<
-    DataType, tensor::CUDAAllocator, Al::HostTransferBackend>;
+    DataType, tensor::CUDAAllocator, Al::NCCLBackend>;
 #endif // DISTCONV_HAS_NVSHMEM
   std::unique_ptr<HaloExchange> m_halo_xch_input;
   std::unique_ptr<HaloExchange> m_halo_xch_d_output;
@@ -1111,7 +1111,7 @@ class Convolution<cudnn::BackendCUDNN, DataType> {
   BoundaryAttributesV<index_t> m_output_boundary_offsets = 0;
   BoundaryAttributesV<cudaStream_t> m_boundary_streams;
   BoundaryAttributesV<
-    std::shared_ptr<Al::HostTransferBackend::comm_type>> m_boundary_comms;
+    std::shared_ptr<Al::NCCLBackend::comm_type>> m_boundary_comms;
 
   bool m_enable_profiling;
   cudaEvent_t m_event_comp_start;
