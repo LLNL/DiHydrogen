@@ -28,9 +28,7 @@ target_include_directories(distconv PUBLIC
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}>)
 
 target_link_libraries(distconv PUBLIC MPI::MPI_CXX)
-target_link_libraries(distconv PUBLIC cuda::toolkit)
-target_link_libraries(distconv PUBLIC cuda::CUB)
-target_link_libraries(distconv PUBLIC cuda::cuDNN)
+target_link_libraries(distconv PUBLIC h2::cuda_toolkit)
 target_link_libraries(distconv PUBLIC ${Aluminum_LIBRARIES})
 if (NVSHMEM_FOUND)
   target_link_libraries(distconv PUBLIC NVSHMEM::NVSHMEM)

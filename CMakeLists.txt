@@ -5,7 +5,7 @@
 ## SPDX-License-Identifier: Apache-2.0
 ################################################################################
 
-cmake_minimum_required(VERSION 3.14.0)
+cmake_minimum_required(VERSION 3.21.0)
 
 # Use the OLD policy for CMP0074. The NEW policy picks MPI_ROOT environment variable, which is automatically defined by the Spectrum-MPI module on Lassen. Apparently, it results in a compilation error due to -pthread being added to nvcc device link command. Another workaround is to unset MPI_ROOT when invoking CMake.
 cmake_policy(SET CMP0074 OLD)
@@ -52,7 +52,7 @@ include(H2CMakeUtils)
 include(H2CXXFeatureDetection)
 include(SetupCXX)
 if (H2_ENABLE_DISTCONV_LEGACY)
-include(SetupMPI)
+  include(SetupMPI)
 endif ()
 
 option(H2_ENABLE_HIP_ROCM
@@ -119,9 +119,6 @@ endif ()
 if (H2_ENABLE_CUDA)
   enable_language(CUDA)
   include(SetupCUDAToolkit)
-  #find_package(CUBLAS REQUIRED)
-  find_package(CUB REQUIRED)
-  find_package(cuDNN REQUIRED)
   if (CMAKE_CUDA_COMPILER)
     set(H2_HAS_CUDA TRUE)
   endif ()
@@ -145,31 +142,22 @@ if (H2_HAS_CUDA OR H2_HAS_HIP_ROCM)
 endif ()
 
 if (H2_ENABLE_ALUMINUM)
-  set(H2_MINIMUM_ALUMINUM_VERSION 1.0.0)
-  find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET
-    HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
-    $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
-    PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
-    NO_DEFAULT_PATH)
-  find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET)
-  if (NOT Aluminum_FOUND)
-    set(H2_MINIMUM_ALUMINUM_VERSION 0.7.0)
-
-    find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET
-      HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
-      $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
-      PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
-      NO_DEFAULT_PATH)
-    find_package(Aluminum ${H2_MINIMUM_ALUMINUM_VERSION} NO_MODULE QUIET)
-  endif ()
-
-  if (Aluminum_FOUND)
+  find_package(Aluminum 1.0.0 CONFIG QUIET)
+  if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
     message(STATUS
-      "Found Aluminum@${ALUMINUM_VERSION}: ${Aluminum_DIR}")
-    set(H2_HAS_ALUMINUM ${Aluminum_FOUND})
-  else ()
-    message(FATAL_ERROR
-      "Aluminum support is required but not found.")
+      "A candidate Aluminum > v1.0.0 was found, but was not selected:")
+    message(STATUS
+      "  ${Aluminum_NOT_FOUND_MESSAGE}")
+  endif ()
+  # Try again, since we're technically ok with >v0.7.0
+  if (NOT Aluminum_FOUND)
+    find_package(Aluminum 0.7.0 CONFIG QUIET)
+    if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
+      message(STATUS
+        "A candidate Aluminum > v0.7.0 was found, but was not selected:")
+      message(STATUS
+        "  ${Aluminum_NOT_FOUND_MESSAGE}")
+    endif ()
   endif ()
 endif ()
 
@@ -225,7 +213,7 @@ target_include_directories(
 target_link_libraries(H2Core PUBLIC
   $<TARGET_NAME_IF_EXISTS:Half::Half>
   $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_CXX>
-  $<TARGET_NAME_IF_EXISTS:cuda::CUDA_CXX>
+  $<TARGET_NAME_IF_EXISTS:h2::cuda_toolkit>
   $<TARGET_NAME_IF_EXISTS:rocm::ROCm_CXX>
   )
 
@@ -234,11 +222,13 @@ if (H2_EXTRA_CXX_FLAGS)
     PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${H2_EXTRA_CXX_FLAGS}>)
 endif ()
 
-set_target_properties(H2Core
-  PROPERTIES
-  CXX_STANDARD 14
-  CXX_EXTENSIONS OFF
-  CXX_STANDARD_REQUIRED ON)
+if (NOT CMAKE_CXX_STANDARD)
+  set_target_properties(H2Core
+    PROPERTIES
+    CXX_STANDARD 14
+    CXX_EXTENSIONS OFF
+    CXX_STANDARD_REQUIRED ON)
+endif ()
 
 # Compiler flags are not transitive in the install environment; we
 # don't want to force downstreams to, e.g., compile with "-Werror"
