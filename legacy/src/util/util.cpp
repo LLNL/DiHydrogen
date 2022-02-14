@@ -13,7 +13,7 @@ const std::string to_string<std::string>(const std::string i) {
 int get_memory_usage() {
   std::ifstream proc_status("/proc/self/status");
   std::string line;
-  int vmsize;
+  int vmsize = 0;
   while (std::getline(proc_status, line)) {
     if (line.find("VmSize") != 0) continue;
     std::istringstream iss(line);
