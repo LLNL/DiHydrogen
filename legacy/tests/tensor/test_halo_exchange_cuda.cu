@@ -312,7 +312,7 @@ __global__ void check_tensor_reverse<4>(const DataType *buf,
             if (stored != ref) {
               atomicAdd(error_counter, 1);
 #if 1
-              printf("Error at (%d, %d, %d, %d); ref: %d, stored: %f, global_index_base(%d, %d, %d, %d), dir: %d\n",
+              printf("Error at (%d, %d, %d, %d); ref: %zu, stored: %f, global_index_base(%d, %d, %d, %d), dir: %d\n",
                      (int)global_idx[0], (int)global_idx[1],
                      (int)global_idx[2], (int)global_idx[3],
                      ref, stored,
@@ -407,7 +407,7 @@ __global__ void check_tensor_reverse<5>(const DataType *buf,
               if (stored != ref) {
                 atomicAdd(error_counter, 1);
 #if 1
-                printf("Error at (%d, %d, %d, %d, %d); ref: %d, stored: %f, global_index_base(%d, %d, %d, %d, %d), dir: %d\n",
+                printf("Error at (%d, %d, %d, %d, %d); ref: %zu, stored: %f, global_index_base(%d, %d, %d, %d, %d), dir: %d\n",
                        (int)global_idx[0], (int)global_idx[1],
                        (int)global_idx[2], (int)global_idx[3],
                        (int)global_idx[4],
