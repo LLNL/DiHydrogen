@@ -435,7 +435,13 @@ __global__ void fp_channel_kernel(const DataType * __restrict__ x,
   const size_t sample_size = spatial_size * num_channels;
   const int sample_idx = blockIdx.y;
   // https://stackoverflow.com/questions/27570552/templated-cuda-kernel-with-dynamic-shared-memory
-  extern __shared__ __align__(sizeof(DataType)) unsigned char x_cache_char[];
+  //
+  // Note (trb 02/14/2022): Using __align__(sizeof(DataType)) was
+  // causing compiler errors with CUDA 11.4.0 on Pascal. Therefore,
+  // I'm hard-coding this to the size of a duouble, which should be
+  // sufficient for all types we use. Also, this:
+  // https://stackoverflow.com/questions/27570552/templated-cuda-kernel-with-dynamic-shared-memory/49224531
+  extern __shared__ __align__(sizeof(double)) unsigned char x_cache_char[];
   DataType *x_cache = reinterpret_cast<DataType*>(x_cache_char);
   const int cache_idx = threadIdx.x;
   constexpr auto min_output = util::min<DataType>();
@@ -506,7 +512,7 @@ __global__ void bp_channel_kernel(const DataType * __restrict__ y,
   size_t offset = blockIdx.x * BLOCK_SIZE + threadIdx.x;
   const size_t sample_size = spatial_size * num_channels;
   const int sample_idx = blockIdx.y;
-  extern __shared__ __align__(sizeof(DataType)) unsigned char cache_char[];
+  extern __shared__ __align__(sizeof(double)) unsigned char cache_char[];
   DataType *cache = reinterpret_cast<DataType*>(cache_char);
   const int cache_idx = threadIdx.x;
   constexpr auto min_output = util::min<DataType>();
