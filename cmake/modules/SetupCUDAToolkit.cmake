@@ -27,7 +27,7 @@ target_include_directories(
 target_link_libraries(
   h2::cuda_toolkit
   INTERFACE
-  h2::cuDNN
+  cuda::cudnn
   CUDA::nvToolsExt
   CUDA::cuda_driver
   CUDA::cudart)

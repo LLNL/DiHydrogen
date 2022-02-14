@@ -23,7 +23,7 @@ The following cache variable will be set and marked as "advanced"::
   cuDNN_INCLUDE_PATH - The include directory needed for cuDNN.
   cuDNN_LIBRARY      - The library needed for cuDNN.
 
-In addition, the :prop_tgt:`IMPORTED` target ``h2::cuDNN`` will
+In addition, the :prop_tgt:`IMPORTED` target ``cuda::cudnn`` will
 be created.
 
 #]=============]
@@ -78,15 +78,15 @@ include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(cuDNN
   DEFAULT_MSG cuDNN_VERSION cuDNN_LIBRARY cuDNN_INCLUDE_PATH)
 
-if (NOT TARGET h2::cuDNN)
-  add_library(h2::cuDNN INTERFACE IMPORTED)
-endif (NOT TARGET h2::cuDNN)
+if (NOT TARGET cuda::cudnn)
+  add_library(cuda::cudnn INTERFACE IMPORTED)
+endif (NOT TARGET cuda::cudnn)
 
-target_include_directories(h2::cuDNN INTERFACE "${cuDNN_INCLUDE_PATH}")
-target_link_libraries(h2::cuDNN INTERFACE "${cuDNN_LIBRARY}")
+target_include_directories(cuda::cudnn INTERFACE "${cuDNN_INCLUDE_PATH}")
+target_link_libraries(cuda::cudnn INTERFACE "${cuDNN_LIBRARY}")
 
 set(cuDNN_INCLUDE_DIRS "${cuDNN_INCLUDE_PATH}")
-set(cuDNN_LIBRARIES h2::cuDNN)
+set(cuDNN_LIBRARIES cuda::cudnn)
 
 mark_as_advanced(FORCE
   cuDNN_INCLUDE_PATH
