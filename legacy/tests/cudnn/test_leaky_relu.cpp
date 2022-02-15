@@ -23,7 +23,6 @@ using namespace distconv;
 using distconv::tensor::Shape;
 
 using DataType = float;
-constexpr int ND = 4;
 constexpr DataType negative_slope = 0.01;
 
 template <typename Backend>

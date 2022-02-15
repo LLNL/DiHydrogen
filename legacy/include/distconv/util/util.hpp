@@ -272,7 +272,7 @@ std::vector<T> split_spaced_array(const std::string &str) {
   const std::vector<std::string> sary = split(str, ",");
   std::vector<T> ary;
   // cf. https://gist.github.com/mark-d-holmberg/862733
-  for(const auto s : sary) {
+  for(auto const& s : sary) {
     std::istringstream ss(s);
     T val;
     ss >> val;

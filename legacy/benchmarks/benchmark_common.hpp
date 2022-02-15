@@ -31,10 +31,12 @@ struct GetType<BenchmarkDataType::DOUBLE> {
   using type = double;
 };
 
+#ifdef H2_HAS_HALF
 template <>
 struct GetType<BenchmarkDataType::HALF> {
   using type = half;
 };
+#endif // H2_HAS_HALF
 
 const unsigned input_tensor_seed = 0;
 const unsigned filter_tensor_seed = 1;

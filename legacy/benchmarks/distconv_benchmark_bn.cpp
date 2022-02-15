@@ -99,7 +99,6 @@ class Data {
   typename TensorType<Backend, DataType>::type d_var;
 
   Data(const BenchmarkConfig<NSD> &cfg, MPI_Comm comm): m_cfg(cfg) {
-    using Tensor = typename TensorType<Backend, DataType>::type;
 
     int pid;
     int np;

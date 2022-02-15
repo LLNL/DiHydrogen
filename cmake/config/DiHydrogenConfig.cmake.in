@@ -29,17 +29,8 @@ set(H2_DISTCONV_HAS_NVSHMEM @NVSHMEM_FOUND@)
 if (H2_HAS_ALUMINUM)
   set(_BUILD_AL_DIR "@Aluminum_DIR@")
   set(_MIN_AL_VERSION "@H2_MINIMUM_ALUMINUM_VERSION@")
-  find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
-    HINTS "${_BUILD_AL_DIR}"
-    NO_DEFAULT_PATH)
-  find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
-    HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
-    $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
-    PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
-    NO_DEFAULT_PATH)
-  if (NOT Aluminum_FOUND)
-    find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE REQUIRED)
-  endif ()
+  find_dependency(Aluminum ${_MIN_AL_VERSION}
+    HINTS "${_BUILD_AL_DIR}")
 endif ()
 
 if (H2_HAS_DISTCONV)
@@ -55,26 +46,7 @@ if (H2_HAS_HALF)
 endif ()
 
 if (H2_HAS_CUDA)
-  enable_language(CUDA)
   include(SetupCUDAToolkit)
-  # Hack around a dependency naming issue in the Hydrogen/LBANN
-  # stack. This will be cleaned up as DiHydrogen usage stabilizes.
-  if (NOT TARGET cuda::CUB)
-    if (CUB_FOUND AND TARGET cuda::cub)
-      add_library(cuda::CUB INTERFACE IMPORTED)
-      target_link_libraries(cuda::CUB INTERFACE cuda::cub)
-    else ()
-      find_dependency(CUB)
-    endif ()
-  endif ()
-  if (NOT TARGET cuda::cuDNN)
-    if (cuDNN_FOUND AND TARGET cuda::cudnn)
-      add_library(cuda::cuDNN INTERFACE IMPORTED)
-      target_link_libraries(cuda::cuDNN INTERFACE cuda::cudnn)
-    else ()
-      find_dependency(cuDNN)
-    endif ()
-  endif ()
   if (H2_DISTCONV_HAS_P2P)
     find_dependency(P2P)
   endif ()

@@ -10,7 +10,16 @@ if (DISTCONV_HAS_P2P)
   add_subdirectory(p2p)
 endif ()
 
+# If +nvshmem, we want this library to build as a static library;
+# otherwise, follow the rest of DiHydrogen.
+if (DISTCONV_HAS_NVSHMEM)
+  set(DISTCONV_LIB_TYPE STATIC)
+else ()
+  set(DISTCONV_LIB_TYPE)
+endif ()
+
 add_library(distconv
+  ${DISTCONV_LIB_TYPE}
   ${SOURCES} ${THIS_DIR_SOURCES}
   ${CUDA_SOURCES} ${THIS_DIR_CUDA_SOURCES}
   ${DISTCONV_HEADERS})
@@ -28,9 +37,7 @@ target_include_directories(distconv PUBLIC
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}>)
 
 target_link_libraries(distconv PUBLIC MPI::MPI_CXX)
-target_link_libraries(distconv PUBLIC cuda::toolkit)
-target_link_libraries(distconv PUBLIC cuda::CUB)
-target_link_libraries(distconv PUBLIC cuda::cuDNN)
+target_link_libraries(distconv PUBLIC h2::cuda_toolkit)
 target_link_libraries(distconv PUBLIC ${Aluminum_LIBRARIES})
 if (NVSHMEM_FOUND)
   target_link_libraries(distconv PUBLIC NVSHMEM::NVSHMEM)

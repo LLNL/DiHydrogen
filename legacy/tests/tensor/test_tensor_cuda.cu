@@ -36,7 +36,7 @@ __global__ void check_tensor(int *buf, size_t base,
         size_t offset = base + i + j * shape[0] + k * shape[0] * shape[1];
         //printf("%d\n", buf[offset]);
         if (buf[offset] != offset) {
-          printf("Error at (%d, %d, %d); ref: %d, stored: %u\n",
+          printf("Error at (%zu, %zu, %zu); ref: %zu, stored: %u\n",
                  i, j, k, offset, buf[offset]);
         }
       }

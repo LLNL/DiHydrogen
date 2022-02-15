@@ -185,7 +185,7 @@ class TensorImpl<Tensor<DataType, LocaleMPI, Allocator>> {
     auto &offsets = m_offset_all.back();
     index_t cur_offset = 0;
     for (int i = 0; i < num_procs; i += num_procs_per_split) {
-      for (int j = 0; j < num_procs_per_split; ++j) {
+      for (size_t j = 0; j < num_procs_per_split; ++j) {
         offsets[i+j] = cur_offset;
       }
       cur_offset += local_dim;

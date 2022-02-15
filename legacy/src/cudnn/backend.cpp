@@ -8,7 +8,9 @@ namespace distconv {
 namespace cudnn {
 
 // Default workspace wize
+#if CUDNN_MAJOR < 8
 constexpr size_t CONVOLUTION_WORKSPACE_SIZE = 1 << 30;
+#endif // CUDNN_MAJOR < 8
 
 cudnnConvolutionFwdAlgo_t BackendCUDNN::get_fwd_algorithm(
     const std::string &name,
