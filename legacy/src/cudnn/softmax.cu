@@ -438,7 +438,7 @@ __global__ void fp_channel_kernel(const DataType * __restrict__ x,
   //
   // Note (trb 02/14/2022): Using __align__(sizeof(DataType)) was
   // causing compiler errors with CUDA 11.4.0 on Pascal. Therefore,
-  // I'm hard-coding this to the size of a duouble, which should be
+  // I'm hard-coding this to the size of a double, which should be
   // sufficient for all types we use. Also, this:
   // https://stackoverflow.com/questions/27570552/templated-cuda-kernel-with-dynamic-shared-memory/49224531
   extern __shared__ __align__(sizeof(double)) unsigned char x_cache_char[];
