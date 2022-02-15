@@ -53,8 +53,7 @@ target_include_directories(NVSHMEM::NVSHMEM
 # Set the link libraries for the target
 target_link_libraries(NVSHMEM::NVSHMEM
   INTERFACE
-  ${NVSHMEM_LIBRARY}
-  CUDA::)
+  ${NVSHMEM_LIBRARY})
 
 target_compile_definitions(NVSHMEM::NVSHMEM
   INTERFACE
