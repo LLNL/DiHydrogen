@@ -10,7 +10,16 @@ if (DISTCONV_HAS_P2P)
   add_subdirectory(p2p)
 endif ()
 
+# If +nvshmem, we want this library to build as a static library;
+# otherwise, follow the rest of DiHydrogen.
+if (DISTCONV_HAS_NVSHMEM)
+  set(DISTCONV_LIB_TYPE STATIC)
+else ()
+  set(DISTCONV_LIB_TYPE)
+endif ()
+
 add_library(distconv
+  ${DISTCONV_LIB_TYPE}
   ${SOURCES} ${THIS_DIR_SOURCES}
   ${CUDA_SOURCES} ${THIS_DIR_CUDA_SOURCES}
   ${DISTCONV_HEADERS})
