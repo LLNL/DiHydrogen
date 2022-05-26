@@ -29,6 +29,7 @@ target_link_libraries(
   INTERFACE
   cuda::cudnn
   CUDA::nvToolsExt
+  CUDA::nvml
   CUDA::cuda_driver
   CUDA::cudart)
 
