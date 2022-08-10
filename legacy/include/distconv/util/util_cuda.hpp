@@ -138,13 +138,13 @@ struct Clock {
 };
 
 inline void nvtx_push(const char *name) {
-  if (get_config().m_nvtx) {
+  if (get_config().profiling) {
     nvtxRangePushA(name);
   }
 }
 
 inline void nvtx_pop() {
-  if (get_config().m_nvtx) {
+  if (get_config().profiling) {
     nvtxRangePop();
   }
 }
