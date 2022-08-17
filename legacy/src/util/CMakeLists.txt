@@ -1,7 +1,11 @@
 h2_set_full_path(THIS_DIR_SOURCES
   util.cpp
-  util_cuda.cpp
-  )
+)
+if (H2_HAS_CUDA)
+  h2_append_full_path(THIS_DIR_SOURCES util_cuda.cpp)
+elseif (H2_HAS_ROCM)
+  h2_append_full_path(THIS_DIR_SOURCES util_rocm.cpp)
+endif ()
 
 if (DISTCONV_HAS_NVSHMEM)
   h2_set_full_path(THIS_DIR_CU_SOURCES

@@ -16,11 +16,11 @@
         miopenStatus_t const status_distconv_check_miopen = (miopen_call);   \
         if (status_distconv_check_miopen != miopenStatusSuccess)             \
         {                                                                    \
-            PrintStreamError()                                               \
+            ::distconv::util::PrintStreamError()                             \
                 << "MIOpen error at " << __FILE__ << ":" << __LINE__ << ": " \
                 << miopenGetErrorString(status_distconv_check_miopen)        \
                 << std::endl;                                                \
-            hipDeviceReset();                                                \
+            static_cast<void>(hipDeviceReset());                             \
             abort();                                                         \
         }                                                                    \
     } while (0)
@@ -278,19 +278,19 @@ struct miopenTypeTraits;
 template <>
 struct miopenTypeTraits<int>
 {
-    static constexpr value = miopenInt32; // Yeah, I know. But also, reality.
+    static constexpr auto value = miopenInt32; // Yeah, I know. But also, reality.
 };
 
 template <>
 struct miopenTypeTraits<float>
 {
-    static constexpr value = miopenFloat;
+    static constexpr auto value = miopenFloat;
 };
 
 template <>
 struct miopenTypeTraits<double>
 {
-    static constexpr value = miopenDouble;
+    static constexpr auto value = miopenDouble;
 };
 
 // FIXME (trb 07/25/2022): FP16 support.
@@ -312,7 +312,7 @@ inline constexpr miopenDataType_t miopen_type = get_miopen_type<T>();
 inline std::string get_miopen_version_number_string()
 {
     size_t version[3];
-    CHECK_MIOPEN(miopenGetVersion(&version[0], &version[1], &version[2]));
+    DISTCONV_CHECK_MIOPEN(miopenGetVersion(&version[0], &version[1], &version[2]));
     std::ostringstream oss;
     oss << "MIOpen v" << version[0] << "." << version[1] << "." << version[2];
     return oss.str();

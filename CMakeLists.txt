@@ -7,14 +7,6 @@
 
 cmake_minimum_required(VERSION 3.21.0)
 
-# Use the OLD policy for CMP0074. The NEW policy picks MPI_ROOT
-# environment variable, which is automatically defined by the
-# Spectrum-MPI module on Lassen. Apparently, it results in a
-# compilation error due to -pthread being added to nvcc device link
-# command. Another workaround is to unset MPI_ROOT when invoking
-# CMake.
-cmake_policy(SET CMP0074 OLD)
-
 project(DiHydrogen
   VERSION 0.2.2
   DESCRIPTION "A distributed multilinear algebra interface library."
@@ -37,32 +29,51 @@ string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
 # subsequently fail to find its dependencies.
 #
 
+include(CMakeDependentOption)
+
 option(H2_ENABLE_DISTCONV_LEGACY
   "Enable the legacy DistConv code branch."
   OFF)
 
-# These might become full-fledged options later.
-set(H2_ENABLE_ALUMINUM ${H2_ENABLE_DISTCONV_LEGACY}
-  CACHE BOOL "Use the Aluminum library for communications.")
-
-set(H2_ENABLE_OPENMP ${H2_ENABLE_DISTCONV_LEGACY}
-  CACHE BOOL "Enable CPU acceleration with OpenMP threads.")
-
-set(H2_ENABLE_CUDA ${H2_ENABLE_DISTCONV_LEGACY}
-  CACHE BOOL
-  "Search for and enable CUDA language features in DiHydrogen.")
-
-include(GNUInstallDirs)
-include(H2CMakeUtils)
-include(H2CXXFeatureDetection)
-include(SetupCXX)
-if (H2_ENABLE_DISTCONV_LEGACY)
-  include(SetupMPI)
-endif ()
-
-option(H2_ENABLE_HIP_ROCM
-  "Search for and enable ROCm/HIP language features in DiHydrogen."
+cmake_dependent_option(H2_ENABLE_CUDA
+  "Use the CUDA backend for DistConv features of DiHydrogen."
+  OFF
+  "H2_ENABLE_DISTCONV_LEGACY"
   OFF)
+
+cmake_dependent_option(H2_ENABLE_HIP_ROCM
+  "Search for and enable ROCm/HIP language features in DiHydrogen."
+  OFF
+  "H2_ENABLE_DISTCONV_LEGACY"
+  OFF)
+
+cmake_dependent_option(H2_ENABLE_ROCM
+  "Search for and enable ROCm/HIP language features in DiHydrogen."
+  ${H2_ENABLE_HIP_ROCM}
+  "H2_ENABLE_DISTCONV_LEGACY"
+  OFF)
+
+# Sanity-check the arguments.
+if (H2_ENABLE_DISTCONV_LEGACY)
+  # We need one of CUDA or ROCm
+  if (NOT (H2_ENABLE_CUDA OR H2_ENABLE_ROCM))
+    message(FATAL_ERROR "Must enable one of CUDA and ROCm with DistConv.")
+  endif ()
+
+  # We need only one of CUDA or ROCm
+  if (H2_ENABLE_CUDA AND H2_ENABLE_ROCM)
+    message(FATAL_ERROR "Must enable no more than one of CUDA or ROCm.")
+  endif ()
+
+  # These might become full-fledged options later, but I hope
+  # not. Aluminum should just be the communication interface that H2
+  # uses across the board.
+  set(H2_ENABLE_ALUMINUM ${H2_ENABLE_DISTCONV_LEGACY}
+    CACHE BOOL "Use the Aluminum library for communications.")
+
+  set(H2_ENABLE_OPENMP ${H2_ENABLE_DISTCONV_LEGACY}
+    CACHE BOOL "Enable CPU acceleration with OpenMP threads.")
+endif ()
 
 option(H2_DEVELOPER_BUILD
   "Enable extra warnings and force tests to be enabled."
@@ -72,6 +83,8 @@ option(H2_ENABLE_CODE_COVERAGE
   "Enable code coverage instrumentation. Requires compiler support."
   OFF)
 
+# This is exposed as an option in case Catch2 isn't available or
+# whatever.
 option(H2_ENABLE_TESTS
   "Enable test codes. Requires Catch2."
   ${H2_DEVELOPER_BUILD})
@@ -80,12 +93,62 @@ option(H2_ENABLE_WERROR
   "Enable the \"-Werror\" flag. Requires compiler support."
   OFF)
 
-# Check option consistency
-if (H2_ENABLE_CUDA AND H2_ENABLE_HIP_ROCM)
-  message(FATAL_ERROR
-    "CUDA and ROCm support are mutually exclusive. Please only enable "
-    "one of H2_ENABLE_CUDA and H2_ENABLE_HIP_ROCM and reconfigure.")
-endif (H2_ENABLE_CUDA AND H2_ENABLE_HIP_ROCM)
+include(GNUInstallDirs)
+include(H2CMakeUtils)
+include(H2CXXFeatureDetection)
+
+include(SetupCXX) # This just sets RPATH settings
+
+# There are a variety of ways to inject flags into C++ compilers, and
+# some behavioral variations across compilers. I don't want to care
+# about all these intricate data, so unless we know we're in the
+# comfortable realm of Clang or GCC, we don't touch the flags at all
+# -- users are free to modify them as needed by the usual CMake
+# mechanisms for adjusting language compiler flags.
+#
+# In the Clang/GNU universe, flags are read left to right, so
+# appending flags allows a user to override any flags that may have
+# been automatically injected. Thus, we gather our "developer" flags
+# into a variable and prepend that string to the usual CMakery. Users,
+# then, should continue to add custom flags via the usual CMake
+# methods for doing so and these options should not interfere with
+# those mechanisms. That is, a user should NOT mess with
+# H2_CMAKE_CXX_FLAGS.
+if (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang"
+    OR CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+
+  list(APPEND H2_CMAKE_CXX_FLAGS -g3 -ggdb3)
+  if (H2_DEVELOPER_BUILD)
+    list(APPEND H2_CMAKE_CXX_FLAGS -Wall -Wextra -pedantic
+      -Wno-unused-parameter -Wnon-virtual-dtor -Wshadow)
+  endif ()
+  if (H2_ENABLE_WERROR)
+    list(APPEND H2_CMAKE_CXX_FLAGS -Werror)
+  endif ()
+
+  # PREPEND the options.
+  set(CMAKE_CXX_FLAGS "${H2_CMAKE_CXX_FLAGS_STR} ${CMAKE_CXX_FLAGS}")
+
+  # Disable all optimization in debug.
+  list(APPEND CMAKE_CXX_FLAGS_DEBUG -O0)
+
+else ()
+
+  message(NOTICE
+    "You are using a compiler that CMake doesn't recognize as a Clang "
+    "or GNU compiler. This should be fine, but this build system will "
+    "not add any additional flags beyond CMake's defaults for you. "
+    "You must add any additional flags manually using the usual CMake "
+    "mechanisms (e.g., CMAKE_CXX_FLAGS). CMake will (attempt to) use"
+    "an appropriate C++ standard (C++17 at time of writing) via the "
+    "cxx_std_17 compiler feature. If your compiler does not support "
+    "this feature, another warning will appear later.")
+
+endif ()
+
+if (H2_ENABLE_DISTCONV_LEGACY)
+  include(SetupMPI)
+endif ()
 
 # C++ features
 
@@ -106,11 +169,6 @@ endif ()
 if (H2_DEVELOPER_BUILD)
   # It is *not* a FATAL_ERROR to not have clang-format.
   include(H2AddClangFormat)
-  h2_cxx_get_developer_warning_flags(H2_EXTRA_CXX_FLAGS)
-endif ()
-
-if (H2_ENABLE_WERROR)
-  h2_cxx_get_warnings_as_errors_flag(H2_EXTRA_CXX_FLAGS)
 endif ()
 
 if (H2_ENABLE_CODE_COVERAGE)
@@ -128,18 +186,42 @@ if (H2_ENABLE_CUDA)
     set(H2_HAS_CUDA TRUE)
   endif ()
   find_package(NVSHMEM)
+
+  set(H2_CUDA_LIBS
+    h2::cuda_toolkit)
+  if (NVSHMEM_FOUND)
+    list(APPEND H2_CUDA_LIBS NVSHMEM::NVSHMEM)
+  endif ()
 endif (H2_ENABLE_CUDA)
 
 # This is a placeholder.
-if (H2_ENABLE_HIP_ROCM)
-  if (H2_ENABLE_DISTCONV_LEGACY)
-    message(FATAL_ERROR
-      "ROCm support with DistConv is not yet available. Please reconfigure with "
-      "-DH2_ENABLE_HIP_ROCM=OFF")
-  endif (H2_ENABLE_DISTCONV_LEGACY)
-  if (HIP_FOUND)
-    set(H2_HAS_HIP_ROCM TRUE)
-  endif (HIP_FOUND)
+if (H2_ENABLE_ROCM)
+  find_package(hip CONFIG REQUIRED) # This must be first.
+
+  # This is used to compile .cu files as HIP files.
+  enable_language(HIP)
+
+  find_library(HSA_LIBRARY hsa-runtime64
+    HINTS ${ROCM_PATH}/hsa $ENV{ROCM_PATH}/hsa
+    PATH_SUFFIXES lib lib64
+    DOC "HSA runtime library"
+    NO_DEFAULT_PATH)
+  find_library(HSA_LIBRARY hsa-runtime64)
+  if (NOT HSA_LIBRARY)
+    message(FATAL_ERROR "HSA Runtime library not found.")
+  endif ()
+
+  find_package(MIOpen CONFIG REQUIRED)
+  find_package(hipcub CONFIG REQUIRED)
+  find_package(Roctracer MODULE REQUIRED)
+
+  set(H2_HIP_LIBS
+    hip::host
+    hip::hipcub
+    MIOpen
+    ${Roctracer_LIBRARIES}
+    ${HSA_LIBRARY})
+  set(H2_HAS_ROCM TRUE)
 endif ()
 
 if (H2_HAS_CUDA OR H2_HAS_HIP_ROCM)
@@ -215,22 +297,17 @@ target_include_directories(
   $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-target_link_libraries(H2Core PUBLIC
-  $<TARGET_NAME_IF_EXISTS:Half::Half>
-  $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_CXX>
-  $<TARGET_NAME_IF_EXISTS:h2::cuda_toolkit>
-  $<TARGET_NAME_IF_EXISTS:rocm::ROCm_CXX>
-  )
-
-if (H2_EXTRA_CXX_FLAGS)
-  target_compile_options(H2Core
-    PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${H2_EXTRA_CXX_FLAGS}>)
-endif ()
+# target_link_libraries(H2Core PUBLIC
+#   $<TARGET_NAME_IF_EXISTS:Half::Half>
+#   $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_CXX>
+#   $<TARGET_NAME_IF_EXISTS:h2::cuda_toolkit>
+#   $<TARGET_NAME_IF_EXISTS:rocm::ROCm_CXX>
+#   )
 
 if (NOT CMAKE_CXX_STANDARD)
   set_target_properties(H2Core
     PROPERTIES
-    CXX_STANDARD 14
+    CXX_STANDARD 17
     CXX_EXTENSIONS OFF
     CXX_STANDARD_REQUIRED ON)
 endif ()

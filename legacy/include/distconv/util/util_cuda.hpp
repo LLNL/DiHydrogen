@@ -87,6 +87,8 @@ __device__ __forceinline__ double atomic_add(double* address, double val)
 namespace distconv {
 namespace util {
 
+void check_for_device_runtime_error();
+
 int get_number_of_gpus();
 int get_local_rank();
 int get_local_size();

@@ -11,7 +11,9 @@ Config cfg;
 
 void initialize() {
   if (!initialized) {
-    cfg.m_nvtx = std::getenv("DISTCONV_NVTX") != nullptr;
+    cfg.profiling = std::getenv("DISTCONV_PROFILING") != nullptr;
+    if (!cfg.profiling)
+      cfg.profiling = std::getenv("DISTCONV_NVTX") != nullptr;
     initialized = true;
   }
 }

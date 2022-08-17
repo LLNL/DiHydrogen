@@ -1,7 +1,12 @@
 h2_set_full_path(THIS_DIR_SOURCES
   runtime.cpp
-  runtime_cuda.cpp
-  )
+)
+
+if (H2_HAS_CUDA)
+  h2_append_full_path(THIS_DIR_SOURCES runtime_cuda.cpp)
+elseif (H2_HAS_ROCM)
+  h2_append_full_path(THIS_DIR_SOURCES runtime_rocm.cpp)
+endif ()
 
 add_subdirectory(tensor)
 add_subdirectory(cudnn)
@@ -36,15 +41,14 @@ target_include_directories(distconv PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}>)
 
-target_link_libraries(distconv PUBLIC MPI::MPI_CXX)
-target_link_libraries(distconv PUBLIC h2::cuda_toolkit)
-target_link_libraries(distconv PUBLIC ${Aluminum_LIBRARIES})
-if (NVSHMEM_FOUND)
-  target_link_libraries(distconv PUBLIC NVSHMEM::NVSHMEM)
-endif ()
+target_link_libraries(distconv PUBLIC
+  ${H2_CUDA_LIBS}
+  ${H2_ROCM_LIBS}
+  ${Aluminum_LIBRARIES}
+  MPI::MPI_CXX)
 
 set_target_properties(distconv
   PROPERTIES
-  CXX_STANDARD 14
+  CXX_STANDARD 17
   CXX_EXTENSIONS OFF
   CXX_STANDARD_REQUIRED ON)

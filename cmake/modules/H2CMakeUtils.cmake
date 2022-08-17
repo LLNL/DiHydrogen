@@ -5,23 +5,19 @@
 ## SPDX-License-Identifier: Apache-2.0
 ################################################################################
 
+macro (h2_append_full_path VAR)
+  foreach (filename ${ARGN})
+    list(APPEND ${VAR} "${CMAKE_CURRENT_SOURCE_DIR}/${filename}")
+  endforeach ()
+endmacro ()
+
 # A handy macro to add the current source directory to a local
 # filename. To be used for creating a list of sources.
 macro (h2_set_full_path VAR)
   unset(__tmp_names)
-  foreach (filename ${ARGN})
-    list(APPEND __tmp_names "${CMAKE_CURRENT_SOURCE_DIR}/${filename}")
-  endforeach()
+  h2_append_full_path(__tmp_names ${ARGN})
   set(${VAR} "${__tmp_names}")
 endmacro()
-
-macro (tom_install_with_prefix BASE_DIR INSTALL_BASE_DIR)
-  file(RELATIVE_PATH __this_dir_rel_path
-    "${BASE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}")
-  install(FILES ${ARGN}
-    DESTINATION "${INSTALL_BASE_DIR}/${__this_dir_rel_path}"
-    COMPONENT ${TOM_CURRENT_INSTALL_COMPONENT})
-endmacro ()
 
 macro (h2_set_default VAR DEFAULT_VALUE)
   if (NOT ${VAR})

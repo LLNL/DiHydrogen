@@ -18,6 +18,9 @@
 #include "distconv/tensor/tensor_cuda.hpp"
 #include "distconv/util/util_cuda.hpp"
 #endif
+#if H2_HAS_ROCM
+#include "distconv/util/util_rocm.hpp"
+#endif
 #ifdef DISTCONV_HAS_CUDNN
 #include "distconv/util/util_cudnn.hpp"
 #endif
@@ -327,7 +330,7 @@ int test_backward(Data<NSD, Backend, DataType> &d,
                        d.d_mean, d.d_var, d.d_input);
   }
   be.wait();
-  DISTCONV_CHECK_CUDA(cudaGetLastError());
+  util::check_for_device_runtime_error();
 
   util::MPIRootPrintStreamInfo() << "Starting " << cfg.run_count
                                  << " times of measurement";

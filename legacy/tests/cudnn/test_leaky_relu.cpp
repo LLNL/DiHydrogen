@@ -13,6 +13,9 @@
 #include "distconv/tensor/tensor_cuda.hpp"
 #include "distconv/util/util_cuda.hpp"
 #endif
+#ifdef H2_HAS_ROCM
+#include "distconv/util/util_rocm.hpp"
+#endif
 #ifdef DISTCONV_HAS_CUDNN
 #include "distconv/util/util_cudnn.hpp"
 #endif
@@ -193,7 +196,7 @@ int run(const test::Config &cfg, MPI_Comm comm) {
 
 int main(int argc, char *argv[]) {
   int dev = distconv::util::choose_gpu();
-  DISTCONV_CHECK_CUDA(cudaSetDevice(dev));
+  distconv::util::set_gpu(dev);
   int pid;
   int np;
   Al::Initialize(argc, argv);

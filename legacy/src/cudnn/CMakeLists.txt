@@ -1,6 +1,9 @@
-h2_set_full_path(THIS_DIR_SOURCES
-  backend.cpp
-  )
+if (H2_HAS_CUDA)
+  h2_set_full_path(THIS_DIR_SOURCES backend.cpp)
+elseif (H2_HAS_ROCM)
+  h2_set_full_path(THIS_DIR_SOURCES backend_rocm.cpp)
+endif ()
+
 h2_set_full_path(THIS_DIR_CU_SOURCES
   pooling.cu
   batchnorm.cu

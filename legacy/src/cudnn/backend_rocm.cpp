@@ -1,4 +1,4 @@
-#include "distconv/backend_miopen.hpp"
+#include "distconv/cudnn/backend_miopen.hpp"
 #include "distconv/util/util_miopen.hpp"
 #include "distconv/util/util_mpi.hpp"
 
@@ -68,7 +68,8 @@ static AlgoType get_algo(miopenConvAlgoPerf_t const& perf)
 }
 
 static miopenConvFwdAlgorithm_t
-get_fwd_algorithm_by_heuristics(miopenTensorDescriptor_t const& xdesc,
+get_fwd_algorithm_by_heuristics(miopenHandle_t handle,
+                                miopenTensorDescriptor_t const& xdesc,
                                 void const* x,
                                 miopenTensorDescriptor_t const& wdesc,
                                 void const* w,
@@ -81,8 +82,8 @@ get_fwd_algorithm_by_heuristics(miopenTensorDescriptor_t const& xdesc,
     constexpr size_t max_num_algos = 5;
     std::array<miopenConvAlgoPerf_t, max_num_algos> perf_results;
     int tested_algo_count = 0;
-    DISTCONV_CHECK_MIOpen(
-        miopenFindConvolutionForwardAlgorithm(get_handle(),
+    DISTCONV_CHECK_MIOPEN(
+        miopenFindConvolutionForwardAlgorithm(handle,
                                               xdesc,
                                               x,
                                               wdesc,
@@ -101,7 +102,7 @@ get_fwd_algorithm_by_heuristics(miopenTensorDescriptor_t const& xdesc,
         if (perf_results[i].memory <= ws_size)
             return perf_results[i].fwd_algo;
 
-    util::MPIPrintStreamError() << "No forward algorithm found for CUDNN";
+    util::MPIPrintStreamError() << "No forward algorithm found for MIOpen";
     std::abort();
     return miopenConvolutionFwdAlgoGEMM; // just in case a compiler whines.
 }
@@ -114,7 +115,6 @@ find_best_algorithm(std::vector<miopenConvAlgoPerf_t> const& perf_results)
     for (auto const& res : perf_results)
     {
         auto const algo = get_algo<AlgoType>(res);
-        assert_always(res.status == miopenStatusSuccess);
         if (time_map.find(algo) == cend(time_map))
         {
             time_map[algo] = 0;
@@ -139,13 +139,15 @@ find_best_algorithm(std::vector<miopenConvAlgoPerf_t> const& perf_results)
 // It seems there can be some variance in execution times, so multiple
 // trials can be done.
 static miopenConvFwdAlgorithm_t
-autotune_fwd_algorithm(miopenTensorDescriptor_t const& xdesc,
+autotune_fwd_algorithm(miopenHandle_t handle,
+                       miopenTensorDescriptor_t const& xdesc,
                        void const* x,
                        miopenTensorDescriptor_t const& wdesc,
                        void const* w,
                        miopenConvolutionDescriptor_t const& conv_desc,
                        miopenTensorDescriptor_t const& ydesc,
                        void* y,
+                       void* ws,
                        size_t ws_size)
 {
     constexpr int trial_count = 5;
@@ -154,11 +156,10 @@ autotune_fwd_algorithm(miopenTensorDescriptor_t const& xdesc,
     std::array<miopenConvAlgoPerf_t, algo_count> perf_results;
     std::vector<miopenConvAlgoPerf_t> perf_results_all;
     int tested_algo_count = 0;
-    WSBuffer ws(CONVOLUTION_WORKSPACE_SIZE);
     for (int t = 0; t < trial_count + skip; ++t)
     {
         DISTCONV_CHECK_MIOPEN(
-            miopenFindConvolutionForwardAlgorithm(get_handle(),
+            miopenFindConvolutionForwardAlgorithm(handle,
                                                   xdesc,
                                                   x,
                                                   wdesc,
@@ -168,7 +169,7 @@ autotune_fwd_algorithm(miopenTensorDescriptor_t const& xdesc,
                                                   y,
                                                   algo_count,
                                                   &tested_algo_count,
-                                                  perf_results,
+                                                  perf_results.data(),
                                                   ws,
                                                   ws_size,
                                                   /*exhaustive_search=*/1));
@@ -180,24 +181,12 @@ autotune_fwd_algorithm(miopenTensorDescriptor_t const& xdesc,
             {
                 auto const& res = perf_results[i];
                 oss << "("
-                    << util::CUDNNConvolutionFwdAlgorithms::get_name(res.algo)
-                    << ", ";
-                if (res.status == miopenStatusSuccess)
-                {
-                    oss << res.time << " ms"
-                        << ", " << res.memory / 1000 / 1000 << " KB";
-                    perf_results_all.push_back(res);
-                }
-                else if (res.status == miopenStatusAllocFailed)
-                {
-                    oss << "INSUFFICIENT MEMORY, " << res.memory / 1000 / 1000
-                        << " MB required";
-                }
-                else
-                {
-                    oss << "INTERNAL ERROR";
-                }
-                oss << ") ";
+                    << util::MIOpenConvolutionFwdAlgorithms::get_name(res.fwd_algo)
+                    << ", "
+                    << res.time << " ms"
+                    << ", " << res.memory / 1000 / 1000 << " KB"
+                    << ") ";
+                perf_results_all.push_back(res);
             }
             util::MPIPrintStreamDebug() << oss.str();
         }
@@ -210,8 +199,8 @@ autotune_fwd_algorithm(miopenTensorDescriptor_t const& xdesc,
     return best_algo;
 }
 
-static miopenConvolutionFwdAlgo_t
-get_fwd_algorithm(std::string const& name,
+miopenConvFwdAlgorithm_t
+BackendMIOpen::get_fwd_algorithm(std::string const& name,
                   miopenTensorDescriptor_t const* input_desc,
                   void const* input,
                   miopenTensorDescriptor_t const* filter_desc,
@@ -228,32 +217,37 @@ get_fwd_algorithm(std::string const& name,
 
     util::MIOpenConvolutionFwdAlgorithms algos;
     for (auto const& p : algos.algo_map)
-    {
         if (p.second == n)
             return p.first;
-    }
 
     assert_always(input_desc);
     assert_always(filter_desc);
     assert_always(conv_desc);
     assert_always(output_desc);
 
+    WSBuffer ws(CONVOLUTION_WORKSPACE_SIZE);
     if (n == "HEURISTIC")
-    {
-        return get_fwd_algorithm_by_heuristics(
-            *input_desc, *filter_desc, *conv_desc, *output_desc, ws_size);
-    }
+        return get_fwd_algorithm_by_heuristics(get_handle(),
+                                               *input_desc,
+                                               input,
+                                               *filter_desc,
+                                               filter,
+                                               *conv_desc,
+                                               *output_desc,
+                                               output,
+                                               ws,
+                                               ws_size);
     else if (n == "AUTOTUNE")
-    {
-        return autotune_fwd_algorithm(*input_desc,
+        return autotune_fwd_algorithm(get_handle(),
+                                      *input_desc,
                                       input,
                                       *filter_desc,
                                       filter,
                                       *conv_desc,
                                       *output_desc,
                                       output,
+                                      ws,
                                       ws_size);
-    }
 
     util::MPIRootPrintStreamError()
         << "No matching fwd algorithm found for MIOpen: " << n;
@@ -262,6 +256,7 @@ get_fwd_algorithm(std::string const& name,
 
 static miopenConvBwdWeightsAlgorithm_t
 get_bwd_data_algorithm(std::string const& name,
+                       miopenHandle_t handle,
                        miopenTensorDescriptor_t const* filter_desc,
                        void const* filter,
                        miopenTensorDescriptor_t const* d_output_desc,
@@ -278,10 +273,8 @@ get_bwd_data_algorithm(std::string const& name,
 
     auto const& algo_map = util::MIOpenConvolutionBwdDataAlgorithms::algo_map;
     for (auto const& p : algo_map)
-    {
         if (p.second == n)
             return p.first;
-    }
 
     assert_always(filter_desc);
     assert_always(d_output_desc);
@@ -289,13 +282,11 @@ get_bwd_data_algorithm(std::string const& name,
     assert_always(d_input_desc);
 
     if (n == "HEURISTIC")
-    {
         return get_bwd_data_algorithm_by_heuristics(
-            *filter_desc, *d_output_desc, *conv_desc, *d_input_desc, ws_size);
-    }
+            handle, *filter_desc, *d_output_desc, *conv_desc, *d_input_desc, ws_size);
     else if (n == "AUTOTUNE")
-    {
-        return autotune_bwd_data_algorithm(*filter_desc,
+        return autotune_bwd_data_algorithm(handle,
+                                           *filter_desc,
                                            filter,
                                            *d_output_desc,
                                            d_output,
@@ -303,41 +294,42 @@ get_bwd_data_algorithm(std::string const& name,
                                            *d_input_desc,
                                            d_input,
                                            ws_size);
-    }
 
     util::MPIRootPrintStreamError()
-        << "No matching bwd data algorithm found for CUDNN: " << n;
+        << "No matching bwd data algorithm found for MIOpen: " << n;
     std::abort();
 }
 
 static miopenConvBwdDataAlgorithm_t get_bwd_data_algorithm_by_heuristics(
+                                                                         miopenHandle_t handle,
     miopenTensorDescriptor_t const& filter_desc,
     miopenTensorDescriptor_t const& d_output_desc,
     miopenConvolutionDescriptor_t const& conv_desc,
     miopenTensorDescriptor_t const& d_input_desc,
     size_t ws_size)
 {
-#if CUDNN_MAJOR < 8
+#if 0
+#if MIOpen_MAJOR < 8
     cudnnConvolutionBwdDataAlgo_t algo;
-    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardDataAlgorithm(
+    DISTCONV_CHECK_MIOPEN(cudnnGetConvolutionBackwardDataAlgorithm(
         get_handle(),
         filter_desc,
         d_output_desc,
         conv_desc,
         d_input_desc,
-        CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT,
+        MIOpen_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT,
         ws_size ? ws_size : CONVOLUTION_WORKSPACE_SIZE,
         &algo));
     return algo;
 
-#else // CUDNN_MAJOR < 8
+#else // MIOpen_MAJOR < 8
     int algo_count;
-    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(
+    DISTCONV_CHECK_MIOPEN(cudnnGetConvolutionBackwardDataAlgorithmMaxCount(
         get_handle(), &algo_count));
     cudnnConvolutionBwdDataAlgoPerf_t* perf_results =
         new cudnnConvolutionBwdDataAlgoPerf_t[algo_count];
     int tested_algo_count = 0;
-    DISTCONV_CHECK_CUDNN(
+    DISTCONV_CHECK_MIOPEN(
         cudnnGetConvolutionBackwardDataAlgorithm_v7(get_handle(),
                                                     filter_desc,
                                                     d_output_desc,
@@ -358,14 +350,16 @@ static miopenConvBwdDataAlgorithm_t get_bwd_data_algorithm_by_heuristics(
         }
     }
 
-    util::MPIPrintStreamError() << "No backward data algorithm found for CUDNN";
+    util::MPIPrintStreamError() << "No backward data algorithm found for MIOpen";
     std::abort();
 
-#endif // CUDNN_MAJOR < 8
+#endif // MIOpen_MAJOR < 8
+#endif // 0
 }
 
-miopenConvBwdDataAlgorithm_t
-autotune_bwd_data_algorithm(miopenFilterDescriptor_t const& filter_desc,
+static miopenConvBwdDataAlgorithm_t
+autotune_bwd_data_algorithm(miopenHandle_t handle,
+                            miopenTensorDescriptor_t const& filter_desc,
                             void const* filter,
                             miopenTensorDescriptor_t const& d_output_desc,
                             void const* d_output,
@@ -389,7 +383,7 @@ autotune_bwd_data_algorithm(miopenFilterDescriptor_t const& filter_desc,
     {
         if (ws_size)
         {
-            DISTCONV_CHECK_MIOpen(
+            DISTCONV_CHECK_MIOPEN(
                 miopenFindConvolutionBackwardDataAlgorithmEx(get_handle(),
                                                              filter_desc,
                                                              filter,
@@ -406,7 +400,7 @@ autotune_bwd_data_algorithm(miopenFilterDescriptor_t const& filter_desc,
         }
         else
         {
-            DISTCONV_CHECK_MIOpen(
+            DISTCONV_CHECK_MIOPEN(
                 miopenFindConvolutionBackwardDataAlgorithm(get_handle(),
                                                            filter_desc,
                                                            d_output_desc,
@@ -426,27 +420,12 @@ autotune_bwd_data_algorithm(miopenFilterDescriptor_t const& filter_desc,
 
                 oss << "("
                     << util::MIOpenConvolutionBwdDataAlgorithms::get_name(
-                           res.algo)
-                    << ", ";
-                if (res.status == miopenStatusSuccess)
-                {
-                    oss << res.time << " ms"
-                        << ", " << res.memory / 1000 / 1000 << " MB";
-                }
-                else if (res.status == miopenStatusAllocFailed)
-                {
-                    oss << "INSUFFICIENT MEMORY, " << res.memory / 1000 / 1000
-                        << " MB required";
-                }
-                else
-                {
-                    oss << "INTERNAL ERROR";
-                }
-                oss << ") ";
-                if (res.status == miopenStatusSuccess)
-                {
-                    perf_results_all.push_back(res);
-                }
+                           res.bwd_data_algo)
+                    << ", "
+                    << res.time << " ms"
+                    << ", " << res.memory / 1000 / 1000 << " MB"
+                    << ") ";
+                perf_results_all.push_back(res);
             }
             util::MPIPrintStreamDebug() << ss.str();
         }
@@ -455,8 +434,7 @@ autotune_bwd_data_algorithm(miopenFilterDescriptor_t const& filter_desc,
     {
         internal::RuntimeHIP::get_device_memory_pool().release(ws);
     }
-    auto best_algo = find_best_algorithm<miopenConvolutionBwdDataAlgo_t,
-                                         miopenConvolutionBwdDataAlgoPerf_t>(
+    auto best_algo = find_best_algorithm<miopenConvBwdDataAlgorithm_t>(
         perf_results_all);
     util::MPIPrintStreamDebug()
         << "Autotune best algorithm: "
@@ -464,14 +442,14 @@ autotune_bwd_data_algorithm(miopenFilterDescriptor_t const& filter_desc,
     return best_algo;
 }
 
-miopenConvolutionBwdFilterAlgo_t BackendMIOpen::get_bwd_filter_algorithm(
+miopenConvBwdWeightsAlgorithm_t BackendMIOpen::get_bwd_filter_algorithm(
     std::string const& name,
     miopenTensorDescriptor_t const* input_desc,
     void const* input,
     miopenTensorDescriptor_t const* d_output_desc,
     void const* d_output,
     miopenConvolutionDescriptor_t const* conv_desc,
-    miopenFilterDescriptor_t const* d_filter_desc,
+    miopenTensorDescriptor_t const* d_filter_desc,
     void* d_filter,
     size_t ws_size)
 {
@@ -480,7 +458,7 @@ miopenConvolutionBwdFilterAlgo_t BackendMIOpen::get_bwd_filter_algorithm(
              ? "HEURISTIC"
              : (name == "DETERMINISTIC" ? "IMPLICIT_GEMM" : name));
 
-    auto const& algo_map = util::MIOpenConvolutionBwdFilterAlgorithms::algo_map;
+    auto const& algo_map = util::MIOpenConvolutionBwdWeightsAlgorithms::algo_map;
     for (auto const& p : algo_map)
     {
         if (p.second == n)
@@ -514,17 +492,18 @@ miopenConvolutionBwdFilterAlgo_t BackendMIOpen::get_bwd_filter_algorithm(
     std::abort();
 }
 
-miopenConvolutionBwdFilterAlgo_t
+miopenConvBwdWeightsAlgorithm_t
 BackendMIOpen::get_bwd_filter_algorithm_by_heuristics(
     miopenTensorDescriptor_t const& input_desc,
     miopenTensorDescriptor_t const& d_output_desc,
     miopenConvolutionDescriptor_t const& conv_desc,
-    miopenFilterDescriptor_t const& d_filter_desc,
+    miopenTensorDescriptor_t const& d_filter_desc,
     size_t ws_size)
 {
+#if 0
 #if MIOpen_MAJOR < 8
-    miopenConvolutionBwdFilterAlgo_t algo;
-    DISTCONV_CHECK_MIOpen(miopenGetConvolutionBackwardFilterAlgorithm(
+    miopenConvBwdWeightsAlgorithm_t algo;
+    DISTCONV_CHECK_MIOPEN(miopenGetConvolutionBackwardFilterAlgorithm(
         get_handle(),
         input_desc,
         d_output_desc,
@@ -537,12 +516,12 @@ BackendMIOpen::get_bwd_filter_algorithm_by_heuristics(
 
 #else // MIOpen_MAJOR < 8
     int algo_count;
-    DISTCONV_CHECK_MIOpen(miopenGetConvolutionBackwardFilterAlgorithmMaxCount(
+    DISTCONV_CHECK_MIOPEN(miopenGetConvolutionBackwardFilterAlgorithmMaxCount(
         get_handle(), &algo_count));
-    miopenConvolutionBwdFilterAlgoPerf_t* perf_results =
-        new miopenConvolutionBwdFilterAlgoPerf_t[algo_count];
+    miopenConvolutionBwdWeightsAlgoPerf_t* perf_results =
+        new miopenConvolutionBwdWeightsAlgoPerf_t[algo_count];
     int tested_algo_count = 0;
-    DISTCONV_CHECK_MIOpen(
+    DISTCONV_CHECK_MIOPEN(
         miopenGetConvolutionBackwardFilterAlgorithm_v7(get_handle(),
                                                        input_desc,
                                                        d_output_desc,
@@ -552,7 +531,7 @@ BackendMIOpen::get_bwd_filter_algorithm_by_heuristics(
                                                        &tested_algo_count,
                                                        perf_results));
 
-    miopenConvolutionBwdFilterAlgo_t algo;
+    miopenConvBwdWeightsAlgorithm_t algo;
     for (int i = 0; i < tested_algo_count; i++)
     {
         if (perf_results[i].memory <= ws_size)
@@ -568,15 +547,16 @@ BackendMIOpen::get_bwd_filter_algorithm_by_heuristics(
     std::abort();
 
 #endif // MIOpen_MAJOR < 8
+#endif // 0
 }
 
-miopenConvolutionBwdFilterAlgo_t BackendMIOpen::autotune_bwd_filter_algorithm(
+miopenConvBwdWeightsAlgorithm_t BackendMIOpen::autotune_bwd_filter_algorithm(
     miopenTensorDescriptor_t const& input_desc,
     void const* input,
     miopenTensorDescriptor_t const& d_output_desc,
     void const* d_output,
     miopenConvolutionDescriptor_t const& conv_desc,
-    miopenFilterDescriptor_t const& d_filter_desc,
+    miopenTensorDescriptor_t const& d_filter_desc,
     void* d_filter,
     size_t ws_size)
 {
@@ -595,7 +575,7 @@ miopenConvolutionBwdFilterAlgo_t BackendMIOpen::autotune_bwd_filter_algorithm(
     {
         if (ws_size)
         {
-            DISTCONV_CHECK_MIOpen(
+            DISTCONV_CHECK_MIOPEN(
                 miopenFindConvolutionBackwardFilterAlgorithmEx(
                     get_handle(),
                     input_desc,
@@ -613,7 +593,7 @@ miopenConvolutionBwdFilterAlgo_t BackendMIOpen::autotune_bwd_filter_algorithm(
         }
         else
         {
-            DISTCONV_CHECK_MIOpen(
+            DISTCONV_CHECK_MIOPEN(
                 miopenFindConvolutionBackwardFilterAlgorithm(get_handle(),
                                                              input_desc,
                                                              d_output_desc,
@@ -632,28 +612,13 @@ miopenConvolutionBwdFilterAlgo_t BackendMIOpen::autotune_bwd_filter_algorithm(
                 auto const& res = perf_results[i];
 
                 oss << "("
-                    << util::MIOpenConvolutionBwdFilterAlgorithms::get_name(
-                           res.algo)
-                    << ", ";
-                if (res.status == miopenStatusSuccess)
-                {
-                    oss << res.time << " ms"
-                        << ", " << res.memory / 1000 / 1000 << " MB";
-                }
-                else if (res.status == miopenStatusAllocFailed)
-                {
-                    oss << "INSUFFICIENT MEMORY, " << res.memory / 1000 / 1000
-                        << " MB required";
-                }
-                else
-                {
-                    oss << "INTERNAL ERROR";
-                }
-                oss << ") ";
-                if (res.status == miopenStatusSuccess)
-                {
-                    perf_results_all.push_back(res);
-                }
+                    << util::MIOpenConvolutionBwdWeightsAlgorithms::get_name(
+                           res.bwd_weights_algo)
+                    << ", "
+                    << res.time << " ms"
+                    << ", " << res.memory / 1000 / 1000 << " MB"
+                    << ") ";
+                perf_results_all.push_back(res);
             }
             util::MPIPrintStreamDebug() << ss.str();
         }
@@ -663,10 +628,10 @@ miopenConvolutionBwdFilterAlgo_t BackendMIOpen::autotune_bwd_filter_algorithm(
         internal::RuntimeHIP::get_device_memory_pool().release(ws);
     }
     auto const best_algo =
-        find_best_algorithm<miopenConvolutionBwdFilterAlgo_t>(perf_results_all);
+        find_best_algorithm<miopenConvBwdWeightsAlgorithm_t>(perf_results_all);
     util::MPIPrintStreamDebug()
         << "Autotune best algorithm: "
-        << util::MIOpenConvolutionBwdFilterAlgorithms::get_name(best_algo);
+        << util::MIOpenConvolutionBwdWeightsAlgorithms::get_name(best_algo);
     return best_algo;
 }
 

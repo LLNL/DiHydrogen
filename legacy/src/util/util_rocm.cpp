@@ -9,6 +9,9 @@ namespace distconv
 {
 namespace util
 {
+void check_for_device_runtime_error() {
+  DISTCONV_CHECK_HIP(hipGetLastError());
+}
 
 int get_number_of_gpus()
 {
@@ -21,7 +24,7 @@ int get_number_of_gpus()
     }
     else
     {
-        DISTCONV_CHECK_CUDA(hipGetDeviceCount(&num_gpus));
+        DISTCONV_CHECK_HIP(hipGetDeviceCount(&num_gpus));
     }
     return num_gpus;
 }
