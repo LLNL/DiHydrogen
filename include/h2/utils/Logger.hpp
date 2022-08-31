@@ -5,8 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_LOGGER_HPP_
-#define H2_LOGGER_HPP_
+#pragma once
+#ifndef H2_UTILS_LOGGER_HPP_INCLUDED
+#define H2_UTILS_LOGGER_HPP_INCLUDED
 
 #include "spdlog/spdlog.h"
 
@@ -36,7 +37,7 @@ class Logger
 public:
 
   Logger() { initialize(); }
-  ~Logger() { finalize(); }
+  ~Logger() { shutdown(); }
 
 private:
   void initialize();
@@ -45,4 +46,4 @@ private:
 
 };// class Logger
 } // namespace h2
-#endif // H2_LOGGER_HPP_
+#endif // H2_UTILS_LOGGER_HPP_INCLUDED
