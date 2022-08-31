@@ -194,6 +194,12 @@ if (H2_ENABLE_CUDA)
   endif ()
 endif (H2_ENABLE_CUDA)
 
+# FIXME(KLG)
+#if (H2_ENABLE_SPDLOG)
+  find_package(spdlog REQUIRED)
+  set(H2_HAS_SPDLOG TRUE)
+#endif ()
+
 # This is a placeholder.
 if (H2_ENABLE_ROCM)
   find_package(hip CONFIG REQUIRED) # This must be first.

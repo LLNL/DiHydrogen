@@ -6,4 +6,7 @@
 ################################################################################
 
 # Proper C++ files to add to the library
-target_sources(H2Core PRIVATE Error.cpp)
+target_sources(H2Core PRIVATE
+  Error.cpp
+  Logger.cpp
+  )
