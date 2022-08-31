@@ -194,6 +194,9 @@ if (H2_ENABLE_CUDA)
   endif ()
 endif (H2_ENABLE_CUDA)
 
+find_package(spdlog REQUIRED)
+set(H2_HAS_SPDLOG TRUE)
+
 # This is a placeholder.
 if (H2_ENABLE_ROCM)
   find_package(hip CONFIG REQUIRED) # This must be first.
@@ -316,6 +319,7 @@ endif ()
 # don't want to force downstreams to, e.g., compile with "-Werror"
 # just because we wanted to compile that way.
 target_link_libraries(H2Core PRIVATE
+  spdlog::spdlog
   $<BUILD_INTERFACE:$<TARGET_NAME_IF_EXISTS:h2_coverage_flags>>)
 
 install(TARGETS H2Core

@@ -13,4 +13,5 @@ h2_add_sources_to_target_and_install(
   INSTALL_PREFIX "${H2_CURRENT_INSTALL_PREFIX}"
   SOURCES
   Error.hpp
+  Logger.hpp
   )
