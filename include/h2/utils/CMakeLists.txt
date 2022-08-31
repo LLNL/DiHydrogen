@@ -15,10 +15,3 @@ h2_add_sources_to_target_and_install(
   Error.hpp
   Logger.hpp
   )
-
-# FIXME(KLG): Should this go here?
-target_link_libraries(H2Core PRIVATE spdlog::spdlog)
-# FIXME(KLG): Why is this stupid? Can't find spdlog in header
-target_include_directories(H2Core PUBLIC
-  ${spdlogDIR}
-  /g/g13/graham63/workspace/code/pascal/H2_logging/spdlog-install/usr/local/include)
