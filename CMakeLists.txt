@@ -319,6 +319,7 @@ endif ()
 # don't want to force downstreams to, e.g., compile with "-Werror"
 # just because we wanted to compile that way.
 target_link_libraries(H2Core PRIVATE
+  spdlog::spdlog
   $<BUILD_INTERFACE:$<TARGET_NAME_IF_EXISTS:h2_coverage_flags>>)
 
 install(TARGETS H2Core
