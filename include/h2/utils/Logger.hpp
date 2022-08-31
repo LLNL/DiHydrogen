@@ -35,9 +35,10 @@ class Logger
 {
 public:
 
-  Logger() = default;
-  ~Logger() = default;
+  Logger() { initialize(); }
+  ~Logger() { finalize(); }
 
+private:
   void initialize();
   void shutdown();
   void load_log_level();
