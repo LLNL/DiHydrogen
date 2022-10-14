@@ -1,7 +1,7 @@
-#include "distconv/runtime_gpu.hpp"
 #include "distconv/cudnn/leaky_relu.hpp"
-#include "distconv/util/util_mpi.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
+#include "distconv/util/util_mpi.hpp"
 
 using distconv::tensor::LocaleMPI;
 using distconv::tensor::CUDAAllocator;
@@ -26,12 +26,15 @@ struct ForwardFunctor {
 // respect to constness of tensor parameters. All of tensors need to
 // be non-const.
 template <typename TensorType>
-void forward(TensorType &input, typename TensorType::data_type negative_slope,
-             TensorType &output, h2::gpu::DeviceStream stream) {
-  using DataType = typename TensorType::data_type;
-  tensor::Transform(input, output, ForwardFunctor<DataType>(negative_slope),
-                    stream);
-  return;
+void forward(TensorType& input,
+             typename TensorType::data_type negative_slope,
+             TensorType& output,
+             h2::gpu::DeviceStream stream)
+{
+    using DataType = typename TensorType::data_type;
+    tensor::Transform(
+        input, output, ForwardFunctor<DataType>(negative_slope), stream);
+    return;
 }
 
 template <typename DataType>
@@ -46,32 +49,36 @@ struct BackwardFunctor {
 };
 
 template <typename TensorType>
-void backward(TensorType &input, TensorType &d_output,
-              typename TensorType::data_type negative_slope, TensorType &d_input,
-              h2::gpu::DeviceStream stream) {
-  using DataType = typename TensorType::data_type;
-  tensor::Transform(input, d_output, d_input, BackwardFunctor<DataType>(negative_slope),
-                    stream);
-  return;
+void backward(TensorType& input,
+              TensorType& d_output,
+              typename TensorType::data_type negative_slope,
+              TensorType& d_input,
+              h2::gpu::DeviceStream stream)
+{
+    using DataType = typename TensorType::data_type;
+    tensor::Transform(input,
+                      d_output,
+                      d_input,
+                      BackwardFunctor<DataType>(negative_slope),
+                      stream);
+    return;
 }
 
-#define INSTANTIATE_FORWARD(TYPE)                               \
-  template                                                      \
-  void forward<Tensor<TYPE>>(Tensor<TYPE> &input,               \
-                             TYPE negative_slope,               \
-                             Tensor<TYPE> &output,              \
-                             h2::gpu::DeviceStream stream);
+#define INSTANTIATE_FORWARD(TYPE)                                              \
+    template void forward<Tensor<TYPE>>(Tensor<TYPE> & input,                  \
+                                        TYPE negative_slope,                   \
+                                        Tensor<TYPE> & output,                 \
+                                        h2::gpu::DeviceStream stream);
 INSTANTIATE_FORWARD(float)
 INSTANTIATE_FORWARD(double)
 #undef INSTANTIATE_FORWARD
 
-#define INSTANTIATE_BACKWARD(TYPE)                                      \
-  template                                                              \
-  void backward<Tensor<TYPE>>(Tensor<TYPE> &input,                      \
-                              Tensor<TYPE> &d_output,                   \
-                              TYPE negative_slope,                      \
-                              Tensor<TYPE> &output,                     \
-                              h2::gpu::DeviceStream stream);
+#define INSTANTIATE_BACKWARD(TYPE)                                             \
+    template void backward<Tensor<TYPE>>(Tensor<TYPE> & input,                 \
+                                         Tensor<TYPE> & d_output,              \
+                                         TYPE negative_slope,                  \
+                                         Tensor<TYPE> & output,                \
+                                         h2::gpu::DeviceStream stream);
 INSTANTIATE_BACKWARD(float)
 INSTANTIATE_BACKWARD(double)
 #undef INSTANTIATE_BACKWARD

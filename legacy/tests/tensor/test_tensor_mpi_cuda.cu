@@ -1,13 +1,14 @@
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
-#include "distconv/tensor/tensor_mpi.hpp"
 #include "distconv/tensor/tensor_cuda.hpp"
+#include "distconv/tensor/tensor_mpi.hpp"
 #include "distconv/tensor/tensor_mpi_cuda.hpp"
-#include "test_tensor.hpp"
 #include "distconv/util/util_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
+#include "test_tensor.hpp"
 
 #include <assert.h>
+
 #include <iostream>
 #include <vector>
 
@@ -217,11 +218,12 @@ int test_clear_halo(const Shape &shape,
     h[i] = default_value;
   }
   for (int i = 0; i < num_dims; ++i) {
-    h2::gpu::mem_copy(buf, h, t.get_local_real_size());
-    t.clear_halo(i);
-    dim3 gsize(local_real_shape[1], local_real_shape[2]);
-    if (num_dims == 4) {
-      gsize.z = local_real_shape[3];
+      h2::gpu::mem_copy(buf, h, t.get_local_real_size());
+      t.clear_halo(i);
+      dim3 gsize(local_real_shape[1], local_real_shape[2]);
+      if (num_dims == 4)
+      {
+          gsize.z = local_real_shape[3];
     }
     check_clear_halo<ND, DataType><<<gsize, 128>>>(
         buf, local_real_shape, i, dist.get_overlap(i), 1, error_counter_d);
@@ -262,31 +264,33 @@ int test_clear_halo(const Shape &shape,
   divisible by 8.
  */
 int main(int argc, char *argv[]) {
-  h2::gpu::set_gpu(util::choose_gpu());
-  MPI_Init(&argc, &argv);
-  int pid;
-  int np;
-  MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-  MPI_Comm_size(MPI_COMM_WORLD, &np);
+    h2::gpu::set_gpu(util::choose_gpu());
+    MPI_Init(&argc, &argv);
+    int pid;
+    int np;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &np);
 
-  MPIPrintStreamInfo() << "Using device " << h2::gpu::current_gpu();
+    MPIPrintStreamInfo() << "Using device " << h2::gpu::current_gpu();
 
-  constexpr int ND = 3;
-  using DataType = int;
+    constexpr int ND = 3;
+    using DataType = int;
 
-  using TensorMPI = Tensor<DataType, LocaleMPI, CUDAAllocator>;
-  auto dist3 = Distribution::make_overlapped_distribution({2, 2, np/4}, {1, 1, 0});
-  auto dist4 = Distribution::make_overlapped_distribution({2, 2, 2, np/8}, {1, 1, 0, 0});
-  assert_always((np % 8) == 0 && (np >= 8));
-  //Distribution<3> dist({1, 1, np}, {1, 1, 0});
+    using TensorMPI = Tensor<DataType, LocaleMPI, CUDAAllocator>;
+    auto dist3 =
+        Distribution::make_overlapped_distribution({2, 2, np / 4}, {1, 1, 0});
+    auto dist4 = Distribution::make_overlapped_distribution({2, 2, 2, np / 8},
+                                                            {1, 1, 0, 0});
+    assert_always((np % 8) == 0 && (np >= 8));
+    // Distribution<3> dist({1, 1, np}, {1, 1, 0});
 
-  assert0(test_alloc<TensorMPI>(Shape({2, 2, 2}), dist3));
-  MPIRootPrintStreamInfo() << "test_alloc success";
+    assert0(test_alloc<TensorMPI>(Shape({2, 2, 2}), dist3));
+    MPIRootPrintStreamInfo() << "test_alloc success";
 
-  assert0(test_data_access_mpi_cuda<TensorMPI>(Shape({2, 2, 2}), dist3));
-  MPIRootPrintStreamInfo() << "test_data_access_mpi_cuda success";
+    assert0(test_data_access_mpi_cuda<TensorMPI>(Shape({2, 2, 2}), dist3));
+    MPIRootPrintStreamInfo() << "test_data_access_mpi_cuda success";
 
-  // Doesn't work with Spectrum-MPI
+    // Doesn't work with Spectrum-MPI
 #if 0
   assert0(test_data_access_mpi_cuda<Tensor<DataType, LocaleMPI,
           CUDAPitchedAllocator>>(Shape({32, 32, 4}), dist3));

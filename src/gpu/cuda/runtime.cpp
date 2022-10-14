@@ -4,7 +4,6 @@
 
 #include <cstdlib>
 #include <cstring>
-
 #include <iostream> // FIXME: Eventually, Logger.hpp
 
 #include <cuda_runtime.h>

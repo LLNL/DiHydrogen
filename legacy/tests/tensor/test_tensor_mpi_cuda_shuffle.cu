@@ -1,13 +1,13 @@
 #include "distconv/distconv.hpp"
 #include "distconv/runtime_gpu.hpp"
-#include "distconv/tensor/tensor.hpp"
-#include "distconv/tensor/tensor_mpi_cuda.hpp"
-#include "distconv/tensor/tensor_cuda.hpp"
-#include "test_tensor.hpp"
-#include "distconv/util/util_gpu.hpp"
-#include "distconv/util/util_mpi.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda_al.hpp"
+#include "distconv/tensor/tensor.hpp"
+#include "distconv/tensor/tensor_cuda.hpp"
+#include "distconv/tensor/tensor_mpi_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
+#include "distconv/util/util_mpi.hpp"
+#include "test_tensor.hpp"
 #ifdef DISTCONV_HAS_P2P
 #include "distconv/tensor/shuffle_mpi_cuda_p2p.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda_hybrid.hpp"
@@ -18,8 +18,8 @@
 
 #include <Al.hpp>
 
-#include <iostream>
 #include <cmath>
+#include <iostream>
 
 using DataType = float;
 

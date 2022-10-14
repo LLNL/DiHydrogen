@@ -308,8 +308,7 @@ destroy_convolution_descriptor(cudnnConvolutionDescriptor_t const& desc)
 }
 
 inline void
-set_convolution_group_count(cudnnConvolutionDescriptor_t const& desc,
-                            int ngrps)
+set_convolution_group_count(cudnnConvolutionDescriptor_t const& desc, int ngrps)
 {
     DISTCONV_CHECK_CUDNN(cudnnSetConvolutionGroupCount(desc, ngrps));
 }
@@ -369,21 +368,19 @@ void convolution_forward(Handle_t handle,
                          TensorDescriptor_t const& out_desc,
                          void* out_data)
 {
-    DISTCONV_CHECK_CUDNN(
-        cudnnConvolutionForward(
-            handle,
-            &alpha,
-            in_desc,
-            in_data,
-            filter_desc,
-            filter_data,
-            conv_desc,
-            conv_algo,
-            work_data,
-            work_data_size,
-            &beta,
-            out_desc,
-            out_data));
+    DISTCONV_CHECK_CUDNN(cudnnConvolutionForward(handle,
+                                                 &alpha,
+                                                 in_desc,
+                                                 in_data,
+                                                 filter_desc,
+                                                 filter_data,
+                                                 conv_desc,
+                                                 conv_algo,
+                                                 work_data,
+                                                 work_data_size,
+                                                 &beta,
+                                                 out_desc,
+                                                 out_data));
 }
 
 template <typename T>
@@ -401,21 +398,19 @@ void convolution_bwd_data(Handle_t handle,
                           TensorDescriptor_t const& dx_desc,
                           void* dx_data)
 {
-    DISTCONV_CHECK_CUDNN(
-        cudnnConvolutionBackwardData(
-            handle,
-            &alpha,
-            filter_desc,
-            filter_data,
-            dy_desc,
-            dy_data,
-            conv_desc,
-            conv_algo,
-            work_data,
-            work_data_size,
-            &beta,
-            dx_desc,
-            dx_data));
+    DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardData(handle,
+                                                      &alpha,
+                                                      filter_desc,
+                                                      filter_data,
+                                                      dy_desc,
+                                                      dy_data,
+                                                      conv_desc,
+                                                      conv_algo,
+                                                      work_data,
+                                                      work_data_size,
+                                                      &beta,
+                                                      dx_desc,
+                                                      dx_data));
 }
 
 template <typename T>
@@ -433,21 +428,19 @@ void convolution_bwd_filter(Handle_t handle,
                             FilterDescriptor_t const& dw_desc,
                             void* dw_data)
 {
-    DISTCONV_CHECK_CUDNN(
-        cudnnConvolutionBackwardFilter(
-            handle,
-            &alpha,
-            in_desc,
-            in_data,
-            dy_desc,
-            dy_data,
-            conv_desc,
-            conv_algo,
-            work_data,
-            work_data_size,
-            &beta,
-            dw_desc,
-            dw_data));
+    DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardFilter(handle,
+                                                        &alpha,
+                                                        in_desc,
+                                                        in_data,
+                                                        dy_desc,
+                                                        dy_data,
+                                                        conv_desc,
+                                                        conv_algo,
+                                                        work_data,
+                                                        work_data_size,
+                                                        &beta,
+                                                        dw_desc,
+                                                        dw_data));
 }
 
 inline constexpr auto default_conv_mode = CUDNN_CROSS_CORRELATION;
@@ -577,14 +570,8 @@ inline void pooling_forward(cudnnHandle_t handle,
                             void* out_data,
                             bool const& /*training*/)
 {
-    DISTCONV_CHECK_CUDNN(cudnnPoolingForward(handle,
-                                             desc,
-                                             &alpha,
-                                             in_desc,
-                                             in_data,
-                                             &beta,
-                                             out_desc,
-                                             out_data));
+    DISTCONV_CHECK_CUDNN(cudnnPoolingForward(
+        handle, desc, &alpha, in_desc, in_data, &beta, out_desc, out_data));
 }
 
 template <typename T>
@@ -622,8 +609,8 @@ inline void pooling_backward(cudnnHandle_t handle,
         {
             util::MPIPrintStreamError()
                 << "Parameters: "
-                << "output_d: " << out_desc
-                << ", output: " << out_data << ", d_output_d: " << d_out_desc
+                << "output_d: " << out_desc << ", output: " << out_data
+                << ", d_output_d: " << d_out_desc
                 << ", d_output: " << d_out_data << ", input_d: " << in_desc
                 << ", input: " << in_data << ", d_input_d: " << d_in_desc
                 << ", d_input: " << d_in_data;
@@ -640,7 +627,8 @@ inline cudnnActivationDescriptor_t make_activation_descriptor()
     return desc;
 }
 
-inline void destroy_activation_descriptor(cudnnActivationDescriptor_t const& desc)
+inline void
+destroy_activation_descriptor(cudnnActivationDescriptor_t const& desc)
 {
     DISTCONV_CHECK_CUDNN(cudnnDestroyActivationDescriptor(desc));
 }

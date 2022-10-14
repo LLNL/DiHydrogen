@@ -88,98 +88,98 @@ __global__ void unpack_from_ag_kernel(const DataType * __restrict__ packed_buf,
 }  // namespace internal
 
 template <>
-void ChannelExchange<float>::pack_for_rs(
-  TensorType &src,
-  TensorType &dst,
-  float *dst_buf,
-  size_t comm_size,
-  h2::gpu::DeviceStream stream) {
-  constexpr int block_size = 256;
-  dim3 block_dim(block_size);
-  dim3 grid_dim((src.get_local_size() + block_size - 1) / block_size);
-  auto src_shape = src.get_local_shape();
-  internal::pack_for_rs_kernel<<<grid_dim, block_dim, 0, stream>>>(
-    src.get_base_ptr(),
-    dst_buf,
-    src_shape[-1],
-    src_shape[-2],
-    comm_size,
-    src.get_local_size(),
-    get_sample_size(src),
-    get_channel_size(src),
-    dst.get_local_shape()[-2],
-    get_sample_size(dst),
-    dst.get_local_size());
+void ChannelExchange<float>::pack_for_rs(TensorType& src,
+                                         TensorType& dst,
+                                         float* dst_buf,
+                                         size_t comm_size,
+                                         h2::gpu::DeviceStream stream)
+{
+    constexpr int block_size = 256;
+    dim3 block_dim(block_size);
+    dim3 grid_dim((src.get_local_size() + block_size - 1) / block_size);
+    auto src_shape = src.get_local_shape();
+    internal::pack_for_rs_kernel<<<grid_dim, block_dim, 0, stream>>>(
+        src.get_base_ptr(),
+        dst_buf,
+        src_shape[-1],
+        src_shape[-2],
+        comm_size,
+        src.get_local_size(),
+        get_sample_size(src),
+        get_channel_size(src),
+        dst.get_local_shape()[-2],
+        get_sample_size(dst),
+        dst.get_local_size());
 }
 
 template <>
-void ChannelExchange<double>::pack_for_rs(
-  TensorType &src,
-  TensorType &dst,
-  double *dst_buf,
-  size_t comm_size,
-  h2::gpu::DeviceStream stream) {
-  constexpr int block_size = 256;
-  dim3 block_dim(block_size);
-  dim3 grid_dim((src.get_local_size() + block_size - 1) / block_size);
-  auto src_shape = src.get_local_shape();
-  internal::pack_for_rs_kernel<<<grid_dim, block_dim, 0, stream>>>(
-    src.get_base_ptr(),
-    dst_buf,
-    src_shape[-1],
-    src_shape[-2],
-    comm_size,
-    src.get_local_size(),
-    get_sample_size(src),
-    get_channel_size(src),
-    dst.get_local_shape()[-2],
-    get_sample_size(dst),
-    dst.get_local_size());
+void ChannelExchange<double>::pack_for_rs(TensorType& src,
+                                          TensorType& dst,
+                                          double* dst_buf,
+                                          size_t comm_size,
+                                          h2::gpu::DeviceStream stream)
+{
+    constexpr int block_size = 256;
+    dim3 block_dim(block_size);
+    dim3 grid_dim((src.get_local_size() + block_size - 1) / block_size);
+    auto src_shape = src.get_local_shape();
+    internal::pack_for_rs_kernel<<<grid_dim, block_dim, 0, stream>>>(
+        src.get_base_ptr(),
+        dst_buf,
+        src_shape[-1],
+        src_shape[-2],
+        comm_size,
+        src.get_local_size(),
+        get_sample_size(src),
+        get_channel_size(src),
+        dst.get_local_shape()[-2],
+        get_sample_size(dst),
+        dst.get_local_size());
 }
 
 template <>
-void ChannelExchange<float>::unpack_from_ag(
-  TensorType &src,
-  TensorType &dst,
-  float *packed_buf,
-  size_t comm_size,
-  h2::gpu::DeviceStream stream) {
-  constexpr int block_size = 256;
-  dim3 block_dim(block_size);
-  dim3 grid_dim((src.get_local_size() + block_size - 1) / block_size);
-  auto src_shape = src.get_local_shape();
-  internal::unpack_from_ag_kernel<<<grid_dim, block_dim, 0, stream>>>(
-    packed_buf,
-    dst.get_base_ptr(),
-    src_shape[-1],
-    comm_size,
-    dst.get_local_size(),
-    src.get_local_size(),
-    get_sample_size(src),
-    get_sample_size(dst));
+void ChannelExchange<float>::unpack_from_ag(TensorType& src,
+                                            TensorType& dst,
+                                            float* packed_buf,
+                                            size_t comm_size,
+                                            h2::gpu::DeviceStream stream)
+{
+    constexpr int block_size = 256;
+    dim3 block_dim(block_size);
+    dim3 grid_dim((src.get_local_size() + block_size - 1) / block_size);
+    auto src_shape = src.get_local_shape();
+    internal::unpack_from_ag_kernel<<<grid_dim, block_dim, 0, stream>>>(
+        packed_buf,
+        dst.get_base_ptr(),
+        src_shape[-1],
+        comm_size,
+        dst.get_local_size(),
+        src.get_local_size(),
+        get_sample_size(src),
+        get_sample_size(dst));
 }
 
 template <>
-void ChannelExchange<double>::unpack_from_ag(
-  TensorType &src,
-  TensorType &dst,
-  double *packed_buf,
-  size_t comm_size,
-  h2::gpu::DeviceStream stream) {
-  constexpr int block_size = 256;
-  dim3 block_dim(block_size);
-  dim3 grid_dim((dst.get_local_size() + block_size - 1) / block_size);
-  auto src_shape = src.get_local_shape();
-  internal::unpack_from_ag_kernel<<<grid_dim, block_dim, 0, stream>>>(
-    packed_buf,
-    dst.get_base_ptr(),
-    src_shape[-1],
-    comm_size,
-    dst.get_local_size(),
-    src.get_local_size(),
-    get_sample_size(src),
-    get_sample_size(dst));
+void ChannelExchange<double>::unpack_from_ag(TensorType& src,
+                                             TensorType& dst,
+                                             double* packed_buf,
+                                             size_t comm_size,
+                                             h2::gpu::DeviceStream stream)
+{
+    constexpr int block_size = 256;
+    dim3 block_dim(block_size);
+    dim3 grid_dim((dst.get_local_size() + block_size - 1) / block_size);
+    auto src_shape = src.get_local_shape();
+    internal::unpack_from_ag_kernel<<<grid_dim, block_dim, 0, stream>>>(
+        packed_buf,
+        dst.get_base_ptr(),
+        src_shape[-1],
+        comm_size,
+        dst.get_local_size(),
+        src.get_local_size(),
+        get_sample_size(src),
+        get_sample_size(dst));
 }
 
 }  // namespace tensor
-}  // namespace distconv
+} // namespace distconv

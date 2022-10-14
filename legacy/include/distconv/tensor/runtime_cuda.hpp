@@ -59,7 +59,6 @@ struct MemoryPoolChunk {
   }
 
  protected:
-
   chunk_t m_chunk;
 };
 

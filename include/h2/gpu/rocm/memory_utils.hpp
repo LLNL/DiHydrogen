@@ -35,8 +35,10 @@ inline void mem_copy(void* const dst, void const* const src, size_t const bytes)
     H2_CHECK_HIP(hipMemcpy(dst, src, bytes, hipMemcpyDefault));
 }
 
-inline void
-mem_copy(void* const dst, void const* const src, size_t const bytes, DeviceStream const stream)
+inline void mem_copy(void* const dst,
+                     void const* const src,
+                     size_t const bytes,
+                     DeviceStream const stream)
 {
     H2_GPU_INFO("hipMemcpyAsync(dst={}, src={}, bytes={}, "
                 "kind=hipMemcpyDefault, stream={})",

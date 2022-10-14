@@ -1,11 +1,11 @@
 #include "distconv/runtime_gpu.hpp"
-#include "distconv/tensor/tensor.hpp"
-#include "distconv/tensor/tensor_mpi.hpp"
-#include "distconv/tensor/tensor_cuda.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
-#include "test_tensor.hpp"
+#include "distconv/tensor/tensor.hpp"
+#include "distconv/tensor/tensor_cuda.hpp"
+#include "distconv/tensor/tensor_mpi.hpp"
 #include "distconv/util/util_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
+#include "test_tensor.hpp"
 
 #include <iostream>
 #include <vector>
@@ -521,26 +521,27 @@ inline int test_transform_reduce2(const Shape &shape,
   be >= 4 and divisible by 4.
  */
 int main(int argc, char *argv[]) {
-  h2::gpu::set_gpu(util::choose_gpu());
-  MPI_Init(&argc, &argv);
-  int pid;
-  int np;
-  MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-  MPI_Comm_size(MPI_COMM_WORLD, &np);
+    h2::gpu::set_gpu(util::choose_gpu());
+    MPI_Init(&argc, &argv);
+    int pid;
+    int np;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &np);
 
-  MPIPrintStreamInfo() << "Using device " << h2::gpu::current_gpu();
+    MPIPrintStreamInfo() << "Using device " << h2::gpu::current_gpu();
 
-  constexpr int num_dims = 3;
-  using DataType = int;
+    constexpr int num_dims = 3;
+    using DataType = int;
 
-  using TensorMPI = Tensor<DataType, LocaleMPI, CUDAAllocator>;
-  auto dist = Distribution::make_overlapped_distribution({2, 2, np/4}, {1, 1, 0});
-  assert_always((np % 4) == 0 && (np / 4 > 0));
-  Shape tensor_shape({4, 4, 4});
+    using TensorMPI = Tensor<DataType, LocaleMPI, CUDAAllocator>;
+    auto dist =
+        Distribution::make_overlapped_distribution({2, 2, np / 4}, {1, 1, 0});
+    assert_always((np % 4) == 0 && (np / 4 > 0));
+    Shape tensor_shape({4, 4, 4});
 
-  {
-    assert0(test_transform<TensorMPI>(tensor_shape, dist));
-    MPIRootPrintStreamInfo() << "test_transform success";
+    {
+        assert0(test_transform<TensorMPI>(tensor_shape, dist));
+        MPIRootPrintStreamInfo() << "test_transform success";
   }
 
   Shape reduced_dim(num_dims, 2);

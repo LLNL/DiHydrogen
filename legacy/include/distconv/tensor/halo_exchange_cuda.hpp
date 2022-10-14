@@ -3,10 +3,10 @@
 #include "distconv/base.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/halo_exchange.hpp"
-#include "distconv/util/util_mpi.hpp"
-#include "distconv/util/util_gpu.hpp"
 #include "distconv/tensor/memory_gpu.hpp"
 #include "distconv/tensor/tensor_mpi.hpp"
+#include "distconv/util/util_gpu.hpp"
+#include "distconv/util/util_mpi.hpp"
 
 #include <Al.hpp>
 
@@ -53,52 +53,76 @@ class HaloExchange<DataType, CUDAAllocator, AlBackend> {
     with MPI. Explicit barrier is used with the P2P-based
     implementation.
    */
-  virtual void exchange(const IntVector &widths_rhs_send,
-                        const IntVector &widths_rhs_recv,
-                        const IntVector &widths_lhs_send,
-                        const IntVector &widths_lhs_recv,
-                        BoundaryAttributesV<CommType> &comms,
+  virtual void exchange(const IntVector& widths_rhs_send,
+                        const IntVector& widths_rhs_recv,
+                        const IntVector& widths_lhs_send,
+                        const IntVector& widths_lhs_recv,
+                        BoundaryAttributesV<CommType>& comms,
                         h2::gpu::DeviceStream stream_main,
                         bool rendezvous,
                         bool sync_back,
                         bool is_reverse,
                         bool skip_unpack,
-                        HaloExchangeAccumOp op=HaloExchangeAccumOp::ID) {
-    h2::gpu::DeviceStream prev_streams[2] = {stream_main, stream_main};
-    for (int i = 0; i < m_tensor.get_num_dims(); ++i) {
-      if (is_exchange_required(i, widths_rhs_send[i], widths_rhs_recv[i],
-                               widths_lhs_send[i], widths_lhs_recv[i])) {
-        // Synchronize boundary streams
-        for (Side side: SIDES) {
-          h2::gpu::DeviceStream prev = prev_streams[side];
-          h2::gpu::DeviceStream cur_streams[2] = {comms(i, RHS)->get_stream(),
-                                         comms(i, LHS)->get_stream()};
-          util::wait_stream(prev, cur_streams, 2);
-          prev_streams[side] = comms(i, side)->get_stream();
-        }
-        exchange(i, widths_rhs_send[i], widths_rhs_recv[i],
-                 widths_lhs_send[i], widths_lhs_recv[i],
-                 comms(i, RHS), comms(i, LHS), rendezvous,
-                 is_reverse, skip_unpack, op);
+                        HaloExchangeAccumOp op = HaloExchangeAccumOp::ID)
+  {
+      h2::gpu::DeviceStream prev_streams[2] = {stream_main, stream_main};
+      for (int i = 0; i < m_tensor.get_num_dims(); ++i)
+      {
+          if (is_exchange_required(i,
+                                   widths_rhs_send[i],
+                                   widths_rhs_recv[i],
+                                   widths_lhs_send[i],
+                                   widths_lhs_recv[i]))
+          {
+              // Synchronize boundary streams
+              for (Side side : SIDES)
+              {
+                  h2::gpu::DeviceStream prev = prev_streams[side];
+                  h2::gpu::DeviceStream cur_streams[2] = {
+                      comms(i, RHS)->get_stream(), comms(i, LHS)->get_stream()};
+                  util::wait_stream(prev, cur_streams, 2);
+                  prev_streams[side] = comms(i, side)->get_stream();
+              }
+              exchange(i,
+                       widths_rhs_send[i],
+                       widths_rhs_recv[i],
+                       widths_lhs_send[i],
+                       widths_lhs_recv[i],
+                       comms(i, RHS),
+                       comms(i, LHS),
+                       rendezvous,
+                       is_reverse,
+                       skip_unpack,
+                       op);
+          }
       }
-    }
-    if (sync_back) {
-      for (Side side: SIDES) {
-        util::wait_stream(prev_streams[side], stream_main);
+      if (sync_back)
+      {
+          for (Side side : SIDES)
+          {
+              util::wait_stream(prev_streams[side], stream_main);
+          }
       }
-    }
   }
-  virtual void exchange(BoundaryAttributesV<CommType> &comms,
+  virtual void exchange(BoundaryAttributesV<CommType>& comms,
                         h2::gpu::DeviceStream stream_main,
                         bool rendezvous,
                         bool sync_back,
                         bool is_reverse,
                         bool skip_unpack,
-                        HaloExchangeAccumOp op=HaloExchangeAccumOp::ID) {
-    exchange(m_tensor.get_halo_width(), m_tensor.get_halo_width(),
-             m_tensor.get_halo_width(), m_tensor.get_halo_width(),
-             comms, stream_main, rendezvous, sync_back,
-             is_reverse, skip_unpack, op);
+                        HaloExchangeAccumOp op = HaloExchangeAccumOp::ID)
+  {
+      exchange(m_tensor.get_halo_width(),
+               m_tensor.get_halo_width(),
+               m_tensor.get_halo_width(),
+               m_tensor.get_halo_width(),
+               comms,
+               stream_main,
+               rendezvous,
+               sync_back,
+               is_reverse,
+               skip_unpack,
+               op);
   }
   virtual void exchange(int dim,
                         int width_rhs_send, int width_rhs_recv,
@@ -121,43 +145,60 @@ class HaloExchange<DataType, CUDAAllocator, AlBackend> {
              skip_unpack, op);
   }
 
-  void unpack(const IntVector &widths_rhs_recv,
-              const IntVector &widths_lhs_recv,
-              BoundaryAttributesV<h2::gpu::DeviceStream> &streams,
+  void unpack(const IntVector& widths_rhs_recv,
+              const IntVector& widths_lhs_recv,
+              BoundaryAttributesV<h2::gpu::DeviceStream>& streams,
               h2::gpu::DeviceStream stream_main,
               bool sync_back,
               bool is_reverse,
-              HaloExchangeAccumOp op=HaloExchangeAccumOp::ID) {
-    h2::gpu::DeviceStream prev_streams[2] = {stream_main, stream_main};
-    for (int i = 0; i < m_tensor.get_num_dims(); ++i) {
-      if (!is_exchange_required(i, 0, widths_rhs_recv[i],
-                                0, widths_lhs_recv[i])) {
-        continue;
+              HaloExchangeAccumOp op = HaloExchangeAccumOp::ID)
+  {
+      h2::gpu::DeviceStream prev_streams[2] = {stream_main, stream_main};
+      for (int i = 0; i < m_tensor.get_num_dims(); ++i)
+      {
+          if (!is_exchange_required(
+                  i, 0, widths_rhs_recv[i], 0, widths_lhs_recv[i]))
+          {
+              continue;
+          }
+          for (Side side : SIDES)
+          {
+              h2::gpu::DeviceStream prev = prev_streams[side];
+              h2::gpu::DeviceStream cur_streams[2] = {streams(i, LHS),
+                                                      streams(i, RHS)};
+              util::wait_stream(prev, cur_streams, 2);
+              prev_streams[side] = streams(i, side);
+          }
+          unpack(i,
+                 widths_rhs_recv[i],
+                 widths_lhs_recv[i],
+                 streams(i, RHS),
+                 streams(i, LHS),
+                 is_reverse,
+                 op);
       }
-      for (Side side: SIDES) {
-        h2::gpu::DeviceStream prev = prev_streams[side];
-        h2::gpu::DeviceStream cur_streams[2] = {streams(i, LHS), streams(i, RHS)};
-        util::wait_stream(prev, cur_streams, 2);
-        prev_streams[side] = streams(i, side);
+      if (sync_back)
+      {
+          for (Side side : SIDES)
+          {
+              util::wait_stream(prev_streams[side], stream_main);
+          }
       }
-      unpack(i, widths_rhs_recv[i], widths_lhs_recv[i],
-             streams(i, RHS), streams(i, LHS),
-             is_reverse, op);
-    }
-    if (sync_back) {
-      for (Side side: SIDES) {
-        util::wait_stream(prev_streams[side], stream_main);
-      }
-    }
   }
 
-  void unpack(BoundaryAttributesV<h2::gpu::DeviceStream> &streams,
+  void unpack(BoundaryAttributesV<h2::gpu::DeviceStream>& streams,
               h2::gpu::DeviceStream stream_main,
               bool sync_back,
               bool is_reverse,
-              HaloExchangeAccumOp op=HaloExchangeAccumOp::ID) {
-    unpack(m_tensor.get_halo_width(), m_tensor.get_halo_width(), streams,
-           stream_main, sync_back, is_reverse, op);
+              HaloExchangeAccumOp op = HaloExchangeAccumOp::ID)
+  {
+      unpack(m_tensor.get_halo_width(),
+             m_tensor.get_halo_width(),
+             streams,
+             stream_main,
+             sync_back,
+             is_reverse,
+             op);
   }
 
   void dump_packed_halo(int dim) {
@@ -166,8 +207,8 @@ class HaloExchange<DataType, CUDAAllocator, AlBackend> {
     for (auto side: SIDES) {
       if (get_peer(dim, side) == MPI_PROC_NULL) continue;
       std::ofstream out_send;
-      h2::gpu::mem_copy(h, get_send_buffer(dim, side),
-                        get_halo_size(dim) * sizeof(DataType));
+      h2::gpu::mem_copy(
+          h, get_send_buffer(dim, side), get_halo_size(dim) * sizeof(DataType));
       std::ostringstream file_path_send;
       file_path_send << "send_halo_" << rank << "_"
                 << dim << "_" << side << ".txt";
@@ -176,8 +217,8 @@ class HaloExchange<DataType, CUDAAllocator, AlBackend> {
         out_send << h[i] << std::endl;
       }
       out_send.close();
-      h2::gpu::mem_copy(h, get_recv_buffer(dim, side),
-               get_halo_size(dim) * sizeof(DataType));
+      h2::gpu::mem_copy(
+          h, get_recv_buffer(dim, side), get_halo_size(dim) * sizeof(DataType));
       std::ofstream out_recv;
       std::ostringstream file_path_recv;
       file_path_recv << "recv_halo_" << rank << "_"
@@ -195,15 +236,17 @@ class HaloExchange<DataType, CUDAAllocator, AlBackend> {
     int rank = m_tensor.get_locale().get_rank();
     DataType *h = new DataType[get_halo_size(dim)];
     for (auto side: SIDES) {
-      h2::gpu::mem_copy(h, get_recv_buffer(dim, side),
-                        get_halo_size(dim) * sizeof(DataType));
-      std::ofstream out;
-      std::ostringstream file_path;
-      file_path << "recv_halo_" << rank << "_"
-                << dim << "_" << side << ".txt";
-      out.open(file_path.str(), std::ios::out | std::ios::trunc);
-      for (size_t i = 0; i < get_halo_size(dim); ++i) {
-        out << h[i] << std::endl;
+        h2::gpu::mem_copy(h,
+                          get_recv_buffer(dim, side),
+                          get_halo_size(dim) * sizeof(DataType));
+        std::ofstream out;
+        std::ostringstream file_path;
+        file_path << "recv_halo_" << rank << "_" << dim << "_" << side
+                  << ".txt";
+        out.open(file_path.str(), std::ios::out | std::ios::trunc);
+        for (size_t i = 0; i < get_halo_size(dim); ++i)
+        {
+            out << h[i] << std::endl;
       }
       out.close();
     }
@@ -319,24 +362,35 @@ class HaloExchange<DataType, CUDAAllocator, AlBackend> {
       });
   }
 
-  void pack_dim(int dim, Side side, int width,
-                h2::gpu::DeviceStream stream, void *buf,
-                bool is_reverse) {
-    pack_or_unpack(dim, side, width, stream, buf, true, is_reverse);
+  void pack_dim(int dim,
+                Side side,
+                int width,
+                h2::gpu::DeviceStream stream,
+                void* buf,
+                bool is_reverse)
+  {
+      pack_or_unpack(dim, side, width, stream, buf, true, is_reverse);
   }
 
-  void unpack_dim(int dim, Side side, int width,
+  void unpack_dim(int dim,
+                  Side side,
+                  int width,
                   h2::gpu::DeviceStream stream,
-                  void *buf, bool is_reverse,
-                  HaloExchangeAccumOp op=HaloExchangeAccumOp::ID) {
-    pack_or_unpack(dim, side, width, stream, buf, false,
-                   is_reverse, op);
+                  void* buf,
+                  bool is_reverse,
+                  HaloExchangeAccumOp op = HaloExchangeAccumOp::ID)
+  {
+      pack_or_unpack(dim, side, width, stream, buf, false, is_reverse, op);
   }
 
-  void pack_or_unpack(int dim, Side side, int width,
-                      h2::gpu::DeviceStream stream, void *buf,
-                      bool is_pack, bool is_reverse,
-                      HaloExchangeAccumOp op=HaloExchangeAccumOp::ID);
+  void pack_or_unpack(int dim,
+                      Side side,
+                      int width,
+                      h2::gpu::DeviceStream stream,
+                      void* buf,
+                      bool is_pack,
+                      bool is_reverse,
+                      HaloExchangeAccumOp op = HaloExchangeAccumOp::ID);
 
   virtual bool unpack(int dim,
                       int width_rhs_recv,
@@ -344,26 +398,28 @@ class HaloExchange<DataType, CUDAAllocator, AlBackend> {
                       h2::gpu::DeviceStream stream_rhs,
                       h2::gpu::DeviceStream stream_lhs,
                       bool is_reverse,
-                      HaloExchangeAccumOp op=HaloExchangeAccumOp::ID) {
-    bool unpack_done = false;
+                      HaloExchangeAccumOp op = HaloExchangeAccumOp::ID)
+  {
+      bool unpack_done = false;
 
-    // unpack the peer halo
-    for (auto side: SIDES) {
-      if (get_peer(dim, side) == MPI_PROC_NULL) continue;
-      const int width_recv = side == Side::RHS
-          ? width_rhs_recv : width_lhs_recv;
-      if (width_recv == 0) continue;
-       const h2::gpu::DeviceStream stream = side == Side::RHS
-          ? stream_rhs : stream_lhs;
-      auto recv_buf = get_recv_buffer(dim, side);
-      unpack_done = true;
-      // Pack the local halo.
-      unpack_dim(dim, side, width_recv, stream, recv_buf,
-                 is_reverse, op);
-    }
-    return unpack_done;
+      // unpack the peer halo
+      for (auto side : SIDES)
+      {
+          if (get_peer(dim, side) == MPI_PROC_NULL)
+              continue;
+          const int width_recv =
+              side == Side::RHS ? width_rhs_recv : width_lhs_recv;
+          if (width_recv == 0)
+              continue;
+          const h2::gpu::DeviceStream stream =
+              side == Side::RHS ? stream_rhs : stream_lhs;
+          auto recv_buf = get_recv_buffer(dim, side);
+          unpack_done = true;
+          // Pack the local halo.
+          unpack_dim(dim, side, width_recv, stream, recv_buf, is_reverse, op);
+      }
+      return unpack_done;
   }
-
 };
 
 } // namespace tensor

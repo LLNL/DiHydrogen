@@ -4,22 +4,21 @@
 
 #include <hip/hip_runtime.h>
 
-#define H2_CHECK_HIP(CMD)                                               \
-    do                                                                  \
-    {                                                                   \
-        auto const hip_status_h2_check_hip = (CMD);                     \
-        if (hipSuccess != hip_status_h2_check_hip)                      \
-        {                                                               \
-            std::ostringstream oss;                                     \
-            oss << __FILE__ << ":" << __LINE__ << ": "                  \
-                << "HIP runtime command failed:\n\n  " #CMD "\n\n"      \
-                << "Error name: "                                       \
-                << ::h2::gpu::error_name(hip_status_h2_check_hip)       \
-                << "\n Error msg: "                                     \
-                << ::h2::gpu::error_string(hip_status_h2_check_hip)     \
-                << "\n";                                                \
-            throw std::runtime_error(oss.str());                        \
-        }                                                               \
+#define H2_CHECK_HIP(CMD)                                                      \
+    do                                                                         \
+    {                                                                          \
+        auto const hip_status_h2_check_hip = (CMD);                            \
+        if (hipSuccess != hip_status_h2_check_hip)                             \
+        {                                                                      \
+            std::ostringstream oss;                                            \
+            oss << __FILE__ << ":" << __LINE__ << ": "                         \
+                << "HIP runtime command failed:\n\n  " #CMD "\n\n"             \
+                << "Error name: "                                              \
+                << ::h2::gpu::error_name(hip_status_h2_check_hip)              \
+                << "\n Error msg: "                                            \
+                << ::h2::gpu::error_string(hip_status_h2_check_hip) << "\n";   \
+            throw std::runtime_error(oss.str());                               \
+        }                                                                      \
     } while (0)
 
 namespace h2

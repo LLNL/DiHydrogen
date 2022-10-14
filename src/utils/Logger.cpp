@@ -7,8 +7,8 @@
 
 #include "h2/utils/Logger.hpp"
 
-#include <spdlog/cfg/env.h>  // support for loading levels from the
-                             // environment variable
+#include <spdlog/cfg/env.h> // support for loading levels from the
+                            // environment variable
 #include <spdlog/pattern_formatter.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
@@ -37,8 +37,9 @@ char const* get_first_env(std::initializer_list<char const*> names)
 class MPIRankFlag : public spdlog::custom_flag_formatter
 {
 public:
-    void format(const spdlog::details::log_msg &, const std::tm &,
-                spdlog::memory_buf_t &dest) override
+    void format(const spdlog::details::log_msg&,
+                const std::tm&,
+                spdlog::memory_buf_t& dest) override
     {
         static std::string rank = get_rank_str();
         dest.append(rank.data(), rank.data() + rank.size());
@@ -62,7 +63,8 @@ public:
 #ifdef H2_LOGGER_HAS_MPI
         int is_init = 0;
         MPI_Initialized(&is_init);
-        if (is_init) {
+        if (is_init)
+        {
             int rank = 0;
             MPI_Comm_rank(MPI_COMM_WORLD, &rank);
             return rank;
@@ -73,22 +75,22 @@ public:
 
     static int get_rank_env()
     {
-        char const* env = get_first_env({
-                "FLUX_TASK_RANK",
-                "SLURM_PROCID",
-                "PMI_RANK",
-                "MPIRUN_RANK",
-                "OMPI_COMM_WORLD_RANK",
-                "MV2_COMM_WORLD_RANK"});
+        char const* env = get_first_env({"FLUX_TASK_RANK",
+                                         "SLURM_PROCID",
+                                         "PMI_RANK",
+                                         "MPIRUN_RANK",
+                                         "OMPI_COMM_WORLD_RANK",
+                                         "MV2_COMM_WORLD_RANK"});
         return env ? std::atoi(env) : -1;
     }
-};// class MPIRankFlag
+}; // class MPIRankFlag
 
 class MPISizeFlag : public spdlog::custom_flag_formatter
 {
 public:
-    void format(const spdlog::details::log_msg &, const std::tm &,
-                spdlog::memory_buf_t &dest) override
+    void format(const spdlog::details::log_msg&,
+                const std::tm&,
+                spdlog::memory_buf_t& dest) override
     {
         static std::string size = get_size_str();
         dest.append(size.data(), size.data() + size.size());
@@ -112,7 +114,8 @@ public:
 #ifdef H2_LOGGER_HAS_MPI
         int is_init = 0;
         MPI_Initialized(&is_init);
-        if (is_init) {
+        if (is_init)
+        {
             int size = 0;
             MPI_Comm_size(MPI_COMM_WORLD, &size);
             return size;
@@ -123,23 +126,22 @@ public:
 
     static int get_size_env()
     {
-        char const* env = get_first_env({
-                "FLUX_JOB_SIZE",
-                "SLURM_NTASKS",
-                "PMI_SIZE",
-                "MPIRUN_NTASKS",
-                "OMPI_COMM_WORLD_SIZE",
-                "MV2_COMM_WORLD_SIZE"});
+        char const* env = get_first_env({"FLUX_JOB_SIZE",
+                                         "SLURM_NTASKS",
+                                         "PMI_SIZE",
+                                         "MPIRUN_NTASKS",
+                                         "OMPI_COMM_WORLD_SIZE",
+                                         "MV2_COMM_WORLD_SIZE"});
         return env ? std::atoi(env) : -1;
     }
-};// class MPISizeFlag
+}; // class MPISizeFlag
 
 class HostnameFlag final : public spdlog::custom_flag_formatter
 {
 public:
-    void format(const spdlog::details::log_msg &,
-                const std::tm &,
-                spdlog::memory_buf_t &dest) override
+    void format(const spdlog::details::log_msg&,
+                const std::tm&,
+                spdlog::memory_buf_t& dest) override
     {
         static auto const hostname = get_hostname();
         dest.append(hostname.data(), hostname.data() + hostname.size());
@@ -156,7 +158,7 @@ public:
         char buf[1024];
         if (gethostname(buf, 1024) != 0)
             throw std::runtime_error("gethostname failed.");
-        auto end = std::find(buf, buf+1024, '\0');
+        auto end = std::find(buf, buf + 1024, '\0');
         return std::string{buf, end};
     }
 #else
@@ -167,45 +169,48 @@ public:
     }
 #endif // H2_LOGGER_HAS_UNISTD_H
 
-};// class HostnameFlag
+}; // class HostnameFlag
 
 } // namespace
 
 namespace h2
 {
 
-void Logger::initialize() {
-  auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+void Logger::initialize()
+{
+    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
 
-  auto formatter = std::make_unique<spdlog::pattern_formatter>();
-  formatter->add_flag<HostnameFlag>('h');
-  formatter->add_flag<MPISizeFlag>('W');
-  formatter->add_flag<MPIRankFlag>('w').set_pattern(
-    "[%D %H:%M %z] [%h (Rank %w/%W)] [%^%L%$] %v");
+    auto formatter = std::make_unique<spdlog::pattern_formatter>();
+    formatter->add_flag<HostnameFlag>('h');
+    formatter->add_flag<MPISizeFlag>('W');
+    formatter->add_flag<MPIRankFlag>('w').set_pattern(
+        "[%D %H:%M %z] [%h (Rank %w/%W)] [%^%L%$] %v");
 
-  std::vector<spdlog::sink_ptr> sinks { console_sink };
+    std::vector<spdlog::sink_ptr> sinks{console_sink};
 
-  auto logger = std::make_shared<spdlog::logger>(
-    H2_LOGGER_NAME, sinks.begin(), sinks.end());
-  logger->flush_on(spdlog::get_level());
-  logger->set_formatter(std::move(formatter));
-  spdlog::register_logger(logger);
-  load_log_level();
+    auto logger = std::make_shared<spdlog::logger>(
+        H2_LOGGER_NAME, sinks.begin(), sinks.end());
+    logger->flush_on(spdlog::get_level());
+    logger->set_formatter(std::move(formatter));
+    spdlog::register_logger(logger);
+    load_log_level();
 }
 
-void Logger::finalize() {
-  spdlog::shutdown();
+void Logger::finalize()
+{
+    spdlog::shutdown();
 }
 
-void Logger::load_log_level() {
-  // Set the log level to "info" and mylogger to "trace":
-  // SPDLOG_LEVEL=info,mylogger=trace && ./example
-  spdlog::cfg::load_env_levels();
-  //#define H2_LOG_ACTIVE_LEVEL SPDLOG_LEVEL
-  // or from command line:
-  // ./example SPDLOG_LEVEL=info,mylogger=trace
-  //#include "spdlog/cfg/argv.h" // for loading levels from argv
-  //spdlog::cfg::load_argv_levels(args, argv);
+void Logger::load_log_level()
+{
+    // Set the log level to "info" and mylogger to "trace":
+    // SPDLOG_LEVEL=info,mylogger=trace && ./example
+    spdlog::cfg::load_env_levels();
+    // #define H2_LOG_ACTIVE_LEVEL SPDLOG_LEVEL
+    //  or from command line:
+    //  ./example SPDLOG_LEVEL=info,mylogger=trace
+    // #include "spdlog/cfg/argv.h" // for loading levels from argv
+    // spdlog::cfg::load_argv_levels(args, argv);
 }
 
-}// namespace h2
+} // namespace h2

@@ -1,18 +1,14 @@
-#include <distconv_config.hpp>
-
-#include "distconv_benchmark_common.hpp"
 #include "benchmark_common.hpp"
-
 #include "distconv/runtime_gpu.hpp"
-
-#include "distconv/tensor/tensor.hpp"
-#include "distconv/tensor/tensor_mpi_cuda.hpp"
-#include "distconv/tensor/tensor_cuda.hpp"
-#include "distconv/util/util_gpu.hpp"
+#include "distconv/tensor/shuffle_mpi.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda_al.hpp"
-
-#include "distconv/tensor/shuffle_mpi.hpp"
+#include "distconv/tensor/tensor.hpp"
+#include "distconv/tensor/tensor_cuda.hpp"
+#include "distconv/tensor/tensor_mpi_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
+#include "distconv_benchmark_common.hpp"
+#include <distconv_config.hpp>
 #ifdef DISTCONV_HAS_P2P
 #include "distconv/tensor/shuffle_mpi_cuda_p2p.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda_hybrid.hpp"
@@ -308,13 +304,12 @@ int test_shuffler(Data<tensor::CUDAAllocator> &d,
   util::MPIRootPrintStreamInfo() << "Measuring shuffle_forward";
   std::vector<util::Clock> clks(cfg.run_count, stream);
   for (int i = 0; i < cfg.run_count; ++i) {
-    h2::gpu::sync();
-    DISTCONV_CHECK_MPI(MPI_Barrier(comm));
-    clks[i].start();
-    shfl->shuffle_forward(d.sample.get_base_ptr(),
-                          d.spatial.get_base_ptr(),
-                          stream);
-    clks[i].stop();
+      h2::gpu::sync();
+      DISTCONV_CHECK_MPI(MPI_Barrier(comm));
+      clks[i].start();
+      shfl->shuffle_forward(
+          d.sample.get_base_ptr(), d.spatial.get_base_ptr(), stream);
+      clks[i].stop();
   }
   h2::gpu::sync();
   for (int i = 0; i < cfg.run_count; ++i) {
@@ -323,13 +318,12 @@ int test_shuffler(Data<tensor::CUDAAllocator> &d,
 
   util::MPIRootPrintStreamInfo() << "Measuring shuffle_backward";
   for (int i = 0; i < cfg.run_count; ++i) {
-    h2::gpu::sync();
-    DISTCONV_CHECK_MPI(MPI_Barrier(comm));
-    clks[i].start();
-    shfl->shuffle_backward(d.spatial.get_base_ptr(),
-                           d.output_sample.get_base_ptr(),
-                           stream);
-    clks[i].stop();
+      h2::gpu::sync();
+      DISTCONV_CHECK_MPI(MPI_Barrier(comm));
+      clks[i].start();
+      shfl->shuffle_backward(
+          d.spatial.get_base_ptr(), d.output_sample.get_base_ptr(), stream);
+      clks[i].stop();
   }
   h2::gpu::sync();
   for (int i = 0; i < cfg.run_count; ++i) {

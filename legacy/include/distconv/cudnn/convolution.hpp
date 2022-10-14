@@ -712,7 +712,8 @@ public:
                     + m_input_boundary_offsets(i, side);
                 void* boundary_output_ptr =
                     output.get_buffer() + m_output_boundary_offsets(i, side);
-                h2::gpu::DeviceStream st_boundary = get_boundary_stream(i, side);
+                h2::gpu::DeviceStream st_boundary =
+                    get_boundary_stream(i, side);
                 void* ws_boundary =
                     internal::RuntimeGPU::get_device_memory_pool().get(
                         m_ws_size_fwd_boundaries(i, side), st_boundary);

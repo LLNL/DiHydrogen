@@ -47,8 +47,8 @@ class HaloExchangeMPI:
 
     for (auto side: SIDES) {
       if (this->get_peer(dim, side) == MPI_PROC_NULL) continue;
-      const h2::gpu::DeviceStream stream = side == Side::RHS
-          ? comm_rhs->get_stream() : comm_lhs->get_stream();
+      const h2::gpu::DeviceStream stream =
+          side == Side::RHS ? comm_rhs->get_stream() : comm_lhs->get_stream();
       const int width_send = side == Side::RHS
           ? width_rhs_send : width_lhs_send;
       const int width_recv = side == Side::RHS

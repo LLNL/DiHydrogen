@@ -112,8 +112,9 @@ inline void destroy_filter_descriptor(miopenTensorDescriptor_t const& desc)
 }
 
 template <typename T>
-void print_array(T const* const data, size_t const size,
-                 std::ostream& os=std::cout)
+void print_array(T const* const data,
+                 size_t const size,
+                 std::ostream& os = std::cout)
 {
     os << "[";
     for (size_t ii = 0; ii < size; ++ii)
@@ -131,16 +132,13 @@ inline void setup_filter_descriptor(FilterDescriptor_t& desc,
     std::vector<int> strides;
     strides.reserve(shape.size());
     strides.push_back(1);
-    std::partial_sum(shape.begin(), shape.end() - 1,
+    std::partial_sum(shape.begin(),
+                     shape.end() - 1,
                      std::back_inserter(strides),
                      std::multiplies<int>());
     std::reverse(begin(strides), end(strides));
     DISTCONV_CHECK_MIOPEN(miopenSetTensorDescriptor(
-        desc,
-        dt,
-        shape.size(),
-        util::reverse(shape).data(),
-        strides.data()));
+        desc, dt, shape.size(), util::reverse(shape).data(), strides.data()));
 }
 
 template <typename Tensor, typename ShapeType>
@@ -376,21 +374,19 @@ void convolution_forward(Handle_t handle,
                          TensorDescriptor_t const& out_desc,
                          void* out_data)
 {
-    DISTCONV_CHECK_MIOPEN(
-        miopenConvolutionForward(
-            handle,
-            &alpha,
-            in_desc,
-            in_data,
-            filter_desc,
-            filter_data,
-            conv_desc,
-            conv_algo,
-            &beta,
-            out_desc,
-            out_data,
-            work_data,
-            work_data_size));
+    DISTCONV_CHECK_MIOPEN(miopenConvolutionForward(handle,
+                                                   &alpha,
+                                                   in_desc,
+                                                   in_data,
+                                                   filter_desc,
+                                                   filter_data,
+                                                   conv_desc,
+                                                   conv_algo,
+                                                   &beta,
+                                                   out_desc,
+                                                   out_data,
+                                                   work_data,
+                                                   work_data_size));
 }
 
 template <typename T>
@@ -557,8 +553,7 @@ inline miopenPoolingDescriptor_t make_pooling_descriptor()
     miopenPoolingDescriptor_t desc;
     DISTCONV_CHECK_MIOPEN(miopenCreatePoolingDescriptor(&desc));
     DISTCONV_CHECK_MIOPEN(
-        miopenSetPoolingIndexType(desc,
-                                  details::get_index_type()));
+        miopenSetPoolingIndexType(desc, details::get_index_type()));
     return desc;
 }
 
@@ -576,8 +571,8 @@ inline void setup_pooling_descriptor(miopenPoolingDescriptor_t& desc,
 {
     DISTCONV_CHECK_MIOPEN(miopenSetNdPoolingDescriptor(
         desc, mode, nb_dims, window_dim, pad, stride));
-    DISTCONV_CHECK_MIOPEN(miopenSetPoolingIndexType(desc,
-                                                    details::get_index_type()));
+    DISTCONV_CHECK_MIOPEN(
+        miopenSetPoolingIndexType(desc, details::get_index_type()));
 }
 
 inline int get_pooling_descriptor_dims(miopenPoolingDescriptor_t const& desc)
@@ -614,10 +609,9 @@ namespace details
 void set_workspace(miopenPoolingDescriptor_t const& desc, void* workspace);
 void* get_workspace(miopenPoolingDescriptor_t const& desc);
 void clear_workspace(miopenPoolingDescriptor_t const& desc);
-std::pair<void*, size_t>
-make_workspace(miopenHandle_t handle,
-               miopenPoolingDescriptor_t desc,
-               miopenTensorDescriptor_t out_desc);
+std::pair<void*, size_t> make_workspace(miopenHandle_t handle,
+                                        miopenPoolingDescriptor_t desc,
+                                        miopenTensorDescriptor_t out_desc);
 
 } // namespace details
 
@@ -633,12 +627,11 @@ inline void pooling_forward(miopenHandle_t handle,
                             bool training)
 {
     // Set up the index type first.
-    DISTCONV_CHECK_MIOPEN(miopenSetPoolingIndexType(desc,
-                                                    details::get_index_type()));
+    DISTCONV_CHECK_MIOPEN(
+        miopenSetPoolingIndexType(desc, details::get_index_type()));
     // Then get the workspace size.
-    auto workspace = (training
-                      ? details::make_workspace(handle, desc, out_desc)
-                      : std::make_pair((void*) nullptr, (size_t) 0UL));
+    auto workspace = (training ? details::make_workspace(handle, desc, out_desc)
+                               : std::make_pair((void*) nullptr, (size_t) 0UL));
     DISTCONV_CHECK_MIOPEN(miopenPoolingForward(handle,
                                                desc,
                                                &alpha,

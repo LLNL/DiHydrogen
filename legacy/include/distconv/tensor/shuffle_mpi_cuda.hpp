@@ -1,12 +1,12 @@
 #pragma once
 
-#include "distconv/tensor/runtime_gpu.hpp"
 #include "distconv/runtime_gpu.hpp"
+#include "distconv/tensor/memory_gpu.hpp"
+#include "distconv/tensor/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/tensor_mpi.hpp"
-#include "distconv/tensor/memory_gpu.hpp"
-#include "distconv/util/util_mpi.hpp"
 #include "distconv/util/util_gpu.hpp"
+#include "distconv/util/util_mpi.hpp"
 
 namespace distconv {
 namespace tensor {
@@ -57,9 +57,9 @@ class TensorMPICUDAShuffler {
 
   virtual ~TensorMPICUDAShuffler() {
     if (m_rank_limits_fwd)
-      DISTCONV_CHECK_GPU(GPU_FREE(m_rank_limits_fwd));
+        DISTCONV_CHECK_GPU(GPU_FREE(m_rank_limits_fwd));
     if (m_rank_limits_bwd)
-      DISTCONV_CHECK_GPU(GPU_FREE(m_rank_limits_bwd));
+        DISTCONV_CHECK_GPU(GPU_FREE(m_rank_limits_bwd));
     if (m_send_counts)
       delete[] m_send_counts;
     if (m_recv_counts)
@@ -69,15 +69,17 @@ class TensorMPICUDAShuffler {
     if (m_recv_displs_h)
       delete[] m_recv_displs_h;
     if (m_send_displs_d)
-      DISTCONV_CHECK_GPU(GPU_FREE(m_send_displs_d));
+        DISTCONV_CHECK_GPU(GPU_FREE(m_send_displs_d));
     if (m_recv_displs_d)
-      DISTCONV_CHECK_GPU(GPU_FREE(m_recv_displs_d));
+        DISTCONV_CHECK_GPU(GPU_FREE(m_recv_displs_d));
   }
 
-  void shuffle_forward(const DataType *src, DataType *dst,
-                       h2::gpu::DeviceStream stream=0);
-  void shuffle_backward(const DataType *src, DataType *dst,
-                        h2::gpu::DeviceStream stream=0);
+  void shuffle_forward(const DataType* src,
+                       DataType* dst,
+                       h2::gpu::DeviceStream stream = 0);
+  void shuffle_backward(const DataType* src,
+                        DataType* dst,
+                        h2::gpu::DeviceStream stream = 0);
 
   static size_t get_buf_size(const TensorType &tensor) {
     return get_buf_size(tensor.get_local_shape());
@@ -159,8 +161,7 @@ class TensorMPICUDAShuffler {
 #ifdef DISTCONV_OPTIMIZE_FIND_DESTINATION
     optimize_find_destination(src_tensor, dst_tensor, host_buf);
 #endif
-    DISTCONV_GPU_MALLOC(&rank_limits,
-                         sizeof(int) * host_buf.size());
+    DISTCONV_GPU_MALLOC(&rank_limits, sizeof(int) * host_buf.size());
     h2::gpu::mem_copy(rank_limits, host_buf.data(), host_buf.size());
   }
 
@@ -211,10 +212,8 @@ class TensorMPICUDAShuffler {
     m_recv_counts = new int[num_ranks];
     m_send_displs_h = new int[num_ranks];
     m_recv_displs_h = new int[num_ranks];
-    DISTCONV_GPU_MALLOC(
-        &m_send_displs_d, sizeof(int) * num_ranks);
-    DISTCONV_GPU_MALLOC(
-        &m_recv_displs_d, sizeof(int) * num_ranks);
+    DISTCONV_GPU_MALLOC(&m_send_displs_d, sizeof(int) * num_ranks);
+    DISTCONV_GPU_MALLOC(&m_recv_displs_d, sizeof(int) * num_ranks);
 
     const Region src_local_region(src_tensor.get_global_index(),
                                   m_src_local_shape);
@@ -287,69 +286,87 @@ class TensorMPICUDAShuffler {
     h2::gpu::mem_copy(m_recv_displs_d, m_recv_displs_h, num_ranks);
   }
 
-  void shuffle(const DataType *src, DataType *dst,
-               h2::gpu::DeviceStream stream, bool is_forward);
+  void shuffle(const DataType* src,
+               DataType* dst,
+               h2::gpu::DeviceStream stream,
+               bool is_forward);
 
-  virtual DataType *get_src_buf(bool is_forward, h2::gpu::DeviceStream s) {
-    if (is_forward && m_src_buf_passed) {
-      return m_src_buf;
-    } else if (!is_forward && m_dst_buf_passed) {
+  virtual DataType* get_src_buf(bool is_forward, h2::gpu::DeviceStream s)
+  {
+      if (is_forward && m_src_buf_passed)
+      {
+          return m_src_buf;
+      } else if (!is_forward && m_dst_buf_passed) {
       return m_dst_buf;
     } else {
       size_t buffer_size = get_src_local_shape(is_forward).get_size() *
           sizeof(DataType);
-      DataType *buf = buffer_size == 0 ? nullptr :
-          static_cast<DataType*>(
-              distconv::internal::RuntimeGPU::get_device_memory_pool().get(
-                  buffer_size, s));
+      DataType* buf =
+          buffer_size == 0
+              ? nullptr
+              : static_cast<DataType*>(
+                  distconv::internal::RuntimeGPU::get_device_memory_pool().get(
+                      buffer_size, s));
       return buf;
     }
   }
 
-  virtual DataType *get_dst_buf(bool is_forward, h2::gpu::DeviceStream s) {
-    if (is_forward && m_dst_buf_passed) {
-      return m_dst_buf;
-    } else if (!is_forward && m_src_buf_passed) {
+  virtual DataType* get_dst_buf(bool is_forward, h2::gpu::DeviceStream s)
+  {
+      if (is_forward && m_dst_buf_passed)
+      {
+          return m_dst_buf;
+      } else if (!is_forward && m_src_buf_passed) {
       return m_src_buf;
     } else {
       size_t buffer_size = get_dst_local_shape(is_forward).get_size() *
           sizeof(DataType);
-      DataType *buf = buffer_size == 0 ? nullptr :
-          static_cast<DataType*>(
-              distconv::internal::RuntimeGPU::get_device_memory_pool().get(
-                  buffer_size, s));
+      DataType* buf =
+          buffer_size == 0
+              ? nullptr
+              : static_cast<DataType*>(
+                  distconv::internal::RuntimeGPU::get_device_memory_pool().get(
+                      buffer_size, s));
       return buf;
     }
   }
 
-  virtual void transfer(
-      const DataType *send_buf, size_t send_buffer_size,
-      DataType *recv_buf, size_t recv_buffer_size,
-      bool is_forward, h2::gpu::DeviceStream stream) {
+  virtual void transfer(const DataType* send_buf,
+                        size_t send_buffer_size,
+                        DataType* recv_buf,
+                        size_t recv_buffer_size,
+                        bool is_forward,
+                        h2::gpu::DeviceStream stream)
+  {
 #ifdef DISTCONV_SHFL_USE_CUDA_AWARE
-    DISTCONV_CHECK_GPU(cudaStreamSynchronize(stream));
-    MPI_Alltoallv(send_buf,
-                  get_send_counts(is_forward),
-                  get_send_displs_h(is_forward),
-                  util::get_mpi_data_type<DataType>(),
-                  recv_buf,
-                  get_recv_counts(is_forward),
-                  get_recv_displs_h(is_forward),
-                  util::get_mpi_data_type<DataType>(),
-                  m_loc.get_comm());
+      DISTCONV_CHECK_GPU(cudaStreamSynchronize(stream));
+      MPI_Alltoallv(send_buf,
+                    get_send_counts(is_forward),
+                    get_send_displs_h(is_forward),
+                    util::get_mpi_data_type<DataType>(),
+                    recv_buf,
+                    get_recv_counts(is_forward),
+                    get_recv_displs_h(is_forward),
+                    util::get_mpi_data_type<DataType>(),
+                    m_loc.get_comm());
 #else
     // manually copying back to host
-    DataType *send_buf_h = send_buffer_size == 0 ? nullptr :
-        static_cast<DataType*>(
-            tensor::internal::RuntimeGPU::get_pinned_memory_pool().get(
-                send_buffer_size));
-    DataType *recv_buf_h = recv_buffer_size == 0 ? nullptr :
-        static_cast<DataType*>(
-            internal::RuntimeGPU::get_pinned_memory_pool().get(
-                recv_buffer_size));
+    DataType* send_buf_h =
+        send_buffer_size == 0
+            ? nullptr
+            : static_cast<DataType*>(
+                tensor::internal::RuntimeGPU::get_pinned_memory_pool().get(
+                    send_buffer_size));
+    DataType* recv_buf_h =
+        recv_buffer_size == 0
+            ? nullptr
+            : static_cast<DataType*>(
+                internal::RuntimeGPU::get_pinned_memory_pool().get(
+                    recv_buffer_size));
 
     if (send_buffer_size > 0) {
-        h2::gpu::mem_copy((void*)send_buf_h, (void*)send_buf, send_buffer_size);
+        h2::gpu::mem_copy(
+            (void*) send_buf_h, (void*) send_buf, send_buffer_size);
     }
 
     MPI_Alltoallv(send_buf_h, get_send_counts(is_forward),
@@ -361,14 +378,17 @@ class TensorMPICUDAShuffler {
                   m_loc.get_comm());
 
     if (recv_buffer_size > 0) {
-        h2::gpu::mem_copy((void*)recv_buf, (void*)recv_buf_h, recv_buffer_size);
+        h2::gpu::mem_copy(
+            (void*) recv_buf, (void*) recv_buf_h, recv_buffer_size);
     }
 
     if (send_buf_h != nullptr) {
-      tensor::internal::RuntimeGPU::get_pinned_memory_pool().release(send_buf_h);
+        tensor::internal::RuntimeGPU::get_pinned_memory_pool().release(
+            send_buf_h);
     }
     if (recv_buf_h != nullptr) {
-      tensor::internal::RuntimeGPU::get_pinned_memory_pool().release(recv_buf_h);
+        tensor::internal::RuntimeGPU::get_pinned_memory_pool().release(
+            recv_buf_h);
     }
 #endif
     util::MPIPrintStreamDebug() << "Transfer done\n";
@@ -376,7 +396,7 @@ class TensorMPICUDAShuffler {
 
   virtual void release_buf(DataType *buf) {
     if (buf != nullptr && buf != m_src_buf && buf != m_dst_buf) {
-      distconv::internal::RuntimeGPU::get_device_memory_pool().release(buf);
+        distconv::internal::RuntimeGPU::get_device_memory_pool().release(buf);
     }
   }
 

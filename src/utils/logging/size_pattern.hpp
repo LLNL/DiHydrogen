@@ -16,33 +16,35 @@ namespace
 class SizeFlag : public spdlog::custom_flag_formatter
 {
 public:
-  void format(const spdlog::details::log_msg &, const std::tm &,
-              spdlog::memory_buf_t &dest) override
-  {
-    std::string size = std::to_string(get_local_size());
-    dest.append(size.data(), size.data() + size.size());
-  }
-
-  std::unique_ptr<custom_flag_formatter> clone() const override
-  {
-    return spdlog::details::make_unique<SizeFlag>();
-  }
-
-  /** Attempt to identify world size from the environment. */
-  int get_local_size()
-  {
-    char* env = std::getenv("MV2_COMM_WORLD_SIZE");
-    if (!env)
-      env = std::getenv("OMPI_COMM_WORLD_SIZE");
-    if (!env) {
-      // Cannot determine world size
-      env = "-1";
+    void format(const spdlog::details::log_msg&,
+                const std::tm&,
+                spdlog::memory_buf_t& dest) override
+    {
+        std::string size = std::to_string(get_local_size());
+        dest.append(size.data(), size.data() + size.size());
     }
-    return std::atoi(env);
-  }
 
-};// class SizeFlag
+    std::unique_ptr<custom_flag_formatter> clone() const override
+    {
+        return spdlog::details::make_unique<SizeFlag>();
+    }
 
-} // namespace h2
+    /** Attempt to identify world size from the environment. */
+    int get_local_size()
+    {
+        char* env = std::getenv("MV2_COMM_WORLD_SIZE");
+        if (!env)
+            env = std::getenv("OMPI_COMM_WORLD_SIZE");
+        if (!env)
+        {
+            // Cannot determine world size
+            env = "-1";
+        }
+        return std::atoi(env);
+    }
+
+}; // class SizeFlag
+
+} // namespace
 
 #endif // H2_UTILS_LOGGING_SIZE_PATTERN_HPP_INCLUDED

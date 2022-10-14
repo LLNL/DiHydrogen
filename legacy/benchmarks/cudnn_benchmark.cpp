@@ -1,18 +1,18 @@
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <vector>
-#include <cstdlib>
-#include <algorithm>
+#include "benchmark_common.hpp"
+#include "distconv/util/cxxopts.hpp"
+#include "distconv/util/stopwatch.h"
+#include "distconv/util/util.hpp"
+#include "distconv/util/util_gpu_dnn.hpp"
 
 #include <cuda.h>
 #include <cudnn.h>
 
-#include "distconv/util/util.hpp"
-#include "distconv/util/stopwatch.h"
-#include "distconv/util/util_gpu_dnn.hpp"
-#include "distconv/util/cxxopts.hpp"
-#include "benchmark_common.hpp"
+#include <algorithm>
+#include <cstdlib>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <vector>
 
 using namespace distconv;
 using distconv_benchmark::BenchmarkDataType;

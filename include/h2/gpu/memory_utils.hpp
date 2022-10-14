@@ -52,8 +52,8 @@ struct MemInfo
     size_t total;
 };
 
-}// namespace gpu
-}// namespace h2
+} // namespace gpu
+} // namespace h2
 
 #if H2_HAS_CUDA
 #include "cuda/memory_utils.hpp"

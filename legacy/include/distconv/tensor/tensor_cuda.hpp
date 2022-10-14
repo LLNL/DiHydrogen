@@ -1,11 +1,10 @@
 #pragma once
 
-#include <distconv_config.hpp>
-
+#include "distconv/tensor/memory_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/tensor_process.hpp"
-#include "distconv/tensor/memory_gpu.hpp"
 #include "distconv/util/util.hpp"
+#include <distconv_config.hpp>
 
 namespace distconv {
 namespace tensor {

@@ -2,8 +2,8 @@
 
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/tensor_mpi.hpp"
-#include "distconv/util/util_mpi.hpp"
 #include "distconv/util/util_gpu.hpp" // for profiler marking
+#include "distconv/util/util_mpi.hpp"
 
 #include <algorithm>
 #include <cstring>
@@ -527,15 +527,17 @@ class TensorMPIShuffler<DataType, BaseAllocator> {
           }
           util::profile_pop();
         } else {
-          util::profile_push("pack-default");
-          util::MPIRootPrintStreamWarning()
-              << "Packing does not use the optimized implementation";
-          pack(
-              src, m_helper.get_src_local_shape(is_forward),
-              m_helper.get_src_strides(is_forward),
-              m_helper.get_dst_locale_shape(is_forward),
-              rank_limits_fwd, send_buf.get(), send_displs);
-          util::profile_pop();
+            util::profile_push("pack-default");
+            util::MPIRootPrintStreamWarning()
+                << "Packing does not use the optimized implementation";
+            pack(src,
+                 m_helper.get_src_local_shape(is_forward),
+                 m_helper.get_src_strides(is_forward),
+                 m_helper.get_dst_locale_shape(is_forward),
+                 rank_limits_fwd,
+                 send_buf.get(),
+                 send_displs);
+            util::profile_pop();
         }
       }
     }
@@ -553,13 +555,16 @@ class TensorMPIShuffler<DataType, BaseAllocator> {
     if (!getenv("SKIP_UNPACK")) {
       if (m_helper.is_dst_split_root(is_forward)) {
         if (get_sample_to_spatial(is_forward)) {
-          util::profile_push("unpack-opt");
-          util::MPIPrintStreamDebug() << "Sample-to-spatial unpacking";
-          if (nd == 4) {
-            unpack_sample_to_spatial_halo4(
-                dst, m_helper.get_dst_local_shape(is_forward),
-                m_helper.get_dst_strides(is_forward),
-                recv_buf.get(), m_helper.get_dst_overlap(is_forward));
+            util::profile_push("unpack-opt");
+            util::MPIPrintStreamDebug() << "Sample-to-spatial unpacking";
+            if (nd == 4)
+            {
+                unpack_sample_to_spatial_halo4(
+                    dst,
+                    m_helper.get_dst_local_shape(is_forward),
+                    m_helper.get_dst_strides(is_forward),
+                    recv_buf.get(),
+                    m_helper.get_dst_overlap(is_forward));
           } else {
             unpack_sample_to_spatial_halo5(
                 dst, m_helper.get_dst_local_shape(is_forward),
@@ -568,13 +573,15 @@ class TensorMPIShuffler<DataType, BaseAllocator> {
           }
           util::profile_pop();
         } else {
-          util::profile_push("unpack-default");
-          unpack(
-              dst, m_helper.get_dst_local_shape(is_forward),
-              m_helper.get_dst_strides(is_forward),
-              m_helper.get_src_locale_shape(is_forward),
-              rank_limits_bwd, recv_buf.get(), recv_displs);
-          util::profile_pop();
+            util::profile_push("unpack-default");
+            unpack(dst,
+                   m_helper.get_dst_local_shape(is_forward),
+                   m_helper.get_dst_strides(is_forward),
+                   m_helper.get_src_locale_shape(is_forward),
+                   rank_limits_bwd,
+                   recv_buf.get(),
+                   recv_displs);
+            util::profile_pop();
         }
       }
     }

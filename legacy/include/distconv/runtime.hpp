@@ -3,7 +3,7 @@
 namespace distconv {
 
 struct Config {
-  bool profiling;
+    bool profiling;
 };
 
 void initialize();

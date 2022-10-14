@@ -1,10 +1,9 @@
-#include <distconv_config.hpp>
-
 #include "distconv/tensor/shuffle_mpi_cuda.hpp"
 #include "distconv/util/util_gpu.hpp"
+#include <distconv_config.hpp>
 
-#include <vector>
 #include <sstream>
+#include <vector>
 
 #if H2_HAS_CUDA
 using gpuStream_t = cudaStream_t;
@@ -177,16 +176,19 @@ __global__ void pack_kernel(const DataType *src,
 }
 
 template <typename DataType, bool packed>
-void pack_kernel_dispatch(const DataType *src,
-                          const Shape &src_local_shape,
-                          const IndexVector &src_strides,
-                          const Shape &dst_locale_shape,
-                          const int *rank_limits,
-                          DataType *buf,
-                          const int *displs,
-                          dim3 grid_dim, dim3 block_dim,
-                          int shm_size, gpuStream_t stream) {
-  const int num_dims = src_local_shape.num_dims();
+void pack_kernel_dispatch(const DataType* src,
+                          const Shape& src_local_shape,
+                          const IndexVector& src_strides,
+                          const Shape& dst_locale_shape,
+                          const int* rank_limits,
+                          DataType* buf,
+                          const int* displs,
+                          dim3 grid_dim,
+                          dim3 block_dim,
+                          int shm_size,
+                          gpuStream_t stream)
+{
+    const int num_dims = src_local_shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                 \
   pack_kernel<ND, DataType, packed><<<                                  \
@@ -221,18 +223,19 @@ void pack_kernel_dispatch(const DataType *src,
 }
 
 template <typename DataType, bool packed>
-void pack(const DataType *src,
-          const Shape &src_local_shape,
-          const IndexVector &src_strides,
-          const Shape &dst_locale_shape,
-          const int *rank_limits,
-          DataType *buf,
-          const int *displs,
-          gpuStream_t stream) {
-  constexpr int block_size = 256;
-  dim3 block_dim(block_size);
-  size_t work_size = src_local_shape.get_size();
-  dim3 grid_dim((work_size + block_size - 1) / block_size);
+void pack(const DataType* src,
+          const Shape& src_local_shape,
+          const IndexVector& src_strides,
+          const Shape& dst_locale_shape,
+          const int* rank_limits,
+          DataType* buf,
+          const int* displs,
+          gpuStream_t stream)
+{
+    constexpr int block_size = 256;
+    dim3 block_dim(block_size);
+    size_t work_size = src_local_shape.get_size();
+    dim3 grid_dim((work_size + block_size - 1) / block_size);
 #ifdef PACK_USE_SHMEM
   int shm_size = dst_locale_shape.reduce_sum() * sizeof(int)
       + dst_locale_shape.reduce_prod() * sizeof(int);
@@ -297,16 +300,19 @@ __global__ void unpack_kernel2(DataType *tensor,
 }
 
 template <typename DataType, bool packed>
-void unpack_kernel_dispatch(DataType *tensor,
-                            const Shape &local_shape,
-                            const IndexVector &strides,
-                            const Shape &locale_shape,
-                            const int *rank_limits,
-                            const DataType *packed_buf,
-                            const int *displs,
-                            dim3 grid_dim, dim3 block_dim,
-                            int shm_size, gpuStream_t stream) {
-  const int num_dims = local_shape.num_dims();
+void unpack_kernel_dispatch(DataType* tensor,
+                            const Shape& local_shape,
+                            const IndexVector& strides,
+                            const Shape& locale_shape,
+                            const int* rank_limits,
+                            const DataType* packed_buf,
+                            const int* displs,
+                            dim3 grid_dim,
+                            dim3 block_dim,
+                            int shm_size,
+                            gpuStream_t stream)
+{
+    const int num_dims = local_shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                 \
   unpack_kernel2<ND, DataType, packed><<<                               \
@@ -341,18 +347,19 @@ void unpack_kernel_dispatch(DataType *tensor,
 }
 
 template <typename DataType, bool packed>
-void unpack(DataType *dst,
-            const Shape &shape,
-            const IndexVector &strides,
-            const Shape &locale_shape,
-            const int *rank_limits,
-            const DataType *buf,
-            const int *displs,
-            gpuStream_t stream) {
-  constexpr int block_size = 256;
-  dim3 block_dim(block_size);
-  size_t work_size = shape.get_size();
-  dim3 grid_dim((work_size + block_size - 1) / block_size);
+void unpack(DataType* dst,
+            const Shape& shape,
+            const IndexVector& strides,
+            const Shape& locale_shape,
+            const int* rank_limits,
+            const DataType* buf,
+            const int* displs,
+            gpuStream_t stream)
+{
+    constexpr int block_size = 256;
+    dim3 block_dim(block_size);
+    size_t work_size = shape.get_size();
+    dim3 grid_dim((work_size + block_size - 1) / block_size);
 #ifdef PACK_USE_SHMEM
   int shm_size = locale_shape.reduce_sum() * sizeof(int)
       + locale_shape.reduce_prod() * sizeof(int);
@@ -369,49 +376,58 @@ void unpack(DataType *dst,
 namespace tensor {
 
 template <typename DataType>
-void TensorMPICUDAShuffler<DataType>::shuffle(const DataType *src,
-                                              DataType *dst,
+void TensorMPICUDAShuffler<DataType>::shuffle(const DataType* src,
+                                              DataType* dst,
                                               gpuStream_t stream,
-                                              bool is_forward) {
-  // Poiners can be null if they are empty, which can happen in MPI
-  // local tensors
-  //assert_always(src != nullptr);
-  //assert_always(dst != nullptr);
+                                              bool is_forward)
+{
+    // Poiners can be null if they are empty, which can happen in MPI
+    // local tensors
+    // assert_always(src != nullptr);
+    // assert_always(dst != nullptr);
 
-  const int *rank_limits_fwd = get_rank_limits_fwd(is_forward);
-  const int *rank_limits_bwd = get_rank_limits_bwd(is_forward);
-  const int *send_counts = get_send_counts(is_forward);
-  const int *recv_counts = get_recv_counts(is_forward);
-  const int *send_displs_h = get_send_displs_h(is_forward);
-  const int *recv_displs_h = get_recv_displs_h(is_forward);
-  const int *send_displs_d = get_send_displs_d(is_forward);
-  const int *recv_displs_d = get_recv_displs_d(is_forward);
+    const int* rank_limits_fwd = get_rank_limits_fwd(is_forward);
+    const int* rank_limits_bwd = get_rank_limits_bwd(is_forward);
+    const int* send_counts = get_send_counts(is_forward);
+    const int* recv_counts = get_recv_counts(is_forward);
+    const int* send_displs_h = get_send_displs_h(is_forward);
+    const int* recv_displs_h = get_recv_displs_h(is_forward);
+    const int* send_displs_d = get_send_displs_d(is_forward);
+    const int* recv_displs_d = get_recv_displs_d(is_forward);
 
-  const int num_ranks = get_src_locale_shape(is_forward).get_size();
-  const size_t send_buffer_size =
-      get_src_local_shape(is_forward).get_size() *
-      sizeof(DataType);
-  DataType *send_buf = get_src_buf(is_forward, stream);
-  const size_t recv_buffer_size =
-      get_dst_local_shape(is_forward).get_size() *
-      sizeof(DataType);
-  DataType *recv_buf = get_dst_buf(is_forward, stream);
+    const int num_ranks = get_src_locale_shape(is_forward).get_size();
+    const size_t send_buffer_size =
+        get_src_local_shape(is_forward).get_size() * sizeof(DataType);
+    DataType* send_buf = get_src_buf(is_forward, stream);
+    const size_t recv_buffer_size =
+        get_dst_local_shape(is_forward).get_size() * sizeof(DataType);
+    DataType* recv_buf = get_dst_buf(is_forward, stream);
 
-  if (send_buffer_size && is_src_split_root(is_forward)) {
-    if (get_src_overlap(is_forward).reduce_sum() == 0) {
-      pack<DataType, true>(
-          src, get_src_local_shape(is_forward),
-          get_src_strides(is_forward),
-          get_dst_locale_shape(is_forward),
-          rank_limits_fwd, send_buf, send_displs_d, stream);
-    } else {
-      pack<DataType, false>(
-          src, get_src_local_shape(is_forward),
-          get_src_strides(is_forward),
-          get_dst_locale_shape(is_forward),
-          rank_limits_fwd, send_buf, send_displs_d, stream);
+    if (send_buffer_size && is_src_split_root(is_forward))
+    {
+        if (get_src_overlap(is_forward).reduce_sum() == 0)
+        {
+            pack<DataType, true>(src,
+                                 get_src_local_shape(is_forward),
+                                 get_src_strides(is_forward),
+                                 get_dst_locale_shape(is_forward),
+                                 rank_limits_fwd,
+                                 send_buf,
+                                 send_displs_d,
+                                 stream);
+        }
+        else
+        {
+            pack<DataType, false>(src,
+                                  get_src_local_shape(is_forward),
+                                  get_src_strides(is_forward),
+                                  get_dst_locale_shape(is_forward),
+                                  rank_limits_fwd,
+                                  send_buf,
+                                  send_displs_d,
+                                  stream);
+        }
     }
-  }
 
 #if 0
   {
@@ -459,17 +475,19 @@ void TensorMPICUDAShuffler<DataType>::shuffle(const DataType *src,
   release_buf(recv_buf);
 }
 
-#define INSTANTIATE_SHUFFLE(TYPE)                               \
-  template <>                                                   \
-  void TensorMPICUDAShuffler<TYPE>::shuffle_forward(            \
-      const TYPE *src, TYPE *dst, gpuStream_t stream) {         \
-    shuffle(src, dst, stream, true);                            \
-  };                                                            \
-  template <>                                                   \
-  void TensorMPICUDAShuffler<TYPE>::shuffle_backward(           \
-      const TYPE *src, TYPE *dst, gpuStream_t stream) {         \
-    shuffle(src, dst, stream, false);                           \
-  };
+#define INSTANTIATE_SHUFFLE(TYPE)                                              \
+    template <>                                                                \
+    void TensorMPICUDAShuffler<TYPE>::shuffle_forward(                         \
+        const TYPE* src, TYPE* dst, gpuStream_t stream)                        \
+    {                                                                          \
+        shuffle(src, dst, stream, true);                                       \
+    };                                                                         \
+    template <>                                                                \
+    void TensorMPICUDAShuffler<TYPE>::shuffle_backward(                        \
+        const TYPE* src, TYPE* dst, gpuStream_t stream)                        \
+    {                                                                          \
+        shuffle(src, dst, stream, false);                                      \
+    };
 
 INSTANTIATE_SHUFFLE(float)
 INSTANTIATE_SHUFFLE(double)

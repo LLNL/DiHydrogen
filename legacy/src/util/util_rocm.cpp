@@ -136,7 +136,7 @@ hipError_t hip_malloc(void** ptr,
 }
 
 void wait_stream(hipStream_t const master,
-                 hipStream_t * const followers,
+                 hipStream_t* const followers,
                  int const num_followers)
 {
     hipEvent_t const ev = internal::RuntimeHIP::get_event();

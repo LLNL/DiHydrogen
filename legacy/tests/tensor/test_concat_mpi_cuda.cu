@@ -1,9 +1,9 @@
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/tensor_mpi_cuda.hpp"
-#include "test_tensor.hpp"
 #include "distconv/util/util_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
+#include "test_tensor.hpp"
 
 #include <iostream>
 #include <vector>
@@ -51,7 +51,7 @@ inline int test_concat(const Shape &dst_shape,
   }
   assert_always(concat_dim >= 0);
   util::MPIRootPrintStreamInfo()
-    << "Concatenating tensors along dimension " << concat_dim;
+      << "Concatenating tensors along dimension " << concat_dim;
 
   // init src1
   DataType src1_init_val = 1;
@@ -130,39 +130,45 @@ inline int test_concat(const Shape &dst_shape,
 }
 
 int main(int argc, char *argv[]) {
-  h2::gpu::set_gpu(util::choose_gpu());
-  MPI_Init(&argc, &argv);
-  int pid;
-  int np;
-  MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-  MPI_Comm_size(MPI_COMM_WORLD, &np);
+    h2::gpu::set_gpu(util::choose_gpu());
+    MPI_Init(&argc, &argv);
+    int pid;
+    int np;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &np);
 
-  MPIPrintStreamInfo() << "Using device " << h2::gpu::current_gpu();
+    MPIPrintStreamInfo() << "Using device " << h2::gpu::current_gpu();
 
-  using DataType = int;
-  using TensorType = Tensor<DataType, LocaleMPI, CUDAAllocator>;
-  Shape dst_shape({32, 32, 32, 5, np});
-  Shape src1_shape({32, 32, 32, 2, np});
-  Shape src2_shape({32, 32, 32, 3, np});
+    using DataType = int;
+    using TensorType = Tensor<DataType, LocaleMPI, CUDAAllocator>;
+    Shape dst_shape({32, 32, 32, 5, np});
+    Shape src1_shape({32, 32, 32, 2, np});
+    Shape src2_shape({32, 32, 32, 3, np});
 
-  auto overlapped_dist = Distribution::make_overlapped_distribution(
-      {1, 2, 2, 1, np/4}, {0, 1, 1, 0, 0});
-  auto non_overlapped_dist = Distribution::make_distribution(
-      {1, 2, 2, 1, np/4});
-  assert_always((np % 4) == 0 && (np / 4 > 0));
+    auto overlapped_dist = Distribution::make_overlapped_distribution(
+        {1, 2, 2, 1, np / 4}, {0, 1, 1, 0, 0});
+    auto non_overlapped_dist =
+        Distribution::make_distribution({1, 2, 2, 1, np / 4});
+    assert_always((np % 4) == 0 && (np / 4 > 0));
 
-  // concat tensors with no halo to tensor with halo
-  assert0(test_concat<TensorType>(dst_shape, overlapped_dist,
-                                  src1_shape, src2_shape, non_overlapped_dist));
-  // concat tensors with no halo to tensor with halo
-  assert0(test_concat<TensorType>(dst_shape, non_overlapped_dist,
-                                  src1_shape, src2_shape, overlapped_dist));
+    // concat tensors with no halo to tensor with halo
+    assert0(test_concat<TensorType>(dst_shape,
+                                    overlapped_dist,
+                                    src1_shape,
+                                    src2_shape,
+                                    non_overlapped_dist));
+    // concat tensors with no halo to tensor with halo
+    assert0(test_concat<TensorType>(dst_shape,
+                                    non_overlapped_dist,
+                                    src1_shape,
+                                    src2_shape,
+                                    overlapped_dist));
 
-  MPI_Barrier(MPI_COMM_WORLD);
-  MPIRootPrintStreamInfo() << "Completed successfully.";
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPIRootPrintStreamInfo() << "Completed successfully.";
 
-  MPI_Finalize();
-  static_cast<void>(GPU_DEVICE_RESET());
+    MPI_Finalize();
+    static_cast<void>(GPU_DEVICE_RESET());
 
-  return 0;
+    return 0;
 }

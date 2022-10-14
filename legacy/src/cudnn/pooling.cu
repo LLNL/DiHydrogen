@@ -1,5 +1,5 @@
-#include "distconv/runtime_gpu.hpp"
 #include "distconv/cudnn/pooling.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
 
 namespace {
@@ -98,12 +98,13 @@ namespace distconv {
 
 template <typename DataType>
 void Pooling<BackendDNNLib, DataType>::bp_accumulate_sum(
-    Tensor<DataType> &tensor,
+    Tensor<DataType>& tensor,
     IndexVector const& dst,
     IndexVector const& src,
     tensor::Shape const& shape)
 {
-  switch (m_num_dims) {
+    switch (m_num_dims)
+    {
     case 4:
       bp_accumulate_sum_nd<4, DataType>(tensor, dst, src, shape);
       break;
@@ -114,12 +115,12 @@ void Pooling<BackendDNNLib, DataType>::bp_accumulate_sum(
   return;
 }
 
-#define INSTANTIATE_BP_ACCUMULATE_SUM(TYPE)                             \
-  template void Pooling<BackendDNNLib, TYPE>::bp_accumulate_sum(        \
-      Tensor<TYPE> &tensor,                                             \
-      const IndexVector &dst,                                           \
-      const IndexVector &src,                                           \
-      const tensor::Shape &shape)
+#define INSTANTIATE_BP_ACCUMULATE_SUM(TYPE)                                    \
+    template void Pooling<BackendDNNLib, TYPE>::bp_accumulate_sum(             \
+        Tensor<TYPE>& tensor,                                                  \
+        const IndexVector& dst,                                                \
+        const IndexVector& src,                                                \
+        const tensor::Shape& shape)
 INSTANTIATE_BP_ACCUMULATE_SUM(float);
 INSTANTIATE_BP_ACCUMULATE_SUM(double);
 #undef INSTANTIATE_BP_ACCUMULATE_SUM

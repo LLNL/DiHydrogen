@@ -34,7 +34,7 @@ void* PinnedMemoryPool::get(size_t size)
     util::PrintStreamDebug()
         << "Allocating a new pinned memory of size " << size << "\n";
     void* new_mem;
-    DISTCONV_CHECK_HIP(hipHostMalloc (&new_mem, size));
+    DISTCONV_CHECK_HIP(hipHostMalloc(&new_mem, size));
     chunk_t& c = m_chunks.emplace_back(new_mem, size, true);
     return std::get<0>(c);
 }

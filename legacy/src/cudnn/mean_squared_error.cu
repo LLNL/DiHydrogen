@@ -1,8 +1,8 @@
-#include "distconv/runtime_gpu.hpp"
 #include "distconv/cudnn/mean_squared_error.hpp"
-#include "distconv/util/util_mpi.hpp"
-#include "distconv/util/util_gpu.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
+#include "distconv/util/util_mpi.hpp"
 
 #include <limits>
 
@@ -19,7 +19,8 @@ using distconv::tensor::CUDAAllocator;
 
 template <typename DataType>
 using TensorCUDA = distconv::tensor::Tensor<DataType, LocaleMPI, CUDAAllocator>;
-using MeanSquaredErrorCUDNN = distconv::MeanSquaredError<distconv::BackendDNNLib>;
+using MeanSquaredErrorCUDNN =
+    distconv::MeanSquaredError<distconv::BackendDNNLib>;
 
 namespace distconv {
 namespace mean_squared_error {

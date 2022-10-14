@@ -139,16 +139,20 @@ struct Clock {
   }
 };
 
-inline void profile_push(const char *name) {
-  if (get_config().profiling) {
-    nvtxRangePushA(name);
-  }
+inline void profile_push(const char* name)
+{
+    if (get_config().profiling)
+    {
+        nvtxRangePushA(name);
+    }
 }
 
-inline void profile_pop() {
-  if (get_config().profiling) {
-    nvtxRangePop();
-  }
+inline void profile_pop()
+{
+    if (get_config().profiling)
+    {
+        nvtxRangePop();
+    }
 }
 
 #define LIST_OF_ELEMENT_TYPES                   \

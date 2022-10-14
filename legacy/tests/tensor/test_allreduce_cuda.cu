@@ -1,15 +1,14 @@
-#include <distconv_config.hpp>
-
+#include "distconv/base.hpp"
 #include "distconv/runtime.hpp"
 #include "distconv/runtime_gpu.hpp"
-#include "distconv/base.hpp"
-#include "distconv/util/util_gpu.hpp"
-#include "distconv/util/util_mpi.hpp"
-#include "distconv/tensor/memory_gpu.hpp"
 #include "distconv/tensor/allreduce.hpp"
+#include "distconv/tensor/allreduce_al.hpp"
 #include "distconv/tensor/allreduce_mpi.hpp"
 #include "distconv/tensor/allreduce_mpi_cuda.hpp"
-#include "distconv/tensor/allreduce_al.hpp"
+#include "distconv/tensor/memory_gpu.hpp"
+#include "distconv/util/util_gpu.hpp"
+#include "distconv/util/util_mpi.hpp"
+#include <distconv_config.hpp>
 #ifdef DISTCONV_HAS_NVSHMEM
 #include "distconv/tensor/allreduce_nvshmem.hpp"
 #endif // DISTCONV_HAS_NVSHMEM
@@ -18,6 +17,7 @@
 #include "h2/gpu/runtime.hpp"
 
 #include <Al.hpp>
+
 #include <memory>
 
 using DataType = int;
@@ -62,7 +62,7 @@ void alloc_buf(const std::string &method, DataType *&ptr, size_t count) {
     //util::MPIPrintStreamInfo() << "NVSHMEM alloc at: " << ptr;
 #endif // DISTCONV_HAS_NVSHMEM
   } else {
-    DISTCONV_CHECK_GPU(GPU_MALLOC(&ptr, sizeof(DataType) * count));
+      DISTCONV_CHECK_GPU(GPU_MALLOC(&ptr, sizeof(DataType) * count));
   }
 }
 
@@ -77,7 +77,7 @@ void free_buf(const std::string &method, void *ptr) {
     //util::MPIPrintStreamInfo() << "Freeing nvshmem done";
 #endif // DISTCONV_HAS_NVSHMEM
   } else {
-    DISTCONV_CHECK_GPU(GPU_FREE(ptr));
+      DISTCONV_CHECK_GPU(GPU_FREE(ptr));
   }
 }
 
@@ -132,12 +132,14 @@ void test_teardown(const std::string &method, DataType *input_buf,
   util::MPIPrintStreamInfo() << "test torndown";
 }
 
-std::unique_ptr<tensor::Allreduce<DataType>> make_reducer(const std::string name,
-                                                          MPI_Comm comm,
-                                                          DeviceStream stream) {
-  if (name == "AllreduceMPICUDA") {
-    return std::make_unique<tensor::AllreduceMPICUDA<DataType>>(comm, stream);
-  } else if (name == "AllreduceAlNCCL") {
+std::unique_ptr<tensor::Allreduce<DataType>>
+make_reducer(const std::string name, MPI_Comm comm, DeviceStream stream)
+{
+    if (name == "AllreduceMPICUDA")
+    {
+        return std::make_unique<tensor::AllreduceMPICUDA<DataType>>(comm,
+                                                                    stream);
+    } else if (name == "AllreduceAlNCCL") {
     return std::make_unique<tensor::AllreduceAlNCCL<DataType>>(
         std::make_shared<Al::NCCLBackend::comm_type>(comm, stream));
 #ifdef DISTCONV_HAS_NVSHMEM
@@ -202,23 +204,24 @@ void test(const std::string &method, int min_count, int max_count, MPI_Comm comm
   * py * pz == N
  */
 int main(int argc, char *argv[]) {
-  set_gpu(util::choose_gpu());
-  Al::Initialize(argc, argv);
-  int pid;
-  int np;
-  MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-  MPI_Comm_size(MPI_COMM_WORLD, &np);
-  int min_count = 1;
-  int max_count = 1024 * 1024;
-  std::vector<std::string> methods;
-  // default test methods
-  methods.push_back("AllreduceMPICUDA");
-  methods.push_back("AllreduceAlNCCL");
-  int argi = 1;
+    set_gpu(util::choose_gpu());
+    Al::Initialize(argc, argv);
+    int pid;
+    int np;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &np);
+    int min_count = 1;
+    int max_count = 1024 * 1024;
+    std::vector<std::string> methods;
+    // default test methods
+    methods.push_back("AllreduceMPICUDA");
+    methods.push_back("AllreduceAlNCCL");
+    int argi = 1;
 
-  if (argi < argc) {
-    min_count = atoi(argv[argi]);
-    ++argi;
+    if (argi < argc)
+    {
+        min_count = atoi(argv[argi]);
+        ++argi;
   }
   if (argi < argc) {
     max_count = atoi(argv[argi]);

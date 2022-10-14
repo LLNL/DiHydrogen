@@ -1,15 +1,15 @@
 #include "distconv/distconv.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
-#include "distconv/tensor/tensor_mpi_cuda.hpp"
 #include "distconv/tensor/tensor_cuda.hpp"
-#include "test_tensor.hpp"
-#include "test_tensor_mpi_cuda_common.hpp"
+#include "distconv/tensor/tensor_mpi_cuda.hpp"
 #include "distconv/util/util_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
+#include "test_tensor.hpp"
+#include "test_tensor_mpi_cuda_common.hpp"
 
-#include <iostream>
 #include <cmath>
+#include <iostream>
 
 using namespace distconv;
 using namespace distconv::tensor;

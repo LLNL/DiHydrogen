@@ -1,8 +1,8 @@
-#include "distconv/runtime_gpu.hpp"
 #include "distconv/cudnn/cross_entropy.hpp"
-#include "distconv/util/util_mpi.hpp"
-#include "distconv/util/util_gpu.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
+#include "distconv/util/util_mpi.hpp"
 
 #include <limits>
 

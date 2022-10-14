@@ -1,8 +1,8 @@
-#include "distconv/runtime_gpu.hpp"
 #include "distconv/cudnn/softmax.hpp"
-#include "distconv/util/util_mpi.hpp"
-#include "distconv/util/util_gpu.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
+#include "distconv/util/util_mpi.hpp"
 
 #include <limits>
 
@@ -294,26 +294,31 @@ __global__ void update_per_sample_kernel(
 }
 
 template <typename Tensor, typename DataType>
-void compute_max(const Tensor &tensor, DataType *sample_max,
-                 h2::gpu::DeviceStream stream) {
-  dim3 gdim;
-  int num_samples;
-  size_t sample_size;
-  set_kernel_params(tensor, num_samples, sample_size, gdim);
+void compute_max(const Tensor& tensor,
+                 DataType* sample_max,
+                 h2::gpu::DeviceStream stream)
+{
+    dim3 gdim;
+    int num_samples;
+    size_t sample_size;
+    set_kernel_params(tensor, num_samples, sample_size, gdim);
 
-  if (num_samples == 0 || sample_size == 0) {
-    return;
-  }
+    if (num_samples == 0 || sample_size == 0)
+    {
+        return;
+    }
 
-  reduce_per_sample_kernel
-      <DataType, block_size, id<DataType>, max<DataType>,
-       atomic_max<DataType>>
-      <<<gdim, block_size, 0, stream>>>(
-          tensor.get_base_ptr(), sample_size,
-          id<DataType>(),
-          max<DataType>(),
-          atomic_max<DataType>(),
-          sample_max);
+    reduce_per_sample_kernel<DataType,
+                             block_size,
+                             id<DataType>,
+                             max<DataType>,
+                             atomic_max<DataType>>
+        <<<gdim, block_size, 0, stream>>>(tensor.get_base_ptr(),
+                                          sample_size,
+                                          id<DataType>(),
+                                          max<DataType>(),
+                                          atomic_max<DataType>(),
+                                          sample_max);
 }
 
 template <typename DataType>
@@ -324,26 +329,35 @@ struct exp_shifted {
 };
 
 template <typename Tensor, typename DataType>
-void compute_exp(const Tensor &x, const DataType *sample_max,
-                 Tensor &y, DataType *sample_exp,
-                 h2::gpu::DeviceStream stream) {
-  dim3 gdim;
-  int num_samples;
-  size_t sample_size;
-  set_kernel_params(x, num_samples, sample_size, gdim);
+void compute_exp(const Tensor& x,
+                 const DataType* sample_max,
+                 Tensor& y,
+                 DataType* sample_exp,
+                 h2::gpu::DeviceStream stream)
+{
+    dim3 gdim;
+    int num_samples;
+    size_t sample_size;
+    set_kernel_params(x, num_samples, sample_size, gdim);
 
-  if (num_samples == 0 || sample_size == 0) {
-    return;
-  }
+    if (num_samples == 0 || sample_size == 0)
+    {
+        return;
+    }
 
-  map_and_reduce_per_sample_kernel
-      <DataType, block_size,
-       exp_shifted<DataType>, sum<DataType>,
-       atomic_add_fn<DataType>>
-      <<<gdim, block_size, 0, stream>>>(
-          x.get_base_ptr(), sample_size, sample_max,
-          exp_shifted<DataType>(), sum<DataType>(), atomic_add_fn<DataType>(),
-          y.get_base_ptr(), sample_exp);
+    map_and_reduce_per_sample_kernel<DataType,
+                                     block_size,
+                                     exp_shifted<DataType>,
+                                     sum<DataType>,
+                                     atomic_add_fn<DataType>>
+        <<<gdim, block_size, 0, stream>>>(x.get_base_ptr(),
+                                          sample_size,
+                                          sample_max,
+                                          exp_shifted<DataType>(),
+                                          sum<DataType>(),
+                                          atomic_add_fn<DataType>(),
+                                          y.get_base_ptr(),
+                                          sample_exp);
 }
 
 template <typename DataType>
@@ -356,45 +370,56 @@ struct SoftmaxOp {
 };
 
 template <typename Tensor, typename DataType>
-void compute_softmax(const DataType *sample_exp, Tensor &output_tensor,
-                     h2::gpu::DeviceStream stream) {
-  dim3 gdim;
-  int num_samples;
-  size_t sample_size;
-  set_kernel_params(output_tensor, num_samples, sample_size, gdim);
+void compute_softmax(const DataType* sample_exp,
+                     Tensor& output_tensor,
+                     h2::gpu::DeviceStream stream)
+{
+    dim3 gdim;
+    int num_samples;
+    size_t sample_size;
+    set_kernel_params(output_tensor, num_samples, sample_size, gdim);
 
-  if (num_samples == 0 || sample_size == 0) {
-    return;
-  }
+    if (num_samples == 0 || sample_size == 0)
+    {
+        return;
+    }
 
-  update_per_sample_kernel
-      <DataType, block_size, SoftmaxOp<DataType>>
-      <<<gdim, block_size, 0, stream>>>(
-          output_tensor.get_base_ptr(),
-          sample_exp,
-          sample_size,
-          SoftmaxOp<DataType>(get_min<DataType>()));
+    update_per_sample_kernel<DataType, block_size, SoftmaxOp<DataType>>
+        <<<gdim, block_size, 0, stream>>>(
+            output_tensor.get_base_ptr(),
+            sample_exp,
+            sample_size,
+            SoftmaxOp<DataType>(get_min<DataType>()));
 }
 
 template <typename Tensor, typename DataType>
-void bp_dotproduct(const Tensor &y, const Tensor &dy, DataType *sample_dp,
-                   h2::gpu::DeviceStream stream) {
-  dim3 gdim;
-  int num_samples;
-  size_t sample_size;
-  set_kernel_params(y, num_samples, sample_size, gdim);
+void bp_dotproduct(const Tensor& y,
+                   const Tensor& dy,
+                   DataType* sample_dp,
+                   h2::gpu::DeviceStream stream)
+{
+    dim3 gdim;
+    int num_samples;
+    size_t sample_size;
+    set_kernel_params(y, num_samples, sample_size, gdim);
 
-  if (num_samples == 0 || sample_size == 0) {
-    return;
-  }
+    if (num_samples == 0 || sample_size == 0)
+    {
+        return;
+    }
 
-  reduce_per_sample_kernel
-      <DataType, block_size,
-       mul<DataType>, sum<DataType>, atomic_add_fn<DataType>>
-      <<<gdim, block_size, 0, stream>>>(
-          y.get_base_ptr(), dy.get_base_ptr(), sample_size,
-          mul<DataType>(), sum<DataType>(), atomic_add_fn<DataType>(),
-          sample_dp);
+    reduce_per_sample_kernel<DataType,
+                             block_size,
+                             mul<DataType>,
+                             sum<DataType>,
+                             atomic_add_fn<DataType>>
+        <<<gdim, block_size, 0, stream>>>(y.get_base_ptr(),
+                                          dy.get_base_ptr(),
+                                          sample_size,
+                                          mul<DataType>(),
+                                          sum<DataType>(),
+                                          atomic_add_fn<DataType>(),
+                                          sample_dp);
 }
 
 template <typename DataType>
@@ -413,24 +438,30 @@ struct bp_compute_func {
 };
 
 template <typename Tensor, typename DataType>
-void bp_compute_gradient(const Tensor &y, const Tensor &dy,
-                         DataType *sample_dp, Tensor &dx,
-                         h2::gpu::DeviceStream stream) {
-  dim3 gdim;
-  int num_samples;
-  size_t sample_size;
-  set_kernel_params(y, num_samples, sample_size, gdim);
+void bp_compute_gradient(const Tensor& y,
+                         const Tensor& dy,
+                         DataType* sample_dp,
+                         Tensor& dx,
+                         h2::gpu::DeviceStream stream)
+{
+    dim3 gdim;
+    int num_samples;
+    size_t sample_size;
+    set_kernel_params(y, num_samples, sample_size, gdim);
 
-  if (num_samples == 0 || sample_size == 0) {
-    return;
-  }
+    if (num_samples == 0 || sample_size == 0)
+    {
+        return;
+    }
 
-  map_per_sample_kernel
-      <DataType, block_size, bp_compute_func<DataType>>
-      <<<gdim, block_size, 0, stream>>>(
-          y.get_base_ptr(), dy.get_base_ptr(), sample_dp,
-          sample_size, dx.get_base_ptr(),
-          bp_compute_func<DataType>(get_min<DataType>()));
+    map_per_sample_kernel<DataType, block_size, bp_compute_func<DataType>>
+        <<<gdim, block_size, 0, stream>>>(
+            y.get_base_ptr(),
+            dy.get_base_ptr(),
+            sample_dp,
+            sample_size,
+            dx.get_base_ptr(),
+            bp_compute_func<DataType>(get_min<DataType>()));
 }
 
 template <typename DataType, int BLOCK_SIZE>
@@ -486,28 +517,29 @@ __global__ void fp_channel_kernel(const DataType * __restrict__ x,
 }
 
 template <typename Tensor>
-int fp_channel(const Tensor &x, Tensor &y, h2::gpu::DeviceStream stream) {
-  using DataType = typename Tensor::data_type;
+int fp_channel(const Tensor& x, Tensor& y, h2::gpu::DeviceStream stream)
+{
+    using DataType = typename Tensor::data_type;
 
-  if (x.get_local_size() == 0) {
+    if (x.get_local_size() == 0)
+    {
+        return 0;
+    }
+
+    auto num_samples = x.get_local_shape()[-1];
+    auto num_channels = x.get_local_shape()[-2];
+    size_t spatial_size = x.get_local_size() / num_samples / num_channels;
+    auto num_blocks_per_sample = util::ceil(spatial_size, (size_t) block_size);
+
+    dim3 gdim(num_blocks_per_sample, num_samples);
+    auto shmem_size = num_channels * block_size * sizeof(DataType);
+
+    fp_channel_kernel<DataType, block_size>
+        <<<gdim, block_size, shmem_size, stream>>>(
+            x.get_base_ptr(), spatial_size, num_channels, y.get_base_ptr());
+    DISTCONV_CHECK_GPU(GPU_GET_LAST_ERROR());
+
     return 0;
-  }
-
-  auto num_samples = x.get_local_shape()[-1];
-  auto num_channels = x.get_local_shape()[-2];
-  size_t spatial_size = x.get_local_size() / num_samples / num_channels;
-  auto num_blocks_per_sample = util::ceil(spatial_size, (size_t)block_size);
-
-  dim3 gdim(num_blocks_per_sample, num_samples);
-  auto shmem_size = num_channels * block_size * sizeof(DataType);
-
-  fp_channel_kernel<DataType, block_size>
-      <<<gdim, block_size, shmem_size, stream>>>(
-          x.get_base_ptr(), spatial_size, num_channels,
-          y.get_base_ptr());
-  DISTCONV_CHECK_GPU(GPU_GET_LAST_ERROR());
-
-  return 0;
 }
 
 template <typename DataType, int BLOCK_SIZE>
@@ -557,28 +589,35 @@ __global__ void bp_channel_kernel(const DataType * __restrict__ y,
 }
 
 template <typename Tensor>
-int bp_channel(const Tensor &y, const Tensor &dy, Tensor &dx, h2::gpu::DeviceStream stream) {
-  using DataType = typename Tensor::data_type;
+int bp_channel(const Tensor& y,
+               const Tensor& dy,
+               Tensor& dx,
+               h2::gpu::DeviceStream stream)
+{
+    using DataType = typename Tensor::data_type;
 
-  if (dx.get_local_size() == 0) {
+    if (dx.get_local_size() == 0)
+    {
+        return 0;
+    }
+
+    auto num_samples = dx.get_local_shape()[-1];
+    auto num_channels = dx.get_local_shape()[-2];
+    size_t spatial_size = dx.get_local_size() / num_samples / num_channels;
+    auto num_blocks_per_sample = util::ceil(spatial_size, (size_t) block_size);
+
+    dim3 gdim(num_blocks_per_sample, num_samples);
+    auto shmem_size = num_channels * block_size * 2 * sizeof(DataType);
+
+    bp_channel_kernel<DataType, block_size>
+        <<<gdim, block_size, shmem_size, stream>>>(y.get_base_ptr(),
+                                                   dy.get_base_ptr(),
+                                                   spatial_size,
+                                                   num_channels,
+                                                   dx.get_base_ptr());
+    DISTCONV_CHECK_GPU(GPU_GET_LAST_ERROR());
+
     return 0;
-  }
-
-  auto num_samples = dx.get_local_shape()[-1];
-  auto num_channels = dx.get_local_shape()[-2];
-  size_t spatial_size = dx.get_local_size() / num_samples / num_channels;
-  auto num_blocks_per_sample = util::ceil(spatial_size, (size_t)block_size);
-
-  dim3 gdim(num_blocks_per_sample, num_samples);
-  auto shmem_size = num_channels * block_size * 2 * sizeof(DataType);
-
-  bp_channel_kernel<DataType, block_size>
-      <<<gdim, block_size, shmem_size, stream>>>(
-          y.get_base_ptr(), dy.get_base_ptr(), spatial_size, num_channels,
-          dx.get_base_ptr());
-  DISTCONV_CHECK_GPU(GPU_GET_LAST_ERROR());
-
-  return 0;
 }
 
 } // namespace softmax
@@ -601,7 +640,7 @@ int SoftmaxCUDNN::forward(const Tensor &x, Tensor &y) {
     return softmax::fp_channel(x, y, stream);
   }
 
-  auto &mempool = internal::RuntimeGPU::get_device_memory_pool();
+  auto& mempool = internal::RuntimeGPU::get_device_memory_pool();
   auto ws_size = num_samples * sizeof(DataType);
   DataType *sample_max = static_cast<DataType*>(
       mempool.get(ws_size, stream));
@@ -646,7 +685,7 @@ int SoftmaxCUDNN::backward(const Tensor &y, const Tensor &dy,
     return softmax::bp_channel(y, dy, dx, stream);
   }
 
-  auto &mempool = internal::RuntimeGPU::get_device_memory_pool();
+  auto& mempool = internal::RuntimeGPU::get_device_memory_pool();
   auto ws_size = num_samples * sizeof(DataType);
 
   DataType *sample_dp = static_cast<DataType*>(

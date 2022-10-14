@@ -1,12 +1,12 @@
 #include "h2/gpu/logger.hpp"
 
-#include <spdlog/spdlog.h>
+#include <memory>
+#include <stdexcept>
+
 #include <spdlog/cfg/env.h>
 #include <spdlog/pattern_formatter.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
-
-#include <memory>
-#include <stdexcept>
+#include <spdlog/spdlog.h>
 
 #if __has_include(<unistd.h>)
 #define HAS_UNISTD_H
@@ -22,7 +22,7 @@ static std::string get_hostname_raw()
     char buf[1024];
     if (gethostname(buf, 1024) != 0)
         throw std::runtime_error("gethostname failed.");
-    auto end = std::find(buf, buf+1024, '\0');
+    auto end = std::find(buf, buf + 1024, '\0');
     return std::string{buf, end};
 }
 
@@ -64,7 +64,8 @@ static std::shared_ptr<spdlog::logger> make_logger()
     console_sink->set_level(spdlog::level::trace);
 
     auto formatter = std::make_unique<spdlog::pattern_formatter>();
-    formatter->add_flag<HostnameFlag>('h').set_pattern("[%h:%P] [%n:%^%l%$] %v");
+    formatter->add_flag<HostnameFlag>('h').set_pattern(
+        "[%h:%P] [%n:%^%l%$] %v");
     console_sink->set_formatter(std::move(formatter));
 
     auto logger = std::make_shared<spdlog::logger>(

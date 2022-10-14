@@ -1,11 +1,11 @@
 #include "distconv/distconv.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
-#include "distconv/tensor/tensor_mpi.hpp"
 #include "distconv/tensor/tensor_cuda.hpp"
+#include "distconv/tensor/tensor_mpi.hpp"
 #include "distconv/tensor/tensor_mpi_cuda.hpp"
-#include "test_tensor.hpp"
 #include "distconv/util/util_gpu.hpp"
+#include "test_tensor.hpp"
 #ifdef DISTCONV_HAS_NVSHMEM
 #include "distconv/util/nvshmem.hpp"
 #endif // DISTCONV_HAS_NVSHMEM
@@ -23,10 +23,10 @@
 #include "h2/gpu/memory_utils.hpp"
 #include "h2/gpu/runtime.hpp"
 
+#include <Al.hpp>
+
 #include <iostream>
 #include <vector>
-
-#include <Al.hpp>
 
 using namespace distconv;
 using namespace distconv::tensor;
@@ -514,7 +514,7 @@ int test_halo_exchange(const Array<ND> &shape,
       comms(i, side) =
           std::make_shared<Al::HostTransferBackend::comm_type>(
               tensor.get_locale().get_comm(), stream);
-    });
+  });
   for (int i = 0; i < ND - 2; ++i) {
     if (tensor.get_split_index()[i] % 2) {
       std::swap(comms(i, LHS), comms(i, RHS));
@@ -681,7 +681,7 @@ int test_halo_exchange_reverse(const Array<ND> &shape,
       comms(i, side) =
           std::make_shared<Al::HostTransferBackend::comm_type>(
               tensor.get_locale().get_comm(), stream);
-    });
+  });
   for (int i = 0; i < ND - 2; ++i) {
     if (tensor.get_split_index()[i] % 2) {
       std::swap(comms(i, LHS), comms(i, RHS));

@@ -3,7 +3,6 @@
 #define H2_LEGACY_INCLUDE_DISTCONV_RUNTIME_GPU_HPP_INCLUDED
 
 #include "distconv_config.hpp"
-
 #include "h2/gpu/memory_utils.hpp"
 #include "h2/gpu/runtime.hpp"
 
