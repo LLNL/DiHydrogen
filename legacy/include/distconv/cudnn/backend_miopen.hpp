@@ -128,29 +128,18 @@ inline void setup_filter_descriptor(FilterDescriptor_t& desc,
     auto const dt = util::get_miopen_type<typename Tensor::data_type>();
     int_vector const shape =
         tensor.get_local_real_shape().template get_vector<int>();
-    // FIXME -- This is probably not right.
     std::vector<int> strides;
     strides.reserve(shape.size());
     strides.push_back(1);
     std::partial_sum(shape.begin(), shape.end() - 1,
                      std::back_inserter(strides),
                      std::multiplies<int>());
-
-    //IndexVector strides = tensor::get_strides(tensor.get_local_real_shape(),
-    //                                          IntVector(shape.size(), 0),
-    //                                          tensor.get_pitch());
     std::reverse(begin(strides), end(strides));
-    std::cout << "** STRIDES=";
-    //print_array(strides.get_vector<int>().data(), strides.length());
-    print_array(strides.data(), strides.size());
-    std::cout << "\n";
-
     DISTCONV_CHECK_MIOPEN(miopenSetTensorDescriptor(
         desc,
         dt,
         shape.size(),
         util::reverse(shape).data(),
-        //util::reverse(strides).get_vector<int>().data()));
         strides.data()));
 }
 

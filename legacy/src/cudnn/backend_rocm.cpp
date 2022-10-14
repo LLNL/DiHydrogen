@@ -106,76 +106,6 @@ static AlgoType get_algo(miopenConvAlgoPerf_t const& perf)
     return PerfAlgo<AlgoType>::get(perf);
 }
 
-static void print_tensor_descriptor(miopenTensorDescriptor_t const& desc,
-                                    std::string const& name = "",
-                                    std::ostream& os = std::cout)
-{
-    auto const num_dims = get_tensor_rank(desc);
-    miopenDataType_t dt;
-    std::vector<int> dims, strides;
-    dims.reserve(num_dims);
-    strides.reserve(num_dims);
-
-    DISTCONV_CHECK_MIOPEN(
-        miopenGetTensorDescriptor(desc, &dt, dims.data(), strides.data()));
-
-    os << "<TensorDesc>{\n";
-    if (name.size())
-        os << "     name: " << name << "\n";
-    os << "     ndim: " << num_dims << "\n";
-    os << "     dims: ";
-    print_array(dims.data(), num_dims);
-    os << "\n"
-       << "  strides: ";
-    print_array(strides.data(), num_dims);
-    os << "\n"
-       << "}" << std::endl;
-}
-
-static void print_convolution_descriptor(
-    miopenConvolutionDescriptor_t const& desc,
-    std::string const& name = "",
-    std::ostream& os = std::cout)
-{
-    int spatial_dims = -1;
-    // This gets the correct value for spatial_dims.
-    DISTCONV_CHECK_MIOPEN(miopenGetConvolutionNdDescriptor(
-                              desc, 0, &spatial_dims, nullptr, nullptr, nullptr, nullptr));
-
-    std::vector<int> data;
-    data.reserve(3 * spatial_dims);
-    int* const pads = data.data();
-    int* const strides = data.data() + spatial_dims;
-    int* const dilations = data.data() + 2 * spatial_dims;
-    miopenConvolutionMode_t mode;
-    DISTCONV_CHECK_MIOPEN(miopenGetConvolutionNdDescriptor(
-        desc, spatial_dims, &spatial_dims, pads, strides, dilations, &mode));
-
-    os << "<ConvolutionDesc>{\n";
-    if (name.size())
-        os << "     name: " << name << "\n";
-    os << "     mode: ";
-    switch (mode)
-    {
-    case miopenConvolution: os << "Convolution"; break;
-    case miopenTranspose: os << "Transpose"; break;
-    default: os << "<UnknownMode>"; break;
-    }
-    os << "\n"
-       << "     sdim: " << spatial_dims << "\n"
-       << "     pads: ";
-    print_array(pads, spatial_dims);
-    os << "\n"
-       << "  strides: ";
-    print_array(strides, spatial_dims);
-    os << "\n"
-       << "   dilats: ";
-    print_array(dilations, spatial_dims);
-    os << "\n"
-       << "}" << std::endl;
-}
-
-
 static miopenConvFwdAlgorithm_t
 get_fwd_algorithm_by_heuristics(miopenHandle_t handle,
                                 miopenTensorDescriptor_t const& xdesc,
@@ -191,10 +121,6 @@ get_fwd_algorithm_by_heuristics(miopenHandle_t handle,
     constexpr size_t max_num_algos = 5;
     std::array<miopenConvAlgoPerf_t, max_num_algos> perf_results;
     int tested_algo_count = 0;
-    print_tensor_descriptor(xdesc, "xdesc");
-    print_tensor_descriptor(wdesc, "wdesc");
-    print_convolution_descriptor(conv_desc, "conv_desc");
-    print_tensor_descriptor(ydesc, "ydesc");
     DISTCONV_CHECK_MIOPEN(
         miopenFindConvolutionForwardAlgorithm(handle,
                                               xdesc,

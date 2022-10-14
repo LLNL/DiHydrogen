@@ -57,7 +57,6 @@ target_include_directories(distconv PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}>)
 
-message("\n\nH2_ROCM_LIBS=${H2_ROCM_LIBS}\n\n")
 target_link_libraries(distconv PUBLIC
   H2Core
   ${H2_CUDA_LIBS}
