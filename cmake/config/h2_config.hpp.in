@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
+#pragma once
 #ifndef H2_CONFIG_HPP_
 #define H2_CONFIG_HPP_
 
@@ -14,17 +15,44 @@
 #define H2_VERSION_PATCH @PROJECT_VERSION_PATCH@
 
 // Configuration information
-#cmakedefine H2_HAS_HALF
-#cmakedefine H2_HAS_OPENMP
+#cmakedefine01 H2_HAS_HALF
+#cmakedefine01 H2_HAS_OPENMP
 
-#cmakedefine H2_HAS_CUDA
-#cmakedefine H2_HAS_HIP_ROCM
-#if defined(H2_HAS_CUDA) || defined(H2_HAS_HIP_ROCM)
+#cmakedefine01 H2_HAS_CUDA
+#cmakedefine01 H2_HAS_ROCM
+#if H2_HAS_CUDA || H2_HAS_ROCM
 #define H2_HAS_GPU
 #endif
 
 // Features detected at configure time
 #define H2_PRETTY_FUNCTION @H2_PRETTY_FUNCTION@
 #define H2_RESTRICT @H2_RESTRICT@
+
+// C++ standard
+#ifdef __cplusplus
+
+#if __cplusplus > 202100L
+#define H2_CXX_STANDARD 23
+#elif __cplusplus > 202000L
+#define H2_CXX_STANDARD 20
+#elif __cplusplus > 201700L
+#define H2_CXX_STANDARD 17
+#else
+#error "C++17 or newer is required."
+#endif
+
+#if H2_CXX_STANDARD >= 20
+#define H2_CONSTEXPR_FUNC constexpr
+#if __has_cpp_attribute(nodiscard)
+#define H2_NODISCARD [[nodiscard]]
+#else
+#define H2_NODISCARD
+#endif
+#else
+#define H2_CONSTEXPR_FUNC
+#define H2_NODISCARD
+#endif
+
+#endif // defined(__cplusplus)
 
 #endif // H2_CONFIG_HPP_

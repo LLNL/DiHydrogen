@@ -15,7 +15,9 @@ h2_add_sources_to_target_and_install(
   INSTALL_PREFIX "${H2_CURRENT_INSTALL_PREFIX}"
   SOURCES
   Version.hpp
-  )
+)
+
+add_subdirectory(gpu)
 
 # Setup the metaprogramming component. The metaprogramming facilities
 # are expected to be available everywhere and carry no

@@ -5,10 +5,9 @@
 ## SPDX-License-Identifier: Apache-2.0
 ################################################################################
 
-# First add this directory's sources. CPP files aren't exported, so
-# these are PRIVATE.
-target_sources(H2Core PRIVATE Version.cpp)
-
-# Subdirectories
-add_subdirectory(gpu)
-add_subdirectory(utils)
+target_sources(SeqCatchTests PRIVATE
+  unit_test_cub_allocator.cpp
+  unit_test_malloc_allocator.cpp
+  unit_test_mallocasync_allocator.cpp
+  unit_test_pool_allocator.cpp
+  )

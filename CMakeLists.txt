@@ -8,7 +8,7 @@
 cmake_minimum_required(VERSION 3.21.0)
 
 project(DiHydrogen
-  VERSION 0.2.2
+  VERSION 0.3.0
   DESCRIPTION "A distributed multilinear algebra interface library."
   HOMEPAGE_URL "https://github.com/llnl/DiHydrogen"
   LANGUAGES CXX)
@@ -35,34 +35,33 @@ option(H2_ENABLE_DISTCONV_LEGACY
   "Enable the legacy DistConv code branch."
   OFF)
 
-cmake_dependent_option(H2_ENABLE_CUDA
+option(H2_ENABLE_CUDA
   "Use the CUDA backend for DistConv features of DiHydrogen."
-  OFF
-  "H2_ENABLE_DISTCONV_LEGACY"
   OFF)
 
-cmake_dependent_option(H2_ENABLE_HIP_ROCM
+option(H2_ENABLE_HIP_ROCM
   "Search for and enable ROCm/HIP language features in DiHydrogen."
-  OFF
-  "H2_ENABLE_DISTCONV_LEGACY"
   OFF)
 
-cmake_dependent_option(H2_ENABLE_ROCM
+option(H2_ENABLE_ROCM
   "Search for and enable ROCm/HIP language features in DiHydrogen."
-  ${H2_ENABLE_HIP_ROCM}
-  "H2_ENABLE_DISTCONV_LEGACY"
-  OFF)
+  ${H2_ENABLE_HIP_ROCM})
+
+# We need only one of CUDA or ROCm
+if (H2_ENABLE_CUDA AND H2_ENABLE_ROCM)
+  message(FATAL_ERROR "Must enable no more than one of CUDA or ROCm.")
+endif ()
+
+# Just in case I missed anything
+if (H2_ENABLE_ROCM AND NOT H2_ENABLE_HIP_ROCM)
+  set(H2_ENABLE_HIP_ROCM ON CACHE BOOL "Use HIP/ROCm backend." FORCE)
+endif ()
 
 # Sanity-check the arguments.
 if (H2_ENABLE_DISTCONV_LEGACY)
   # We need one of CUDA or ROCm
   if (NOT (H2_ENABLE_CUDA OR H2_ENABLE_ROCM))
     message(FATAL_ERROR "Must enable one of CUDA and ROCm with DistConv.")
-  endif ()
-
-  # We need only one of CUDA or ROCm
-  if (H2_ENABLE_CUDA AND H2_ENABLE_ROCM)
-    message(FATAL_ERROR "Must enable no more than one of CUDA or ROCm.")
   endif ()
 
   # These might become full-fledged options later, but I hope
@@ -218,7 +217,7 @@ if (H2_ENABLE_ROCM)
   find_package(hipcub CONFIG REQUIRED)
   find_package(Roctracer MODULE REQUIRED)
 
-  set(H2_HIP_LIBS
+  set(H2_ROCM_LIBS
     hip::host
     hip::hipcub
     MIOpen
@@ -227,7 +226,7 @@ if (H2_ENABLE_ROCM)
   set(H2_HAS_ROCM TRUE)
 endif ()
 
-if (H2_HAS_CUDA OR H2_HAS_HIP_ROCM)
+if (H2_HAS_CUDA OR H2_HAS_ROCM)
   set(H2_HAS_GPU TRUE)
 endif ()
 
@@ -249,15 +248,17 @@ if (H2_ENABLE_ALUMINUM)
         "  ${Aluminum_NOT_FOUND_MESSAGE}")
     endif ()
   endif ()
+  if (NOT Aluminum_FOUND)
+    message(FATAL_ERROR "Aluminum support required but not found.")
+  endif ()
 endif ()
 
 # DiHydrogen will use MPI-3 features extensively. Until proven
 # otherwise, assume that the CMake module version checking is
 # accurate.
 if (H2_ENABLE_DISTCONV_LEGACY)
-  if (NOT TARGET MPI::MPI_CXX)
-    find_package(MPI 3.0.0 COMPONENTS CXX REQUIRED)
-  endif ()
+  find_package(MPI 3.0.0 COMPONENTS CXX REQUIRED)
+
   get_target_property(
     __mpi_compile_options MPI::MPI_CXX INTERFACE_COMPILE_OPTIONS)
   if (__mpi_compile_options)
@@ -265,6 +266,36 @@ if (H2_ENABLE_DISTCONV_LEGACY)
       INTERFACE_COMPILE_OPTIONS
       $<$<COMPILE_LANGUAGE:CXX>:${__mpi_compile_options}>)
     unset(__mpi_compile_options)
+  endif ()
+
+  if (H2_HAS_ROCM)
+    # Fix things in the MPI::MPI_CXX target
+    get_target_property(_MPI_CXX_INCL_DIRS
+      MPI::MPI_CXX INTERFACE_INCLUDE_DIRECTORIES)
+    if (NOT _MPI_CXX_INCL_DIRS)
+      set(_MPI_CXX_INCL_DIRS ${MPI_CXX_COMPILER_INCLUDE_DIRS})
+    endif ()
+    if ((NOT _MPI_CXX_INCL_DIRS)
+        AND (DEFINED ENV{PE_ENV})
+        AND ("${MPI_CXX_COMPILER}" STREQUAL "${CMAKE_CXX_COMPILER}"))
+
+      execute_process(
+        COMMAND "${CMAKE_CXX_COMPILER}" "--cray-print-opts=cflags"
+        OUTPUT_VARIABLE _CRAY_INCLUDE_PATHS)
+      if (_CRAY_INCLUDE_PATHS)
+        string(STRIP "${_CRAY_INCLUDE_PATHS}" _CRAY_INCLUDE_PATHS_STRIPPED)
+        string(REPLACE "-I" "" _CRAY_INCLUDE_PATHS_NO_I
+          "${_CRAY_INCLUDE_PATHS_STRIPPED}")
+        string(REPLACE " " ";" _MPI_CXX_INCL_DIRS
+          "${_CRAY_INCLUDE_PATHS_NO_I}")
+      endif ()
+    endif ()
+
+    if (_MPI_CXX_INCL_DIRS)
+      target_include_directories(MPI::MPI_CXX
+        INTERFACE
+        $<$<COMPILE_LANGUAGE:HIP>:${_MPI_CXX_INCL_DIRS}>)
+    endif ()
   endif ()
 endif ()
 
@@ -300,13 +331,6 @@ target_include_directories(
   $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-# target_link_libraries(H2Core PUBLIC
-#   $<TARGET_NAME_IF_EXISTS:Half::Half>
-#   $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_CXX>
-#   $<TARGET_NAME_IF_EXISTS:h2::cuda_toolkit>
-#   $<TARGET_NAME_IF_EXISTS:rocm::ROCm_CXX>
-#   )
-
 if (NOT CMAKE_CXX_STANDARD)
   set_target_properties(H2Core
     PROPERTIES
@@ -320,7 +344,10 @@ endif ()
 # just because we wanted to compile that way.
 target_link_libraries(H2Core PRIVATE
   $<BUILD_INTERFACE:$<TARGET_NAME_IF_EXISTS:h2_coverage_flags>>)
-target_link_libraries(H2Core PUBLIC spdlog::spdlog)
+target_link_libraries(H2Core PUBLIC
+  spdlog::spdlog
+  ${H2_CUDA_LIBS}
+  ${H2_ROCM_LIBS})
 
 install(TARGETS H2Core
   EXPORT DiHydrogenTargets
