@@ -206,7 +206,7 @@ int main(int argc, char *argv[]) {
     if (pid == 0)
     {
         std::cout << cfg << std::endl;
-  }
+    }
 
   if (cfg.p_n * cfg.p_c * cfg.p_h * cfg.p_w != np) {
     util::MPIRootPrintStreamError()

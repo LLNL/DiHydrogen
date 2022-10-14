@@ -14,7 +14,8 @@ namespace tensor
 namespace internal
 {
 
-PinnedMemoryPool::PinnedMemoryPool() {}
+PinnedMemoryPool::PinnedMemoryPool()
+{}
 PinnedMemoryPool::~PinnedMemoryPool()
 {
     deallocate_all_chunks();
@@ -63,7 +64,8 @@ void PinnedMemoryPool::deallocate_all_chunks()
     m_chunks.clear();
 }
 
-RuntimeHIP::RuntimeHIP() {}
+RuntimeHIP::RuntimeHIP()
+{}
 
 RuntimeHIP& RuntimeHIP::get_instance()
 {

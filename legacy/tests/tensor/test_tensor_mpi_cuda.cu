@@ -224,7 +224,7 @@ int test_clear_halo(const Shape &shape,
       if (num_dims == 4)
       {
           gsize.z = local_real_shape[3];
-    }
+      }
     check_clear_halo<ND, DataType><<<gsize, 128>>>(
         buf, local_real_shape, i, dist.get_overlap(i), 1, error_counter_d);
     h2::gpu::mem_copy(&error_counter, error_counter_d);

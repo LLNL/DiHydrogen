@@ -247,7 +247,7 @@ class HaloExchange<DataType, CUDAAllocator, AlBackend> {
         for (size_t i = 0; i < get_halo_size(dim); ++i)
         {
             out << h[i] << std::endl;
-      }
+        }
       out.close();
     }
     delete[] h;

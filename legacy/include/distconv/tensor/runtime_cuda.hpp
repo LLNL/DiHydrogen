@@ -58,7 +58,7 @@ struct MemoryPoolChunk {
     taken() = f;
   }
 
- protected:
+  protected:
   chunk_t m_chunk;
 };
 

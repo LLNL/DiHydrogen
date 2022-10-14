@@ -296,19 +296,23 @@ class TensorMPICUDAShuffler {
       if (is_forward && m_src_buf_passed)
       {
           return m_src_buf;
-      } else if (!is_forward && m_dst_buf_passed) {
-      return m_dst_buf;
-    } else {
-      size_t buffer_size = get_src_local_shape(is_forward).get_size() *
-          sizeof(DataType);
-      DataType* buf =
-          buffer_size == 0
-              ? nullptr
-              : static_cast<DataType*>(
-                  distconv::internal::RuntimeGPU::get_device_memory_pool().get(
-                      buffer_size, s));
-      return buf;
-    }
+      }
+      else if (!is_forward && m_dst_buf_passed)
+      {
+          return m_dst_buf;
+      }
+      else
+      {
+          size_t buffer_size =
+              get_src_local_shape(is_forward).get_size() * sizeof(DataType);
+          DataType* buf =
+              buffer_size == 0
+                  ? nullptr
+                  : static_cast<DataType*>(
+                      distconv::internal::RuntimeGPU::get_device_memory_pool()
+                          .get(buffer_size, s));
+          return buf;
+      }
   }
 
   virtual DataType* get_dst_buf(bool is_forward, h2::gpu::DeviceStream s)
@@ -316,19 +320,23 @@ class TensorMPICUDAShuffler {
       if (is_forward && m_dst_buf_passed)
       {
           return m_dst_buf;
-      } else if (!is_forward && m_src_buf_passed) {
-      return m_src_buf;
-    } else {
-      size_t buffer_size = get_dst_local_shape(is_forward).get_size() *
-          sizeof(DataType);
-      DataType* buf =
-          buffer_size == 0
-              ? nullptr
-              : static_cast<DataType*>(
-                  distconv::internal::RuntimeGPU::get_device_memory_pool().get(
-                      buffer_size, s));
-      return buf;
-    }
+      }
+      else if (!is_forward && m_src_buf_passed)
+      {
+          return m_src_buf;
+      }
+      else
+      {
+          size_t buffer_size =
+              get_dst_local_shape(is_forward).get_size() * sizeof(DataType);
+          DataType* buf =
+              buffer_size == 0
+                  ? nullptr
+                  : static_cast<DataType*>(
+                      distconv::internal::RuntimeGPU::get_device_memory_pool()
+                          .get(buffer_size, s));
+          return buf;
+      }
   }
 
   virtual void transfer(const DataType* send_buf,

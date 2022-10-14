@@ -139,9 +139,11 @@ make_reducer(const std::string name, MPI_Comm comm, DeviceStream stream)
     {
         return std::make_unique<tensor::AllreduceMPICUDA<DataType>>(comm,
                                                                     stream);
-    } else if (name == "AllreduceAlNCCL") {
-    return std::make_unique<tensor::AllreduceAlNCCL<DataType>>(
-        std::make_shared<Al::NCCLBackend::comm_type>(comm, stream));
+    }
+    else if (name == "AllreduceAlNCCL")
+    {
+        return std::make_unique<tensor::AllreduceAlNCCL<DataType>>(
+            std::make_shared<Al::NCCLBackend::comm_type>(comm, stream));
 #ifdef DISTCONV_HAS_NVSHMEM
   } else if (name == "AllreduceNVSHMEM") {
     return std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
@@ -222,7 +224,7 @@ int main(int argc, char *argv[]) {
     {
         min_count = atoi(argv[argi]);
         ++argi;
-  }
+    }
   if (argi < argc) {
     max_count = atoi(argv[argi]);
     ++argi;

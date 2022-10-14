@@ -28,7 +28,8 @@ HIPDeviceMemoryPool::HIPDeviceMemoryPool()
     )
 {}
 
-HIPDeviceMemoryPool::~HIPDeviceMemoryPool() {}
+HIPDeviceMemoryPool::~HIPDeviceMemoryPool()
+{}
 
 void* HIPDeviceMemoryPool::get(size_t size, hipStream_t st)
 {

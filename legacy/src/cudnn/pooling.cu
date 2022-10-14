@@ -111,7 +111,7 @@ void Pooling<BackendDNNLib, DataType>::bp_accumulate_sum(
     case 5:
       bp_accumulate_sum_nd<5, DataType>(tensor, dst, src, shape);
       break;
-  }
+    }
   return;
 }
 

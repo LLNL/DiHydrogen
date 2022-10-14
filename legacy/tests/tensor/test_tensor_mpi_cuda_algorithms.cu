@@ -542,7 +542,7 @@ int main(int argc, char *argv[]) {
     {
         assert0(test_transform<TensorMPI>(tensor_shape, dist));
         MPIRootPrintStreamInfo() << "test_transform success";
-  }
+    }
 
   Shape reduced_dim(num_dims, 2);
   for (auto it = reduced_dim.index_begin();

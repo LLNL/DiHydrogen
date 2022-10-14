@@ -38,10 +38,10 @@ public:
         // Sync the stream before releasing the pinned buffer
         h2::gpu::sync(m_stream);
         x.release(host_buf);
-  }
+    }
 
-  private:
-  h2::gpu::DeviceStream m_stream;
+private:
+    h2::gpu::DeviceStream m_stream;
 };
 
 } // namespace tensor

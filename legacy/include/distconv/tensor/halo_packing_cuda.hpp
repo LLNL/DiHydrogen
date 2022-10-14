@@ -157,12 +157,13 @@ void pack_or_unpack(Tensor<DataType, LocaleMPI, CUDAAllocator>& tensor,
     {
         pack_or_unpack<DataType, true>(
             tensor, dim, side, width, stream, buf, is_reverse, op);
-    } else {
-    pack_or_unpack<DataType, false>(
-        tensor, dim, side, width, stream,
-        buf, is_reverse, op);
-  }
-  return;
+    }
+    else
+    {
+        pack_or_unpack<DataType, false>(
+            tensor, dim, side, width, stream, buf, is_reverse, op);
+    }
+    return;
 }
 
 #ifdef DISTCONV_HAS_NVSHMEM

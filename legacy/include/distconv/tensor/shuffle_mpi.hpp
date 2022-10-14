@@ -565,13 +565,17 @@ class TensorMPIShuffler<DataType, BaseAllocator> {
                     m_helper.get_dst_strides(is_forward),
                     recv_buf.get(),
                     m_helper.get_dst_overlap(is_forward));
-          } else {
-            unpack_sample_to_spatial_halo5(
-                dst, m_helper.get_dst_local_shape(is_forward),
-                m_helper.get_dst_strides(is_forward),
-                recv_buf.get(), m_helper.get_dst_overlap(is_forward));
-          }
-          util::profile_pop();
+            }
+            else
+            {
+                unpack_sample_to_spatial_halo5(
+                    dst,
+                    m_helper.get_dst_local_shape(is_forward),
+                    m_helper.get_dst_strides(is_forward),
+                    recv_buf.get(),
+                    m_helper.get_dst_overlap(is_forward));
+            }
+            util::profile_pop();
         } else {
             util::profile_push("unpack-default");
             unpack(dst,

@@ -152,18 +152,21 @@ void channel_sums_and_sqsums_opt(int num_samples,
                 num_samples,
                 spatial_size,
                 spatial_real_size);
-    } else {
-    using DataTypeV = DataType;
-    auto num_blocks_per_channel = util::ceil(spatial_size, block_work_size);
-    dim3 grid_dim(num_blocks_per_channel, num_channels);
-    channel_sums_and_sqsums_opt_kernel<ND, DataType, block_size, DataType>
-        <<<grid_dim, block_dim, 0, stream>>>(
-            input.get_const_base_ptr(),
-            sums.get_base_ptr(),
-            sqsums.get_base_ptr(),
-            num_channels, num_samples,
-            spatial_size, spatial_real_size);
-  }
+    }
+    else
+    {
+        using DataTypeV = DataType;
+        auto num_blocks_per_channel = util::ceil(spatial_size, block_work_size);
+        dim3 grid_dim(num_blocks_per_channel, num_channels);
+        channel_sums_and_sqsums_opt_kernel<ND, DataType, block_size, DataType>
+            <<<grid_dim, block_dim, 0, stream>>>(input.get_const_base_ptr(),
+                                                 sums.get_base_ptr(),
+                                                 sqsums.get_base_ptr(),
+                                                 num_channels,
+                                                 num_samples,
+                                                 spatial_size,
+                                                 spatial_real_size);
+    }
 }
 
 template <int ND, typename Tensor>
@@ -241,7 +244,7 @@ void channel_sums_and_sqsums(int num_dims,
     case 5:
       channel_sums_and_sqsums<5, Tensor>(num_samples, input, sums, sqsums, stream);
       break;
-  }
+    }
 }
 
 #define INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(TYPE)                              \
@@ -298,14 +301,16 @@ void sums_to_statistics(index_t num_per_sum,
             running_var,
             sums_to_statistics_functor<DataType>(num_per_sum, decay),
             stream);
-    } else {
-    // Fill global_var with 1. Do the same thing as the corresponding LBANN code.
-    tensor::Transform(
-        global_var,
-        [] __device__ (DataType &global_var) {
-          global_var = DataType(1);
-        }, stream);
-  }
+    }
+    else
+    {
+        // Fill global_var with 1. Do the same thing as the corresponding LBANN
+        // code.
+        tensor::Transform(
+            global_var,
+            [] __device__(DataType & global_var) { global_var = DataType(1); },
+            stream);
+    }
 }
 
 #define INSTANTIATE_SUMS_TO_STATISTICS(TYPE)                                   \
@@ -443,19 +448,22 @@ void batch_normalization_opt(int num_samples,
                 epsilon,
                 channel_size,
                 num_channels);
-    } else {
-    auto num_blocks_per_channel = util::ceil(channel_size, block_work_size);
-    dim3 grid_dim(num_blocks_per_channel, num_channels, num_samples);
-    batch_normalization_opt_kernel<ND, DataType, DataType>
-        <<<grid_dim, block_dim, 0, stream>>>(
-            input.get_const_buffer(),
-            mean.get_const_base_ptr(),
-            var.get_const_base_ptr(),
-            scale.get_const_base_ptr(),
-            bias.get_const_base_ptr(),
-            output.get_buffer(), epsilon,
-            channel_size, num_channels);
-  }
+    }
+    else
+    {
+        auto num_blocks_per_channel = util::ceil(channel_size, block_work_size);
+        dim3 grid_dim(num_blocks_per_channel, num_channels, num_samples);
+        batch_normalization_opt_kernel<ND, DataType, DataType>
+            <<<grid_dim, block_dim, 0, stream>>>(input.get_const_buffer(),
+                                                 mean.get_const_base_ptr(),
+                                                 var.get_const_base_ptr(),
+                                                 scale.get_const_base_ptr(),
+                                                 bias.get_const_base_ptr(),
+                                                 output.get_buffer(),
+                                                 epsilon,
+                                                 channel_size,
+                                                 num_channels);
+    }
 }
 
 template <int ND, typename TensorType>
@@ -543,7 +551,7 @@ void batch_normalization(int num_dims,
           num_samples, input, mean, var,
           scale, bias, output, epsilon, stream);
       break;
-  }
+    }
 }
 
 #define INSTANTIATE_BATCH_NORMALIZATION(TYPE)                                  \
@@ -719,17 +727,25 @@ void forward_all(const Tensor& input,
                 spatial_real_size,
                 num_per_sum,
                 ar_dev);
-    } else {
-    forward_all_kernel<ND, DataType, DataType2, DataType, block_size>
-        <<<grid_dim, block_dim, 0, stream>>>(
-            input.get_const_base_ptr(),
-            running_mean.get_base_ptr(), running_var.get_base_ptr(),
-            scale.get_base_ptr(), bias.get_base_ptr(),
-            output.get_base_ptr(),
-            decay, epsilon, num_samples, num_channels,
-            spatial_size, spatial_real_size, num_per_sum,
-            ar_dev);
-  }
+    }
+    else
+    {
+        forward_all_kernel<ND, DataType, DataType2, DataType, block_size>
+            <<<grid_dim, block_dim, 0, stream>>>(input.get_const_base_ptr(),
+                                                 running_mean.get_base_ptr(),
+                                                 running_var.get_base_ptr(),
+                                                 scale.get_base_ptr(),
+                                                 bias.get_base_ptr(),
+                                                 output.get_base_ptr(),
+                                                 decay,
+                                                 epsilon,
+                                                 num_samples,
+                                                 num_channels,
+                                                 spatial_size,
+                                                 spatial_real_size,
+                                                 num_per_sum,
+                                                 ar_dev);
+    }
 }
 
 template <typename Tensor>
@@ -757,7 +773,7 @@ void forward_all(int num_dims,
       forward_all<5, Tensor>(input, mean, var, running_mean, running_var,
                              scale, bias, output, decay, epsilon, stream, ar);
       break;
-  }
+    }
 }
 
 #define INSTANTIATE_FORWARD(TYPE)                                              \
@@ -981,24 +997,29 @@ void backprop1_opt(int num_samples,
                 spatial_size,
                 i_spatial_real_size,
                 o_spatial_real_size);
-    } else {
-    using DataTypeV = DataType;
-    auto num_blocks_per_channel = util::ceil(spatial_size, block_work_size);
-    dim3 grid_dim(num_blocks_per_channel, num_channels);
-    backprop1_opt_kernel<ND, DataType, block_size, DataTypeV>
-        <<<grid_dim, block_dim, 0, stream>>>(
-            input.get_const_base_ptr(),
-            d_output.get_const_base_ptr(),
-            mean.get_const_base_ptr(),
-            var.get_const_base_ptr(),
-            scale.get_const_base_ptr(),
-            scale_gradient.get_base_ptr(),
-            bias_gradient.get_base_ptr(),
-            mean_gradient.get_base_ptr(),
-            var_gradient.get_base_ptr(),
-            epsilon, num_channels, num_samples,
-            spatial_size, i_spatial_real_size, o_spatial_real_size);
-  }
+    }
+    else
+    {
+        using DataTypeV = DataType;
+        auto num_blocks_per_channel = util::ceil(spatial_size, block_work_size);
+        dim3 grid_dim(num_blocks_per_channel, num_channels);
+        backprop1_opt_kernel<ND, DataType, block_size, DataTypeV>
+            <<<grid_dim, block_dim, 0, stream>>>(input.get_const_base_ptr(),
+                                                 d_output.get_const_base_ptr(),
+                                                 mean.get_const_base_ptr(),
+                                                 var.get_const_base_ptr(),
+                                                 scale.get_const_base_ptr(),
+                                                 scale_gradient.get_base_ptr(),
+                                                 bias_gradient.get_base_ptr(),
+                                                 mean_gradient.get_base_ptr(),
+                                                 var_gradient.get_base_ptr(),
+                                                 epsilon,
+                                                 num_channels,
+                                                 num_samples,
+                                                 spatial_size,
+                                                 i_spatial_real_size,
+                                                 o_spatial_real_size);
+    }
 }
 
 template <int ND, typename TensorType>
@@ -1124,7 +1145,7 @@ void backprop1(int num_dims,
                                mean, var, scale, scale_gradient, bias_gradient,
                                mean_gradient, var_gradient, epsilon, stream);
       break;
-  }
+    }
 }
 
 #define INSTANTIATE_BACKPROP1(TYPE)                                            \
@@ -1291,21 +1312,26 @@ void backprop2_opt(index_t num_samples,
                 num_per_sum,
                 channel_size,
                 num_channels);
-    } else {
-    auto num_blocks_per_channel = util::ceil(channel_size, block_work_size);
-    dim3 grid_dim(num_blocks_per_channel, num_channels, num_samples);
-    backprop2_opt_kernel<ND, DataType, DataType>
-        <<<grid_dim, block_dim, 0, stream>>>(
-            input.get_const_buffer(),
-            d_output.get_const_buffer(),
-            mean.get_const_base_ptr(),
-            var.get_const_base_ptr(),
-            scale.get_const_base_ptr(),
-            mean_gradient.get_const_base_ptr(),
-            var_gradient.get_const_base_ptr(),
-            d_input.get_buffer(),
-            epsilon, num_per_sum, channel_size, num_channels);
-  }
+    }
+    else
+    {
+        auto num_blocks_per_channel = util::ceil(channel_size, block_work_size);
+        dim3 grid_dim(num_blocks_per_channel, num_channels, num_samples);
+        backprop2_opt_kernel<ND, DataType, DataType>
+            <<<grid_dim, block_dim, 0, stream>>>(
+                input.get_const_buffer(),
+                d_output.get_const_buffer(),
+                mean.get_const_base_ptr(),
+                var.get_const_base_ptr(),
+                scale.get_const_base_ptr(),
+                mean_gradient.get_const_base_ptr(),
+                var_gradient.get_const_base_ptr(),
+                d_input.get_buffer(),
+                epsilon,
+                num_per_sum,
+                channel_size,
+                num_channels);
+    }
 }
 
 template <int ND, typename TensorType>
@@ -1407,7 +1433,7 @@ void backprop2(int num_dims,
                                mean, var, scale, mean_gradient,
                                var_gradient, d_input, epsilon, stream);
       break;
-  }
+    }
 }
 
 #define INSTANTIATE_BACKPROP2(TYPE)                                            \
