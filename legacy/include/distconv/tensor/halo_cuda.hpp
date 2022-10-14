@@ -1,8 +1,21 @@
 #pragma once
 
-#include "distconv/base.hpp"
+#include <distconv_config.hpp>
 
+#include "distconv/base.hpp"
+#include "distconv/runtime_gpu.hpp"
+
+#if H2_HAS_CUDA
 #include <cooperative_groups.h>
+#define GPU_LAST_ERROR cudaGetLastError
+#define GPU_LAUNCH_COOP_KERNEL cudaLaunchCooperativeKernel
+#define GPU_SUCCESS cudaSuccess
+#elif H2_HAS_ROCM
+#include <hip/hip_cooperative_groups.h>
+#define GPU_LAST_ERROR hipGetLastError
+#define GPU_LAUNCH_COOP_KERNEL hipLaunchCooperativeKernel
+#define GPU_SUCCESS hipSuccess
+#endif
 
 namespace distconv {
 namespace tensor {
@@ -70,7 +83,7 @@ void traverse_halo_generic(DataType *tensor, const Shape &shape,
                            int dim, Side side, bool inner, int halo_width,
                            size_t num_halo_points, OpType op, const int nd,
                            const dim3 &grid_dims, const dim3 &block_dims,
-                           cudaStream_t s) {
+                           h2::gpu::DeviceStream s) {
 #define CALL_KERNEL(ND) \
   traverse_halo_generic_kernel<ND, DataType, OpType>                    \
       <<<grid_dims, block_dims, 0, s>>>(                                \
@@ -219,7 +232,7 @@ traverse_halo_opt_dim1_5d_apply(DataType * __restrict__ tensor,
   packed_offset_common += x_len * threadIdx.y;
   tensor_offset_common += x_len * y_len * threadIdx.y;
   for (int y = threadIdx.y; y < z_len; y += blockDim.y) {
-    int z_block_len = min(blockDim.y, z_len - (y - threadIdx.y));
+    int const z_block_len = min(static_cast<int>(blockDim.y), z_len - (y - static_cast<int>(threadIdx.y)));
 #pragma unroll
     for (int hw = 0; hw < halo_width; ++hw) {
       size_t packed_offset = packed_offset_common + x_len * z_block_len * hw;
@@ -464,25 +477,25 @@ template <int ND, typename DataType, typename OpType,
           bool inner, Side side, int dim>
 inline void traverse_halo_opt(DataType *tensor, Array<ND> shape,
                               int halo_width, OpType op,
-                              cudaStream_t s, dim3 gsize, dim3 bsize) {
+                              h2::gpu::DeviceStream s, dim3 gsize, dim3 bsize) {
 
 #define CALL(HW)                                                        \
   if ((OpType::has_post_grid || OpType::has_pre_grid) && num_blocks > 1) { \
     void *args[3] = {&tensor, &shape, &op};                             \
-    DISTCONV_CHECK_CUDA(cudaLaunchCooperativeKernel(                    \
+    DISTCONV_CHECK_GPU(GPU_LAUNCH_COOP_KERNEL(                          \
         (const void *)(traverse_halo_opt<ND, DataType, OpType, inner,   \
                        side, dim, HW>),                                 \
         gsize, bsize, (void **)args, 0, s));                            \
   } else {                                                              \
     traverse_halo_opt<ND, DataType, OpType, inner, side, dim, HW>       \
         <<<gsize, bsize, 0, s>>>(tensor, shape, op);                    \
-    auto err = cudaGetLastError();                                      \
-    if (err != cudaSuccess) {                                           \
+    auto err = GPU_LAST_ERROR();                                        \
+    if (err != GPU_SUCCESS) {                                           \
       util::MPIPrintStreamError()                                       \
           << "Lauch error: "                                            \
           << gsize.x << "x" << gsize.y << "x" << gsize.z                \
           << ", " << bsize.x << "x" << bsize.y << "x" << bsize.z;       \
-      DISTCONV_CHECK_CUDA(err);                                         \
+      DISTCONV_CHECK_GPU(err);                                          \
     }                                                                   \
   }
 
@@ -539,7 +552,7 @@ template <int ND, typename DataType, typename OpType,
           bool inner, Side side, int dim>
 inline void traverse_halo_opt(DataType *tensor, Array<ND> shape,
                               int halo_width, OpType op,
-                              cudaStream_t s) {
+                              h2::gpu::DeviceStream s) {
   int vector_width = 1;
   if (dim >= 1) {
     if (shape[0] % 4 == 0) {
@@ -600,7 +613,7 @@ template <int ND, typename DataType, typename OpType,
           bool inner, Side side>
 inline void traverse_halo_opt(DataType *tensor, Array<ND> shape,
                               int dim, int halo_width,
-                              OpType op, cudaStream_t s) {
+                              OpType op, h2::gpu::DeviceStream s) {
   if (dim == 0) {
     traverse_halo_opt<ND, DataType, OpType, inner, side, 0>(
         tensor, shape, halo_width, op, s);
@@ -621,7 +634,7 @@ template <int ND, typename DataType, typename OpType,
 inline void traverse_halo_opt(DataType *tensor, Array<ND> shape,
                               int dim, Side side,
                               int halo_width, OpType op,
-                              cudaStream_t s) {
+                              h2::gpu::DeviceStream s) {
   if (side == Side::RHS) {
     traverse_halo_opt<ND, DataType, OpType, inner, Side::RHS>(
         tensor, shape, dim, halo_width, op, s);
@@ -637,7 +650,7 @@ template <int ND, typename DataType, typename OpType>
 inline void traverse_halo_opt(DataType *tensor, Array<ND> shape,
                               int dim, Side side,
                               int halo_width, bool inner,
-                              OpType op, cudaStream_t s) {
+                              OpType op, h2::gpu::DeviceStream s) {
   if (inner) {
     traverse_halo_opt<ND, DataType, OpType, true>(
         tensor, shape, dim, side, halo_width, op, s);
@@ -653,7 +666,7 @@ template <typename Tensor, typename OpType>
 void TraverseHalo(Tensor &tensor, int dim,
                   Side side, int halo_width,
                   bool inner, OpType op,
-                  cudaStream_t s) {
+                  h2::gpu::DeviceStream s) {
   // ConstDataType is const DataType if the operation only reads the tensor.
   using ConstDataType = std::conditional_t<OpType::modifies_tensor,
                                            typename Tensor::data_type,
@@ -700,7 +713,7 @@ template <typename Tensor, typename OpType>
 void TraverseHalo(Tensor &tensor, int dim,
                   Side side,
                   bool inner, OpType op,
-                  cudaStream_t s) {
+                  h2::gpu::DeviceStream s) {
   TraverseHalo(tensor, dim, side,
                tensor.get_distribution().get_overlap()[dim],
                inner, op, s);
@@ -711,7 +724,7 @@ template <typename Tensor, typename OpType>
 void TraverseHalo(Tensor &tensor, int dim,
                   int width_rhs, int width_lhs,
                   bool inner,
-                  OpType op, cudaStream_t s) {
+                  OpType op, h2::gpu::DeviceStream s) {
   TraverseHalo(tensor, dim, width_rhs, Side::RHS,
                inner, op, s);
   TraverseHalo(tensor, dim, width_lhs, Side::LHS,
@@ -721,10 +734,14 @@ void TraverseHalo(Tensor &tensor, int dim,
 template <typename Tensor, typename OpType>
 void TraverseHalo(Tensor &tensor, int dim,
                   bool inner,
-                  OpType op, cudaStream_t s) {
+                  OpType op, h2::gpu::DeviceStream s) {
   TraverseHalo(tensor, dim, Side::RHS, inner, op, s);
   TraverseHalo(tensor, dim, Side::LHS, inner, op, s);
 }
 
 } // namespace tensor
 } // namespace distconv
+
+#undef GPU_SUCCESS
+#undef GPU_LAUNCH_COOP_KERNEL
+#undef GPU_LAST_ERROR

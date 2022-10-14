@@ -83,11 +83,6 @@ int get_local_size();
 int choose_gpu();
 /** @brief Get the number of GPUs available to this process. */
 int get_num_gpus();
-/** @brief Set the device to the given id.
- *
- *  id must be less than get_num_gpus().
- */
-void set_gpu(int id);
 
 std::ostream& operator<<(std::ostream& os, const hipPitchedPtr& p);
 std::ostream& operator<<(std::ostream& os, const hipPos& p);
@@ -136,7 +131,7 @@ struct Clock
     }
 };
 
-inline void roctx_push(const char* name)
+inline void profile_push(const char* name)
 {
     if (get_config().profiling)
     {
@@ -144,7 +139,7 @@ inline void roctx_push(const char* name)
     }
 }
 
-inline void roctx_pop()
+inline void profile_pop()
 {
     if (get_config().profiling)
     {

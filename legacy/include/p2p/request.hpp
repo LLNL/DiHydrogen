@@ -2,36 +2,46 @@
 
 #include "p2p/mpi.hpp"
 
+#if H2_HAS_ROCM
+#include <hip/hip_runtime.h>
+#else
 #include <cuda_runtime.h>
+#endif
 
 namespace p2p {
 
 class Connection;
 
 class Request {
+#if H2_HAS_ROCM
+  using DeviceStream = hipStream_t;
+#else
+  using DeviceStream = cudaStream_t;
+#endif
+
   constexpr static int MAX_MPI_REQUESTS = 2;
- public:
+public:
   using handler_type = bool (Connection::*)(cudaStream_t, void*, Request*);
-  
+
   enum class Kind {CONNECT, REGISTER, NOTIFY, WAIT,
                    DEFAULT, NULL_REQUEST};
   Request();
   Request(Connection *conn,
-          MPI_Request req, cudaStream_t stream=0);
+          MPI_Request req, DeviceStream stream=0);
   Request(Kind kind, Connection *conn,
-          MPI_Request req, cudaStream_t stream=0);
+          MPI_Request req, DeviceStream stream=0);
   Request(Connection *conn,
           MPI_Request req1, MPI_Request req2,
-          cudaStream_t stream=0);
+          DeviceStream stream=0);
   Request(Kind kind, Connection *conn,
           MPI_Request req1, MPI_Request req2,
-          cudaStream_t stream=0);
+          DeviceStream stream=0);
   Request(Connection *conn,
           MPI_Request *mpi_requests, int num_requests,
-          cudaStream_t stream, handler_type handler);
+          DeviceStream stream, handler_type handler);
   Request(Kind kind, Connection *conn,
           MPI_Request *mpi_requests, int num_requests,
-          cudaStream_t stream, handler_type handler);
+          DeviceStream stream, handler_type handler);
 
   Request(const Request &req);
   Request &operator=(const Request &req);
@@ -53,16 +63,14 @@ class Request {
 
   static void process(const Request *requests, int num_requests,
                       internal::MPI &mpi);
-  
+
  private:
-  Kind m_kind;  
+  Kind m_kind;
   Connection *m_conn;
   MPI_Request m_requests[MAX_MPI_REQUESTS];
   int m_num_requests;
-  cudaStream_t m_stream;
+  DeviceStream m_stream;
   void *m_data = nullptr;
   handler_type m_handler = nullptr;
-
-};
-
+}; // class Request
 } // namespace p2p

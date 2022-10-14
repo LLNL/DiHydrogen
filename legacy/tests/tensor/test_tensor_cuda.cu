@@ -1,7 +1,8 @@
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/tensor_cuda.hpp"
 #include "test_tensor.hpp"
-#include "distconv/util/util_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
 
 #include <iostream>
 
@@ -25,8 +26,6 @@ __global__ void init_tensor(int *buf, size_t base,
     }
   }
 }
-
-
 
 __global__ void check_tensor(int *buf, size_t base,
                              Array<3> shape) {
@@ -92,7 +91,7 @@ inline int test_data_access_cuda(
   Usage: ./test_tensor_cuda
  */
 int main(int argc, char *argv[]) {
-  DISTCONV_CHECK_CUDA(cudaSetDevice(0));
+  h2::gpu::set_gpu(0);
 
   const int ND = 3;
   using DataType = int;
@@ -108,7 +107,8 @@ int main(int argc, char *argv[]) {
   std::cout << "Using pitched memory\n";
   assert0(test_data_access_cuda<TensorCUDAPitch>(Shape({8, 8, 8}), dist));
 
-  cudaDeviceReset();
+  static_cast<void>(GPU_DEVICE_RESET());
+  // yeah, yeah, nodiscard is the future or whatever.
   util::PrintStreamInfo() << "Completed successfully.";
   return 0;
 }

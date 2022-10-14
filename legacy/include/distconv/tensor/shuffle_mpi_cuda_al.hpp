@@ -1,5 +1,8 @@
 #pragma once
 
+#include <distconv_config.hpp>
+
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda.hpp"
 
 #include <Al.hpp>
@@ -30,7 +33,7 @@ class TensorMPICUDAShufflerAL:
                 size_t send_buffer_size,
                 DataType *recv_buf,
                 size_t recv_buffer_size,
-                bool is_forward, cudaStream_t stream) override {
+                bool is_forward, h2::gpu::DeviceStream stream) override {
     // Assumes stream is the same as m_al_comm.get_stream()
     std::vector<Al::HostTransferBackend::req_type> requests;
     for (int i = 0; i < this->get_num_peers(); ++i) {

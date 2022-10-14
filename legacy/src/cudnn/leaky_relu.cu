@@ -1,3 +1,4 @@
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/cudnn/leaky_relu.hpp"
 #include "distconv/util/util_mpi.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
@@ -26,7 +27,7 @@ struct ForwardFunctor {
 // be non-const.
 template <typename TensorType>
 void forward(TensorType &input, typename TensorType::data_type negative_slope,
-             TensorType &output, cudaStream_t stream) {
+             TensorType &output, h2::gpu::DeviceStream stream) {
   using DataType = typename TensorType::data_type;
   tensor::Transform(input, output, ForwardFunctor<DataType>(negative_slope),
                     stream);
@@ -47,7 +48,7 @@ struct BackwardFunctor {
 template <typename TensorType>
 void backward(TensorType &input, TensorType &d_output,
               typename TensorType::data_type negative_slope, TensorType &d_input,
-              cudaStream_t stream) {
+              h2::gpu::DeviceStream stream) {
   using DataType = typename TensorType::data_type;
   tensor::Transform(input, d_output, d_input, BackwardFunctor<DataType>(negative_slope),
                     stream);
@@ -59,7 +60,7 @@ void backward(TensorType &input, TensorType &d_output,
   void forward<Tensor<TYPE>>(Tensor<TYPE> &input,               \
                              TYPE negative_slope,               \
                              Tensor<TYPE> &output,              \
-                             cudaStream_t stream);
+                             h2::gpu::DeviceStream stream);
 INSTANTIATE_FORWARD(float)
 INSTANTIATE_FORWARD(double)
 #undef INSTANTIATE_FORWARD
@@ -70,7 +71,7 @@ INSTANTIATE_FORWARD(double)
                               Tensor<TYPE> &d_output,                   \
                               TYPE negative_slope,                      \
                               Tensor<TYPE> &output,                     \
-                              cudaStream_t stream);
+                              h2::gpu::DeviceStream stream);
 INSTANTIATE_BACKWARD(float)
 INSTANTIATE_BACKWARD(double)
 #undef INSTANTIATE_BACKWARD

@@ -1,7 +1,7 @@
 if (H2_HAS_CUDA)
   h2_set_full_path(THIS_DIR_SOURCES runtime_cuda.cpp)
 elseif (H2_HAS_ROCM)
-  #h2_set_full_path(THIS_DIR_SOURCES runtime_rocm.cpp)
+  h2_set_full_path(THIS_DIR_SOURCES runtime_rocm.cpp)
 endif ()
 
 h2_set_full_path(THIS_DIR_CU_SOURCES

@@ -9,8 +9,9 @@ namespace distconv
 {
 namespace util
 {
-void check_for_device_runtime_error() {
-  DISTCONV_CHECK_HIP(hipGetLastError());
+void check_for_device_runtime_error()
+{
+    DISTCONV_CHECK_HIP(hipGetLastError());
 }
 
 int get_number_of_gpus()
@@ -92,8 +93,10 @@ std::ostream& operator<<(std::ostream& os, hipMemcpy3DParms const& p)
     return os;
 }
 
-hipError_t hip_malloc(
-    void** ptr, size_t const size, char const* const file_name, int const linum)
+hipError_t hip_malloc(void** ptr,
+                      size_t const size,
+                      char const* const file_name,
+                      int const linum)
 {
     // Report only when file_name is given and the size is larger than
     // one Mib by default
@@ -132,10 +135,9 @@ hipError_t hip_malloc(
     return st;
 }
 
-void wait_stream(
-    hipStream_t const master,
-    hipStream_t const* const followers,
-    int const num_followers)
+void wait_stream(hipStream_t const master,
+                 hipStream_t * const followers,
+                 int const num_followers)
 {
     hipEvent_t const ev = internal::RuntimeHIP::get_event();
     bool event_recorded = false;
@@ -153,7 +155,7 @@ void wait_stream(
     }
 }
 
-void wait_stream(hipStream_t const master, hipStream_t const follower)
+void wait_stream(hipStream_t const master, hipStream_t follower)
 {
     wait_stream(master, &follower, 1);
 }

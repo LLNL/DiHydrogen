@@ -1,5 +1,6 @@
 #pragma once
 
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/algorithms/common_cuda.hpp"
 
@@ -56,7 +57,7 @@ template <int BLOCK_SIZE, int INNER_DIM,
 void transform(Shape shape, IndexVector strides, DataType *data,
                TransformFunc op, int thread_work_size, int num_inner_blocks,
                const dim3 &grid_dims, const dim3 &block_dims,
-               cudaStream_t stream) {
+               h2::gpu::DeviceStream stream) {
   const int nd = shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                 \
@@ -130,7 +131,7 @@ void transform(Shape shape, IndexVector strides,
                TransformFunc op,
                int thread_work_size, int num_inner_blocks,
                const dim3 &grid_dims, const dim3 &block_dims,
-               cudaStream_t stream) {
+               h2::gpu::DeviceStream stream) {
   const int nd = shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                 \
@@ -210,7 +211,7 @@ void transform(Shape shape, IndexVector strides,
                TransformFunc op,
                int thread_work_size, int num_inner_blocks,
                const dim3 &grid_dims, const dim3 &block_dims,
-               cudaStream_t stream) {
+               h2::gpu::DeviceStream stream) {
   const int nd = shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                 \
@@ -294,7 +295,7 @@ void transform(Shape shape, IndexVector strides,
                TransformFunc op,
                int thread_work_size, int num_inner_blocks,
                const dim3 &grid_dims, const dim3 &block_dims,
-               cudaStream_t stream) {
+               h2::gpu::DeviceStream stream) {
   const int nd = shape.num_dims();
 #define CALL_KERNEL(ND)                                                 \
   transform_kernel<ND, DataType1, DataType2, DataType3, DataType4,      \
@@ -327,7 +328,7 @@ typename std::enable_if<
                CUDAAllocator>::value,
   int>::type
 Transform(Tensor &tensor, TransformFunc op,
-          cudaStream_t stream=0) {
+          h2::gpu::DeviceStream stream=0) {
   namespace algo = algorithms_cuda;
   if (tensor.get_local_size() == 0) return 0;
 
@@ -397,7 +398,7 @@ typename std::enable_if<
                CUDAAllocator>::value,
   int>::type
 Transform(Tensor1 &tensor1, Tensor2 &tensor2,
-          TransformFunc op, cudaStream_t stream=0) {
+          TransformFunc op, h2::gpu::DeviceStream stream=0) {
   namespace algo = algorithms_cuda;
 
   // All tensor arguments have an eaual shape
@@ -477,7 +478,7 @@ typename std::enable_if<
                CUDAAllocator>::value,
   int>::type
 Transform(Tensor1 &tensor1, Tensor2 &tensor2, Tensor3 &tensor3,
-          TransformFunc op, cudaStream_t stream=0) {
+          TransformFunc op, h2::gpu::DeviceStream stream=0) {
   namespace algo = algorithms_cuda;
 
   // All tensor arguments have an eaual shape
@@ -563,7 +564,7 @@ typename std::enable_if<
   int>::type
 Transform(Tensor1 &tensor1, Tensor2 &tensor2, Tensor3 &tensor3,
           Tensor4 &tensor4, TransformFunc op,
-          cudaStream_t stream=0) {
+          h2::gpu::DeviceStream stream=0) {
   namespace algo = algorithms_cuda;
 
   // All tensor arguments have an eaual shape

@@ -34,7 +34,7 @@ void* PinnedMemoryPool::get(size_t size)
     util::PrintStreamDebug()
         << "Allocating a new pinned memory of size " << size << "\n";
     void* new_mem;
-    DISTCONV_CHECK_HIP(hipMallocHost(&new_mem, size));
+    DISTCONV_CHECK_HIP(hipHostMalloc (&new_mem, size));
     chunk_t& c = m_chunks.emplace_back(new_mem, size, true);
     return std::get<0>(c);
 }
@@ -58,7 +58,7 @@ void PinnedMemoryPool::deallocate_all_chunks()
 {
     std::for_each(m_chunks.begin(), m_chunks.end(), [](chunk_t c) {
         assert_always(!std::get<2>(c));
-        hipFreeHost(std::get<0>(c));
+        static_cast<void>(hipHostFree(std::get<0>(c)));
     });
     m_chunks.clear();
 }
@@ -67,8 +67,10 @@ RuntimeHIP::RuntimeHIP() {}
 
 RuntimeHIP& RuntimeHIP::get_instance()
 {
-    static auto instance = std::make_unique<RuntimeHIP>();
-    return instance;
+    // Note: Cannot use make_unique because it has no access to the
+    // private ctor of the runtime class.
+    static auto instance = std::unique_ptr<RuntimeHIP>(new RuntimeHIP);
+    return *instance;
 }
 
 PinnedMemoryPool& RuntimeHIP::get_pinned_memory_pool()

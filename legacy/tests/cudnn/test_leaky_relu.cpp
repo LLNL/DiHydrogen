@@ -5,21 +5,25 @@
 #include <numeric>
 #include <cstdlib>
 
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/tensor_mpi.hpp"
 #include "distconv/distconv.hpp"
 #include "distconv/util/util_mpi.hpp"
-#ifdef DISTCONV_HAS_CUDA
 #include "distconv/tensor/tensor_cuda.hpp"
-#include "distconv/util/util_cuda.hpp"
-#endif
-#ifdef H2_HAS_ROCM
-#include "distconv/util/util_rocm.hpp"
-#endif
+#include "distconv/util/util_gpu.hpp"
+#include "distconv/cudnn/backend.hpp"
 #ifdef DISTCONV_HAS_CUDNN
 #include "distconv/util/util_cudnn.hpp"
+namespace dnn_lib = ::distconv::cudnn;
+#endif
+#if H2_HAS_ROCM
+#include "distconv/util/util_miopen.hpp"
+namespace dnn_lib = ::distconv::miopen;
 #endif
 #include "test_common.hpp"
+
+#include <Al.hpp>
 
 using namespace distconv;
 
@@ -31,14 +35,12 @@ constexpr DataType negative_slope = 0.01;
 template <typename Backend>
 struct TensorType;
 
-#ifdef DISTCONV_HAS_CUDNN
 template <>
-struct TensorType<cudnn::BackendCUDNN> {
+struct TensorType<BackendDNNLib> {
   using type =
       tensor::Tensor<DataType, tensor::LocaleMPI,
                      tensor::CUDAAllocator>;
 };
-#endif
 
 template <>
 struct TensorType<ref::Backend> {
@@ -145,23 +147,21 @@ template <typename Backend>
 int test_all(Data<Backend> &d, const test::Config &cfg,
              MPI_Comm comm);
 
-#ifdef DISTCONV_HAS_CUDNN
 template <>
-int test_all<cudnn::BackendCUDNN>(Data<cudnn::BackendCUDNN> &d,
-                                  const test::Config &cfg,
-                                  MPI_Comm comm) {
+int test_all<BackendDNNLib>(Data<BackendDNNLib> &d,
+                            const test::Config &cfg,
+                            MPI_Comm comm)
+{
   int pid;
   DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
-  cudnnHandle_t cudnn_h;
-  DISTCONV_CHECK_CUDNN(cudnnCreate(&cudnn_h));
-  cudnn::BackendCUDNN be(comm, cudnn_h);
-  test_forward<cudnn::BackendCUDNN>(d, cfg, comm, be);
-  test_backward<cudnn::BackendCUDNN>(d, cfg, comm, be);
+  auto handle = dnn_lib::make_handle();
+  BackendDNNLib be(comm, handle);
+  test_forward<BackendDNNLib>(d, cfg, comm, be);
+  test_backward<BackendDNNLib>(d, cfg, comm, be);
   be.wait();
+  dnn_lib::destroy_handle(handle);
   return 0;
 }
-#endif
-
 
 template <typename Backend>
 int run(const test::Config &cfg, MPI_Comm comm) {
@@ -195,8 +195,7 @@ int run(const test::Config &cfg, MPI_Comm comm) {
 }
 
 int main(int argc, char *argv[]) {
-  int dev = distconv::util::choose_gpu();
-  distconv::util::set_gpu(dev);
+  h2::gpu::set_gpu(distconv::util::choose_gpu());
   int pid;
   int np;
   Al::Initialize(argc, argv);
@@ -218,10 +217,8 @@ int main(int argc, char *argv[]) {
   if (cfg.backend == "Ref") {
     //run<ref::Backend>(cfg, MPI_COMM_WORLD);
     util::MPIRootPrintStreamError() << "Ref backend not implemented";
-#ifdef DISTCONV_HAS_CUDNN
-  } else if (cfg.backend == "CUDNN") {
-    run<cudnn::BackendCUDNN>(cfg, MPI_COMM_WORLD);
-#endif
+  } else if (cfg.backend == "CUDNN" || cfg.backend == "MIOpen") {
+    run<BackendDNNLib>(cfg, MPI_COMM_WORLD);
   } else {
     util::MPIRootPrintStreamError() << "Unknown backend name";
     abort();

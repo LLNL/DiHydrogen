@@ -28,14 +28,6 @@ class RuntimeHIP
 public:
     static HIPDeviceMemoryPool& get_device_memory_pool();
     static hipEvent_t& get_event(int idx = 0);
-
-private:
-    RuntimeHIP();
-    static RuntimeHIP& get_instance();
-
-    // PinnedMemoryPool m_pmp;
-    HIPDeviceMemoryPool m_dmp;
-    std::array<hipEvent_t, 2> m_events;
 };
 
 } // namespace internal

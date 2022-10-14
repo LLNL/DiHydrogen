@@ -22,7 +22,7 @@
 #include "distconv/util/util_rocm.hpp"
 #endif
 #ifdef DISTCONV_HAS_CUDNN
-#include "distconv/util/util_cudnn.hpp"
+#include "distconv/util/util_gpu_dnn.hpp"
 #endif
 
 #include <Al.hpp>

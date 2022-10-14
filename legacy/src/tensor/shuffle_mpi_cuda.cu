@@ -1,8 +1,16 @@
+#include <distconv_config.hpp>
+
 #include "distconv/tensor/shuffle_mpi_cuda.hpp"
-#include "distconv/util/util_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
 
 #include <vector>
 #include <sstream>
+
+#if H2_HAS_CUDA
+using gpuStream_t = cudaStream_t;
+#elif H2_HAS_ROCM
+using gpuStream_t = hipStream_t;
+#endif
 
 namespace distconv {
 
@@ -177,7 +185,7 @@ void pack_kernel_dispatch(const DataType *src,
                           DataType *buf,
                           const int *displs,
                           dim3 grid_dim, dim3 block_dim,
-                          int shm_size, cudaStream_t stream) {
+                          int shm_size, gpuStream_t stream) {
   const int num_dims = src_local_shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                 \
@@ -220,7 +228,7 @@ void pack(const DataType *src,
           const int *rank_limits,
           DataType *buf,
           const int *displs,
-          cudaStream_t stream) {
+          gpuStream_t stream) {
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
   size_t work_size = src_local_shape.get_size();
@@ -297,7 +305,7 @@ void unpack_kernel_dispatch(DataType *tensor,
                             const DataType *packed_buf,
                             const int *displs,
                             dim3 grid_dim, dim3 block_dim,
-                            int shm_size, cudaStream_t stream) {
+                            int shm_size, gpuStream_t stream) {
   const int num_dims = local_shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                 \
@@ -340,7 +348,7 @@ void unpack(DataType *dst,
             const int *rank_limits,
             const DataType *buf,
             const int *displs,
-            cudaStream_t stream) {
+            gpuStream_t stream) {
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
   size_t work_size = shape.get_size();
@@ -363,7 +371,7 @@ namespace tensor {
 template <typename DataType>
 void TensorMPICUDAShuffler<DataType>::shuffle(const DataType *src,
                                               DataType *dst,
-                                              cudaStream_t stream,
+                                              gpuStream_t stream,
                                               bool is_forward) {
   // Poiners can be null if they are empty, which can happen in MPI
   // local tensors
@@ -454,12 +462,12 @@ void TensorMPICUDAShuffler<DataType>::shuffle(const DataType *src,
 #define INSTANTIATE_SHUFFLE(TYPE)                               \
   template <>                                                   \
   void TensorMPICUDAShuffler<TYPE>::shuffle_forward(            \
-      const TYPE *src, TYPE *dst, cudaStream_t stream) {        \
+      const TYPE *src, TYPE *dst, gpuStream_t stream) {         \
     shuffle(src, dst, stream, true);                            \
   };                                                            \
   template <>                                                   \
   void TensorMPICUDAShuffler<TYPE>::shuffle_backward(           \
-      const TYPE *src, TYPE *dst, cudaStream_t stream) {        \
+      const TYPE *src, TYPE *dst, gpuStream_t stream) {         \
     shuffle(src, dst, stream, false);                           \
   };
 

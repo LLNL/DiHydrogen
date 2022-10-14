@@ -1,10 +1,18 @@
+#include "distconv/distconv.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/cudnn/batchnorm.hpp"
 #include "distconv/util/util_mpi.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
 
 #include <type_traits>
 
+#if H2_HAS_CUDA
 #include <cub/block/block_reduce.cuh>
+namespace cubns = cub;
+#elif H2_HAS_ROCM
+#include <hipcub/block/block_reduce.hpp>
+namespace cubns = hipcub;
+#endif
 
 using distconv::tensor::LocaleMPI;
 using distconv::tensor::CUDAAllocator;
@@ -53,7 +61,7 @@ __global__ void channel_sums_and_sqsums_kernel(
     }
   }
 
-  using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
+  using BlockReduce = cubns::BlockReduce<DataType, BLOCK_SIZE>;
   __shared__ typename BlockReduce::TempStorage temp_storage_sum;
   __shared__ typename BlockReduce::TempStorage temp_storage_sqsum;
   sum = BlockReduce(temp_storage_sum).Sum(sum);
@@ -91,7 +99,7 @@ __global__ void channel_sums_and_sqsums_opt_kernel(
     offset += sample_offset;
   }
 
-  using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
+  using BlockReduce = cubns::BlockReduce<DataType, BLOCK_SIZE>;
   __shared__ typename BlockReduce::TempStorage temp_storage_sum;
   __shared__ typename BlockReduce::TempStorage temp_storage_sqsum;
   sum = BlockReduce(temp_storage_sum).Sum(sum);
@@ -106,7 +114,7 @@ __global__ void channel_sums_and_sqsums_opt_kernel(
 template <int ND, typename Tensor>
 void channel_sums_and_sqsums_opt(int num_samples, const Tensor &input,
                                  Tensor &sums, Tensor &sqsums,
-                                 cudaStream_t stream) {
+                                 h2::gpu::DeviceStream stream) {
   using DataType = typename Tensor::data_type;
 
   // Do not contribute to the accumulation if the local tensor is not
@@ -153,17 +161,17 @@ void channel_sums_and_sqsums_opt(int num_samples, const Tensor &input,
 
 template <int ND, typename Tensor>
 void channel_sums_and_sqsums(int num_samples, const Tensor &input, Tensor &sums,
-                             Tensor &sqsums, cudaStream_t stream) {
+                             Tensor &sqsums, h2::gpu::DeviceStream stream) {
   using DataType = typename Tensor::data_type;
   // Clear GPU memory
-  DISTCONV_CHECK_CUDA(cudaMemsetAsync(
-      sums.get_buffer(), 0,
-      sums.get_local_pitched_size() * sizeof(DataType),
-      stream));
-  DISTCONV_CHECK_CUDA(cudaMemsetAsync(
-      sqsums.get_buffer(), 0,
-      sqsums.get_local_pitched_size() * sizeof(DataType),
-      stream));
+  h2::gpu::mem_zero(
+      sums.get_buffer(),
+      sums.get_local_pitched_size(),
+      stream);
+  h2::gpu::mem_zero(
+      sqsums.get_buffer(),
+      sqsums.get_local_pitched_size(),
+      stream);
 
   // Do not contribute to the accumulation if the local tensor is not
   // a split root.
@@ -209,7 +217,7 @@ void channel_sums_and_sqsums(int num_samples, const Tensor &input, Tensor &sums,
 
 template <typename Tensor>
 void channel_sums_and_sqsums(int num_dims, int num_samples, const Tensor &input,
-                             Tensor &sums, Tensor &sqsums, cudaStream_t stream) {
+                             Tensor &sums, Tensor &sqsums, h2::gpu::DeviceStream stream) {
   switch (num_dims) {
     case 4:
       channel_sums_and_sqsums<4, Tensor>(num_samples, input, sums, sqsums, stream);
@@ -225,7 +233,7 @@ void channel_sums_and_sqsums(int num_dims, int num_samples, const Tensor &input,
   channel_sums_and_sqsums<Tensor<TYPE>>(                        \
       int num_dims, int num_samples,                            \
       const Tensor<TYPE> &input,   Tensor<TYPE> &sums,          \
-      Tensor<TYPE> &sqsums, cudaStream_t stream);
+      Tensor<TYPE> &sqsums, h2::gpu::DeviceStream stream);
 INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(float)
 INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(double)
 #undef INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS
@@ -257,7 +265,7 @@ template <typename TensorType>
 void sums_to_statistics(index_t num_per_sum, typename TensorType::data_type decay,
                         TensorType &global_mean, TensorType &global_var,
                         TensorType &running_mean, TensorType &running_var,
-                        cudaStream_t stream) {
+                        h2::gpu::DeviceStream stream) {
   using DataType = typename TensorType::data_type;
   if (num_per_sum > 0) {
     tensor::Transform(
@@ -280,7 +288,7 @@ void sums_to_statistics(index_t num_per_sum, typename TensorType::data_type deca
       index_t num_per_sum, TYPE decay,                          \
       Tensor<TYPE> &global_mean, Tensor<TYPE> &global_var,      \
       Tensor<TYPE> &running_mean, Tensor<TYPE> &running_var,    \
-      cudaStream_t stream);
+      h2::gpu::DeviceStream stream);
 INSTANTIATE_SUMS_TO_STATISTICS(float)
 INSTANTIATE_SUMS_TO_STATISTICS(double)
 #undef INSTANTIATE_SUMS_TO_STATISTICS
@@ -374,7 +382,7 @@ void batch_normalization_opt(int num_samples, const TensorType &input,
                              const TensorType &scale, const TensorType &bias,
                              TensorType &output,
                              typename TensorType::data_type epsilon,
-                             cudaStream_t stream) {
+                             h2::gpu::DeviceStream stream) {
   using DataType = typename TensorType::data_type;
   // local tensors can be empty
   if (output.get_local_size() == 0) return;
@@ -420,7 +428,7 @@ void batch_normalization(int num_samples, const TensorType &input,
                          const TensorType &scale, const TensorType &bias,
                          TensorType &output,
                          typename TensorType::data_type epsilon,
-                         cudaStream_t stream) {
+                         h2::gpu::DeviceStream stream) {
   using DataType = typename TensorType::data_type;
 
   if (input.get_local_real_shape() == output.get_local_real_shape()) {
@@ -465,7 +473,7 @@ void batch_normalization(int num_dims, int num_samples, const TensorType &input,
                          const TensorType &scale, const TensorType &bias,
                          TensorType &output,
                          typename TensorType::data_type epsilon,
-                         cudaStream_t stream) {
+                         h2::gpu::DeviceStream stream) {
   switch (num_dims) {
     case 4:
       batch_normalization<4, TensorType>(
@@ -487,7 +495,7 @@ void batch_normalization(int num_dims, int num_samples, const TensorType &input,
       const Tensor<TYPE> &input, const Tensor<TYPE> &mean,      \
       const Tensor<TYPE> &var, const Tensor<TYPE> &scale,       \
       const Tensor<TYPE> &bias, Tensor<TYPE> &output,           \
-      TYPE epsilon, cudaStream_t stream);
+      TYPE epsilon, h2::gpu::DeviceStream stream);
 INSTANTIATE_BATCH_NORMALIZATION(float)
 INSTANTIATE_BATCH_NORMALIZATION(double)
 #undef INSTANTIATE_BATCH_NORMALIZATION
@@ -582,7 +590,7 @@ void forward_all(const Tensor &input, Tensor &mean, Tensor &var,
                  Tensor &scale, Tensor &bias, Tensor &output,
                  typename Tensor::data_type decay,
                  typename Tensor::data_type epsilon,
-                 cudaStream_t stream, AllreduceNVSHMEM<typename Tensor::data_type> &ar) {
+                 h2::gpu::DeviceStream stream, AllreduceNVSHMEM<typename Tensor::data_type> &ar) {
   using DataType = typename Tensor::data_type;
   using DataType2 = typename util::GetVectorType<DataType, 2>::type;
 
@@ -651,7 +659,7 @@ void forward_all(int num_dims, const Tensor &input, Tensor &mean, Tensor &var,
                  Tensor &scale, Tensor &bias, Tensor &output,
                  typename Tensor::data_type decay,
                  typename Tensor::data_type epsilon,
-                 cudaStream_t stream, AllreduceNVSHMEM<typename Tensor::data_type> &ar) {
+                 h2::gpu::DeviceStream stream, AllreduceNVSHMEM<typename Tensor::data_type> &ar) {
   switch (num_dims) {
     case 4:
       forward_all<4, Tensor>(input, mean, var, running_mean, running_var,
@@ -674,7 +682,7 @@ void forward_all(int num_dims, const Tensor &input, Tensor &mean, Tensor &var,
       Tensor<TYPE> &scale, Tensor<TYPE> &bias,                  \
       Tensor<TYPE> &output,                                     \
       TYPE decay, TYPE epsilon,                                 \
-      cudaStream_t stream,                                      \
+      h2::gpu::DeviceStream stream,                                      \
       AllreduceNVSHMEM<TYPE> &ar);
 INSTANTIATE_FORWARD(float)
 INSTANTIATE_FORWARD(double)
@@ -739,7 +747,7 @@ void __global__ backprop1_kernel(const DataType * __restrict__ input,
     }
   }
 
-  using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
+  using BlockReduce = cubns::BlockReduce<DataType, BLOCK_SIZE>;
   __shared__ typename BlockReduce::TempStorage temp_storage_scale;
   __shared__ typename BlockReduce::TempStorage temp_storage_bias;
   __shared__ typename BlockReduce::TempStorage temp_storage_mean;
@@ -809,7 +817,7 @@ void __global__ backprop1_opt_kernel(const DataTypeV * __restrict__ input,
     o_offset += o_sample_offset;
   }
 
-  using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
+  using BlockReduce = cubns::BlockReduce<DataType, BLOCK_SIZE>;
   __shared__ typename BlockReduce::TempStorage temp_storage_scale;
   __shared__ typename BlockReduce::TempStorage temp_storage_bias;
   __shared__ typename BlockReduce::TempStorage temp_storage_mean;
@@ -834,7 +842,7 @@ void backprop1_opt(int num_samples, const TensorType &input,
                    const TensorType &var, const TensorType &scale,
                    TensorType &scale_gradient, TensorType &bias_gradient,
                    TensorType &mean_gradient, TensorType &var_gradient,
-                   typename TensorType::data_type epsilon, cudaStream_t stream) {
+                   typename TensorType::data_type epsilon, h2::gpu::DeviceStream stream) {
   using DataType = typename TensorType::data_type;
   const int num_channels = input.get_local_shape()[get_channel_dim()];
   constexpr int block_size = 256;
@@ -896,24 +904,24 @@ void backprop1(int num_samples, const TensorType &input,
                const TensorType &var, const TensorType &scale,
                TensorType &scale_gradient, TensorType &bias_gradient,
                TensorType &mean_gradient, TensorType &var_gradient,
-               typename TensorType::data_type epsilon, cudaStream_t stream) {
+               typename TensorType::data_type epsilon, h2::gpu::DeviceStream stream) {
   using DataType = typename TensorType::data_type;
-  DISTCONV_CHECK_CUDA(cudaMemsetAsync(
-      scale_gradient.get_buffer(), 0,
-      scale_gradient.get_local_pitched_size() * sizeof(DataType),
-      stream));
-  DISTCONV_CHECK_CUDA(cudaMemsetAsync(
-      bias_gradient.get_buffer(), 0,
-      bias_gradient.get_local_pitched_size() * sizeof(DataType),
-      stream));
-  DISTCONV_CHECK_CUDA(cudaMemsetAsync(
-      mean_gradient.get_buffer(), 0,
-      mean_gradient.get_local_pitched_size() * sizeof(DataType),
-      stream));
-  DISTCONV_CHECK_CUDA(cudaMemsetAsync(
-      var_gradient.get_buffer(), 0,
-      var_gradient.get_local_pitched_size() * sizeof(DataType),
-      stream));
+  h2::gpu::mem_zero(
+      scale_gradient.get_buffer(),
+      scale_gradient.get_local_pitched_size(),
+      stream);
+  h2::gpu::mem_zero(
+      bias_gradient.get_buffer(),
+      bias_gradient.get_local_pitched_size(),
+      stream);
+  h2::gpu::mem_zero(
+      mean_gradient.get_buffer(),
+      mean_gradient.get_local_pitched_size(),
+      stream);
+  h2::gpu::mem_zero(
+      var_gradient.get_buffer(),
+      var_gradient.get_local_pitched_size(),
+      stream);
 
   if (input.get_local_size() == 0 || !input.is_split_root()) {
     return;
@@ -973,7 +981,7 @@ void backprop1(int num_dims, int num_samples, const TensorType &input,
                const TensorType &var, const TensorType &scale,
                TensorType &scale_gradient, TensorType &bias_gradient,
                TensorType &mean_gradient, TensorType &var_gradient,
-               typename TensorType::data_type epsilon, cudaStream_t stream) {
+               typename TensorType::data_type epsilon, h2::gpu::DeviceStream stream) {
   switch (num_dims) {
     case 4:
       backprop1<4, TensorType>(num_samples, input, d_output,
@@ -997,7 +1005,7 @@ void backprop1(int num_dims, int num_samples, const TensorType &input,
       const Tensor<TYPE> &scale, Tensor<TYPE> &scale_gradient,  \
       Tensor<TYPE> &bias_gradient, Tensor<TYPE> &mean_gradient, \
       Tensor<TYPE> &var_gradient, TYPE epsilon,                 \
-      cudaStream_t stream);
+      h2::gpu::DeviceStream stream);
 INSTANTIATE_BACKPROP1(float)
 INSTANTIATE_BACKPROP1(double)
 #undef INSTANTIATE_BACKPROP1
@@ -1109,7 +1117,7 @@ void backprop2_opt(index_t num_samples, index_t num_per_sum,
                    const TensorType &mean, const TensorType &var,
                    const TensorType &scale, const TensorType &mean_gradient,
                    const TensorType &var_gradient, TensorType &d_input,
-                   typename TensorType::data_type epsilon, cudaStream_t stream) {
+                   typename TensorType::data_type epsilon, h2::gpu::DeviceStream stream) {
   using DataType = typename TensorType::data_type;
   // local tensors can be empty
   if (input.get_local_size() == 0) return;
@@ -1159,7 +1167,7 @@ void backprop2(index_t num_samples, index_t num_per_sum,
                const TensorType &mean, const TensorType &var,
                const TensorType &scale, const TensorType &mean_gradient,
                const TensorType &var_gradient, TensorType &d_input,
-               typename TensorType::data_type epsilon, cudaStream_t stream) {
+               typename TensorType::data_type epsilon, h2::gpu::DeviceStream stream) {
   using DataType = typename TensorType::data_type;
 
   if (input.get_local_real_shape() == d_output.get_local_real_shape() &&
@@ -1207,7 +1215,7 @@ void backprop2(int num_dims, index_t num_samples, index_t num_per_sum,
                const TensorType &mean, const TensorType &var,
                const TensorType &scale, const TensorType &mean_gradient,
                const TensorType &var_gradient, TensorType &d_input,
-               typename TensorType::data_type epsilon, cudaStream_t stream) {
+               typename TensorType::data_type epsilon, h2::gpu::DeviceStream stream) {
   switch (num_dims) {
     case 4:
       backprop2<4, TensorType>(num_samples, num_per_sum, input, d_output,
@@ -1230,7 +1238,7 @@ void backprop2(int num_dims, index_t num_samples, index_t num_per_sum,
       const Tensor<TYPE> &mean, const Tensor<TYPE> &var,                \
       const Tensor<TYPE> &scale, const Tensor<TYPE> &mean_gradient,     \
       const Tensor<TYPE> &var_gradient, Tensor<TYPE> &d_input,          \
-      TYPE epsilon, cudaStream_t stream);
+      TYPE epsilon, h2::gpu::DeviceStream stream);
 INSTANTIATE_BACKPROP2(float)
 INSTANTIATE_BACKPROP2(double)
 #undef INSTANTIATE_BACKPROP2

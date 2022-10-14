@@ -10,19 +10,19 @@
 
 #include <miopen/miopen.h>
 
-#define DISTCONV_CHECK_MIOPEN(miopen_call)                                   \
-    do                                                                       \
-    {                                                                        \
-        miopenStatus_t const status_distconv_check_miopen = (miopen_call);   \
-        if (status_distconv_check_miopen != miopenStatusSuccess)             \
-        {                                                                    \
-            ::distconv::util::PrintStreamError()                             \
-                << "MIOpen error at " << __FILE__ << ":" << __LINE__ << ": " \
-                << miopenGetErrorString(status_distconv_check_miopen)        \
-                << std::endl;                                                \
-            static_cast<void>(hipDeviceReset());                             \
-            abort();                                                         \
-        }                                                                    \
+#define DISTCONV_CHECK_MIOPEN(miopen_call)                                     \
+    do                                                                         \
+    {                                                                          \
+        miopenStatus_t const status_distconv_check_miopen = (miopen_call);     \
+        if (status_distconv_check_miopen != miopenStatusSuccess)               \
+        {                                                                      \
+            ::distconv::util::PrintStreamError()                               \
+                << "MIOpen error at " << __FILE__ << ":" << __LINE__ << ": "   \
+                << miopenGetErrorString(status_distconv_check_miopen)          \
+                << std::endl;                                                  \
+            static_cast<void>(hipDeviceReset());                               \
+            abort();                                                           \
+        }                                                                      \
     } while (0)
 
 namespace distconv
@@ -54,17 +54,19 @@ struct MIOpenConvolutionFwdAlgorithms
     static map_type const algo_map;
     static std::string get_name(miopenConvFwdAlgorithm_t const algo) noexcept
     {
-        auto const iter = std::find_if(
-            cbegin(algo_map), cend(algo_map),
-            [&algo](auto const& v) { return v.first == algo; });
+        auto const iter =
+            std::find_if(cbegin(algo_map),
+                         cend(algo_map),
+                         [&algo](auto const& v) { return v.first == algo; });
         assert_always(iter != cend(algo_map));
         return iter->second;
     }
     static miopenConvFwdAlgorithm_t get_algo(std::string const& name) noexcept
     {
-        auto const iter = std::find_if(
-            cbegin(algo_map), cend(algo_map),
-            [&name](auto const& v) { return v.second == name; });
+        auto const iter =
+            std::find_if(cbegin(algo_map),
+                         cend(algo_map),
+                         [&name](auto const& v) { return v.second == name; });
         assert_always(iter != cend(algo_map));
         return iter->first;
     }
@@ -82,8 +84,8 @@ inline MIOpenConvolutionFwdAlgorithms::map_type const
         {miopenConvolutionFwdAlgoImplicitGEMM, "IMPLICIT_GEMM"},
 };
 
-inline std::ostream&
-operator<<(std::ostream& os, miopenConvFwdAlgorithm_t const& algo)
+inline std::ostream& operator<<(std::ostream& os,
+                                miopenConvFwdAlgorithm_t const& algo)
 {
     return os << MIOpenConvolutionFwdAlgorithms::get_name(algo);
 }
@@ -100,17 +102,19 @@ struct MIOpenConvolutionBwdDataAlgorithms
     static map_type const algo_map;
     static std::string get_name(miopenConvBwdDataAlgorithm_t algo)
     {
-        auto const iter = std::find_if(
-            cbegin(algo_map), cend(algo_map),
-            [&algo](auto const& v) { return v.first == algo; });
+        auto const iter =
+            std::find_if(cbegin(algo_map),
+                         cend(algo_map),
+                         [&algo](auto const& v) { return v.first == algo; });
         assert_always(iter != cend(algo_map));
         return iter->second;
     }
     static miopenConvBwdDataAlgorithm_t get_algo(std::string const& name)
     {
-        auto const iter = std::find_if(
-            cbegin(algo_map), cend(algo_map),
-            [&name](auto const& v) { return v.second == name; });
+        auto const iter =
+            std::find_if(cbegin(algo_map),
+                         cend(algo_map),
+                         [&name](auto const& v) { return v.second == name; });
         assert_always(iter != cend(algo_map));
         return iter->first;
     }
@@ -129,8 +133,8 @@ inline MIOpenConvolutionBwdDataAlgorithms::map_type const
         {miopenConvolutionBwdDataAlgoImplicitGEMM, "IMPLICIT_GEMM"},
 };
 
-inline std::ostream&
-operator<<(std::ostream& os, miopenConvBwdDataAlgorithm_t const& algo)
+inline std::ostream& operator<<(std::ostream& os,
+                                miopenConvBwdDataAlgorithm_t const& algo)
 {
     return os << MIOpenConvolutionBwdDataAlgorithms::get_name(algo);
 }
@@ -140,24 +144,26 @@ inline std::string get_name(miopenConvBwdDataAlgorithm_t const& algo)
     return MIOpenConvolutionBwdDataAlgorithms::get_name(algo);
 }
 
-struct MIOpenConvolutionBwdFilterAlgorithms
+struct MIOpenConvolutionBwdWeightsAlgorithms
 {
     using map_type =
         std::vector<std::pair<miopenConvBwdWeightsAlgorithm_t, std::string>>;
     static map_type const algo_map;
     static std::string get_name(miopenConvBwdWeightsAlgorithm_t algo)
     {
-        auto const iter = std::find_if(
-            cbegin(algo_map), cend(algo_map),
-            [&algo](auto const& v) { return v.first == algo; });
+        auto const iter =
+            std::find_if(cbegin(algo_map),
+                         cend(algo_map),
+                         [&algo](auto const& v) { return v.first == algo; });
         assert_always(iter != cend(algo_map));
         return iter->second;
     }
     static miopenConvBwdWeightsAlgorithm_t get_algo(std::string const& name)
     {
-        auto const iter = std::find_if(
-            cbegin(algo_map), cend(algo_map),
-            [&name](auto const& v) { return v.second == name; });
+        auto const iter =
+            std::find_if(cbegin(algo_map),
+                         cend(algo_map),
+                         [&name](auto const& v) { return v.second == name; });
         assert_always(iter != cend(algo_map));
         return iter->first;
     }
@@ -166,23 +172,23 @@ struct MIOpenConvolutionBwdFilterAlgorithms
         return get_name(get_algo(name));
     }
 };
-inline MIOpenConvolutionBwdFilterAlgorithms::map_type const
-    MIOpenConvolutionBwdFilterAlgorithms::algo_map = {
+inline MIOpenConvolutionBwdWeightsAlgorithms::map_type const
+    MIOpenConvolutionBwdWeightsAlgorithms::algo_map = {
         {miopenConvolutionBwdWeightsAlgoGEMM, "GEMM"},
         {miopenConvolutionBwdWeightsAlgoDirect, "DIRECT"},
-        {miopenConvolutionBwdWeightsAlgoDirect, "WINOGRAD"},
-        {miopenConvolutionBwdWeightsAlgoDirect, "IMPLICIT_GEMM"},
+        {miopenConvolutionBwdWeightsAlgoWinograd, "WINOGRAD"},
+        {miopenConvolutionBwdWeightsAlgoImplicitGEMM, "IMPLICIT_GEMM"},
 };
 
-inline std::ostream&
-operator<<(std::ostream& os, miopenConvBwdWeightsAlgorithm_t const& algo)
+inline std::ostream& operator<<(std::ostream& os,
+                                miopenConvBwdWeightsAlgorithm_t const& algo)
 {
-    return os << MIOpenConvolutionBwdFilterAlgorithms::get_name(algo);
+    return os << MIOpenConvolutionBwdWeightsAlgorithms::get_name(algo);
 }
 
 inline std::string get_name(miopenConvBwdWeightsAlgorithm_t const& algo)
 {
-    return MIOpenConvolutionBwdFilterAlgorithms::get_name(algo);
+    return MIOpenConvolutionBwdWeightsAlgorithms::get_name(algo);
 }
 
 // NOTE (trb 07/25/2022): There's no such thing in MIOpen.
@@ -225,8 +231,8 @@ inline std::string tostring(miopenTensorDescriptor_t const& desc)
     return oss.str();
 }
 
-inline std::ostream&
-operator<<(std::ostream& os, miopenTensorDescriptor_t const& d)
+inline std::ostream& operator<<(std::ostream& os,
+                                miopenTensorDescriptor_t const& d)
 {
     return os << tostring(d);
 }
@@ -242,15 +248,23 @@ inline std::string tostring(miopenConvolutionDescriptor_t const& desc)
 
     int spatial_dims = -1;
     // This gets the correct value for spatial_dims.
-    DISTCONV_CHECK_MIOPEN(miopenGetConvolutionNdDescriptor(
-        desc, 0, &spatial_dims, padding.data(), strides.data(),
-        dilations.data(), &mode));
+    DISTCONV_CHECK_MIOPEN(miopenGetConvolutionNdDescriptor(desc,
+                                                           0,
+                                                           &spatial_dims,
+                                                           padding.data(),
+                                                           strides.data(),
+                                                           dilations.data(),
+                                                           &mode));
     assert_always(spatial_dims > 0 && spatial_dims <= 5);
 
     // This fills in the rest of the values.
-    DISTCONV_CHECK_MIOPEN(miopenGetConvolutionNdDescriptor(
-        desc, spatial_dims, &spatial_dims, padding.data(), strides.data(),
-        dilations.data(), &mode));
+    DISTCONV_CHECK_MIOPEN(miopenGetConvolutionNdDescriptor(desc,
+                                                           spatial_dims,
+                                                           &spatial_dims,
+                                                           padding.data(),
+                                                           strides.data(),
+                                                           dilations.data(),
+                                                           &mode));
 
     std::ostringstream oss;
     oss << "Convolution descriptor: spatial_dims=" << spatial_dims;
@@ -266,8 +280,8 @@ inline std::string tostring(miopenConvolutionDescriptor_t const& desc)
     return oss.str();
 }
 
-inline std::ostream&
-operator<<(std::ostream& os, miopenConvolutionDescriptor_t const& d)
+inline std::ostream& operator<<(std::ostream& os,
+                                miopenConvolutionDescriptor_t const& d)
 {
     return os << tostring(d);
 }
@@ -278,7 +292,8 @@ struct miopenTypeTraits;
 template <>
 struct miopenTypeTraits<int>
 {
-    static constexpr auto value = miopenInt32; // Yeah, I know. But also, reality.
+    static constexpr auto value =
+        miopenInt32; // Yeah, I know. But also, reality.
 };
 
 template <>
@@ -309,20 +324,26 @@ inline constexpr miopenDataType_t get_miopen_type()
 template <typename T>
 inline constexpr miopenDataType_t miopen_type = get_miopen_type<T>();
 
+template <typename T>
+inline constexpr miopenDataType_t get_dnnlib_type()
+{
+    return get_miopen_type<T>();
+}
+
 inline std::string get_miopen_version_number_string()
 {
     size_t version[3];
-    DISTCONV_CHECK_MIOPEN(miopenGetVersion(&version[0], &version[1], &version[2]));
+    DISTCONV_CHECK_MIOPEN(
+        miopenGetVersion(&version[0], &version[1], &version[2]));
     std::ostringstream oss;
     oss << "MIOpen v" << version[0] << "." << version[1] << "." << version[2];
     return oss.str();
 }
 
 // "NCHW" format.
-inline std::vector<int> get_miopen_dims(
-    int const num_samples,
-    int const num_channels,
-    std::vector<int> const& spatial_dims)
+inline std::vector<int> get_miopen_dims(int const num_samples,
+                                        int const num_channels,
+                                        std::vector<int> const& spatial_dims)
 {
     std::vector<int> dims;
     dims.reserve(spatial_dims.size() + 2);
@@ -333,11 +354,10 @@ inline std::vector<int> get_miopen_dims(
 }
 
 // Only supports NCHW format; assumes fully-packed tensor.
-inline std::vector<int> get_miopen_strides(
-    int const num_samples,
-    int const num_channels,
-    std::vector<int> const& spatial_dims,
-    std::string const& fmt)
+inline std::vector<int> get_miopen_strides(int const num_samples,
+                                           int const num_channels,
+                                           std::vector<int> const& spatial_dims,
+                                           std::string const& fmt)
 {
     size_t const num_spatial_dims = spatial_dims.size();
     assert_always(num_spatial_dims == 2 || num_spatial_dims == 3);

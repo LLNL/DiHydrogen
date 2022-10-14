@@ -1,265 +1,309 @@
 #pragma once
 
-#include "distconv/util/util.hpp"
 #include "distconv/cudnn/backend.hpp"
+#include "distconv/distconv.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/halo_exchange_cuda.hpp"
-#include "distconv/tensor/halo_exchange_cuda_mpi.hpp"
 #include "distconv/tensor/halo_exchange_cuda_al.hpp"
+#include "distconv/tensor/halo_exchange_cuda_mpi.hpp"
+#include "distconv/util/util.hpp"
 #ifdef DISTCONV_HAS_P2P
-#include "distconv/tensor/halo_exchange_cuda_p2p.hpp"
 #include "distconv/tensor/halo_exchange_cuda_hybrid.hpp"
+#include "distconv/tensor/halo_exchange_cuda_p2p.hpp"
 #endif // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
 #include "distconv/tensor/halo_exchange_cuda_nvshmem.hpp"
 #endif // DISTCONV_HAS_NVSHMEM
 
-namespace distconv {
-namespace cudnn {
+namespace distconv
+{
 
-static inline cudnnPoolingMode_t get_cudnn_pooling_mode(
-    const std::string &name, bool deterministic) {
-  if (name == "MAX") {
-    // This does not seem to be necessary. It's not clear what the
-    // difference of the two algorithms is.
-    if (deterministic) {
-      return CUDNN_POOLING_MAX_DETERMINISTIC;
-    } else {
-      return CUDNN_POOLING_MAX;
+#if H2_HAS_CUDA
+namespace cudnn
+{
+static inline cudnnPoolingMode_t get_pooling_mode(const std::string& name,
+                                                  bool deterministic)
+{
+    if (name == "MAX")
+    {
+        // This does not seem to be necessary. It's not clear what the
+        // difference of the two algorithms is.
+        if (deterministic)
+        {
+            return CUDNN_POOLING_MAX_DETERMINISTIC;
+        }
+        else
+        {
+            return CUDNN_POOLING_MAX;
+        }
     }
-  } else if (name == "AVERAGE") {
-    return CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
-  } else if (name == "AVERAGE_NO_PAD") {
-    return CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
-  } else {
-    util::PrintStreamError() << "No matching pooling mode found for CUDNN: "
-                             << name << "\n";
-    std::abort();
-  }
+    else if (name == "AVERAGE")
+    {
+        return CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
+    }
+    else if (name == "AVERAGE_NO_PAD")
+    {
+        return CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+    }
+    else
+    {
+        util::PrintStreamError()
+            << "No matching pooling mode found for CUDNN: " << name << "\n";
+        std::abort();
+    }
 }
-
 } // namespace cudnn
 
+#elif H2_HAS_ROCM
+
+namespace miopen
+{
+static inline miopenPoolingMode_t get_pooling_mode(std::string const& name,
+                                                   bool /*deterministic*/)
+{
+    if (name == "MAX")
+        return miopenPoolingMax;
+    else if (name == "AVERAGE")
+        return miopenPoolingAverage;
+    else if (name == "AVERAGE_NO_PAD")
+        return miopenPoolingAverageInclusive;
+    else
+    {
+        util::PrintStreamError()
+            << "No matching pooling mode found for CUDNN: " << name << "\n";
+        std::abort();
+    }
+    return miopenPoolingMax;
+}
+} // namespace miopen
+#endif
+
 template <typename DataType>
-class Pooling<cudnn::BackendCUDNN, DataType> {
-  using LocaleMPI = tensor::LocaleMPI;
+class Pooling<BackendDNNLib, DataType>
+{
+    using LocaleMPI = tensor::LocaleMPI;
 
- public:
-  Pooling(cudnn::BackendCUDNN &backend,
-          int num_dims,
-          HaloExchangeMethod method):
-      m_be(backend), m_num_dims(num_dims), m_num_spatial_dims(num_dims - 2),
-      m_halo_xch_method(method) {
-    DISTCONV_CHECK_CUDNN(cudnnCreateTensorDescriptor(&m_input_d));
-    DISTCONV_CHECK_CUDNN(cudnnCreateTensorDescriptor(&m_output_d));
-    DISTCONV_CHECK_CUDNN(cudnnCreateTensorDescriptor(&m_d_input_d));
-    DISTCONV_CHECK_CUDNN(cudnnCreateTensorDescriptor(&m_d_output_d));
-    DISTCONV_CHECK_CUDNN(cudnnCreatePoolingDescriptor(&m_pooling_d));
-  }
+public:
+    Pooling(BackendDNNLib& backend, int num_dims, HaloExchangeMethod method)
+        : m_be(backend),
+          m_num_dims(num_dims),
+          m_num_spatial_dims(num_dims - 2),
+          m_input_d{backend::make_tensor_descriptor()},
+          m_output_d{backend::make_tensor_descriptor()},
+          m_d_input_d{backend::make_tensor_descriptor()},
+          m_d_output_d{backend::make_tensor_descriptor()},
+          m_pooling_d{backend::make_pooling_descriptor()},
+          m_halo_xch_method(method)
+    {}
 
-  ~Pooling() {
-    DISTCONV_CHECK_CUDNN(cudnnDestroyTensorDescriptor(m_input_d));
-    DISTCONV_CHECK_CUDNN(cudnnDestroyTensorDescriptor(m_output_d));
-    DISTCONV_CHECK_CUDNN(cudnnDestroyTensorDescriptor(m_d_input_d));
-    DISTCONV_CHECK_CUDNN(cudnnDestroyTensorDescriptor(m_d_output_d));
-    DISTCONV_CHECK_CUDNN(cudnnDestroyPoolingDescriptor(m_pooling_d));
-  }
-
-  Pooling<cudnn::BackendCUDNN, DataType> operator=(
-      const Pooling<cudnn::BackendCUDNN, DataType> &x) {
-    assert_always(&m_be == &x.m_be);
-    m_num_dims = x.m_num_dims;
-    cudnn::copy_tensor_descriptor(m_input_d, x.m_input_d);
-    cudnn::copy_tensor_descriptor(m_output_d, x.m_output_d);
-    cudnn::copy_tensor_descriptor(m_d_input_d, x.m_d_input_d);
-    cudnn::copy_tensor_descriptor(m_d_output_d, x.m_d_output_d);
-    cudnn::copy_pooling_descriptor(m_pooling_d, x.m_pooling_d);
-    return *this;
-  }
-
-  template <typename Tensor>
-  void setup(Tensor &input,
-             Tensor &output,
-             Tensor &d_input,
-             Tensor &d_output,
-             int_vector windows,
-             int_vector pads,
-             int_vector strides,
-             const std::string &mode) {
+    ~Pooling()
     {
-      // All of the dimensions must be the same
-      assert_eq((unsigned int) m_num_spatial_dims, windows.size());
-      assert_eq((unsigned int) m_num_spatial_dims, pads.size());
-      assert_eq((unsigned int) m_num_spatial_dims, strides.size());
+        backend::destroy_pooling_descriptor(m_pooling_d);
+        backend::destroy_tensor_descriptor(m_d_output_d);
+        backend::destroy_tensor_descriptor(m_d_input_d);
+        backend::destroy_tensor_descriptor(m_output_d);
+        backend::destroy_tensor_descriptor(m_input_d);
     }
 
-    // TODO: asymmetric not supported
-    assert_always(util::is_all_elements_equal(windows));
-    assert_always(util::is_all_elements_equal(pads));
-    assert_always(util::is_all_elements_equal(strides));
-
-    // TODO: only stencil-like windows are supported
-    for (int i = 0; i < m_num_spatial_dims; ++i) {
-      auto w = windows[i];
-      if (w % 2) {
-        auto stencil = (w - 1) / 2;
-        // Padding must be zero or match with the stencil size
-        assert_always(pads[i] == 0 || pads[i] == stencil);
-        // TODO: stride limitation
-        assert_always(strides[i] == 1 || strides[i] == stencil + 1);
-      } else {
-        assert_always(w == strides[i]);
-        assert_always(pads[i] == 0);
-      }
-    }
-
-    bool use_padding = pads[0] != 0;
-
-    // As halo exchanges with shared tensors is not yet implemented,
-    // the spatial domain must be partitioned without sharing or
-    // aggregated to the rank-0 process (so that no halo exchange is
-    // done).
-    for (int i = 0; i < m_num_spatial_dims; ++i) {
-      if (input.get_distribution().is_shared(i)) {
-        assert_always(input.get_distribution().get_split_shape()[i]
-                      == 1);
-      }
-    }
-
-    // cudnnPoolingBackward requires input and d_input to have the
-    // same strides.
-    assert_eq(input.get_distribution(), d_input.get_distribution());
-    // Similarly, output and d_output must have the same distribution
-    assert_eq(output.get_distribution(), output.get_distribution());
-
+    Pooling<BackendDNNLib, DataType>
+    operator=(const Pooling<BackendDNNLib, DataType>& x)
     {
-      const int_vector dilations(m_num_spatial_dims, 1);
-      internal::get_halo_sizes(input,
-                               IntVector(windows),
-                               IntVector(strides),
-                               IntVector(dilations),
-                               m_halo_fwd_send, m_halo_bwd_send,
-                               m_halo_fwd_recv, m_halo_bwd_recv,
-                               use_padding);
+        assert_always(&m_be == &x.m_be);
+        m_num_dims = x.m_num_dims;
+        backend::copy_tensor_descriptor(m_input_d, x.m_input_d);
+        backend::copy_tensor_descriptor(m_output_d, x.m_output_d);
+        backend::copy_tensor_descriptor(m_d_input_d, x.m_d_input_d);
+        backend::copy_tensor_descriptor(m_d_output_d, x.m_d_output_d);
+        backend::copy_pooling_descriptor(m_pooling_d, x.m_pooling_d);
+        return *this;
     }
 
-    cudnn::setup_tensor_descriptor(m_input_d, input,
-                                   IntVector(m_halo_fwd_recv),
-                                   IntVector(m_halo_bwd_recv));
-    util::MPIPrintStreamDebug()
-        << "pooling input desc: " << m_input_d;
-    cudnn::setup_tensor_descriptor(m_output_d, output, false);
-
-    cudnn::setup_tensor_descriptor(m_d_input_d, d_input,
-                                   m_halo_fwd_recv, m_halo_bwd_recv);
-    util::MPIPrintStreamDebug()
-        << "pooling d_input desc: " << m_d_input_d;
-    cudnn::setup_tensor_descriptor(m_d_output_d, d_output, false);
-
-    m_mode = cudnn::get_cudnn_pooling_mode(
-        mode, m_be.get_options().m_deterministic);
-
-    // When a dimension is split, halo region works as padding
-    for(auto i = pads.begin(); i != pads.end(); i++)
-      if (input.get_distribution().get_split_shape()[std::distance(pads.begin(), i)] > 1)
-        *i = 0;
-
-    util::MPIPrintStreamDebug()
-        << "pooling pads: " << util::join_array(pads, ", ");
-
-    // pooling descriptor
-    setup_pooling_descriptor(input, output,
-                             windows,
-                             pads,
-                             strides,
-                             m_pooling_d);
-
-    setup_halo_xch(input, d_input);
-
-    setup_boundary_streams(input.get_split_index());
-    return;
-  }
-
-  template <typename Tensor>
-  int forward(
-      typename Tensor::data_type alpha,
-      Tensor &input,
-      typename Tensor::data_type beta,
-      Tensor &output) {
-
-    exchange_halo_input(input, m_halo_xch_input);
-
-    // Note that even when the local output is empty, halo exchange
-    // must be called as this local process may need to push its data
-    // to adjacent processes
-    if (output.get_local_size() == 0) {
-      return 0;
-    }
-
-    set_num_samples(output.get_local_shape()[-1]);
-
-
-    const void *input_ptr = input.get_const_base_ptr()
-        - input.get_local_offset(IndexVector(m_halo_bwd_recv), true);
-
-    DISTCONV_CHECK_CUDNN(cudnnPoolingForward(
-        m_be.get_handle(), m_pooling_d,
-        &alpha, m_input_d,
-        input_ptr,
-        &beta, m_output_d, output.get_base_ptr()));
-
-    return 0;
-  }
-
-  template <typename Tensor>
-  int backward(
-      typename Tensor::data_type alpha,
-      const Tensor &output,
-      const Tensor &d_output,
-      const Tensor &input,
-      typename Tensor::data_type beta,
-      Tensor &d_input) {
-
-    if (d_input.get_local_size() == 0) {
-      return 0;
-    }
-    set_num_samples(d_input.get_local_shape()[-1]);
-
-    if (d_output.get_local_size() > 0) {
-
-      const void *input_ptr = input.get_const_base_ptr() -
-          input.get_local_offset(IndexVector(m_halo_bwd_recv), true);
-      // Assumes d_input has the same distribution as input
-      void *d_input_ptr = d_input.get_base_ptr() -
-          d_input.get_local_offset(IndexVector(m_halo_bwd_recv), true);
-
-      cudnnStatus_t status = cudnnPoolingBackward(
-          m_be.get_handle(), m_pooling_d,
-          &alpha, m_output_d, output.get_const_base_ptr(),
-          m_d_output_d, d_output.get_const_base_ptr(),
-          m_input_d, input_ptr,
-          &beta, m_d_input_d, d_input_ptr);
-      if (status != CUDNN_STATUS_SUCCESS) {
-        util::MPIPrintStreamError()
-            << "cuDNN error: " << cudnnGetErrorString(status) << "\n"
-            << "Error at " << __FILE__ << ":" << __LINE__;
-        if (status == CUDNN_STATUS_BAD_PARAM) {
-          util::MPIPrintStreamError()
-              << "Parameters: "
-              << "output_d: " << m_output_d
-              << ", output: " << output.get_const_base_ptr()
-              << ", d_output_d: " << m_d_output_d
-              << ", d_output: " << d_output.get_const_buffer()
-              << ", input_d: " << m_input_d
-              << ", input: " << input_ptr
-              << ", d_input_d: " << m_d_input_d
-              << ", d_input: " << d_input_ptr;
+    template <typename Tensor>
+    void setup(Tensor& input,
+               Tensor& output,
+               Tensor& d_input,
+               Tensor& d_output,
+               int_vector windows,
+               int_vector pads,
+               int_vector strides,
+               const std::string& mode)
+    {
+        {
+            // All of the dimensions must be the same
+            assert_eq((unsigned int) m_num_spatial_dims, windows.size());
+            assert_eq((unsigned int) m_num_spatial_dims, pads.size());
+            assert_eq((unsigned int) m_num_spatial_dims, strides.size());
         }
-        cudaDeviceReset();
-        abort();
-      }
+
+        // TODO: asymmetric not supported
+        assert_always(util::is_all_elements_equal(windows));
+        assert_always(util::is_all_elements_equal(pads));
+        assert_always(util::is_all_elements_equal(strides));
+
+        // TODO: only stencil-like windows are supported
+        for (int i = 0; i < m_num_spatial_dims; ++i)
+        {
+            auto w = windows[i];
+            if (w % 2)
+            {
+                auto stencil = (w - 1) / 2;
+                // Padding must be zero or match with the stencil size
+                assert_always(pads[i] == 0 || pads[i] == stencil);
+                // TODO: stride limitation
+                assert_always(strides[i] == 1 || strides[i] == stencil + 1);
+            }
+            else
+            {
+                assert_always(w == strides[i]);
+                assert_always(pads[i] == 0);
+            }
+        }
+
+        bool use_padding = pads[0] != 0;
+
+        // As halo exchanges with shared tensors is not yet implemented,
+        // the spatial domain must be partitioned without sharing or
+        // aggregated to the rank-0 process (so that no halo exchange is
+        // done).
+        for (int i = 0; i < m_num_spatial_dims; ++i)
+        {
+            if (input.get_distribution().is_shared(i))
+            {
+                assert_always(input.get_distribution().get_split_shape()[i]
+                              == 1);
+            }
+        }
+
+        // cudnnPoolingBackward requires input and d_input to have the
+        // same strides.
+        assert_eq(input.get_distribution(), d_input.get_distribution());
+        // Similarly, output and d_output must have the same distribution
+        assert_eq(output.get_distribution(), output.get_distribution());
+
+        {
+            const int_vector dilations(m_num_spatial_dims, 1);
+            internal::get_halo_sizes(input,
+                                     IntVector(windows),
+                                     IntVector(strides),
+                                     IntVector(dilations),
+                                     m_halo_fwd_send,
+                                     m_halo_bwd_send,
+                                     m_halo_fwd_recv,
+                                     m_halo_bwd_recv,
+                                     use_padding);
+        }
+
+        backend::setup_tensor_descriptor(m_input_d,
+                                         input,
+                                         IntVector(m_halo_fwd_recv),
+                                         IntVector(m_halo_bwd_recv));
+        util::MPIPrintStreamDebug() << "pooling input desc: " << m_input_d;
+        backend::setup_tensor_descriptor(m_output_d, output, false);
+
+        backend::setup_tensor_descriptor(
+            m_d_input_d, d_input, m_halo_fwd_recv, m_halo_bwd_recv);
+        util::MPIPrintStreamDebug() << "pooling d_input desc: " << m_d_input_d;
+        backend::setup_tensor_descriptor(m_d_output_d, d_output, false);
+
+        m_mode =
+            backend::get_pooling_mode(mode, m_be.get_options().m_deterministic);
+
+        // When a dimension is split, halo region works as padding
+        for (auto i = pads.begin(); i != pads.end(); i++)
+            if (input.get_distribution()
+                    .get_split_shape()[std::distance(pads.begin(), i)]
+                > 1)
+                *i = 0;
+
+        util::MPIPrintStreamDebug()
+            << "pooling pads: " << util::join_array(pads, ", ");
+
+        // pooling descriptor
+        setup_pooling_descriptor(
+            input, output, windows, pads, strides, m_pooling_d);
+
+        setup_halo_xch(input, d_input);
+
+        setup_boundary_streams(input.get_split_index());
+        return;
     }
 
+    // FIXME: Default training=true to maximize backward
+    // compatibility.
+    template <typename Tensor>
+    int forward(typename Tensor::data_type alpha,
+                Tensor& input,
+                typename Tensor::data_type beta,
+                Tensor& output,
+                bool const training = true)
     {
+        exchange_halo_input(input, m_halo_xch_input);
+
+        // Note that even when the local output is empty, halo exchange
+        // must be called as this local process may need to push its data
+        // to adjacent processes
+        if (output.get_local_size() == 0)
+        {
+            return 0;
+        }
+
+        set_num_samples(output.get_local_shape()[-1]);
+
+        const void* input_ptr =
+            input.get_const_base_ptr()
+            - input.get_local_offset(IndexVector(m_halo_bwd_recv), true);
+
+        backend::pooling_forward(m_be.get_handle(),
+                                 m_pooling_d,
+                                 alpha,
+                                 m_input_d,
+                                 input_ptr,
+                                 beta,
+                                 m_output_d,
+                                 output.get_base_ptr(),
+                                 training);
+
+        return 0;
+    }
+
+    template <typename Tensor>
+    int backward(typename Tensor::data_type alpha,
+                 const Tensor& output,
+                 const Tensor& d_output,
+                 const Tensor& input,
+                 typename Tensor::data_type beta,
+                 Tensor& d_input)
+    {
+        if (d_input.get_local_size() == 0)
+        {
+            return 0;
+        }
+        set_num_samples(d_input.get_local_shape()[-1]);
+
+        if (d_output.get_local_size() > 0)
+        {
+            const void* input_ptr =
+                input.get_const_base_ptr()
+                - input.get_local_offset(IndexVector(m_halo_bwd_recv), true);
+            // Assumes d_input has the same distribution as input
+            void* d_input_ptr =
+                d_input.get_base_ptr()
+                - d_input.get_local_offset(IndexVector(m_halo_bwd_recv), true);
+
+            backend::pooling_backward(m_be.get_handle(),
+                                      m_pooling_d,
+                                      alpha,
+                                      m_output_d,
+                                      output.get_const_base_ptr(),
+                                      m_d_output_d,
+                                      d_output.get_const_base_ptr(),
+                                      m_input_d,
+                                      input_ptr,
+                                      beta,
+                                      m_d_input_d,
+                                      d_input_ptr);
+        }
+        {
 #if 0
       cudaDeviceSynchronize();
       MPI_Barrier(MPI_COMM_WORLD);
@@ -276,206 +320,232 @@ class Pooling<cudnn::BackendCUDNN, DataType> {
       }
       out_file.close();
 #endif
+        }
+        exchange_halo_reverse(d_input, m_halo_xch_d_input);
+
+        return 0;
     }
-    exchange_halo_reverse(d_input, m_halo_xch_d_input);
 
-    return 0;
-  }
-
-  void set_num_samples(int n) {
-    if (n != cudnn::get_tensor_num_samples(m_input_d)) {
-      util::MPIPrintStreamDebug() << "Setting #sample to " << n;
-      cudnn::set_tensor_num_samples(m_input_d, n);
-      cudnn::set_tensor_num_samples(m_output_d, n);
-      cudnn::set_tensor_num_samples(m_d_input_d, n);
-      cudnn::set_tensor_num_samples(m_d_output_d, n);
+    void set_num_samples(int n)
+    {
+        if (n != backend::get_tensor_num_samples(m_input_d))
+        {
+            util::MPIPrintStreamDebug() << "Setting #sample to " << n;
+            backend::set_tensor_num_samples(m_input_d, n);
+            backend::set_tensor_num_samples(m_output_d, n);
+            backend::set_tensor_num_samples(m_d_input_d, n);
+            backend::set_tensor_num_samples(m_d_output_d, n);
+        }
     }
-  }
 
-  // Wait for asynchronous tasks
-  void wait() {
-    m_be.wait();
-  }
- protected:
-  cudnn::BackendCUDNN &m_be;
-  const int m_num_dims;
-  const int m_num_spatial_dims;
-  IntVector m_halo_fwd_send;
-  IntVector m_halo_bwd_send;
-  IntVector m_halo_fwd_recv;
-  IntVector m_halo_bwd_recv;
-  cudnnTensorDescriptor_t m_input_d;
-  cudnnTensorDescriptor_t m_output_d;
-  cudnnTensorDescriptor_t m_d_input_d;
-  cudnnTensorDescriptor_t m_d_output_d;
-  cudnnPoolingDescriptor_t m_pooling_d;
-  cudnnPoolingMode_t m_mode;
+    // Wait for asynchronous tasks
+    void wait() { m_be.wait(); }
 
-  HaloExchangeMethod m_halo_xch_method;
-  using HaloExchange = tensor::HaloExchange<DataType,
-                                            tensor::CUDAAllocator,
-                                            Al::HostTransferBackend>;
-  using HaloExchangeMPI = tensor::HaloExchangeMPI<DataType,
+private:
+    BackendDNNLib& m_be;
+    const int m_num_dims;
+    const int m_num_spatial_dims;
+    IntVector m_halo_fwd_send;
+    IntVector m_halo_bwd_send;
+    IntVector m_halo_fwd_recv;
+    IntVector m_halo_bwd_recv;
+    backend::TensorDescriptor_t m_input_d;
+    backend::TensorDescriptor_t m_output_d;
+    backend::TensorDescriptor_t m_d_input_d;
+    backend::TensorDescriptor_t m_d_output_d;
+    backend::PoolingDescriptor_t m_pooling_d;
+    backend::PoolingMode_t m_mode;
+
+    HaloExchangeMethod m_halo_xch_method;
+    using HaloExchange = tensor::
+        HaloExchange<DataType, tensor::CUDAAllocator, Al::HostTransferBackend>;
+    using HaloExchangeMPI = tensor::HaloExchangeMPI<DataType,
+                                                    tensor::CUDAAllocator,
+                                                    Al::HostTransferBackend>;
+    using HaloExchangeAL = tensor::HaloExchangeAL<DataType,
                                                   tensor::CUDAAllocator,
                                                   Al::HostTransferBackend>;
-  using HaloExchangeAL = tensor::HaloExchangeAL<DataType,
-                                                tensor::CUDAAllocator,
-                                                Al::HostTransferBackend>;
 #ifdef DISTCONV_HAS_P2P
-  using HaloExchangeP2P = tensor::HaloExchangeP2P<DataType,
-                                                  tensor::CUDAAllocator,
-                                                  Al::HostTransferBackend>;
-  using HaloExchangeHybrid = tensor::HaloExchangeHybrid<DataType,
-                                                        tensor::CUDAAllocator,
-                                                        Al::HostTransferBackend>;
+    using HaloExchangeP2P = tensor::HaloExchangeP2P<DataType,
+                                                    tensor::CUDAAllocator,
+                                                    Al::HostTransferBackend>;
+    using HaloExchangeHybrid =
+        tensor::HaloExchangeHybrid<DataType,
+                                   tensor::CUDAAllocator,
+                                   Al::HostTransferBackend>;
 #endif // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
-  using HaloExchangeNVSHMEM = tensor::HaloExchangeNVSHMEM<
-    DataType, tensor::CUDAAllocator, Al::HostTransferBackend>;
+    using HaloExchangeNVSHMEM =
+        tensor::HaloExchangeNVSHMEM<DataType,
+                                    tensor::CUDAAllocator,
+                                    Al::HostTransferBackend>;
 #ifdef DISTCONV_HAS_CUDA_GRAPH
-  using HaloExchangeNVSHMEMGraph = tensor::HaloExchangeNVSHMEMGraph<
-    DataType, tensor::CUDAAllocator, Al::HostTransferBackend>;
+    using HaloExchangeNVSHMEMGraph =
+        tensor::HaloExchangeNVSHMEMGraph<DataType,
+                                         tensor::CUDAAllocator,
+                                         Al::HostTransferBackend>;
 #endif // DISTCONV_HAS_CUDA_GRAPH
-  using HaloExchangeNVSHMEMDirect = tensor::HaloExchangeNVSHMEMDirect<
-    DataType, tensor::CUDAAllocator, Al::HostTransferBackend>;
-  using HaloExchangeNVSHMEMFusedNotify = tensor::HaloExchangeNVSHMEMFusedNotify<
-    DataType, tensor::CUDAAllocator, Al::HostTransferBackend>;
+    using HaloExchangeNVSHMEMDirect =
+        tensor::HaloExchangeNVSHMEMDirect<DataType,
+                                          tensor::CUDAAllocator,
+                                          Al::HostTransferBackend>;
+    using HaloExchangeNVSHMEMFusedNotify =
+        tensor::HaloExchangeNVSHMEMFusedNotify<DataType,
+                                               tensor::CUDAAllocator,
+                                               Al::HostTransferBackend>;
 #endif // DISTCONV_HAS_NVSHMEM
-  std::unique_ptr<HaloExchange> m_halo_xch_input;
-  std::unique_ptr<HaloExchange> m_halo_xch_d_input;
-  BoundaryAttributesV<std::shared_ptr<Al::HostTransferBackend::comm_type>> m_boundary_comms;
+    std::unique_ptr<HaloExchange> m_halo_xch_input;
+    std::unique_ptr<HaloExchange> m_halo_xch_d_input;
+    BoundaryAttributesV<std::shared_ptr<Al::HostTransferBackend::comm_type>>
+        m_boundary_comms;
 
-  template <typename Tensor>
-  void setup_pooling_descriptor(const Tensor &input,
-                                const Tensor &output,
-                                int_vector windows,
-                                int_vector pads,
-                                int_vector strides,
-                                cudnnPoolingDescriptor_t &pool_d) {
-    cudnnNanPropagation_t max_pooling_nan_opt = CUDNN_PROPAGATE_NAN;
-    DISTCONV_CHECK_CUDNN(
-        cudnnSetPoolingNdDescriptor(pool_d, m_mode, max_pooling_nan_opt,
-                                    m_num_spatial_dims,
-                                    util::reverse(windows).data(),
-                                    util::reverse(pads).data(),
-                                    util::reverse(strides).data()));
-  }
+    template <typename Tensor>
+    void setup_pooling_descriptor(const Tensor& input,
+                                  const Tensor& output,
+                                  int_vector windows,
+                                  int_vector pads,
+                                  int_vector strides,
+                                  backend::PoolingDescriptor_t& pool_d)
+    {
+        backend::setup_pooling_descriptor(pool_d,
+                                          m_mode,
+                                          m_num_spatial_dims,
+                                          util::reverse(windows).data(),
+                                          util::reverse(pads).data(),
+                                          util::reverse(strides).data());
+    }
 
-  template <typename Tensor>
-  void bp_accumulate_sum(Tensor &tensor,
-                         const IndexVector &dst,
-                         const IndexVector &src,
-                         const tensor::Shape &shape);
+    void bp_accumulate_sum(
+        tensor::Tensor<DataType, tensor::LocaleMPI, tensor::CUDAAllocator>&
+            tensor,
+        IndexVector const& dst,
+        IndexVector const& src,
+        tensor::Shape const& shape);
 
-  template <typename Allocator>
-  void setup_halo_xch(tensor::Tensor<DataType, LocaleMPI,
-                      Allocator> &input,
-                      tensor::Tensor<DataType, LocaleMPI,
-                      Allocator> &d_input) {
-    switch (m_halo_xch_method) {
-      case HaloExchangeMethod::MPI:
-        util::MPIRootPrintStreamDebug() << "Using MPI in halo exchange";
-        m_halo_xch_input.reset(new HaloExchangeMPI(input));
-        m_halo_xch_d_input.reset(new HaloExchangeMPI(d_input));
-        break;
-      case HaloExchangeMethod::AL:
-        util::MPIRootPrintStreamDebug() << "Using AL in halo exchange";
-        m_halo_xch_input.reset(new HaloExchangeAL(input));
-        m_halo_xch_d_input.reset(new HaloExchangeAL(d_input));
-        break;
+    template <typename Allocator>
+    void setup_halo_xch(tensor::Tensor<DataType, LocaleMPI, Allocator>& input,
+                        tensor::Tensor<DataType, LocaleMPI, Allocator>& d_input)
+    {
+        switch (m_halo_xch_method)
+        {
+        case HaloExchangeMethod::MPI:
+            util::MPIRootPrintStreamDebug() << "Using MPI in halo exchange";
+            m_halo_xch_input.reset(new HaloExchangeMPI(input));
+            m_halo_xch_d_input.reset(new HaloExchangeMPI(d_input));
+            break;
+        case HaloExchangeMethod::AL:
+            util::MPIRootPrintStreamDebug() << "Using AL in halo exchange";
+            m_halo_xch_input.reset(new HaloExchangeAL(input));
+            m_halo_xch_d_input.reset(new HaloExchangeAL(d_input));
+            break;
 #ifdef DISTCONV_HAS_P2P
-      case HaloExchangeMethod::P2P:
-        util::MPIRootPrintStreamDebug() << "Using P2P in halo exchange";
-        m_halo_xch_input.reset(new HaloExchangeP2P(input, m_be.get_p2p()));
-        m_halo_xch_d_input.reset(new HaloExchangeP2P(d_input, m_be.get_p2p()));
-        break;
-      case HaloExchangeMethod::HYBRID:
-        util::MPIRootPrintStreamDebug() << "Using hybrid of AL and P2P in halo exchange";
-        m_halo_xch_input.reset(new HaloExchangeHybrid(input, m_be.get_p2p()));
-        m_halo_xch_d_input.reset(new HaloExchangeHybrid(d_input, m_be.get_p2p()));
-        break;
+        case HaloExchangeMethod::P2P:
+            util::MPIRootPrintStreamDebug() << "Using P2P in halo exchange";
+            m_halo_xch_input.reset(new HaloExchangeP2P(input, m_be.get_p2p()));
+            m_halo_xch_d_input.reset(
+                new HaloExchangeP2P(d_input, m_be.get_p2p()));
+            break;
+        case HaloExchangeMethod::HYBRID:
+            util::MPIRootPrintStreamDebug()
+                << "Using hybrid of AL and P2P in halo exchange";
+            m_halo_xch_input.reset(
+                new HaloExchangeHybrid(input, m_be.get_p2p()));
+            m_halo_xch_d_input.reset(
+                new HaloExchangeHybrid(d_input, m_be.get_p2p()));
+            break;
 #endif // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
-      case HaloExchangeMethod::NVSHMEM:
-        m_halo_xch_input.reset(new HaloExchangeNVSHMEM(input));
-        m_halo_xch_d_input.reset(new HaloExchangeNVSHMEM(d_input));
-        break;
+        case HaloExchangeMethod::NVSHMEM:
+            m_halo_xch_input.reset(new HaloExchangeNVSHMEM(input));
+            m_halo_xch_d_input.reset(new HaloExchangeNVSHMEM(d_input));
+            break;
 #ifdef DISTCONV_HAS_CUDA_GRAPH
-      case HaloExchangeMethod::NVSHMEM_GRAPH:
-        m_halo_xch_input.reset(new HaloExchangeNVSHMEMGraph(input));
-        m_halo_xch_d_input.reset(new HaloExchangeNVSHMEMGraph(d_input));
-        break;
+        case HaloExchangeMethod::NVSHMEM_GRAPH:
+            m_halo_xch_input.reset(new HaloExchangeNVSHMEMGraph(input));
+            m_halo_xch_d_input.reset(new HaloExchangeNVSHMEMGraph(d_input));
+            break;
 #endif // DISTCONV_HAS_CUDA_GRAPH
-      case HaloExchangeMethod::NVSHMEM_DIRECT:
-        m_halo_xch_input.reset(new HaloExchangeNVSHMEMDirect(input));
-        m_halo_xch_d_input.reset(new HaloExchangeNVSHMEMDirect(d_input));
-        break;
-      case HaloExchangeMethod::NVSHMEM_FUSED_NOTIFY:
-        m_halo_xch_input.reset(new HaloExchangeNVSHMEMFusedNotify(input));
-        m_halo_xch_d_input.reset(new HaloExchangeNVSHMEMFusedNotify(d_input));
-        break;
+        case HaloExchangeMethod::NVSHMEM_DIRECT:
+            m_halo_xch_input.reset(new HaloExchangeNVSHMEMDirect(input));
+            m_halo_xch_d_input.reset(new HaloExchangeNVSHMEMDirect(d_input));
+            break;
+        case HaloExchangeMethod::NVSHMEM_FUSED_NOTIFY:
+            m_halo_xch_input.reset(new HaloExchangeNVSHMEMFusedNotify(input));
+            m_halo_xch_d_input.reset(
+                new HaloExchangeNVSHMEMFusedNotify(d_input));
+            break;
 #endif // DISTCONV_HAS_NVSHMEM
-      default:
-        util::MPIPrintStreamError() << "Invalid halo exchange method: "
-                                    << m_halo_xch_method;
-        std::abort();
+        default:
+            util::MPIPrintStreamError()
+                << "Invalid halo exchange method: " << m_halo_xch_method;
+            std::abort();
+        }
     }
-  }
 
-  template <typename Allocator>
-  void exchange_halo_input(tensor::Tensor<DataType, LocaleMPI,
-                           Allocator> &tensor,
-                           std::unique_ptr<HaloExchange> &xch) {
-    if (m_be.is_nvtx_enabled()) {
-      nvtxRangePushA("pooling/exchange_halo");
+    template <typename Allocator>
+    void
+    exchange_halo_input(tensor::Tensor<DataType, LocaleMPI, Allocator>& tensor,
+                        std::unique_ptr<HaloExchange>& xch)
+    {
+        if (m_be.is_nvtx_enabled())
+        {
+            GPU_PROFILE_RANGE_PUSH("pooling/exchange_halo");
+        }
+        assert_always(xch != nullptr);
+        xch->exchange(
+            m_boundary_comms, m_be.get_stream(), false, true, false, false);
+        if (m_be.is_nvtx_enabled())
+        {
+            GPU_PROFILE_RANGE_POP();
+        }
     }
-    assert_always(xch != nullptr);
-    xch->exchange(m_boundary_comms, m_be.get_stream(),
-                  false, true, false, false);
-    if (m_be.is_nvtx_enabled()) {
-      nvtxRangePop();
-    }
-  }
 
-  template <typename Allocator>
-  void exchange_halo_reverse(tensor::Tensor<DataType, LocaleMPI,
-                             Allocator> &tensor,
-                             std::unique_ptr<HaloExchange> &xch) {
-    if (m_be.is_nvtx_enabled()) {
-      nvtxRangePushA("pooling/exchange_halo_rev");
+    template <typename Allocator>
+    void exchange_halo_reverse(
+        tensor::Tensor<DataType, LocaleMPI, Allocator>& tensor,
+        std::unique_ptr<HaloExchange>& xch)
+    {
+        if (m_be.is_nvtx_enabled())
+        {
+            GPU_PROFILE_RANGE_PUSH("pooling/exchange_halo_rev");
+        }
+        assert_always(xch != nullptr);
+        xch->exchange(m_halo_fwd_recv,
+                      m_halo_fwd_send,
+                      m_halo_bwd_recv,
+                      m_halo_bwd_send,
+                      m_boundary_comms,
+                      m_be.get_stream(),
+                      true,
+                      true,
+                      true,
+                      false,
+                      tensor::HaloExchangeAccumOp::SUM);
+        if (m_be.is_nvtx_enabled())
+        {
+            GPU_PROFILE_RANGE_POP();
+        }
     }
-    assert_always(xch != nullptr);
-    xch->exchange(m_halo_fwd_recv,
-                  m_halo_fwd_send,
-                  m_halo_bwd_recv,
-                  m_halo_bwd_send,
-                  m_boundary_comms, m_be.get_stream(),
-                  true, true, true, false,
-                  tensor::HaloExchangeAccumOp::SUM);
-    if (m_be.is_nvtx_enabled()) {
-      nvtxRangePop();
-    }
-  }
 
-  void setup_boundary_streams(const IndexVector &split_idx) {
-    apply_to_spatial_sides(
-        m_num_dims,
-        [this](int i, Side side) {
-          int idx = get_boundary_stream_index(i, side);
-          m_boundary_comms(i, side) =
-              m_be.get_internal_al_mpi_cuda_comm(idx);
+    void setup_boundary_streams(const IndexVector& split_idx)
+    {
+        apply_to_spatial_sides(m_num_dims, [this](int i, Side side) {
+            int idx = get_boundary_stream_index(i, side);
+            m_boundary_comms(i, side) = m_be.get_internal_al_mpi_cuda_comm(idx);
         });
-    for (int i = 0; i < m_num_spatial_dims; ++i) {
-      if (split_idx[i] % 2) {
-        std::swap(m_boundary_comms(i, LHS), m_boundary_comms(i, RHS));
-      }
+        for (int i = 0; i < m_num_spatial_dims; ++i)
+        {
+            if (split_idx[i] % 2)
+            {
+                std::swap(m_boundary_comms(i, LHS), m_boundary_comms(i, RHS));
+            }
+        }
     }
-  }
 
-  int get_boundary_stream_index(int dim, Side side) {
-    return dim * 2 + (side == LHS ? 0 : 1);
-  }
-
+    int get_boundary_stream_index(int dim, Side side)
+    {
+        return dim * 2 + (side == LHS ? 0 : 1);
+    }
 };
 
 } // namespace distconv

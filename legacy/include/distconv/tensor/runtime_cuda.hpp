@@ -14,7 +14,7 @@ class PinnedMemoryPool {
   ~PinnedMemoryPool();
   void *get(size_t size);
   void release(void *p);
-  
+
  protected:
   using chunk_t = std::tuple<void*, size_t, bool>;
   std::list<chunk_t> m_chunks;
@@ -37,7 +37,7 @@ struct MemoryPoolChunk {
   void * const &pointer() const {
     return std::get<0>(m_chunk);
   }
-  
+
   size_t &size() {
     return std::get<1>(m_chunk);
   }
@@ -59,26 +59,22 @@ struct MemoryPoolChunk {
   }
 
  protected:
-  
+
   chunk_t m_chunk;
 };
 
 class RuntimeCUDA {
  public:
   static PinnedMemoryPool &get_pinned_memory_pool();
-  
+
  protected:
   static RuntimeCUDA *m_instance;
   PinnedMemoryPool m_pmp;
-  
+
   RuntimeCUDA();
   static RuntimeCUDA &get_instance();
 };
 
-
 } // namespace internal
-
-
-
 } // namespace tensor
 } // namespace distconv

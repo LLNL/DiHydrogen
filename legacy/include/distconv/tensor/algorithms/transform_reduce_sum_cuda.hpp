@@ -2,8 +2,6 @@
 
 #include "distconv/tensor/algorithms/reduce_sum_cuda.hpp"
 
-#include <nvfunctional>
-
 namespace distconv {
 namespace tensor {
 
@@ -16,7 +14,7 @@ typename std::enable_if<
 TransformReduceSum(Tensor<DataType, Locale, Allocator> &src,
                    Tensor<DataType, Locale, Allocator> &dst,
                    const UnaryFunction &op,
-                   cudaStream_t stream=0) {
+                   h2::gpu::DeviceStream stream=0) {
   using TensorType = Tensor<DataType, Locale, Allocator>;
   return algorithms_cuda::ReduceSumFunctor<
     ND, TensorType, UnaryFunction>
@@ -33,7 +31,7 @@ TransformReduceSum(Tensor<DataType, Locale, Allocator> &src,
                    const Array<ND> &local_reduction_region,
                    Tensor<DataType, Locale, Allocator> &dst,
                    const UnaryFunction &op,
-                   cudaStream_t stream=0) {
+                   h2::gpu::DeviceStream stream=0) {
   using TensorType = Tensor<DataType, Locale, Allocator>;
   return algorithms_cuda::ReduceSumFunctor<
     ND, TensorType, UnaryFunction>
@@ -51,7 +49,7 @@ TransformReduceSum(Tensor<DataType, Locale, Allocator> &src,
                    const UnaryFunction1 &op1,
                    Tensor<DataType, Locale, Allocator> &dst2,
                    const UnaryFunction2 &op2,
-                   cudaStream_t stream=0) {
+                   h2::gpu::DeviceStream stream=0) {
   using TensorType = Tensor<DataType, Locale, Allocator>;
   return algorithms_cuda::ReduceSumFunctor2<
     ND, TensorType, UnaryFunction1, UnaryFunction2>
@@ -65,12 +63,12 @@ typename std::enable_if<
   std::is_same<Allocator, CUDAAllocator>::value,
   int>::type
 TransformReduceSum(Tensor<DataType, Locale, Allocator> &src,
-                   const Array<ND> &local_reduction_region,                   
+                   const Array<ND> &local_reduction_region,
                    Tensor<DataType, Locale, Allocator> &dst1,
                    const UnaryFunction1 &op1,
                    Tensor<DataType, Locale, Allocator> &dst2,
                    const UnaryFunction2 &op2,
-                   cudaStream_t stream=0) {
+                   h2::gpu::DeviceStream stream=0) {
   using TensorType = Tensor<DataType, Locale, Allocator>;
   return algorithms_cuda::ReduceSumFunctor2<
     ND, TensorType, UnaryFunction1, UnaryFunction2>

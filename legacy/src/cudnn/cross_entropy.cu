@@ -1,18 +1,25 @@
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/cudnn/cross_entropy.hpp"
 #include "distconv/util/util_mpi.hpp"
-#include "distconv/util/util_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
 
 #include <limits>
 
+#if H2_HAS_CUDA
 #include <cub/block/block_reduce.cuh>
+namespace cubns = cub;
+#elif H2_HAS_ROCM
+#include <hipcub/block/block_reduce.hpp>
+namespace cubns = hipcub;
+#endif
 
 using distconv::tensor::LocaleMPI;
 using distconv::tensor::CUDAAllocator;
 
 template <typename DataType>
 using TensorCUDA = distconv::tensor::Tensor<DataType, LocaleMPI, CUDAAllocator>;
-using CrossEntopyCUDNN = distconv::CrossEntropy<distconv::cudnn::BackendCUDNN>;
+using CrossEntopyCUDNN = distconv::CrossEntropy<distconv::BackendDNNLib>;
 
 namespace distconv {
 namespace cross_entropy {
@@ -60,7 +67,7 @@ __global__ void fp_local(const DataType * __restrict__ prediction,
     }
   }
 
-  using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
+  using BlockReduce = cubns::BlockReduce<DataType, BLOCK_SIZE>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   psum = BlockReduce(temp_storage).Sum(psum);
 

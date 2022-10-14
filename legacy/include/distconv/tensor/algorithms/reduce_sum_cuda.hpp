@@ -1,16 +1,58 @@
 #pragma once
 
+#include "distconv/tensor/memory_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
-#include "distconv/util/util_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
 #include "distconv/tensor/algorithms/common_cuda.hpp"
 
 #include <type_traits>
+#if __has_include(<nvfunctional>)
+#define DISTCONV_HAS_NVFUNCTIONAL_HEADER
 #include <nvfunctional>
+#endif
 
 namespace distconv {
 namespace tensor {
 namespace algorithms_cuda {
+
+#ifndef DISTCONV_HAS_NVFUNCTIONAL_HEADER
+template <typename F>
+class UnaryFunctionWrapper
+{
+public:
+    __host__ __device__
+    UnaryFunctionWrapper(F func) : m_func{std::move(func)} {}
+
+    template <typename ArgT>
+    __host__ __device__ auto operator()(ArgT&& arg) const
+    {
+        return m_func(std::forward<ArgT>(arg));
+    }
+
+    constexpr bool valid() const noexcept { return true; }
+private:
+    F m_func;
+};
+
+// Just don't call it; if you do, it's the identity.
+template <>
+class UnaryFunctionWrapper<std::nullptr_t>
+{
+public:
+    __host__ __device__
+    UnaryFunctionWrapper(void*) {}
+
+    template <typename ArgT>
+    __host__ __device__ auto operator()(ArgT&& arg) const
+    {
+        return arg;
+    }
+
+    __host__ __device__
+    constexpr bool valid() const noexcept { return false; }
+};
+#endif // ifndef DISTCONV_HAS_NVFUNCTIONAL_HEADER
 
 // Generic implementation using atomicAdd
 // assumes ND == 3 or 4
@@ -39,16 +81,26 @@ __global__ static void reduce_kernel(
     }
   }
 
+#ifdef DISTCONV_HAS_NVFUNCTIONAL_HEADER
+  nvstd::function<DataType(DataType&)> op_func = op;
+  auto const use_op = (op != nullptr);
+#else
+  UnaryFunctionWrapper<UnaryFunction> op_func(op);
+#endif
+
   for (int i = 0; i < thread_work_size; ++i) {
     int idx0 = inner_idx % src_shape[0];
     int idx1 = inner_idx / src_shape[0];
     int tensor_offset = idx0 + idx1 * src_strides[1];
     if (inner_idx < inner_size) {
       DataType x = src[tensor_offset];
-      nvstd::function<DataType(DataType&)> op_func = op;
-      if (op != nullptr) {
+#ifdef DISTCONV_HAS_NVFUNCTIONAL_HEADER
+      if (use_op)
         x = op_func(x);
-      }
+#else
+      if constexpr (op_func.valid())
+          x = op_func(x);
+#endif
       int dst_idx0 = dst_shape[0] != 1 ? idx0 : 0;
       int dst_idx1 = dst_shape[1] != 1 ? idx1 : 0;
       int dst_offset = dst_idx0 + dst_idx1 * dst_strides[1];
@@ -90,7 +142,7 @@ struct ReduceSumFunctor {
                  const Shape &local_reduction_shape,
                  Tensor &dst,
                  const UnaryFunction &op,
-                 cudaStream_t stream) {
+                 h2::gpu::DeviceStream stream) {
     using DataType = typename Tensor::data_type;
     if (local_reduction_shape.size() > 0) {
       constexpr int block_size = DEFAULT_BLOCK_SIZE;
@@ -123,7 +175,7 @@ struct ReduceSumFunctor {
               dst.get_base_ptr(),
               dst_shape, dst_strides, op,
               thread_work_size);
-      DISTCONV_CHECK_CUDA(cudaStreamSynchronize(stream));
+      h2::gpu::sync(stream);
     }
 
     // Finds the dimensions to reduce. Note that a dimension is not
@@ -174,6 +226,16 @@ __global__ static void reduce_kernel2(
     }
   }
 
+#ifdef DISTCONV_HAS_NVFUNCTIONAL_HEADER
+  nvstd::function<DataType(DataType)> op1_func = op1;
+  nvstd::function<DataType(DataType)> op2_func = op2;
+  auto const use_op1 = (op1 != nullptr);
+  auto const use_op2 = (op2 != nullptr);
+#else
+  UnaryFunctionWrapper<UnaryFunction1> op1_func(op1);
+  UnaryFunctionWrapper<UnaryFunction2> op2_func(op2);
+#endif
+
   for (int i = 0; i < thread_work_size; ++i) {
     int idx0 = inner_idx % src_shape[0];
     int idx1 = inner_idx / src_shape[0];
@@ -181,19 +243,27 @@ __global__ static void reduce_kernel2(
     if (inner_idx < inner_size) {
       const DataType x = src[tensor_offset];
       DataType y1 = x;
-      nvstd::function<DataType(DataType)> op1_func = op1;
-      if (op1 != nullptr) {
+#ifdef DISTCONV_HAS_NVFUNCTIONAL_HEADER
+      if (use_op1) {
         y1 = op1_func(x);
       }
+#else
+      if constexpr (op1_func.valid())
+        y1 = op1_func(x);
+#endif
       int dst1_idx0 = dst1_shape[0] != 1 ? idx0 : 0;
       int dst1_idx1 = dst1_shape[1] != 1 ? idx1 : 0;
       int dst1_offset = dst1_idx0 + dst1_idx1 * dst1_strides[1];
       atomicAdd(&dst1[dst1_offset], y1);
       DataType y2 = x;
-      nvstd::function<DataType(DataType)> op2_func = op2;
-      if (op2 != nullptr) {
+#ifdef DISTCONV_HAS_NVFUNCTIONAL_HEADER
+      if (use_op2) {
         y2 = op2_func(x);
       }
+#else
+      if constexpr (op2_func.valid())
+        y2 = op2_func(x);
+#endif
       int dst2_idx0 = dst2_shape[0] != 1 ? idx0 : 0;
       int dst2_idx1 = dst2_shape[1] != 1 ? idx1 : 0;
       int dst2_offset = dst2_idx0 + dst2_idx1 * dst2_strides[1];
@@ -213,7 +283,7 @@ struct ReduceSumFunctor2 {
                  const UnaryFunction1 &op1,
                  Tensor &dst2,
                  const UnaryFunction2 &op2,
-                 cudaStream_t stream) {
+                 h2::gpu::DeviceStream stream) {
     if (local_reduction_shape.size() > 0) {
       constexpr int block_size = DEFAULT_BLOCK_SIZE;
       constexpr int max_thread_work_size =
@@ -244,7 +314,7 @@ struct ReduceSumFunctor2 {
               dst2_shape, dst2_strides,
               op2,
               thread_work_size);
-      DISTCONV_CHECK_CUDA(cudaStreamSynchronize(stream));
+      h2::gpu::sync(stream);
     }
 
     std::vector<int> reduction_dims = find_reduce_dims(
@@ -291,7 +361,7 @@ typename std::enable_if<
   int>::type
 ReduceSum(Tensor<DataType, Locale, Allocator> &src,
           Tensor<DataType, Locale, Allocator> &dst,
-          cudaStream_t stream=0) {
+          h2::gpu::DeviceStream stream=0) {
   assert_always(ND == 3 || ND == 4);
   algorithms_cuda::reduction_sanity_check(src, dst);
   using TensorType = Tensor<DataType, Locale, Allocator>;
@@ -309,7 +379,7 @@ typename std::enable_if<
 ReduceSum(Tensor<DataType, Locale, Allocator> &src,
           const Shape &local_reduction_region,
           Tensor<DataType, Locale, Allocator> &dst,
-          cudaStream_t stream=0) {
+          h2::gpu::DeviceStream stream=0) {
   assert_always(ND == 3 || ND == 4);
   algorithms_cuda::reduction_sanity_check<
     ND, DataType, Locale, Allocator>(src, dst);
@@ -327,7 +397,7 @@ typename std::enable_if<
 ReduceSum(Tensor<DataType, Locale, Allocator> &src,
           Tensor<DataType, Locale, Allocator> &dst1,
           Tensor<DataType, Locale, Allocator> &dst2,
-          cudaStream_t stream=0) {
+          h2::gpu::DeviceStream stream=0) {
   assert_always(ND == 3 || ND == 4);
   algorithms_cuda::reduction_sanity_check(src, dst1);
   algorithms_cuda::reduction_sanity_check(src, dst2);
@@ -347,7 +417,7 @@ ReduceSum(Tensor<DataType, Locale, Allocator> &src,
           const Array<ND> &local_reduction_region,
           Tensor<DataType, Locale, Allocator> &dst1,
           Tensor<DataType, Locale, Allocator> &dst2,
-          cudaStream_t stream=0) {
+          h2::gpu::DeviceStream stream=0) {
   assert_always(ND == 3 || ND == 4);
   algorithms_cuda::reduction_sanity_check(src, dst1);
   algorithms_cuda::reduction_sanity_check(src, dst2);

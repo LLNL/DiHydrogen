@@ -64,7 +64,19 @@ size_t HIPDeviceMemoryPool::get_max_allocatable_size(size_t const limit)
     return max_allowed_size;
 }
 
-RuntimeHIP::RuntimeHIP()
+namespace
+{
+
+struct RuntimeHIP_impl
+{
+    RuntimeHIP_impl();
+
+    // PinnedMemoryPool m_pmp;
+    HIPDeviceMemoryPool m_dmp;
+    std::array<hipEvent_t, 2> m_events;
+};
+
+RuntimeHIP_impl::RuntimeHIP_impl()
 {
     for (int i = 0; i < m_events.size(); ++i)
     {
@@ -73,25 +85,24 @@ RuntimeHIP::RuntimeHIP()
     }
 }
 
-RuntimeHIP& RuntimeHIP::get_instance()
+RuntimeHIP_impl& get_runtime()
 {
-    static auto instance = std::make_unique<RuntimeHIP>();
-    return instance;
+    static auto runtime = RuntimeHIP_impl{};
+    return runtime;
 }
 
-// PinnedMemoryPool &RuntimeHIP::get_pinned_memory_pool() {
-//   return get_instance().m_pmp;
-// }
+} // namespace
 
 HIPDeviceMemoryPool& RuntimeHIP::get_device_memory_pool()
 {
-    return get_instance().m_dmp;
+    return get_runtime().m_dmp;
 }
 
 hipEvent_t& RuntimeHIP::get_event(int const idx)
 {
-    assert_always(idx < m_events.size());
-    return get_instance().m_events[idx];
+    auto& rt = get_runtime();
+    assert_always(idx < rt.m_events.size());
+    return rt.m_events[idx];
 }
 
 } // namespace internal

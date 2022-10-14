@@ -47,7 +47,7 @@ class HaloExchangeMPI:
 
     for (auto side: SIDES) {
       if (this->get_peer(dim, side) == MPI_PROC_NULL) continue;
-      const cudaStream_t stream = side == Side::RHS
+      const h2::gpu::DeviceStream stream = side == Side::RHS
           ? comm_rhs->get_stream() : comm_lhs->get_stream();
       const int width_send = side == Side::RHS
           ? width_rhs_send : width_lhs_send;
@@ -70,7 +70,7 @@ class HaloExchangeMPI:
         this->pack_dim(dim, side, width_send, stream, send_buf, is_reverse);
         util::MPIPrintStreamDebug() << "Sending packed halo";
         // send
-        DISTCONV_CHECK_CUDA(cudaStreamSynchronize(stream));
+        h2::gpu::sync(stream);
         size_t halo_bytes = this->get_halo_size(dim, width_send)
             * sizeof(DataType);
         DISTCONV_CHECK_MPI(MPI_Isend(

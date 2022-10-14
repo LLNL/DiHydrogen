@@ -1,22 +1,11 @@
 #pragma once
 
+#include <distconv_config.hpp>
+
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/tensor_process.hpp"
-#include "distconv/tensor/memory_cuda.hpp"
+#include "distconv/tensor/memory_gpu.hpp"
 #include "distconv/util/util.hpp"
-
-#include <cuda_runtime.h>
-
-#define TENSOR_CHECK_CUDA(cuda_call)                                    \
-  do {                                                                  \
-    const cudaError_t cuda_status = cuda_call;                          \
-    if (cuda_status != cudaSuccess) {                                   \
-      std::cerr << "CUDA error: " << cudaGetErrorString(cuda_status) << "\n"; \
-      std::cerr << "Error at " << __FILE__ << ":" << __LINE__ << "\n";  \
-      cudaDeviceReset();                                                \
-      abort();                                                          \
-    }                                                                   \
-  } while (0)
 
 namespace distconv {
 namespace tensor {
@@ -204,5 +193,3 @@ class TensorImpl<Tensor<DataType, LocaleCUDA, Allocator>> {
 
 } // namespace tensor
 } // namespace distconv
-
-#undef TENSOR_CHECK_CUDA

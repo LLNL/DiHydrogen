@@ -1,7 +1,8 @@
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/tensor_mpi_cuda.hpp"
 #include "test_tensor.hpp"
-#include "distconv/util/util_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
 
 #include <iostream>
@@ -49,26 +50,23 @@ inline int test_concat(const Shape &dst_shape,
     }
   }
   assert_always(concat_dim >= 0);
-  util::MPIRootPrintStreamInfo() << "Concatenating tensors along dimension " << concat_dim;
+  util::MPIRootPrintStreamInfo()
+    << "Concatenating tensors along dimension " << concat_dim;
 
   // init src1
   DataType src1_init_val = 1;
   auto src1_size = src1.get_local_real_size();
   std::vector<DataType> src1_init(src1_size, src1_init_val);
-  DISTCONV_CHECK_CUDA(cudaMemcpy(src1.get_buffer(), src1_init.data(),
-                                 sizeof(DataType) * src1_size,
-                                 cudaMemcpyHostToDevice));
+  h2::gpu::mem_copy(src1.get_buffer(), src1_init.data(), src1_size);
   // init src2
   DataType src2_init_val = 2;
   auto src2_size = src2.get_local_real_size();
   std::vector<DataType> src2_init(src2_size, src2_init_val);
-  DISTCONV_CHECK_CUDA(cudaMemcpy(src2.get_buffer(), src2_init.data(),
-                                 sizeof(DataType) * src2_size,
-                                 cudaMemcpyHostToDevice));
+  h2::gpu::mem_copy(src2.get_buffer(), src2_init.data(), src2_size);
 
   Concatenate(dst, src1, src2, 0);
 
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
   MPI_Barrier(MPI_COMM_WORLD);
   util::MPIRootPrintStreamInfo() << "Concatenation done";
 
@@ -101,7 +99,7 @@ inline int test_concat(const Shape &dst_shape,
   MPI_Barrier(MPI_COMM_WORLD);
 
   Slice(src1, src2, dst, 0);
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
   MPI_Barrier(MPI_COMM_WORLD);
   util::MPIRootPrintStreamInfo() << "Split done";
 
@@ -132,15 +130,14 @@ inline int test_concat(const Shape &dst_shape,
 }
 
 int main(int argc, char *argv[]) {
-  int dev = util::choose_gpu();
-  cudaSetDevice(dev);
+  h2::gpu::set_gpu(util::choose_gpu());
   MPI_Init(&argc, &argv);
   int pid;
   int np;
   MPI_Comm_rank(MPI_COMM_WORLD, &pid);
   MPI_Comm_size(MPI_COMM_WORLD, &np);
 
-  MPIPrintStreamInfo() << "Using device " << dev;
+  MPIPrintStreamInfo() << "Using device " << h2::gpu::current_gpu();
 
   using DataType = int;
   using TensorType = Tensor<DataType, LocaleMPI, CUDAAllocator>;
@@ -165,7 +162,7 @@ int main(int argc, char *argv[]) {
   MPIRootPrintStreamInfo() << "Completed successfully.";
 
   MPI_Finalize();
-  cudaDeviceReset();
+  static_cast<void>(GPU_DEVICE_RESET());
 
   return 0;
 }

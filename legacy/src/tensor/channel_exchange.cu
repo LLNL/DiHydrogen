@@ -93,7 +93,7 @@ void ChannelExchange<float>::pack_for_rs(
   TensorType &dst,
   float *dst_buf,
   size_t comm_size,
-  cudaStream_t stream) {
+  h2::gpu::DeviceStream stream) {
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
   dim3 grid_dim((src.get_local_size() + block_size - 1) / block_size);
@@ -118,7 +118,7 @@ void ChannelExchange<double>::pack_for_rs(
   TensorType &dst,
   double *dst_buf,
   size_t comm_size,
-  cudaStream_t stream) {
+  h2::gpu::DeviceStream stream) {
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
   dim3 grid_dim((src.get_local_size() + block_size - 1) / block_size);
@@ -143,7 +143,7 @@ void ChannelExchange<float>::unpack_from_ag(
   TensorType &dst,
   float *packed_buf,
   size_t comm_size,
-  cudaStream_t stream) {
+  h2::gpu::DeviceStream stream) {
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
   dim3 grid_dim((src.get_local_size() + block_size - 1) / block_size);
@@ -165,7 +165,7 @@ void ChannelExchange<double>::unpack_from_ag(
   TensorType &dst,
   double *packed_buf,
   size_t comm_size,
-  cudaStream_t stream) {
+  h2::gpu::DeviceStream stream) {
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
   dim3 grid_dim((dst.get_local_size() + block_size - 1) / block_size);
@@ -183,4 +183,3 @@ void ChannelExchange<double>::unpack_from_ag(
 
 }  // namespace tensor
 }  // namespace distconv
-

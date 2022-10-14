@@ -10,7 +10,7 @@
 
 #include "distconv/util/util.hpp"
 #include "distconv/util/stopwatch.h"
-#include "distconv/util/util_cudnn.hpp"
+#include "distconv/util/util_gpu_dnn.hpp"
 #include "distconv/util/cxxopts.hpp"
 #include "benchmark_common.hpp"
 

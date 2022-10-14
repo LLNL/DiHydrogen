@@ -3,7 +3,7 @@
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/tensor_mpi.hpp"
 #include "distconv/util/util_mpi.hpp"
-#include "distconv/util/util_cuda.hpp" // for nvtx marking
+#include "distconv/util/util_gpu.hpp" // for profiler marking
 
 #include <algorithm>
 #include <cstring>
@@ -504,14 +504,14 @@ class TensorMPIShuffler<DataType, BaseAllocator> {
 
     int nd = m_helper.get_num_dims();
 
-    util::nvtx_push("pack");
+    util::profile_push("pack");
 
     if (!getenv("SKIP_PACK")) {
       if (m_helper.is_src_split_root(is_forward)) {
         if (get_sample_to_spatial(is_forward) &&
             (nd == 4 || nd == 5)) {
           util::MPIPrintStreamDebug() << "Sample-to-spatial packing";
-          util::nvtx_push("pack-opt");
+          util::profile_push("pack-opt");
           if (nd == 4) {
             pack_sample_to_spatial4(
                 src, m_helper.get_src_local_shape(is_forward),
@@ -525,9 +525,9 @@ class TensorMPIShuffler<DataType, BaseAllocator> {
                 m_helper.get_dst_locale_shape(is_forward),
                 send_buf.get());
           }
-          util::nvtx_pop();
+          util::profile_pop();
         } else {
-          util::nvtx_push("pack-default");
+          util::profile_push("pack-default");
           util::MPIRootPrintStreamWarning()
               << "Packing does not use the optimized implementation";
           pack(
@@ -535,25 +535,25 @@ class TensorMPIShuffler<DataType, BaseAllocator> {
               m_helper.get_src_strides(is_forward),
               m_helper.get_dst_locale_shape(is_forward),
               rank_limits_fwd, send_buf.get(), send_displs);
-          util::nvtx_pop();
+          util::profile_pop();
         }
       }
     }
 
-    util::nvtx_pop(); // pack
+    util::profile_pop(); // pack
 
-    util::nvtx_push("transfer");
+    util::profile_push("transfer");
     if (!getenv("SKIP_TRANSFER")) {
       transfer(send_buf, recv_buf, is_forward);
     }
-    util::nvtx_pop();
+    util::profile_pop();
 
-    util::nvtx_push("unpack");
+    util::profile_push("unpack");
     // unpack
     if (!getenv("SKIP_UNPACK")) {
       if (m_helper.is_dst_split_root(is_forward)) {
         if (get_sample_to_spatial(is_forward)) {
-          util::nvtx_push("unpack-opt");
+          util::profile_push("unpack-opt");
           util::MPIPrintStreamDebug() << "Sample-to-spatial unpacking";
           if (nd == 4) {
             unpack_sample_to_spatial_halo4(
@@ -566,19 +566,19 @@ class TensorMPIShuffler<DataType, BaseAllocator> {
                 m_helper.get_dst_strides(is_forward),
                 recv_buf.get(), m_helper.get_dst_overlap(is_forward));
           }
-          util::nvtx_pop();
+          util::profile_pop();
         } else {
-          util::nvtx_push("unpack-default");
+          util::profile_push("unpack-default");
           unpack(
               dst, m_helper.get_dst_local_shape(is_forward),
               m_helper.get_dst_strides(is_forward),
               m_helper.get_src_locale_shape(is_forward),
               rank_limits_bwd, recv_buf.get(), recv_displs);
-          util::nvtx_pop();
+          util::profile_pop();
         }
       }
     }
-    util::nvtx_pop();
+    util::profile_pop();
   }
 
   virtual void transfer(const std::shared_ptr<DataType> &send_buf,

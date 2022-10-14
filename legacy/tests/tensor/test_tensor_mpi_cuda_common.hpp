@@ -3,7 +3,7 @@
 #include "distconv/tensor/tensor_mpi_cuda.hpp"
 #include "distconv/util/util.hpp"
 #include "distconv/util/util_mpi.hpp"
-#include "distconv/util/util_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
 #include <iostream>
 
 using namespace distconv;

@@ -1,9 +1,9 @@
 #pragma once
 
-#include "distconv/tensor/stream.hpp"
-#include "distconv/tensor/stream_cuda.hpp"
 #include "distconv/tensor/memory.hpp"
 #include "distconv/tensor/runtime_cuda.hpp"
+#include "distconv/tensor/stream.hpp"
+#include "distconv/tensor/stream_cuda.hpp"
 #include "distconv/util/util.hpp"
 #include "distconv/util/util_cuda.hpp"
 #ifdef DISTCONV_HAS_NVSHMEM
@@ -153,7 +153,7 @@ Copy(Memory<AllocDst> &dst,
   size_t dst_offset = x_dst_offset + dst.get_pitch() * y_dst_offset;
   void *dst_ptr = (char*)dst.get() + dst_offset;
   const void *src_ptr = (char*)src.get() + src_offset;
-  cudaStream_t s = get_cuda_stream(stream);
+  cudaStream_t s = get_gpu_stream(stream);
   if (dst.get_pitch() == x_len && src.get_pitch() == x_len) {
     // Just use cudaMemcpy when possible
     TENSOR_CHECK_CUDA(cudaMemcpyAsync(dst_ptr, src_ptr, x_len * y_len,
@@ -218,5 +218,3 @@ struct Stream<NVSHMEMAllocator> {
 
 } // namespace tensor
 } // namespace distconv
-
-#undef TENSOR_CHECK_CUDA

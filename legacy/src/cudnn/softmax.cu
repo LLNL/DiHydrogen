@@ -1,18 +1,25 @@
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/cudnn/softmax.hpp"
 #include "distconv/util/util_mpi.hpp"
-#include "distconv/util/util_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
 
 #include <limits>
 
+#if H2_HAS_CUDA
 #include <cub/block/block_reduce.cuh>
+namespace cubns = cub;
+#elif H2_HAS_ROCM
+#include <hipcub/block/block_reduce.hpp>
+namespace cubns = hipcub;
+#endif
 
 using distconv::tensor::LocaleMPI;
 using distconv::tensor::CUDAAllocator;
 
 template <typename DataType>
 using TensorCUDA = distconv::tensor::Tensor<DataType, LocaleMPI, CUDAAllocator>;
-using SoftmaxCUDNN = distconv::Softmax<distconv::cudnn::BackendCUDNN>;
+using SoftmaxCUDNN = distconv::Softmax<distconv::BackendDNNLib>;
 
 namespace distconv {
 namespace softmax {
@@ -158,7 +165,7 @@ __global__ void reduce_per_sample_kernel(const DataType * __restrict__ x,
     local_sum = reduce(local_sum, map(x_i));
   }
 
-  using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
+  using BlockReduce = cubns::BlockReduce<DataType, BLOCK_SIZE>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   auto block_sum = BlockReduce(temp_storage).Sum(local_sum);
   if (threadIdx.x == 0) {
@@ -191,7 +198,7 @@ __global__ void reduce_per_sample_kernel(const DataType * __restrict__ x,
     local_sum = reduce(local_sum, map(x_i, y_i));
   }
 
-  using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
+  using BlockReduce = cubns::BlockReduce<DataType, BLOCK_SIZE>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   auto block_sum = BlockReduce(temp_storage).Sum(local_sum);
   if (threadIdx.x == 0) {
@@ -256,7 +263,7 @@ __global__ void map_and_reduce_per_sample_kernel(
     y[sample_offset] = x_i;
   }
 
-  using BlockReduce = cub::BlockReduce<DataType, BLOCK_SIZE>;
+  using BlockReduce = cubns::BlockReduce<DataType, BLOCK_SIZE>;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   auto block_sum = BlockReduce(temp_storage).Sum(local_sum);
   if (threadIdx.x == 0) {
@@ -288,7 +295,7 @@ __global__ void update_per_sample_kernel(
 
 template <typename Tensor, typename DataType>
 void compute_max(const Tensor &tensor, DataType *sample_max,
-                 cudaStream_t stream) {
+                 h2::gpu::DeviceStream stream) {
   dim3 gdim;
   int num_samples;
   size_t sample_size;
@@ -319,7 +326,7 @@ struct exp_shifted {
 template <typename Tensor, typename DataType>
 void compute_exp(const Tensor &x, const DataType *sample_max,
                  Tensor &y, DataType *sample_exp,
-                 cudaStream_t stream) {
+                 h2::gpu::DeviceStream stream) {
   dim3 gdim;
   int num_samples;
   size_t sample_size;
@@ -350,7 +357,7 @@ struct SoftmaxOp {
 
 template <typename Tensor, typename DataType>
 void compute_softmax(const DataType *sample_exp, Tensor &output_tensor,
-                     cudaStream_t stream) {
+                     h2::gpu::DeviceStream stream) {
   dim3 gdim;
   int num_samples;
   size_t sample_size;
@@ -371,7 +378,7 @@ void compute_softmax(const DataType *sample_exp, Tensor &output_tensor,
 
 template <typename Tensor, typename DataType>
 void bp_dotproduct(const Tensor &y, const Tensor &dy, DataType *sample_dp,
-                   cudaStream_t stream) {
+                   h2::gpu::DeviceStream stream) {
   dim3 gdim;
   int num_samples;
   size_t sample_size;
@@ -408,7 +415,7 @@ struct bp_compute_func {
 template <typename Tensor, typename DataType>
 void bp_compute_gradient(const Tensor &y, const Tensor &dy,
                          DataType *sample_dp, Tensor &dx,
-                         cudaStream_t stream) {
+                         h2::gpu::DeviceStream stream) {
   dim3 gdim;
   int num_samples;
   size_t sample_size;
@@ -479,7 +486,7 @@ __global__ void fp_channel_kernel(const DataType * __restrict__ x,
 }
 
 template <typename Tensor>
-int fp_channel(const Tensor &x, Tensor &y, cudaStream_t stream) {
+int fp_channel(const Tensor &x, Tensor &y, h2::gpu::DeviceStream stream) {
   using DataType = typename Tensor::data_type;
 
   if (x.get_local_size() == 0) {
@@ -498,7 +505,7 @@ int fp_channel(const Tensor &x, Tensor &y, cudaStream_t stream) {
       <<<gdim, block_size, shmem_size, stream>>>(
           x.get_base_ptr(), spatial_size, num_channels,
           y.get_base_ptr());
-  DISTCONV_CHECK_CUDA(cudaGetLastError());
+  DISTCONV_CHECK_GPU(GPU_GET_LAST_ERROR());
 
   return 0;
 }
@@ -550,7 +557,7 @@ __global__ void bp_channel_kernel(const DataType * __restrict__ y,
 }
 
 template <typename Tensor>
-int bp_channel(const Tensor &y, const Tensor &dy, Tensor &dx, cudaStream_t stream) {
+int bp_channel(const Tensor &y, const Tensor &dy, Tensor &dx, h2::gpu::DeviceStream stream) {
   using DataType = typename Tensor::data_type;
 
   if (dx.get_local_size() == 0) {
@@ -569,7 +576,7 @@ int bp_channel(const Tensor &y, const Tensor &dy, Tensor &dx, cudaStream_t strea
       <<<gdim, block_size, shmem_size, stream>>>(
           y.get_base_ptr(), dy.get_base_ptr(), spatial_size, num_channels,
           dx.get_base_ptr());
-  DISTCONV_CHECK_CUDA(cudaGetLastError());
+  DISTCONV_CHECK_GPU(GPU_GET_LAST_ERROR());
 
   return 0;
 }
@@ -594,17 +601,15 @@ int SoftmaxCUDNN::forward(const Tensor &x, Tensor &y) {
     return softmax::fp_channel(x, y, stream);
   }
 
-  auto &mempool = internal::RuntimeCUDA::get_device_memory_pool();
+  auto &mempool = internal::RuntimeGPU::get_device_memory_pool();
   auto ws_size = num_samples * sizeof(DataType);
   DataType *sample_max = static_cast<DataType*>(
       mempool.get(ws_size, stream));
   DataType *sample_exp = static_cast<DataType*>(
       mempool.get(ws_size, stream));
 
-  DISTCONV_CHECK_CUDA(cudaMemsetAsync(
-      sample_max, 0, ws_size, stream));
-  DISTCONV_CHECK_CUDA(cudaMemsetAsync(
-      sample_exp, 0, ws_size, stream));
+  h2::gpu::mem_zero(sample_max, num_samples, stream);
+  h2::gpu::mem_zero(sample_exp, num_samples, stream);
 
   // compute sample-wise max
   softmax::compute_max(x, sample_max, stream);
@@ -641,14 +646,13 @@ int SoftmaxCUDNN::backward(const Tensor &y, const Tensor &dy,
     return softmax::bp_channel(y, dy, dx, stream);
   }
 
-  auto &mempool = internal::RuntimeCUDA::get_device_memory_pool();
+  auto &mempool = internal::RuntimeGPU::get_device_memory_pool();
   auto ws_size = num_samples * sizeof(DataType);
 
   DataType *sample_dp = static_cast<DataType*>(
       mempool.get(ws_size, stream));
 
-  DISTCONV_CHECK_CUDA(cudaMemsetAsync(
-      sample_dp, 0, ws_size, stream));
+  h2::gpu::mem_zero(sample_dp, num_samples, stream);
 
   softmax::bp_dotproduct(y, dy, sample_dp, stream);
   allreduce(sample_dp, num_samples, false);

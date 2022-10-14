@@ -2,15 +2,19 @@
 
 #include <hip/hip_runtime.h>
 
-namespace distconv {
-namespace tensor {
+namespace distconv
+{
+namespace tensor
+{
 
-inline hipStream_t get_hip_stream(const DefaultStream &s) {
-  return 0;
+inline hipStream_t get_gpu_stream(DefaultStream const& s)
+{
+    return 0;
 }
 
-inline hipStream_t get_hip_stream(const hipStream_t &s) {
-  return s;
+inline hipStream_t get_gpu_stream(hipStream_t const& s)
+{
+    return s;
 }
 
 } // namespace tensor
