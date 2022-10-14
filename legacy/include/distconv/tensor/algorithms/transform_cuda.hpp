@@ -2,6 +2,7 @@
 
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/algorithms/common_cuda.hpp"
+#include "distconv/tensor/memory_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
 
 #include <type_traits>
