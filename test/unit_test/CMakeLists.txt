@@ -58,10 +58,6 @@ add_executable(SeqCatchTests SequentialCatchMain.cpp)
 add_subdirectory(patterns/factory)
 add_subdirectory(patterns/multimethods)
 
-if (H2_HAS_GPU)
-  add_subdirectory(memory/gpu)
-endif ()
-
 target_link_libraries(SeqCatchTests
   PRIVATE ${H2_LIBRARIES} Catch2::Catch2)
 set_target_properties(SeqCatchTests
