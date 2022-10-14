@@ -25,10 +25,8 @@ inline constexpr bool EqV()
     return EqVT<T, U>::value;
 }
 
-#ifndef H2_NO_CXX17
 template <typename T, typename U>
 inline constexpr bool Eq = EqV<T, U>();
-#endif // H2_NO_CXX17
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 

@@ -52,11 +52,10 @@ namespace factory
  *  @tparam CopyPolicy    A policy that describes how each prototype is copied.
  *  @tparam ErrorPolicy   The policy for handling errors.
  */
-template <
-    typename AbstractType,
-    typename IdType,
-    typename CopyPolicy,
-    template <typename, typename> class ErrorPolicy = DefaultErrorPolicy>
+template <typename AbstractType,
+          typename IdType,
+          typename CopyPolicy,
+          template <typename, typename> class ErrorPolicy = DefaultErrorPolicy>
 class PrototypeFactory : private CopyPolicy,
                          private ErrorPolicy<IdType, AbstractType>
 {
@@ -69,24 +68,24 @@ public:
 
 public:
     /** @brief Register a new prototype for things of type @c id. */
-    bool register_prototype(
-        id_type const& id, std::unique_ptr<abstract_type>&& prototype)
+    bool register_prototype(id_type const& id,
+                            std::unique_ptr<abstract_type>&& prototype)
     {
         return map_
-            .emplace(
-                std::piecewise_construct, std::forward_as_tuple(id),
-                std::forward_as_tuple(std::move(prototype)))
+            .emplace(std::piecewise_construct,
+                     std::forward_as_tuple(id),
+                     std::forward_as_tuple(std::move(prototype)))
             .second;
     }
 
     /** @brief Register a new prototype for things of type @c id. */
-    bool
-    register_prototype(id_type&& id, std::unique_ptr<abstract_type>&& prototype)
+    bool register_prototype(id_type&& id,
+                            std::unique_ptr<abstract_type>&& prototype)
     {
         return map_
-            .emplace(
-                std::piecewise_construct, std::forward_as_tuple(std::move(id)),
-                std::forward_as_tuple(std::move(prototype)))
+            .emplace(std::piecewise_construct,
+                     std::forward_as_tuple(std::move(id)),
+                     std::forward_as_tuple(std::move(prototype)))
             .second;
     }
 
@@ -99,8 +98,8 @@ public:
      *  the copy policy.
      */
     template <typename... Ts>
-    std::unique_ptr<AbstractType>
-    copy_prototype(IdType const& id, Ts&&... Args) const
+    std::unique_ptr<AbstractType> copy_prototype(IdType const& id,
+                                                 Ts&&... Args) const
     {
         auto it = map_.find(id);
         if (it != map_.end())

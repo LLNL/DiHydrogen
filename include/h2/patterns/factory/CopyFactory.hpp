@@ -43,11 +43,10 @@ namespace factory
  *  @tparam BuilderType   The functor type that builds concrete types.
  *  @tparam ErrorPolicy   The policy for handling errors.
  */
-template <
-    typename AbstractType,
-    typename BuilderType =
-        std::function<std::unique_ptr<AbstractType>(AbstractType const&)>,
-    template <typename, typename> class ErrorPolicy = DefaultErrorPolicy>
+template <typename AbstractType,
+          typename BuilderType =
+              std::function<std::unique_ptr<AbstractType>(AbstractType const&)>,
+          template <typename, typename> class ErrorPolicy = DefaultErrorPolicy>
 class CopyFactory : private ErrorPolicy<std::type_info const&, AbstractType>
 {
 public:
@@ -63,10 +62,9 @@ public:
     bool register_builder(id_type const& id, builder_type builder)
     {
         return map_
-            .emplace(
-                std::piecewise_construct,
-                std::forward_as_tuple(std::type_index(id)),
-                std::forward_as_tuple(std::move(builder)))
+            .emplace(std::piecewise_construct,
+                     std::forward_as_tuple(std::type_index(id)),
+                     std::forward_as_tuple(std::move(builder)))
             .second;
     }
 
