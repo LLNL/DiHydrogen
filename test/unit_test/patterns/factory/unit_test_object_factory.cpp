@@ -61,7 +61,8 @@ struct Key<std::string>
         case GenericKey::WIDGET: return "Widget";
         case GenericKey::GIZMO: return "Gizmo";
         case GenericKey::INVALID: return "Invalid";
-        }
+        default: return "<UNKNOWN>";
+	}
     }
 };
 
