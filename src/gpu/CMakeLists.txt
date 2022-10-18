@@ -13,7 +13,10 @@ elseif (H2_HAS_ROCM)
 endif ()
 
 target_sources(H2Core PRIVATE
-  logger.cpp
-  memory_utils.cpp
-  ${_GPU_DIR}/runtime.cpp
+  logger.cpp)
+if (H2_HAS_GPU)
+  target_sources(H2Core PRIVATE
+    memory_utils.cpp
+    ${_GPU_DIR}/runtime.cpp
   )
+endif ()
