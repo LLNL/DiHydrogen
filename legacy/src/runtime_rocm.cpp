@@ -1,5 +1,8 @@
 #include "distconv/runtime_rocm.hpp"
 
+#include "h2/gpu/memory_utils.hpp"
+#include "h2/gpu/runtime.hpp"
+
 #include "distconv/util/util.hpp"
 #include "distconv/util/util_rocm.hpp"
 
@@ -37,9 +40,7 @@ void* HIPDeviceMemoryPool::get(size_t size, hipStream_t st)
     hipError_t const err = m_allocator.DeviceAllocate(&p, size, st);
     if (err != hipSuccess)
     {
-        size_t available;
-        size_t total;
-        DISTCONV_CHECK_HIP(hipMemGetInfo(&available, &total));
+        auto [available, total] = h2::gpu::mem_info();
         available /= (1024 * 1024);
         total /= (1024 * 1024);
         util::PrintStreamError()
@@ -81,8 +82,7 @@ RuntimeHIP_impl::RuntimeHIP_impl()
 {
     for (int i = 0; i < m_events.size(); ++i)
     {
-        DISTCONV_CHECK_HIP(
-            hipEventCreateWithFlags(&m_events[i], hipEventDisableTiming));
+        m_events[i] = h2::gpu::make_event_notiming();
     }
 }
 

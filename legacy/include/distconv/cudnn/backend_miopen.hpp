@@ -1,5 +1,8 @@
 #pragma once
 
+#include "h2/gpu/memory_utils.hpp"
+#include "h2/gpu/runtime.hpp"
+
 #include "distconv/base.hpp"
 #include "distconv/layers.hpp"
 #include "distconv/tensor/memory.hpp"
@@ -46,13 +49,11 @@ using Stream_t = hipStream_t;
 using Event_t = hipEvent_t;
 inline Event_t make_event()
 {
-    hipEvent_t event;
-    DISTCONV_CHECK_HIP(hipEventCreate(&event));
-    return event;
+    return h2::gpu::make_event();
 }
 inline void destroy_event(hipEvent_t const& event)
 {
-    DISTCONV_CHECK_HIP(hipEventDestroy(event));
+    h2::gpu::destroy(event);
 }
 inline void record_event(hipEvent_t const& event, hipStream_t const& stream)
 {
@@ -66,10 +67,7 @@ inline float elapsed_time(hipEvent_t const& start, hipEvent_t const& end)
 }
 inline size_t get_available_memory()
 {
-    size_t available;
-    size_t total;
-    DISTCONV_CHECK_HIP(hipMemGetInfo(&available, &total));
-    return available;
+    return h2::gpu::mem_info().free;
 }
 
 inline Handle_t make_handle()
@@ -809,13 +807,13 @@ public:
                   miopenHandle_t miopen_h,
                   Options const& opts = Options())
         : m_miopen_h(miopen_h),
+          m_stream(h2::gpu::make_stream()),
           m_enable_nvtx(false),
 #ifdef DISTCONV_HAS_P2P
           m_p2p(comm),
 #endif // DISTCONV_HAS_P2P
           m_opts(opts)
     {
-        DISTCONV_CHECK_HIP(hipStreamCreate(&m_stream));
         init(comm);
     }
 
@@ -845,7 +843,7 @@ public:
 
     Options const& get_options() { return m_opts; }
 
-    void wait() { DISTCONV_CHECK_HIP(hipStreamSynchronize(m_stream)); }
+    void wait() { h2::gpu::sync(m_stream); }
 
     MPI_Comm get_comm() { return m_comm; }
 
@@ -1079,10 +1077,7 @@ protected:
     {
         for (int i = 0; i < m_num_internal_streams; ++i)
         {
-            hipStream_t s;
-            DISTCONV_CHECK_HIP(
-                hipStreamCreateWithFlags(&s, hipStreamNonBlocking));
-            m_internal_streams.push_back(s);
+            m_internal_streams.push_back(h2::gpu::make_stream_nonblocking());
         }
         for (int i = 0; i < m_num_internal_streams_pr; ++i)
         {

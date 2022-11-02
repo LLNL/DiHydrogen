@@ -208,7 +208,7 @@ class HaloExchange<DataType, CUDAAllocator, AlBackend> {
       if (get_peer(dim, side) == MPI_PROC_NULL) continue;
       std::ofstream out_send;
       h2::gpu::mem_copy(
-          h, get_send_buffer(dim, side), get_halo_size(dim) * sizeof(DataType));
+          (void*)h, get_send_buffer(dim, side), get_halo_size(dim) * sizeof(DataType));
       std::ostringstream file_path_send;
       file_path_send << "send_halo_" << rank << "_"
                 << dim << "_" << side << ".txt";
@@ -218,7 +218,7 @@ class HaloExchange<DataType, CUDAAllocator, AlBackend> {
       }
       out_send.close();
       h2::gpu::mem_copy(
-          h, get_recv_buffer(dim, side), get_halo_size(dim) * sizeof(DataType));
+          (void*)h, get_recv_buffer(dim, side), get_halo_size(dim) * sizeof(DataType));
       std::ofstream out_recv;
       std::ostringstream file_path_recv;
       file_path_recv << "recv_halo_" << rank << "_"
@@ -236,7 +236,7 @@ class HaloExchange<DataType, CUDAAllocator, AlBackend> {
     int rank = m_tensor.get_locale().get_rank();
     DataType *h = new DataType[get_halo_size(dim)];
     for (auto side: SIDES) {
-        h2::gpu::mem_copy(h,
+        h2::gpu::mem_copy((void*)h,
                           get_recv_buffer(dim, side),
                           get_halo_size(dim) * sizeof(DataType));
         std::ofstream out;

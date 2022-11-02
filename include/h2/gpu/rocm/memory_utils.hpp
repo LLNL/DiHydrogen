@@ -26,6 +26,13 @@ namespace gpu
 
 using RawCUBAllocType = hipcub::CachingDeviceAllocator;
 
+inline MemInfo mem_info()
+{
+    MemInfo info;
+    H2_CHECK_HIP(hipMemGetInfo(&info.free, &info.total));
+    return info;
+}
+
 inline void mem_copy(void* const dst, void const* const src, size_t const bytes)
 {
     H2_GPU_INFO("hipMemcpy(dst={}, src={}, bytes={}, kind=hipMemcpyDefault)",

@@ -64,9 +64,9 @@ static inline miopenPoolingMode_t get_pooling_mode(std::string const& name,
     if (name == "MAX")
         return miopenPoolingMax;
     else if (name == "AVERAGE")
-        return miopenPoolingAverage;
-    else if (name == "AVERAGE_NO_PAD")
         return miopenPoolingAverageInclusive;
+    else if (name == "AVERAGE_NO_PAD")
+        return miopenPoolingAverage;
     else
     {
         util::PrintStreamError()

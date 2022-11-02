@@ -1,5 +1,8 @@
 #include "distconv/util/util_rocm.hpp"
 
+#include "h2/gpu/memory_utils.hpp"
+#include "h2/gpu/runtime.hpp"
+
 #include <iostream>
 #include <string>
 
@@ -16,18 +19,13 @@ void check_for_device_runtime_error()
 
 int get_number_of_gpus()
 {
-    int num_gpus = 0;
-    char* const env = getenv("TENSOR_NUM_GPUS");
-    if (env)
+    if (char* const env = getenv("TENSOR_NUM_GPUS"))
     {
         std::cerr << "Number of GPUs set by TENSOR_NUM_GPUS" << std::endl;
-        num_gpus = atoi(env);
+        return atoi(env);
     }
     else
-    {
-        DISTCONV_CHECK_HIP(hipGetDeviceCount(&num_gpus));
-    }
-    return num_gpus;
+        return h2::gpu::num_gpus();
 }
 
 int get_local_rank()
@@ -37,6 +35,8 @@ int get_local_rank()
         env = getenv("OMPI_COMM_WORLD_LOCAL_RANK");
     if (!env)
         env = getenv("SLURM_LOCALID");
+    if (!env)
+        env = getenv("FLUX_TASK_LOCAL_ID");
     if (!env)
     {
         std::cerr << "Can't determine local rank" << std::endl;
@@ -121,9 +121,7 @@ hipError_t hip_malloc(void** ptr,
     auto const st = hipMalloc(ptr, size);
     if (st != hipSuccess)
     {
-        size_t available;
-        size_t total;
-        DISTCONV_CHECK_HIP(hipMemGetInfo(&available, &total));
+        auto const& [available, total] = h2::gpu::mem_info();
         util::MPIPrintStreamError()
             << "Allocation of " << size << " bytes ("
             << size / 1024.0 / 1024.0 / 1024.0 << " GiB) failed. " << available

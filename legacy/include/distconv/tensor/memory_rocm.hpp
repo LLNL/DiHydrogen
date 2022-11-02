@@ -37,8 +37,7 @@ struct CUDAAllocator
     static void
     copy(void* dst, const void* src, size_t size, hipStream_t stream = 0)
     {
-        TENSOR_CHECK_HIP(
-            hipMemcpyAsync(dst, src, size, hipMemcpyDeviceToDevice, stream));
+        h2::gpu::mem_copy(dst, src, size, stream);
     }
     static void memset(void* p,
                        size_t pitch,
@@ -56,8 +55,7 @@ struct CUDAAllocator
                        size_t,
                        hipStream_t stream = 0)
     {
-        TENSOR_CHECK_HIP(
-            hipMemcpyAsync(dst, src, size, hipMemcpyHostToDevice, stream));
+        h2::gpu::mem_copy(dst, src, size, stream);
     }
     static void copyout(void* dst,
                         const void* src,
@@ -66,9 +64,8 @@ struct CUDAAllocator
                         size_t,
                         hipStream_t stream = 0)
     {
-        TENSOR_CHECK_HIP(
-            hipMemcpyAsync(dst, src, size, hipMemcpyDeviceToHost, stream));
-        TENSOR_CHECK_HIP(hipStreamSynchronize(stream));
+        h2::gpu::mem_copy(dst, src, size, stream);
+        h2::gpu::sync(stream);
     }
 };
 
@@ -88,11 +85,11 @@ struct CUDAPitchedAllocator
     {
         TENSOR_CHECK_HIP(
             hipMemset2DAsync(p, pitch, v, ldim, size / ldim, stream));
-        TENSOR_CHECK_HIP(hipStreamSynchronize(stream));
+        h2::gpu::sync(stream);
     }
     static void copy(void* dst, const void* src, size_t size)
     {
-        TENSOR_CHECK_HIP(hipMemcpy(dst, src, size, hipMemcpyDeviceToDevice));
+        h2::gpu::mem_copy(dst, src, size);
     }
     static void
     copyin(void* dst, const void* src, size_t size, size_t pitch, size_t ldim)
@@ -171,8 +168,7 @@ Copy(Memory<AllocDst>& dst,
     if (dst.get_pitch() == x_len && src.get_pitch() == x_len)
     {
         // Just use hipMemcpy when possible
-        TENSOR_CHECK_HIP(hipMemcpyAsync(
-            dst_ptr, src_ptr, x_len * y_len, hipMemcpyDefault, s));
+        h2::gpu::mem_copy(dst_ptr, src_ptr, x_len * y_len, s);
     }
     else
     {

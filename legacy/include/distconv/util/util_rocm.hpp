@@ -1,5 +1,7 @@
 #pragma once
 
+#include "h2/gpu/runtime.hpp"
+
 #include "distconv/runtime.hpp"
 #include "distconv/runtime_rocm.hpp"
 #include "distconv/util/util_mpi.hpp"
@@ -104,10 +106,8 @@ struct Clock
     hipStream_t m_s;
     hipEvent_t m_ev1;
     hipEvent_t m_ev2;
-    Clock(hipStream_t s) : m_s(s)
+    Clock(hipStream_t s) : m_s{s}, m_ev1{h2::gpu::make_event()}, m_ev2{h2::gpu::make_event()}
     {
-        DISTCONV_CHECK_HIP(hipEventCreate(&m_ev1));
-        DISTCONV_CHECK_HIP(hipEventCreate(&m_ev2));
     }
     Clock(const Clock& c) : Clock(c.m_s) {}
     Clock& operator=(const Clock& c)
@@ -117,14 +117,14 @@ struct Clock
     }
     ~Clock()
     {
-        DISTCONV_CHECK_HIP(hipEventDestroy(m_ev1));
-        DISTCONV_CHECK_HIP(hipEventDestroy(m_ev2));
+        h2::gpu::destroy(m_ev2);
+        h2::gpu::destroy(m_ev1);
     }
     void start() { DISTCONV_CHECK_HIP(hipEventRecord(m_ev1, m_s)); }
     void stop() { DISTCONV_CHECK_HIP(hipEventRecord(m_ev2, m_s)); }
     float get_time()
     {
-        DISTCONV_CHECK_HIP(hipEventSynchronize(m_ev2));
+        h2::gpu::sync(m_ev2);
         float elapsed = 0;
         DISTCONV_CHECK_HIP(hipEventElapsedTime(&elapsed, m_ev1, m_ev2));
         return elapsed;
