@@ -70,7 +70,7 @@ static inline miopenPoolingMode_t get_pooling_mode(std::string const& name,
     else
     {
         util::PrintStreamError()
-            << "No matching pooling mode found for CUDNN: " << name << "\n";
+            << "No matching pooling mode found for MIOpen: " << name << "\n";
         std::abort();
     }
     return miopenPoolingMax;
