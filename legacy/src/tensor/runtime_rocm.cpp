@@ -1,3 +1,9 @@
+////////////////////////////////////////////////////////////////////////////////
+// Copyright 2019-2022 Lawrence Livermore National Security, LLC and other
+// DiHydrogen Project Developers. See the top-level LICENSE file for details.
+//
+// SPDX-License-Identifier: Apache-2.0
+////////////////////////////////////////////////////////////////////////////////
 #include "distconv/tensor/runtime_rocm.hpp"
 
 #include "distconv/util/util.hpp"
