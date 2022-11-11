@@ -1,6 +1,6 @@
 #pragma once
 
-#include "distconv/cudnn/backend.hpp"
+#include "distconv/dnn_backend/backend.hpp"
 #include "distconv/runtime_gpu.hpp"
 
 #include <Al.hpp>
@@ -11,16 +11,19 @@ namespace distconv
 {
 
 template <>
-class MeanSquaredError<BackendDNNLib>
+class CrossEntropy<BackendDNNLib>
 {
 public:
-    MeanSquaredError(BackendDNNLib& backend) : m_be(backend) {}
+    CrossEntropy(BackendDNNLib& backend, const bool use_labels = false)
+        : m_be(backend), m_use_labels(use_labels)
+    {}
 
-    ~MeanSquaredError() = default;
+    ~CrossEntropy() = default;
 
-    MeanSquaredError& operator=(const MeanSquaredError& x)
+    CrossEntropy& operator=(const CrossEntropy& x)
     {
         assert_always(&m_be == &x.m_be);
+        assert_always(m_use_labels == x.m_use_labels);
         return *this;
     }
 
@@ -29,9 +32,29 @@ public:
     {
         // Both tensors must have the same process grid
         assert_eq(x_pred.get_locale_shape(), x_truth.get_locale_shape());
-        // Must have the same global and locale shapes
-        assert_eq(x_pred.get_shape(), x_truth.get_shape());
-        assert_eq(x_pred.get_local_shape(), x_truth.get_local_shape());
+        if (m_use_labels)
+        {
+            // Must have the same number of samples
+            assert_eq(x_pred.get_shape()[-1], x_truth.get_shape()[-1]);
+            assert_eq(x_pred.get_local_shape()[-1],
+                      x_truth.get_local_shape()[-1]);
+            // Must have the same global and locale spatial shapes
+            for (int i = 0; i < x_pred.get_num_spatial_dims(); i++)
+            {
+                assert_eq(x_pred.get_shape()[i], x_truth.get_shape()[i]);
+                assert_eq(x_pred.get_local_shape()[i],
+                          x_truth.get_local_shape()[i]);
+            }
+            // Must have only one channel
+            assert_eq(x_truth.get_shape()[-2], 1);
+            assert_eq(x_truth.get_local_shape()[-2], 1);
+        }
+        else
+        {
+            // Must have the same global and locale shapes
+            assert_eq(x_pred.get_shape(), x_truth.get_shape());
+            assert_eq(x_pred.get_local_shape(), x_truth.get_local_shape());
+        }
         // No halo for simplicity
         assert_eq(x_pred.get_local_shape(), x_pred.get_local_real_shape());
         assert_eq(x_truth.get_local_shape(), x_truth.get_local_real_shape());
@@ -66,6 +89,7 @@ public:
 
 protected:
     BackendDNNLib& m_be;
+    const bool m_use_labels;
     int m_num_procs_per_sample;
     std::unique_ptr<Al::NCCLBackend::comm_type> m_al;
 };

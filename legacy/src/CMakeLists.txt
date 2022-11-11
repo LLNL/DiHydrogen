@@ -9,7 +9,7 @@ elseif (H2_HAS_ROCM)
 endif ()
 
 add_subdirectory(tensor)
-add_subdirectory(cudnn)
+add_subdirectory(dnn_backend)
 add_subdirectory(util)
 if (DISTCONV_HAS_P2P)
   add_subdirectory(p2p)

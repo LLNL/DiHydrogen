@@ -4,7 +4,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
-#include "distconv/cudnn/backend_miopen.hpp"
+#include "distconv/dnn_backend/backend_miopen.hpp"
 
 #include "distconv/util/util_miopen.hpp"
 #include "distconv/util/util_mpi.hpp"

@@ -1,4 +1,4 @@
-#include "distconv/cudnn/backend.hpp"
+#include "distconv/dnn_backend/backend.hpp"
 #include "distconv/distconv.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
@@ -7,23 +7,18 @@
 #include "distconv/util/util_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
 
+#include "distconv/util/util_gpu_dnn.hpp"
+
+#include "test_common.hpp"
+
+#include <Al.hpp>
+
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <numeric>
 #include <vector>
-#ifdef DISTCONV_HAS_CUDNN
-#include "distconv/util/util_cudnn.hpp"
-namespace dnn_lib = ::distconv::cudnn;
-#endif
-#if H2_HAS_ROCM
-#include "distconv/util/util_miopen.hpp"
-namespace dnn_lib = ::distconv::miopen;
-#endif
-#include "test_common.hpp"
-
-#include <Al.hpp>
 
 using namespace distconv;
 

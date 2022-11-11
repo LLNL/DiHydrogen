@@ -1,4 +1,4 @@
-#include "distconv/cudnn/pooling.hpp"
+#include "distconv/dnn_backend/pooling.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
 

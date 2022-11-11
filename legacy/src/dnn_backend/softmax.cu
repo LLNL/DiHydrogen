@@ -1,4 +1,4 @@
-#include "distconv/cudnn/softmax.hpp"
+#include "distconv/dnn_backend/softmax.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
 #include "distconv/util/util_gpu.hpp"

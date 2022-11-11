@@ -1,4 +1,4 @@
-#include "distconv/cudnn/backend.hpp"
+#include "distconv/dnn_backend/backend.hpp"
 #include "distconv/util/util_mpi.hpp"
 #include "distconv/util/util_cudnn.hpp"
 

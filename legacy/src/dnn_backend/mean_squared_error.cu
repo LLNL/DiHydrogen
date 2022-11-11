@@ -1,4 +1,4 @@
-#include "distconv/cudnn/mean_squared_error.hpp"
+#include "distconv/dnn_backend/mean_squared_error.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
 #include "distconv/util/util_gpu.hpp"

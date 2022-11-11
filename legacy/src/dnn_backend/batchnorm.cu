@@ -1,4 +1,4 @@
-#include "distconv/cudnn/batchnorm.hpp"
+#include "distconv/dnn_backend/batchnorm.hpp"
 #include "distconv/distconv.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"

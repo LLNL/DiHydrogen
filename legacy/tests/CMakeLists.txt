@@ -9,7 +9,7 @@ set_target_properties(compare_binary_files
   CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(tensor)
-add_subdirectory(cudnn)
+add_subdirectory(dnn_backend)
 if (DISTCONV_HAS_P2P)
   add_subdirectory(p2p)
 endif ()

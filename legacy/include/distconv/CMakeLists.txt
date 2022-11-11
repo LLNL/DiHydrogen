@@ -8,6 +8,6 @@ h2_set_full_path(THIS_DIR_HEADERS
 add_subdirectory(util)
 add_subdirectory(tensor)
 add_subdirectory(ref)
-add_subdirectory(cudnn)
+add_subdirectory(dnn_backend)
 
 set(HEADERS "${HEADERS}" "${THIS_DIR_HEADERS}" PARENT_SCOPE)

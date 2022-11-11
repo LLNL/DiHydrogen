@@ -1,4 +1,4 @@
-#include "distconv/cudnn/leaky_relu.hpp"
+#include "distconv/dnn_backend/leaky_relu.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
 #include "distconv/util/util_mpi.hpp"

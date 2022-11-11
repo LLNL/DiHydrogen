@@ -28,13 +28,13 @@ namespace backend = miopen;
 
 #endif
 
-#include "distconv/cudnn/batchnorm.hpp"
-#include "distconv/cudnn/convolution.hpp"
-#include "distconv/cudnn/cross_entropy.hpp"
-#include "distconv/cudnn/leaky_relu.hpp"
-#include "distconv/cudnn/mean_squared_error.hpp"
-#include "distconv/cudnn/pooling.hpp"
-#include "distconv/cudnn/relu.hpp"
-#include "distconv/cudnn/softmax.hpp"
+#include "distconv/dnn_backend/batchnorm.hpp"
+#include "distconv/dnn_backend/convolution.hpp"
+#include "distconv/dnn_backend/cross_entropy.hpp"
+#include "distconv/dnn_backend/leaky_relu.hpp"
+#include "distconv/dnn_backend/mean_squared_error.hpp"
+#include "distconv/dnn_backend/pooling.hpp"
+#include "distconv/dnn_backend/relu.hpp"
+#include "distconv/dnn_backend/softmax.hpp"
 
 #endif // H2_LEGACY_INCLUDE_DISTCONV_CUDNN_BACKEND_HPP_INCLUDED

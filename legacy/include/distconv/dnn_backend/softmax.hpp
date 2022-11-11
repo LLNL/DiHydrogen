@@ -1,6 +1,6 @@
 #pragma once
 
-#include "distconv/cudnn/backend.hpp"
+#include "distconv/dnn_backend/backend.hpp"
 #include "distconv/runtime_gpu.hpp"
 
 #include <Al.hpp>
