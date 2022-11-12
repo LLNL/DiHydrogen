@@ -57,7 +57,7 @@
 #endif // H2_GPU_LOG_ACTIVE_LEVEL <= H2_LOG_LEVEL_WARN
 
 #if H2_GPU_LOG_ACTIVE_LEVEL <= H2_LOG_LEVEL_ERROR
-#define H2_GPU_ERROR(...) H2_GPU_LOG(::spdlog::level::error, __VA_ARGS__)
+#define H2_GPU_ERROR(...) H2_GPU_LOG(::spdlog::level::err, __VA_ARGS__)
 #else
 #define H2_GPU_ERROR(...) (void) 0
 #endif // H2_GPU_LOG_ACTIVE_LEVEL <= H2_LOG_LEVEL_ERROR

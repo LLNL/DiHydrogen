@@ -10,7 +10,6 @@
 
 #include <cstdlib>
 #include <cstring>
-#include <iostream> // FIXME: Eventually, Logger.hpp
 
 #include <hip/hip_runtime.h>
 
@@ -118,25 +117,15 @@ static bool force_round_robin() noexcept
     return check_bool_cstr(std::getenv("H2_SELECT_DEVICE_RR"));
 }
 
-static void warn(char const* const msg)
-{
-    std::clog << msg << std::endl;
-}
-
-static void warn(std::string const& msg)
-{
-    std::clog << msg << std::endl;
-}
-
 static void error(char const* const msg)
 {
-    std::clog << msg << std::endl;
+    H2_GPU_ERROR(msg);
     std::terminate();
 }
 
 static void error(std::string const& msg)
 {
-    std::clog << msg << std::endl;
+    H2_GPU_ERROR(msg);
     std::terminate();
 }
 
@@ -157,13 +146,13 @@ static int get_reasonable_default_gpu_id() noexcept
     int const lsize = guess_local_size();
     if (lrank < 0)
     {
-        warn("Could not guess local rank; setting device 0.");
+        H2_GPU_WARN("Could not guess local rank; setting device 0.");
         return 0;
     }
 
     if (lsize < 0)
     {
-        warn("Could not guess local size; setting device 0.");
+        H2_GPU_WARN("Could not guess local size; setting device 0.");
         return 0;
     }
 
@@ -185,6 +174,13 @@ static int get_reasonable_default_gpu_id() noexcept
 static void set_reasonable_default_gpu()
 {
     h2::gpu::set_gpu(get_reasonable_default_gpu_id());
+}
+
+static void log_gpu_info(int const gpu_id)
+{
+    hipDeviceProp_t props;
+    H2_CHECK_HIP(hipGetDeviceProperties(&props, gpu_id));
+    H2_GPU_INFO("GPU ID {}: name=\"{}\", pci={:#x}", gpu_id, props.name, props.pciBusID);
 }
 
 } // namespace
@@ -211,14 +207,19 @@ void h2::gpu::set_gpu(int id)
 
 void h2::gpu::init_runtime()
 {
-    if (initialized_)
-        return;
-
-    H2_GPU_INFO("initializing gpu runtime");
-    H2_GPU_INFO("found {} devices", num_gpus());
-    H2_CHECK_HIP(hipInit(0));
-    set_reasonable_default_gpu();
-    initialized_ = true;
+    if (!initialized_)
+    {
+        H2_GPU_INFO("initializing gpu runtime");
+        H2_CHECK_HIP(hipInit(0));
+        H2_GPU_INFO("found {} devices", num_gpus());
+        set_reasonable_default_gpu();
+        initialized_ = true;
+    }
+    else
+    {
+        H2_GPU_INFO("H2 GPU already initialized; current gpu={}", current_gpu());
+    }
+    log_gpu_info(current_gpu());
 }
 
 void h2::gpu::finalize_runtime()
