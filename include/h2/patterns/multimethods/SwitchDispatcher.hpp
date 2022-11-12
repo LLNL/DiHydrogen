@@ -228,17 +228,15 @@ class SwitchDispatcher;
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
-template <
-    typename FunctorT,
-    typename ReturnT,
-    typename ThisBase,
-    typename ThisList,
-    typename... ArgumentTs>
+template <typename FunctorT,
+          typename ReturnT,
+          typename ThisBase,
+          typename ThisList,
+          typename... ArgumentTs>
 class SwitchDispatcher<FunctorT, ReturnT, ThisBase, ThisList, ArgumentTs...>
 {
-    static_assert(
-        sizeof...(ArgumentTs) % 2 == 0,
-        "Must pass ArgumentTs as (Base, TL<DTypes>).");
+    static_assert(sizeof...(ArgumentTs) % 2 == 0,
+                  "Must pass ArgumentTs as (Base, TL<DTypes>).");
 
 public:
     template <typename... Args>
@@ -251,9 +249,14 @@ public:
             return SwitchDispatcher<FunctorT, ReturnT, ArgumentTs...>::Exec(
                 F, std::forward<Args>(others)..., *arg_dc);
         else
-            return SwitchDispatcher<
-                FunctorT, ReturnT, ThisBase, Tail,
-                ArgumentTs...>::Exec(F, arg, std::forward<Args>(others)...);
+            return SwitchDispatcher<FunctorT,
+                                    ReturnT,
+                                    ThisBase,
+                                    Tail,
+                                    ArgumentTs...>::Exec(F,
+                                                         arg,
+                                                         std::forward<Args>(
+                                                             others)...);
     }
 };
 
@@ -273,9 +276,8 @@ public:
 
     // All types were deduced, but there is no suitable dispatch for
     // this case.
-    template <
-        typename... Args,
-        meta::EnableUnlessV<Invocable<Args...>, int> = 0>
+    template <typename... Args,
+              meta::EnableUnlessV<Invocable<Args...>, int> = 0>
     static ReturnT Exec(FunctorT F, Args&&... args)
     {
         return F.DispatchError(std::forward<Args>(args)...);
@@ -283,17 +285,15 @@ public:
 };
 
 // Deduction failure case
-template <
-    typename FunctorT,
-    typename ReturnT,
-    typename ThisBase,
-    typename... ArgumentTs>
-class SwitchDispatcher<
-    FunctorT,
-    ReturnT,
-    ThisBase,
-    meta::tlist::Empty,
-    ArgumentTs...>
+template <typename FunctorT,
+          typename ReturnT,
+          typename ThisBase,
+          typename... ArgumentTs>
+class SwitchDispatcher<FunctorT,
+                       ReturnT,
+                       ThisBase,
+                       meta::tlist::Empty,
+                       ArgumentTs...>
 {
 public:
     template <typename... Args>

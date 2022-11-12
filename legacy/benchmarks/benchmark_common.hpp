@@ -31,7 +31,7 @@ struct GetType<BenchmarkDataType::DOUBLE> {
   using type = double;
 };
 
-#ifdef H2_HAS_HALF
+#if H2_HAS_HALF
 template <>
 struct GetType<BenchmarkDataType::HALF> {
   using type = half;

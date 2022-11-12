@@ -108,10 +108,9 @@ private:
     static constexpr bool do_arg_replace_ = (Idx < num_args_);
 
 public:
-    using type = IfThenElse<
-        do_arg_replace_,
-        tlist::At<TL<Replacements...>, Idx>,
-        Placeholder<Idx - num_args_>>;
+    using type = IfThenElse<do_arg_replace_,
+                            tlist::At<TL<Replacements...>, Idx>,
+                            Placeholder<Idx - num_args_>>;
 };
 
 } // namespace placeholders

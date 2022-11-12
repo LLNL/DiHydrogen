@@ -1,14 +1,15 @@
 #include "distconv/distconv.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
-#include "distconv/tensor/tensor_mpi_cuda.hpp"
 #include "distconv/tensor/tensor_cuda.hpp"
+#include "distconv/tensor/tensor_mpi_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
+#include "distconv/util/util_mpi.hpp"
 #include "test_tensor.hpp"
 #include "test_tensor_mpi_cuda_common.hpp"
-#include "distconv/util/util_cuda.hpp"
-#include "distconv/util/util_mpi.hpp"
 
-#include <iostream>
 #include <cmath>
+#include <iostream>
 
 using namespace distconv;
 using namespace distconv::tensor;
@@ -42,7 +43,7 @@ int test_copy_shuffle(const Array<ND> &shape,
                             t_src.get_shape(),
                             t_src.get_global_index());
 
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
 
   assert_always(t_dest.allocate() == 0);
 
@@ -56,9 +57,8 @@ int test_copy_shuffle(const Array<ND> &shape,
 
   int error_counter = 0;
   int *error_counter_d;
-  cudaMalloc(&error_counter_d, sizeof(int));
-  cudaMemcpy(error_counter_d, &error_counter, sizeof(int),
-             cudaMemcpyDefault);
+  GPU_MALLOC(&error_counter_d, sizeof(int));
+  h2::gpu::mem_copy(error_counter_d, &error_counter);
 
   check_tensor<ND><<<1, 1>>>(t_dest.get_const_buffer(),
                              t_dest.get_local_shape(),
@@ -67,8 +67,7 @@ int test_copy_shuffle(const Array<ND> &shape,
                              t_dest.get_shape(),
                              t_dest.get_global_index(),
                              error_counter_d);
-  cudaMemcpy(&error_counter, error_counter_d, sizeof(int),
-             cudaMemcpyDefault);
+  h2::gpu::mem_copy(&error_counter, error_counter_d);
   assert_always(error_counter == 0);
   return 0;
 }
@@ -103,9 +102,8 @@ int test_copy_shuffle_from_host_to_device(
 
   int error_counter = 0;
   int *error_counter_d;
-  cudaMalloc(&error_counter_d, sizeof(int));
-  cudaMemcpy(error_counter_d, &error_counter, sizeof(int),
-             cudaMemcpyDefault);
+  GPU_MALLOC(&error_counter_d, sizeof(int));
+  h2::gpu::mem_copy(error_counter_d, &error_counter);
 
   check_tensor<ND><<<1, 1>>>(t_dest.get_const_buffer(),
                              t_dest.get_local_shape(),
@@ -114,8 +112,7 @@ int test_copy_shuffle_from_host_to_device(
                              t_dest.get_shape(),
                              t_dest.get_global_index(),
                              error_counter_d);
-  cudaMemcpy(&error_counter, error_counter_d, sizeof(int),
-             cudaMemcpyDefault);
+  h2::gpu::mem_copy(&error_counter, error_counter_d);
   assert_always(error_counter == 0);
 
   return 0;
@@ -144,7 +141,7 @@ int test_copy_shuffle_from_device_to_host(const Array<ND> &shape,
                             t_src.get_shape(),
                             t_src.get_global_index());
 
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
 
   assert_always(t_dest.allocate() == 0);
 

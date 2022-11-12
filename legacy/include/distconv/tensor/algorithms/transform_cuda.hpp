@@ -1,7 +1,9 @@
 #pragma once
 
-#include "distconv/tensor/tensor.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/algorithms/common_cuda.hpp"
+#include "distconv/tensor/memory_gpu.hpp"
+#include "distconv/tensor/tensor.hpp"
 
 #include <type_traits>
 
@@ -51,13 +53,21 @@ __global__ void transform_kernel(
   }
 }
 
-template <int BLOCK_SIZE, int INNER_DIM,
-          typename DataType, typename TransformFunc>
-void transform(Shape shape, IndexVector strides, DataType *data,
-               TransformFunc op, int thread_work_size, int num_inner_blocks,
-               const dim3 &grid_dims, const dim3 &block_dims,
-               cudaStream_t stream) {
-  const int nd = shape.num_dims();
+template <int BLOCK_SIZE,
+          int INNER_DIM,
+          typename DataType,
+          typename TransformFunc>
+void transform(Shape shape,
+               IndexVector strides,
+               DataType* data,
+               TransformFunc op,
+               int thread_work_size,
+               int num_inner_blocks,
+               const dim3& grid_dims,
+               const dim3& block_dims,
+               h2::gpu::DeviceStream stream)
+{
+    const int nd = shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                 \
   transform_kernel<ND, DataType, BLOCK_SIZE, INNER_DIM, TransformFunc>  \
@@ -123,15 +133,23 @@ __global__ void transform_kernel(Array<ND> shape, Array<ND> strides,
   }
 }
 
-template <int BLOCK_SIZE, int INNER_DIM,
-          typename DataType1, typename DataType2, typename TransformFunc>
-void transform(Shape shape, IndexVector strides,
-               DataType1 *data1, DataType2 *data2,
+template <int BLOCK_SIZE,
+          int INNER_DIM,
+          typename DataType1,
+          typename DataType2,
+          typename TransformFunc>
+void transform(Shape shape,
+               IndexVector strides,
+               DataType1* data1,
+               DataType2* data2,
                TransformFunc op,
-               int thread_work_size, int num_inner_blocks,
-               const dim3 &grid_dims, const dim3 &block_dims,
-               cudaStream_t stream) {
-  const int nd = shape.num_dims();
+               int thread_work_size,
+               int num_inner_blocks,
+               const dim3& grid_dims,
+               const dim3& block_dims,
+               h2::gpu::DeviceStream stream)
+{
+    const int nd = shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                 \
   transform_kernel<ND, DataType1, DataType2, BLOCK_SIZE, INNER_DIM,     \
@@ -201,17 +219,25 @@ __global__ void transform_kernel(Array<ND> shape, Array<ND> strides,
   }
 }
 
-template <int BLOCK_SIZE, int INNER_DIM,
-          typename DataType1, typename DataType2, typename DataType3,
+template <int BLOCK_SIZE,
+          int INNER_DIM,
+          typename DataType1,
+          typename DataType2,
+          typename DataType3,
           typename TransformFunc>
-void transform(Shape shape, IndexVector strides,
-               DataType1 *data1, DataType2 *data2,
-               DataType3 *data3,
+void transform(Shape shape,
+               IndexVector strides,
+               DataType1* data1,
+               DataType2* data2,
+               DataType3* data3,
                TransformFunc op,
-               int thread_work_size, int num_inner_blocks,
-               const dim3 &grid_dims, const dim3 &block_dims,
-               cudaStream_t stream) {
-  const int nd = shape.num_dims();
+               int thread_work_size,
+               int num_inner_blocks,
+               const dim3& grid_dims,
+               const dim3& block_dims,
+               h2::gpu::DeviceStream stream)
+{
+    const int nd = shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                 \
   transform_kernel<ND, DataType1, DataType2, DataType3, BLOCK_SIZE,     \
@@ -284,18 +310,27 @@ __global__ void transform_kernel(Array<ND> shape, Array<ND> strides,
   }
 }
 
-template <int BLOCK_SIZE, int INNER_DIM,
-          typename DataType1, typename DataType2,
-          typename DataType3, typename DataType4,
+template <int BLOCK_SIZE,
+          int INNER_DIM,
+          typename DataType1,
+          typename DataType2,
+          typename DataType3,
+          typename DataType4,
           typename TransformFunc>
-void transform(Shape shape, IndexVector strides,
-               DataType1 *data1, DataType2 *data2,
-               DataType3 *data3, DataType4 *data4,
+void transform(Shape shape,
+               IndexVector strides,
+               DataType1* data1,
+               DataType2* data2,
+               DataType3* data3,
+               DataType4* data4,
                TransformFunc op,
-               int thread_work_size, int num_inner_blocks,
-               const dim3 &grid_dims, const dim3 &block_dims,
-               cudaStream_t stream) {
-  const int nd = shape.num_dims();
+               int thread_work_size,
+               int num_inner_blocks,
+               const dim3& grid_dims,
+               const dim3& block_dims,
+               h2::gpu::DeviceStream stream)
+{
+    const int nd = shape.num_dims();
 #define CALL_KERNEL(ND)                                                 \
   transform_kernel<ND, DataType1, DataType2, DataType3, DataType4,      \
                    BLOCK_SIZE, INNER_DIM, TransformFunc>                \
@@ -323,43 +358,45 @@ void transform(Shape shape, IndexVector strides,
 
 template <typename Tensor, typename TransformFunc>
 typename std::enable_if<
-  std::is_same<typename Tensor::allocator_type,
-               CUDAAllocator>::value,
-  int>::type
-Transform(Tensor &tensor, TransformFunc op,
-          cudaStream_t stream=0) {
-  namespace algo = algorithms_cuda;
-  if (tensor.get_local_size() == 0) return 0;
+    std::is_same<typename Tensor::allocator_type, CUDAAllocator>::value,
+    int>::type
+Transform(Tensor& tensor, TransformFunc op, h2::gpu::DeviceStream stream = 0)
+{
+    namespace algo = algorithms_cuda;
+    if (tensor.get_local_size() == 0)
+        return 0;
 
-  constexpr int block_size= algo::DEFAULT_BLOCK_SIZE;
-  constexpr int max_thread_work_size=
-      algo::DEFAULT_MAX_THREAD_WORK_SIZE;
-  dim3 block_dims(block_size);
-  int thread_work_size;
-  dim3 grid_dims(0);
-  int inner_dim;
-  int num_inner_blocks;
-  algo::get_grid_dims2<block_size, max_thread_work_size>(
-      tensor.get_local_shape(), grid_dims, thread_work_size,
-      inner_dim, num_inner_blocks);
+    constexpr int block_size = algo::DEFAULT_BLOCK_SIZE;
+    constexpr int max_thread_work_size = algo::DEFAULT_MAX_THREAD_WORK_SIZE;
+    dim3 block_dims(block_size);
+    int thread_work_size;
+    dim3 grid_dims(0);
+    int inner_dim;
+    int num_inner_blocks;
+    algo::get_grid_dims2<block_size, max_thread_work_size>(
+        tensor.get_local_shape(),
+        grid_dims,
+        thread_work_size,
+        inner_dim,
+        num_inner_blocks);
 
-  const auto shape = tensor.get_local_shape();
-  const auto strides = get_strides(shape,
-                                   tensor.get_overlap(),
-                                   tensor.get_pitch());
+    const auto shape = tensor.get_local_shape();
+    const auto strides =
+        get_strides(shape, tensor.get_overlap(), tensor.get_pitch());
 
-  util::MPIPrintStreamDebug() << "grid_dim: " << grid_dims.x
-                              << ", inner dim: " << inner_dim
-                              << ", num_inner_blocks: " << num_inner_blocks;
+    util::MPIPrintStreamDebug()
+        << "grid_dim: " << grid_dims.x << ", inner dim: " << inner_dim
+        << ", num_inner_blocks: " << num_inner_blocks;
 
-  if (tensor.get_num_dims() > 5) {
-    // The below switch block assumes ND <= 5. Otherwise, inner_dim
-    // can be >= 5, and the default case would hit. Simply repeating
-    // the case block would work.
-    util::MPIPrintStreamError() <<
-        "Tensors with 6 or larger number of dimensions not supported.";
-    throw std::exception();
-  }
+    if (tensor.get_num_dims() > 5)
+    {
+        // The below switch block assumes ND <= 5. Otherwise, inner_dim
+        // can be >= 5, and the default case would hit. Simply repeating
+        // the case block would work.
+        util::MPIPrintStreamError()
+            << "Tensors with 6 or larger number of dimensions not supported.";
+        throw std::exception();
+    }
 
 #define CALL_TRANFORM(INNER_DIM)                                        \
   algo::transform<block_size, INNER_DIM>(                               \
@@ -391,53 +428,59 @@ Transform(Tensor &tensor, TransformFunc op,
 
 template <typename Tensor1, typename Tensor2, typename TransformFunc>
 typename std::enable_if<
-  std::is_same<typename std::remove_const<Tensor1>::type::allocator_type,
-               CUDAAllocator>::value &&
-  std::is_same<typename std::remove_const<Tensor2>::type::allocator_type,
-               CUDAAllocator>::value,
-  int>::type
-Transform(Tensor1 &tensor1, Tensor2 &tensor2,
-          TransformFunc op, cudaStream_t stream=0) {
-  namespace algo = algorithms_cuda;
+    std::is_same<typename std::remove_const<Tensor1>::type::allocator_type,
+                 CUDAAllocator>::value
+        && std::is_same<
+            typename std::remove_const<Tensor2>::type::allocator_type,
+            CUDAAllocator>::value,
+    int>::type
+Transform(Tensor1& tensor1,
+          Tensor2& tensor2,
+          TransformFunc op,
+          h2::gpu::DeviceStream stream = 0)
+{
+    namespace algo = algorithms_cuda;
 
-  // All tensor arguments have an eaual shape
-  assert_eq(tensor1.get_local_shape(), tensor2.get_local_shape());
-  // All tensor arguments have the same distribution
-  assert_eq(tensor1.get_distribution(), tensor2.get_distribution());
+    // All tensor arguments have an eaual shape
+    assert_eq(tensor1.get_local_shape(), tensor2.get_local_shape());
+    // All tensor arguments have the same distribution
+    assert_eq(tensor1.get_distribution(), tensor2.get_distribution());
 
-  if (tensor1.get_local_size() == 0) return 0;
+    if (tensor1.get_local_size() == 0)
+        return 0;
 
-  constexpr int block_size= algo::DEFAULT_BLOCK_SIZE;
-  constexpr int max_thread_work_size=
-      algo::DEFAULT_MAX_THREAD_WORK_SIZE;
-  dim3 block_dims(block_size);
-  int thread_work_size;
-  dim3 grid_dims(0);
-  int inner_dim;
-  int num_inner_blocks;
-  algo::get_grid_dims2<block_size, max_thread_work_size>(
-      tensor1.get_local_shape(), grid_dims, thread_work_size,
-      inner_dim, num_inner_blocks);
+    constexpr int block_size = algo::DEFAULT_BLOCK_SIZE;
+    constexpr int max_thread_work_size = algo::DEFAULT_MAX_THREAD_WORK_SIZE;
+    dim3 block_dims(block_size);
+    int thread_work_size;
+    dim3 grid_dims(0);
+    int inner_dim;
+    int num_inner_blocks;
+    algo::get_grid_dims2<block_size, max_thread_work_size>(
+        tensor1.get_local_shape(),
+        grid_dims,
+        thread_work_size,
+        inner_dim,
+        num_inner_blocks);
 
-  const auto shape = tensor1.get_local_shape();
-  const auto strides = get_strides(shape,
-                                   tensor1.get_overlap(),
-                                   tensor1.get_pitch());
+    const auto shape = tensor1.get_local_shape();
+    const auto strides =
+        get_strides(shape, tensor1.get_overlap(), tensor1.get_pitch());
 
-  util::MPIPrintStreamDebug() << "grid_dim: " << grid_dims.x
-                              << ", inner dim: " << inner_dim
-                              << ", num_inner_blocks: " << num_inner_blocks
-                              << ", shape: " << shape
-                              << ", strides: " << strides;
+    util::MPIPrintStreamDebug()
+        << "grid_dim: " << grid_dims.x << ", inner dim: " << inner_dim
+        << ", num_inner_blocks: " << num_inner_blocks << ", shape: " << shape
+        << ", strides: " << strides;
 
-  if (tensor1.get_num_dims() > 5) {
-    // The below switch block assumes ND <= 5. Otherwise, inner_dim
-    // can be >= 5, and the default case would hit. Simply repeating
-    // the case block would work.
-    util::MPIPrintStreamError() <<
-        "Tensors with 6 or larger number of dimensions not supported.";
-    throw std::exception();
-  }
+    if (tensor1.get_num_dims() > 5)
+    {
+        // The below switch block assumes ND <= 5. Otherwise, inner_dim
+        // can be >= 5, and the default case would hit. Simply repeating
+        // the case block would work.
+        util::MPIPrintStreamError()
+            << "Tensors with 6 or larger number of dimensions not supported.";
+        throw std::exception();
+    }
 
 #define CALL_TRANFORM(INNER_DIM) \
   algo::transform<block_size, INNER_DIM>( \
@@ -466,60 +509,66 @@ Transform(Tensor1 &tensor1, Tensor2 &tensor2,
   return 0;
 }
 
-template <typename Tensor1, typename Tensor2, typename Tensor3,
+template <typename Tensor1,
+          typename Tensor2,
+          typename Tensor3,
           typename TransformFunc>
 typename std::enable_if<
-  std::is_same<typename Tensor1::allocator_type,
-               CUDAAllocator>::value &&
-  std::is_same<typename Tensor2::allocator_type,
-               CUDAAllocator>::value &&
-  std::is_same<typename Tensor3::allocator_type,
-               CUDAAllocator>::value,
-  int>::type
-Transform(Tensor1 &tensor1, Tensor2 &tensor2, Tensor3 &tensor3,
-          TransformFunc op, cudaStream_t stream=0) {
-  namespace algo = algorithms_cuda;
+    std::is_same<typename Tensor1::allocator_type, CUDAAllocator>::value
+        && std::is_same<typename Tensor2::allocator_type, CUDAAllocator>::value
+        && std::is_same<typename Tensor3::allocator_type, CUDAAllocator>::value,
+    int>::type
+Transform(Tensor1& tensor1,
+          Tensor2& tensor2,
+          Tensor3& tensor3,
+          TransformFunc op,
+          h2::gpu::DeviceStream stream = 0)
+{
+    namespace algo = algorithms_cuda;
 
-  // All tensor arguments have an eaual shape
-  assert_eq(tensor1.get_local_shape(), tensor2.get_local_shape());
-  assert_eq(tensor2.get_local_shape(), tensor3.get_local_shape());
-  assert_eq(tensor3.get_local_shape(), tensor1.get_local_shape());
-  // All tensor arguments have the same distribution
-  assert_eq(tensor1.get_distribution(), tensor2.get_distribution());
-  assert_eq(tensor2.get_distribution(), tensor3.get_distribution());
-  assert_eq(tensor3.get_distribution(), tensor1.get_distribution());
+    // All tensor arguments have an eaual shape
+    assert_eq(tensor1.get_local_shape(), tensor2.get_local_shape());
+    assert_eq(tensor2.get_local_shape(), tensor3.get_local_shape());
+    assert_eq(tensor3.get_local_shape(), tensor1.get_local_shape());
+    // All tensor arguments have the same distribution
+    assert_eq(tensor1.get_distribution(), tensor2.get_distribution());
+    assert_eq(tensor2.get_distribution(), tensor3.get_distribution());
+    assert_eq(tensor3.get_distribution(), tensor1.get_distribution());
 
-  if (tensor1.get_local_size() == 0) return 0;
+    if (tensor1.get_local_size() == 0)
+        return 0;
 
-  constexpr int block_size= algo::DEFAULT_BLOCK_SIZE;
-  constexpr int max_thread_work_size=
-      algo::DEFAULT_MAX_THREAD_WORK_SIZE;
-  dim3 block_dims(block_size);
-  int thread_work_size;
-  dim3 grid_dims(0);
-  int inner_dim;
-  int num_inner_blocks;
-  algo::get_grid_dims2<block_size, max_thread_work_size>(
-      tensor1.get_local_shape(), grid_dims, thread_work_size,
-      inner_dim, num_inner_blocks);
+    constexpr int block_size = algo::DEFAULT_BLOCK_SIZE;
+    constexpr int max_thread_work_size = algo::DEFAULT_MAX_THREAD_WORK_SIZE;
+    dim3 block_dims(block_size);
+    int thread_work_size;
+    dim3 grid_dims(0);
+    int inner_dim;
+    int num_inner_blocks;
+    algo::get_grid_dims2<block_size, max_thread_work_size>(
+        tensor1.get_local_shape(),
+        grid_dims,
+        thread_work_size,
+        inner_dim,
+        num_inner_blocks);
 
-  const auto shape = tensor1.get_local_shape();
-  const auto strides = get_strides(shape,
-                                   tensor1.get_overlap(),
-                                   tensor1.get_pitch());
+    const auto shape = tensor1.get_local_shape();
+    const auto strides =
+        get_strides(shape, tensor1.get_overlap(), tensor1.get_pitch());
 
-  util::MPIPrintStreamDebug() << "grid_dim: " << grid_dims.x
-                              << ", inner dim: " << inner_dim
-                              << ", num_inner_blocks: " << num_inner_blocks;
+    util::MPIPrintStreamDebug()
+        << "grid_dim: " << grid_dims.x << ", inner dim: " << inner_dim
+        << ", num_inner_blocks: " << num_inner_blocks;
 
-  if (tensor1.get_num_dims() > 5) {
-    // The below switch block assumes ND <= 5. Otherwise, inner_dim
-    // can be >= 5, and the default case would hit. Simply repeating
-    // the case block would work.
-    util::MPIPrintStreamError() <<
-        "Tensors with 6 or larger number of dimensions not supported.";
-    throw std::exception();
-  }
+    if (tensor1.get_num_dims() > 5)
+    {
+        // The below switch block assumes ND <= 5. Otherwise, inner_dim
+        // can be >= 5, and the default case would hit. Simply repeating
+        // the case block would work.
+        util::MPIPrintStreamError()
+            << "Tensors with 6 or larger number of dimensions not supported.";
+        throw std::exception();
+    }
 #define CALL_TRANFORM(INNER_DIM)                                        \
   algo::transform<block_size, INNER_DIM>(                               \
       shape, strides, tensor1.get_base_ptr(), tensor2.get_base_ptr(),   \
@@ -549,66 +598,71 @@ Transform(Tensor1 &tensor1, Tensor2 &tensor2, Tensor3 &tensor3,
   return 0;
 }
 
-template <typename Tensor1, typename Tensor2, typename Tensor3,
-          typename Tensor4, typename TransformFunc>
+template <typename Tensor1,
+          typename Tensor2,
+          typename Tensor3,
+          typename Tensor4,
+          typename TransformFunc>
 typename std::enable_if<
-  std::is_same<typename Tensor1::allocator_type,
-               CUDAAllocator>::value &&
-  std::is_same<typename Tensor2::allocator_type,
-               CUDAAllocator>::value &&
-  std::is_same<typename Tensor3::allocator_type,
-               CUDAAllocator>::value &&
-  std::is_same<typename Tensor4::allocator_type,
-               CUDAAllocator>::value,
-  int>::type
-Transform(Tensor1 &tensor1, Tensor2 &tensor2, Tensor3 &tensor3,
-          Tensor4 &tensor4, TransformFunc op,
-          cudaStream_t stream=0) {
-  namespace algo = algorithms_cuda;
+    std::is_same<typename Tensor1::allocator_type, CUDAAllocator>::value
+        && std::is_same<typename Tensor2::allocator_type, CUDAAllocator>::value
+        && std::is_same<typename Tensor3::allocator_type, CUDAAllocator>::value
+        && std::is_same<typename Tensor4::allocator_type, CUDAAllocator>::value,
+    int>::type
+Transform(Tensor1& tensor1,
+          Tensor2& tensor2,
+          Tensor3& tensor3,
+          Tensor4& tensor4,
+          TransformFunc op,
+          h2::gpu::DeviceStream stream = 0)
+{
+    namespace algo = algorithms_cuda;
 
-  // All tensor arguments have an eaual shape
-  assert_always(tensor1.get_local_shape() == tensor2.get_local_shape());
-  assert_always(tensor2.get_local_shape() == tensor3.get_local_shape());
-  assert_always(tensor3.get_local_shape() == tensor4.get_local_shape());
-  assert_always(tensor4.get_local_shape() == tensor1.get_local_shape());
-  // All tensor arguments have the same distribution
-  assert_eq(tensor1.get_distribution(), tensor2.get_distribution());
-  assert_eq(tensor2.get_distribution(), tensor3.get_distribution());
-  assert_eq(tensor3.get_distribution(), tensor4.get_distribution());
-  assert_eq(tensor4.get_distribution(), tensor1.get_distribution());
+    // All tensor arguments have an eaual shape
+    assert_always(tensor1.get_local_shape() == tensor2.get_local_shape());
+    assert_always(tensor2.get_local_shape() == tensor3.get_local_shape());
+    assert_always(tensor3.get_local_shape() == tensor4.get_local_shape());
+    assert_always(tensor4.get_local_shape() == tensor1.get_local_shape());
+    // All tensor arguments have the same distribution
+    assert_eq(tensor1.get_distribution(), tensor2.get_distribution());
+    assert_eq(tensor2.get_distribution(), tensor3.get_distribution());
+    assert_eq(tensor3.get_distribution(), tensor4.get_distribution());
+    assert_eq(tensor4.get_distribution(), tensor1.get_distribution());
 
-  if (tensor1.get_local_size() == 0) return 0;
+    if (tensor1.get_local_size() == 0)
+        return 0;
 
-  constexpr int block_size= algo::DEFAULT_BLOCK_SIZE;
-  constexpr int max_thread_work_size=
-      algo::DEFAULT_MAX_THREAD_WORK_SIZE;
-  dim3 block_dims(block_size);
-  int thread_work_size;
-  dim3 grid_dims(0);
-  int inner_dim;
-  int num_inner_blocks;
-  algo::get_grid_dims2<block_size, max_thread_work_size>(
-      tensor1.get_local_shape(), grid_dims, thread_work_size,
-      inner_dim, num_inner_blocks);
+    constexpr int block_size = algo::DEFAULT_BLOCK_SIZE;
+    constexpr int max_thread_work_size = algo::DEFAULT_MAX_THREAD_WORK_SIZE;
+    dim3 block_dims(block_size);
+    int thread_work_size;
+    dim3 grid_dims(0);
+    int inner_dim;
+    int num_inner_blocks;
+    algo::get_grid_dims2<block_size, max_thread_work_size>(
+        tensor1.get_local_shape(),
+        grid_dims,
+        thread_work_size,
+        inner_dim,
+        num_inner_blocks);
 
-  const auto shape = tensor1.get_local_shape();
-  const auto strides = get_strides(shape,
-                                   tensor1.get_overlap(),
-                                   tensor1.get_pitch());
+    const auto shape = tensor1.get_local_shape();
+    const auto strides =
+        get_strides(shape, tensor1.get_overlap(), tensor1.get_pitch());
 
-  util::MPIPrintStreamDebug() << "grid_dim: " << grid_dims.x
-                              << ", inner dim: " << inner_dim
-                              << ", num_inner_blocks: " << num_inner_blocks
-                              << "\n";
+    util::MPIPrintStreamDebug()
+        << "grid_dim: " << grid_dims.x << ", inner dim: " << inner_dim
+        << ", num_inner_blocks: " << num_inner_blocks << "\n";
 
-  if (tensor1.get_num_dims() > 5) {
-    // The below switch block assumes ND <= 5. Otherwise, inner_dim
-    // can be >= 5, and the default case would hit. Simply repeating
-    // the case block would work.
-    util::MPIPrintStreamError() <<
-        "Tensors with 6 or larger number of dimensions not supported.";
-    throw std::exception();
-  }
+    if (tensor1.get_num_dims() > 5)
+    {
+        // The below switch block assumes ND <= 5. Otherwise, inner_dim
+        // can be >= 5, and the default case would hit. Simply repeating
+        // the case block would work.
+        util::MPIPrintStreamError()
+            << "Tensors with 6 or larger number of dimensions not supported.";
+        throw std::exception();
+    }
 #define CALL_TRANFORM(INNER_DIM)                                        \
   algo::transform<block_size, INNER_DIM>(                               \
       shape, strides, tensor1.get_base_ptr(), tensor2.get_base_ptr(),   \

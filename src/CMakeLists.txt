@@ -10,4 +10,5 @@
 target_sources(H2Core PRIVATE Version.cpp)
 
 # Subdirectories
+add_subdirectory(gpu)
 add_subdirectory(utils)

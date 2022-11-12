@@ -25,14 +25,14 @@
  *  @param name The name of the new class.
  *  @param parent The name of the parent class.
  */
-#define H2_DEFINE_FORWARDING_EXCEPTION(name, parent)           \
-    class name : public parent                                 \
-    {                                                          \
-    public:                                                    \
-        /* @brief Constructor */                               \
-        template <typename... Ts>                              \
-        name(Ts&&... args) : parent(std::forward<Ts>(args)...) \
-        {}                                                     \
+#define H2_DEFINE_FORWARDING_EXCEPTION(name, parent)                           \
+    class name : public parent                                                 \
+    {                                                                          \
+    public:                                                                    \
+        /* @brief Constructor */                                               \
+        template <typename... Ts>                                              \
+        name(Ts&&... args) : parent(std::forward<Ts>(args)...)                 \
+        {}                                                                     \
     }
 
 /** @def H2_ASSERT(cond, excptn, msg)
@@ -44,8 +44,8 @@
  *                `false`.
  *  @param ... The arguments to pass to the exception.
  */
-#define H2_ASSERT_MSG(cond, excptn, ...)        \
-    if (!(cond))                                \
+#define H2_ASSERT_MSG(cond, excptn, ...)                                       \
+    if (!(cond))                                                               \
         throw excptn(__VA_ARGS__);
 
 namespace h2

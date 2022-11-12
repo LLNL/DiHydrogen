@@ -1,12 +1,14 @@
-#include "distconv_benchmark_common.hpp"
 #include "benchmark_common.hpp"
-#include "distconv/tensor/tensor.hpp"
-#include "distconv/tensor/tensor_mpi_cuda.hpp"
-#include "distconv/tensor/tensor_cuda.hpp"
-#include "distconv/util/util_cuda.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/shuffle_mpi.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda_al.hpp"
+#include "distconv/tensor/tensor.hpp"
+#include "distconv/tensor/tensor_cuda.hpp"
+#include "distconv/tensor/tensor_mpi_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
+#include "distconv_benchmark_common.hpp"
+#include <distconv_config.hpp>
 #ifdef DISTCONV_HAS_P2P
 #include "distconv/tensor/shuffle_mpi_cuda_p2p.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda_hybrid.hpp"
@@ -257,8 +259,7 @@ int test_shuffler(Data<tensor::CUDAAllocator> &d,
 #endif // DISTCONV_HAS_P2P
   AlBackend::comm_type *al_comm = nullptr;
   tensor::TensorMPICUDAShuffler<DataType> *shfl = nullptr;
-  cudaStream_t stream;
-  DISTCONV_CHECK_CUDA(cudaStreamCreate(&stream));
+  auto stream = h2::gpu::make_stream();
 
   switch (cfg.shuffle_method) {
     case ShuffleMethod::AL:
@@ -303,30 +304,28 @@ int test_shuffler(Data<tensor::CUDAAllocator> &d,
   util::MPIRootPrintStreamInfo() << "Measuring shuffle_forward";
   std::vector<util::Clock> clks(cfg.run_count, stream);
   for (int i = 0; i < cfg.run_count; ++i) {
-    DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
-    DISTCONV_CHECK_MPI(MPI_Barrier(comm));
-    clks[i].start();
-    shfl->shuffle_forward(d.sample.get_base_ptr(),
-                          d.spatial.get_base_ptr(),
-                          stream);
-    clks[i].stop();
+      h2::gpu::sync();
+      DISTCONV_CHECK_MPI(MPI_Barrier(comm));
+      clks[i].start();
+      shfl->shuffle_forward(
+          d.sample.get_base_ptr(), d.spatial.get_base_ptr(), stream);
+      clks[i].stop();
   }
-  DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
+  h2::gpu::sync();
   for (int i = 0; i < cfg.run_count; ++i) {
     prof.fwd_time.push_back(clks[i].get_time());
   }
 
   util::MPIRootPrintStreamInfo() << "Measuring shuffle_backward";
   for (int i = 0; i < cfg.run_count; ++i) {
-    DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
-    DISTCONV_CHECK_MPI(MPI_Barrier(comm));
-    clks[i].start();
-    shfl->shuffle_backward(d.spatial.get_base_ptr(),
-                           d.output_sample.get_base_ptr(),
-                           stream);
-    clks[i].stop();
+      h2::gpu::sync();
+      DISTCONV_CHECK_MPI(MPI_Barrier(comm));
+      clks[i].start();
+      shfl->shuffle_backward(
+          d.spatial.get_base_ptr(), d.output_sample.get_base_ptr(), stream);
+      clks[i].stop();
   }
-  DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
+  h2::gpu::sync();
   for (int i = 0; i < cfg.run_count; ++i) {
     prof.bwd_time.push_back(clks[i].get_time());
   }
@@ -336,7 +335,7 @@ int test_shuffler(Data<tensor::CUDAAllocator> &d,
   if (p2p_h) delete p2p_h;
 #endif // DISTCONV_HAS_P2P
   if (al_comm) delete al_comm;
-  DISTCONV_CHECK_CUDA(cudaStreamDestroy(stream));
+  h2::gpu::destroy(stream);
 
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
   util::MPIRootPrintStreamInfo() << "Measurement done";

@@ -87,6 +87,8 @@ __device__ __forceinline__ double atomic_add(double* address, double val)
 namespace distconv {
 namespace util {
 
+void check_for_device_runtime_error();
+
 int get_number_of_gpus();
 int get_local_rank();
 int get_local_size();
@@ -137,16 +139,20 @@ struct Clock {
   }
 };
 
-inline void nvtx_push(const char *name) {
-  if (get_config().m_nvtx) {
-    nvtxRangePushA(name);
-  }
+inline void profile_push(const char* name)
+{
+    if (get_config().profiling)
+    {
+        nvtxRangePushA(name);
+    }
 }
 
-inline void nvtx_pop() {
-  if (get_config().m_nvtx) {
-    nvtxRangePop();
-  }
+inline void profile_pop()
+{
+    if (get_config().profiling)
+    {
+        nvtxRangePop();
+    }
 }
 
 #define LIST_OF_ELEMENT_TYPES                   \

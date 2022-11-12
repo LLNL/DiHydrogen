@@ -14,9 +14,22 @@ set(TEST_SOURCES
 
 foreach (src ${TEST_SOURCES})
   get_filename_component(target ${src} NAME_WE)
+  get_filename_component(ext ${src} LAST_EXT)
+
   add_executable(${target} ${src})
-  target_link_libraries(${target} distconv)
-  set_target_properties(${target} PROPERTIES CXX_STANDARD 14)
+  target_link_libraries(${target} distconv H2Core)
+
+  if (ext STREQUAL ".cu")
+    if (H2_HAS_CUDA)
+      set_target_properties(${target} PROPERTIES CXX_STANDARD 17)
+    else ()
+      set_source_files_properties(${src} PROPERTIES LANGUAGE HIP)
+      set_target_properties(${target} PROPERTIES HIP_STANDARD 17)
+    endif ()
+  else ()
+    set_target_properties(${target} PROPERTIES CXX_STANDARD 17)
+  endif ()
+  target_compile_options(${target} PRIVATE "-Wno-unused-result")
 endforeach ()
 
 configure_file(test_tensor.sh.in

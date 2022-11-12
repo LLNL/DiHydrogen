@@ -7,7 +7,10 @@
 
 #pragma once
 
+#include "h2_config.hpp"
+
 #cmakedefine DISTCONV_DEBUG
+
 #cmakedefine DISTCONV_HAS_CUDA
 #cmakedefine DISTCONV_CUDA_VERSION_MAJOR @DISTCONV_CUDA_VERSION_MAJOR@
 #cmakedefine DISTCONV_CUDA_VERSION_MINOR @DISTCONV_CUDA_VERSION_MINOR@

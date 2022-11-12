@@ -27,11 +27,9 @@ inline constexpr bool IsInvocableV()
     return IsInvocableVT<F, Args...>::value;
 }
 
-#ifndef H2_NO_CXX17
 /** @brief Test whether F can be invoked with the given arguments. */
 template <typename F, typename... Args>
 inline constexpr bool IsInvocable = IsInvocableV<F, Args...>();
-#endif // H2_NO_CXX17
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 

@@ -5,6 +5,11 @@
 namespace distconv {
 namespace util {
 
+void check_for_device_runtime_error()
+{
+    DISTCONV_CHECK_CUDA(cudaGetLastError());
+}
+
 int get_number_of_gpus() {
   int num_gpus = 0;
   char *env = getenv("TENSOR_NUM_GPUS");

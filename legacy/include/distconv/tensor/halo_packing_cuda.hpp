@@ -83,24 +83,38 @@ struct PackFunctor {
 };
 
 template <typename DataType, bool is_pack, typename PackFunctor>
-void pack_or_unpack(
-    Tensor<DataType, LocaleMPI, CUDAAllocator> &tensor,
-    int dim, Side side, int width, cudaStream_t stream,
-    void *buf, bool is_reverse) {
-  using TensorType = Tensor<DataType, LocaleMPI, CUDAAllocator>;
-  TraverseHalo<TensorType, PackFunctor>(
-      tensor, dim, side, width,
-      (is_pack && !is_reverse) || (!is_pack && is_reverse),
-      PackFunctor(static_cast<DataType*>(buf)), stream);
+void pack_or_unpack(Tensor<DataType, LocaleMPI, CUDAAllocator>& tensor,
+                    int dim,
+                    Side side,
+                    int width,
+                    h2::gpu::DeviceStream stream,
+                    void* buf,
+                    bool is_reverse)
+{
+    using TensorType = Tensor<DataType, LocaleMPI, CUDAAllocator>;
+    TraverseHalo<TensorType, PackFunctor>(
+        tensor,
+        dim,
+        side,
+        width,
+        (is_pack && !is_reverse) || (!is_pack && is_reverse),
+        PackFunctor(static_cast<DataType*>(buf)),
+        stream);
 }
 
-template <typename DataType, bool is_pack,
-          template<typename, bool, HaloExchangeAccumOp> typename PackFunctor>
-void pack_or_unpack(
-    Tensor<DataType, LocaleMPI, CUDAAllocator> &tensor,
-    int dim, Side side, int width, cudaStream_t stream,
-    void *buf, bool is_reverse,
-    HaloExchangeAccumOp op) {
+template <typename DataType,
+          bool is_pack,
+          template <typename, bool, HaloExchangeAccumOp>
+          typename PackFunctor>
+void pack_or_unpack(Tensor<DataType, LocaleMPI, CUDAAllocator>& tensor,
+                    int dim,
+                    Side side,
+                    int width,
+                    h2::gpu::DeviceStream stream,
+                    void* buf,
+                    bool is_reverse,
+                    HaloExchangeAccumOp op)
+{
 #define CASE_BLOCK(OP)                                                  \
   case OP:                                                              \
     pack_or_unpack<DataType, is_pack,                                   \
@@ -113,32 +127,43 @@ void pack_or_unpack(
 }
 
 template <typename DataType, bool is_pack>
-void pack_or_unpack(
-    Tensor<DataType, LocaleMPI, CUDAAllocator> &tensor,
-    int dim, Side side, int width, cudaStream_t stream,
-    void *buf, bool is_reverse,
-    HaloExchangeAccumOp op) {
-  pack_or_unpack<DataType, is_pack, PackFunctor>(
-      tensor, dim, side, width, stream, buf, is_reverse, op);
+void pack_or_unpack(Tensor<DataType, LocaleMPI, CUDAAllocator>& tensor,
+                    int dim,
+                    Side side,
+                    int width,
+                    h2::gpu::DeviceStream stream,
+                    void* buf,
+                    bool is_reverse,
+                    HaloExchangeAccumOp op)
+{
+    pack_or_unpack<DataType, is_pack, PackFunctor>(
+        tensor, dim, side, width, stream, buf, is_reverse, op);
 }
 
 template <typename DataType>
-void pack_or_unpack(
-    Tensor<DataType, LocaleMPI, CUDAAllocator> &tensor,
-    int dim, Side side, int width, cudaStream_t stream,
-    void *buf, bool is_pack, bool is_reverse,
-    HaloExchangeAccumOp op) {
-  if (width == 0) return;
-  if (is_pack) {
-    pack_or_unpack<DataType, true>(
-        tensor, dim, side, width, stream,
-        buf, is_reverse, op);
-  } else {
-    pack_or_unpack<DataType, false>(
-        tensor, dim, side, width, stream,
-        buf, is_reverse, op);
-  }
-  return;
+void pack_or_unpack(Tensor<DataType, LocaleMPI, CUDAAllocator>& tensor,
+                    int dim,
+                    Side side,
+                    int width,
+                    h2::gpu::DeviceStream stream,
+                    void* buf,
+                    bool is_pack,
+                    bool is_reverse,
+                    HaloExchangeAccumOp op)
+{
+    if (width == 0)
+        return;
+    if (is_pack)
+    {
+        pack_or_unpack<DataType, true>(
+            tensor, dim, side, width, stream, buf, is_reverse, op);
+    }
+    else
+    {
+        pack_or_unpack<DataType, false>(
+            tensor, dim, side, width, stream, buf, is_reverse, op);
+    }
+    return;
 }
 
 #ifdef DISTCONV_HAS_NVSHMEM
@@ -173,15 +198,26 @@ struct PackAndPutBlockFunctor {
 };
 
 template <typename DataType>
-void pack_and_put_block(
-    Tensor<DataType, LocaleMPI, CUDAAllocator> &tensor,
-    int dim, Side side, int width, cudaStream_t stream,
-    void *buf, bool is_reverse, void *dst, int peer) {
-  using TensorType = Tensor<DataType, LocaleMPI, CUDAAllocator>;
-  TraverseHalo<TensorType, PackAndPutBlockFunctor<DataType>>(
-      tensor, dim, side, width, !is_reverse,
-      PackAndPutBlockFunctor<DataType>(static_cast<DataType*>(buf),
-                                       static_cast<DataType*>(dst), peer), stream);
+void pack_and_put_block(Tensor<DataType, LocaleMPI, CUDAAllocator>& tensor,
+                        int dim,
+                        Side side,
+                        int width,
+                        h2::gpu::DeviceStream stream,
+                        void* buf,
+                        bool is_reverse,
+                        void* dst,
+                        int peer)
+{
+    using TensorType = Tensor<DataType, LocaleMPI, CUDAAllocator>;
+    TraverseHalo<TensorType, PackAndPutBlockFunctor<DataType>>(
+        tensor,
+        dim,
+        side,
+        width,
+        !is_reverse,
+        PackAndPutBlockFunctor<DataType>(
+            static_cast<DataType*>(buf), static_cast<DataType*>(dst), peer),
+        stream);
 }
 
 template <typename DataType>
@@ -221,18 +257,29 @@ struct PackPutNotifyBlockFunctor {
 };
 
 template <typename DataType>
-void pack_put_notify_block(
-    Tensor<DataType, LocaleMPI, CUDAAllocator> &tensor,
-    int dim, Side side, int width, cudaStream_t stream,
-    void *buf, bool is_reverse, void *dst, int peer,
-    util::nvshmem::PairwiseSync &sync) {
-  using TensorType = Tensor<DataType, LocaleMPI, CUDAAllocator>;
-  TraverseHalo<TensorType, PackPutNotifyBlockFunctor<DataType>>(
-      tensor, dim, side, width, !is_reverse,
-      PackPutNotifyBlockFunctor<DataType>(static_cast<DataType*>(buf),
-                                          static_cast<DataType*>(dst),
-                                          peer, sync),
-      stream);
+void pack_put_notify_block(Tensor<DataType, LocaleMPI, CUDAAllocator>& tensor,
+                           int dim,
+                           Side side,
+                           int width,
+                           h2::gpu::DeviceStream stream,
+                           void* buf,
+                           bool is_reverse,
+                           void* dst,
+                           int peer,
+                           util::nvshmem::PairwiseSync& sync)
+{
+    using TensorType = Tensor<DataType, LocaleMPI, CUDAAllocator>;
+    TraverseHalo<TensorType, PackPutNotifyBlockFunctor<DataType>>(
+        tensor,
+        dim,
+        side,
+        width,
+        !is_reverse,
+        PackPutNotifyBlockFunctor<DataType>(static_cast<DataType*>(buf),
+                                            static_cast<DataType*>(dst),
+                                            peer,
+                                            sync),
+        stream);
 }
 
 template <typename DataType, HaloExchangeAccumOp op>
@@ -264,23 +311,37 @@ struct WaitAndUnpackFunctor {
 };
 
 template <typename DataType, HaloExchangeAccumOp Op>
-void wait_and_unpack(
-    Tensor<DataType, LocaleMPI, CUDAAllocator> &tensor,
-    int dim, Side side, int width, cudaStream_t stream,
-    void *buf, bool is_reverse, util::nvshmem::PairwiseSync &sync) {
-  using TensorType = Tensor<DataType, LocaleMPI, CUDAAllocator>;
-  TraverseHalo<TensorType, WaitAndUnpackFunctor<DataType, Op>>(
-      tensor, dim, side, width, is_reverse,
-      WaitAndUnpackFunctor<DataType, Op>(static_cast<DataType*>(buf), sync),
-      stream);
+void wait_and_unpack(Tensor<DataType, LocaleMPI, CUDAAllocator>& tensor,
+                     int dim,
+                     Side side,
+                     int width,
+                     h2::gpu::DeviceStream stream,
+                     void* buf,
+                     bool is_reverse,
+                     util::nvshmem::PairwiseSync& sync)
+{
+    using TensorType = Tensor<DataType, LocaleMPI, CUDAAllocator>;
+    TraverseHalo<TensorType, WaitAndUnpackFunctor<DataType, Op>>(
+        tensor,
+        dim,
+        side,
+        width,
+        is_reverse,
+        WaitAndUnpackFunctor<DataType, Op>(static_cast<DataType*>(buf), sync),
+        stream);
 }
 
 template <typename DataType>
-void wait_and_unpack(
-    Tensor<DataType, LocaleMPI, CUDAAllocator> &tensor,
-    int dim, Side side, int width, cudaStream_t stream,
-    void *buf, bool is_reverse, HaloExchangeAccumOp op,
-    util::nvshmem::PairwiseSync &sync) {
+void wait_and_unpack(Tensor<DataType, LocaleMPI, CUDAAllocator>& tensor,
+                     int dim,
+                     Side side,
+                     int width,
+                     h2::gpu::DeviceStream stream,
+                     void* buf,
+                     bool is_reverse,
+                     HaloExchangeAccumOp op,
+                     util::nvshmem::PairwiseSync& sync)
+{
 #define CASE_BLOCK(OP)                                                  \
   case OP:                                                              \
     wait_and_unpack<DataType, OP>(                                      \

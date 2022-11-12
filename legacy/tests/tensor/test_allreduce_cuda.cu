@@ -1,20 +1,28 @@
 #include "distconv/base.hpp"
-#include "distconv/util/util_cuda.hpp"
-#include "distconv/util/util_mpi.hpp"
-#include "distconv/tensor/memory_cuda.hpp"
+#include "distconv/runtime.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/allreduce.hpp"
+#include "distconv/tensor/allreduce_al.hpp"
 #include "distconv/tensor/allreduce_mpi.hpp"
 #include "distconv/tensor/allreduce_mpi_cuda.hpp"
-#include "distconv/tensor/allreduce_al.hpp"
+#include "distconv/tensor/memory_gpu.hpp"
+#include "distconv/util/util_gpu.hpp"
+#include "distconv/util/util_mpi.hpp"
+#include <distconv_config.hpp>
 #ifdef DISTCONV_HAS_NVSHMEM
 #include "distconv/tensor/allreduce_nvshmem.hpp"
 #endif // DISTCONV_HAS_NVSHMEM
 
+#include "h2/gpu/memory_utils.hpp"
+#include "h2/gpu/runtime.hpp"
+
 #include <Al.hpp>
+
 #include <memory>
 
 using DataType = int;
 using namespace distconv;
+using namespace h2::gpu;
 
 #ifdef DISTCONV_HAS_NVSHMEM
 static std::vector<std::string> nvshmem_methods = {
@@ -54,7 +62,7 @@ void alloc_buf(const std::string &method, DataType *&ptr, size_t count) {
     //util::MPIPrintStreamInfo() << "NVSHMEM alloc at: " << ptr;
 #endif // DISTCONV_HAS_NVSHMEM
   } else {
-    DISTCONV_CHECK_CUDA(cudaMalloc(&ptr, sizeof(DataType) * count));
+      DISTCONV_CHECK_GPU(GPU_MALLOC(&ptr, sizeof(DataType) * count));
   }
 }
 
@@ -69,7 +77,7 @@ void free_buf(const std::string &method, void *ptr) {
     //util::MPIPrintStreamInfo() << "Freeing nvshmem done";
 #endif // DISTCONV_HAS_NVSHMEM
   } else {
-    DISTCONV_CHECK_CUDA(cudaFree(ptr));
+      DISTCONV_CHECK_GPU(GPU_FREE(ptr));
   }
 }
 
@@ -86,17 +94,13 @@ void test_setup(const std::string &method,
                 int pid, int np) {
   auto input_host_buf = create_input(count, pid);
   alloc_buf(method, input_buf, count);
-  DISTCONV_CHECK_CUDA(cudaMemcpy(
-      input_buf, input_host_buf.data(),
-      sizeof(DataType) * count, cudaMemcpyHostToDevice));
+  mem_copy(input_buf, input_host_buf.data(), count);
   alloc_buf(method, output_buf, count);
 }
 
 void test_verify(DataType *output_buf, int count, int pid, int np) {
   std::vector<DataType> host(count);
-  DISTCONV_CHECK_CUDA(cudaMemcpy(host.data(), output_buf,
-                                 sizeof(DataType) * count,
-                                 cudaMemcpyDeviceToHost));
+  mem_copy(host.data(), output_buf, count);
   int num_errors = 0;
   int sum_pid = ((np - 1) * np) / 2;
   for (int i = 0; i < count; ++i) {
@@ -128,14 +132,18 @@ void test_teardown(const std::string &method, DataType *input_buf,
   util::MPIPrintStreamInfo() << "test torndown";
 }
 
-std::unique_ptr<tensor::Allreduce<DataType>> make_reducer(const std::string name,
-                                                          MPI_Comm comm,
-                                                          cudaStream_t stream) {
-  if (name == "AllreduceMPICUDA") {
-    return std::make_unique<tensor::AllreduceMPICUDA<DataType>>(comm, stream);
-  } else if (name == "AllreduceAlNCCL") {
-    return std::make_unique<tensor::AllreduceAlNCCL<DataType>>(
-        std::make_shared<Al::NCCLBackend::comm_type>(comm, stream));
+std::unique_ptr<tensor::Allreduce<DataType>>
+make_reducer(const std::string name, MPI_Comm comm, DeviceStream stream)
+{
+    if (name == "AllreduceMPICUDA")
+    {
+        return std::make_unique<tensor::AllreduceMPICUDA<DataType>>(comm,
+                                                                    stream);
+    }
+    else if (name == "AllreduceAlNCCL")
+    {
+        return std::make_unique<tensor::AllreduceAlNCCL<DataType>>(
+            std::make_shared<Al::NCCLBackend::comm_type>(comm, stream));
 #ifdef DISTCONV_HAS_NVSHMEM
   } else if (name == "AllreduceNVSHMEM") {
     return std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
@@ -169,8 +177,7 @@ void test(const std::string &method, int min_count, int max_count, MPI_Comm comm
   int np;
   MPI_Comm_rank(comm, &pid);
   MPI_Comm_size(comm, &np);
-  cudaStream_t stream;
-  DISTCONV_CHECK_CUDA(cudaStreamCreate(&stream));
+  DeviceStream stream = make_stream();
   auto allreducer = make_reducer(method, comm, stream);
   for (int count = min_count; count <= max_count; count *= 2) {
     MPI_Barrier(MPI_COMM_WORLD);
@@ -180,18 +187,18 @@ void test(const std::string &method, int min_count, int max_count, MPI_Comm comm
     test_setup(method, count, input_buf, output_buf, pid, np);
     assert_always(input_buf != nullptr);
     allreducer->allreduce(input_buf, output_buf, count);
-    DISTCONV_CHECK_CUDA(cudaStreamSynchronize(stream));
+    sync(stream);
     test_verify(output_buf, count, pid, np);
     // test inplace
     allreducer->allreduce(input_buf, count);
-    DISTCONV_CHECK_CUDA(cudaStreamSynchronize(stream));
+    sync(stream);
     test_verify(input_buf, count, pid, np);
     test_teardown(method, input_buf, output_buf);
     util::MPIPrintStreamInfo() << "Count: " << count << " done";
   }
   util::MPIPrintStreamInfo() << "Testing of " << method << " completed";
   MPI_Barrier(MPI_COMM_WORLD);
-  DISTCONV_CHECK_CUDA(cudaStreamDestroy(stream));
+  destroy(stream);
 }
 
 /*
@@ -199,25 +206,25 @@ void test(const std::string &method, int min_count, int max_count, MPI_Comm comm
   * py * pz == N
  */
 int main(int argc, char *argv[]) {
-  int dev = util::choose_gpu();
-  cudaSetDevice(dev);
-  Al::Initialize(argc, argv);
-  int pid;
-  int np;
-  MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-  MPI_Comm_size(MPI_COMM_WORLD, &np);
-  int min_count = 1;
-  int max_count = 1024 * 1024;
-  std::vector<std::string> methods;
-  // default test methods
-  methods.push_back("AllreduceMPICUDA");
-  methods.push_back("AllreduceAlNCCL");
-  int argi = 1;
+    set_gpu(util::choose_gpu());
+    Al::Initialize(argc, argv);
+    int pid;
+    int np;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &np);
+    int min_count = 1;
+    int max_count = 1024 * 1024;
+    std::vector<std::string> methods;
+    // default test methods
+    methods.push_back("AllreduceMPICUDA");
+    methods.push_back("AllreduceAlNCCL");
+    int argi = 1;
 
-  if (argi < argc) {
-    min_count = atoi(argv[argi]);
-    ++argi;
-  }
+    if (argi < argc)
+    {
+        min_count = atoi(argv[argi]);
+        ++argi;
+    }
   if (argi < argc) {
     max_count = atoi(argv[argi]);
     ++argi;

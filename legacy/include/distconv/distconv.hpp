@@ -676,5 +676,5 @@ inline int dump_local_tensor(
 #include "distconv/ref/backend.hpp"
 
 #ifdef DISTCONV_HAS_CUDNN
-#include "distconv/cudnn/backend.hpp"
+#include "distconv/dnn_backend/backend.hpp"
 #endif

@@ -28,11 +28,10 @@ namespace factory
  *  @tparam BuilderType   The functor type that builds concrete types.
  *  @tparam ErrorPolicy   The policy for handling errors.
  */
-template <
-    typename AbstractType,
-    typename IdType,
-    typename BuilderType = std::function<std::unique_ptr<AbstractType>()>,
-    template <typename, typename> class ErrorPolicy = DefaultErrorPolicy>
+template <typename AbstractType,
+          typename IdType,
+          typename BuilderType = std::function<std::unique_ptr<AbstractType>()>,
+          template <typename, typename> class ErrorPolicy = DefaultErrorPolicy>
 class ObjectFactory : private ErrorPolicy<IdType, AbstractType>
 {
 public:
@@ -47,9 +46,9 @@ public:
     bool register_builder(id_type id, builder_type builder)
     {
         return map_
-            .emplace(
-                std::piecewise_construct, std::forward_as_tuple(std::move(id)),
-                std::forward_as_tuple(std::move(builder)))
+            .emplace(std::piecewise_construct,
+                     std::forward_as_tuple(std::move(id)),
+                     std::forward_as_tuple(std::move(builder)))
             .second;
     }
 
@@ -60,8 +59,8 @@ public:
      *  the builder.
      */
     template <typename... Ts>
-    std::unique_ptr<AbstractType>
-    create_object(IdType const& id, Ts&&... Args) const
+    std::unique_ptr<AbstractType> create_object(IdType const& id,
+                                                Ts&&... Args) const
     {
         auto it = map_.find(id);
         if (it != map_.end())

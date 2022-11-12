@@ -43,7 +43,7 @@ class HaloExchangeAL:
     for (auto side: SIDES) {
       if (this->get_peer(dim, side) == MPI_PROC_NULL) continue;
       CommType &comm = side == Side::RHS ? comm_rhs : comm_lhs;
-      const cudaStream_t stream = comm->get_stream();
+      const h2::gpu::DeviceStream stream = comm->get_stream();
       const int width_send = side == Side::RHS ? width_rhs_send : width_lhs_send;
       const int width_recv = side == Side::RHS ? width_rhs_recv : width_lhs_recv;
       auto send_buf = this->get_send_buffer(dim, side);

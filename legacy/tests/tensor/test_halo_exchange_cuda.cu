@@ -1,10 +1,11 @@
 #include "distconv/distconv.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
-#include "distconv/tensor/tensor_mpi.hpp"
 #include "distconv/tensor/tensor_cuda.hpp"
+#include "distconv/tensor/tensor_mpi.hpp"
 #include "distconv/tensor/tensor_mpi_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
 #include "test_tensor.hpp"
-#include "distconv/util/util_cuda.hpp"
 #ifdef DISTCONV_HAS_NVSHMEM
 #include "distconv/util/nvshmem.hpp"
 #endif // DISTCONV_HAS_NVSHMEM
@@ -19,13 +20,17 @@
 #include "distconv/tensor/halo_exchange_cuda_nvshmem.hpp"
 #endif // DISTCONV_HAS_NVSHMEM
 
-#include <iostream>
-#include <vector>
+#include "h2/gpu/memory_utils.hpp"
+#include "h2/gpu/runtime.hpp"
 
 #include <Al.hpp>
 
+#include <iostream>
+#include <vector>
+
 using namespace distconv;
 using namespace distconv::tensor;
+using namespace h2::gpu;
 
 using DataType = float;
 
@@ -497,22 +502,19 @@ int test_halo_exchange(const Array<ND> &shape,
       tensor.get_shape(),
       tensor.get_global_index());
 
-  cudaDeviceSynchronize();
-
+  h2::gpu::sync();
 
   int_vector dims;
   for(int i = 0; i < ND - 2; ++i)
     dims.push_back(i);
-  cudaStream_t stream_main;
-  cudaStreamCreate(&stream_main);
+  DeviceStream stream_main = make_stream();
   BoundaryAttributesV<std::shared_ptr<Al::HostTransferBackend::comm_type>> comms;
   apply_to_spatial_sides(ND, [&](int i, Side side) {
-      cudaStream_t stream;
-      cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking);
+      DeviceStream stream = make_stream_nonblocking();
       comms(i, side) =
           std::make_shared<Al::HostTransferBackend::comm_type>(
               tensor.get_locale().get_comm(), stream);
-    });
+  });
   for (int i = 0; i < ND - 2; ++i) {
     if (tensor.get_split_index()[i] % 2) {
       std::swap(comms(i, LHS), comms(i, RHS));
@@ -579,7 +581,7 @@ int test_halo_exchange(const Array<ND> &shape,
 
   halo_exc->exchange(comms, stream_main, false, true, false, false);
 
-  cudaStreamSynchronize(stream_main);
+  sync(stream_main);
   util::MPIPrintStreamInfo() << "Exchange completed";
 
   nvshmem_barrier(method);
@@ -589,9 +591,8 @@ int test_halo_exchange(const Array<ND> &shape,
 
   int error_counter = 0;
   int *error_counter_d;
-  cudaMalloc(&error_counter_d, sizeof(int));
-  cudaMemcpy(error_counter_d, &error_counter, sizeof(int),
-             cudaMemcpyDefault);
+  GPU_MALLOC(&error_counter_d, sizeof(int));
+  mem_copy(error_counter_d, &error_counter);
   for (int i = 0; i < dims.size(); ++i) {
     if (tensor.get_local_size() > 0) {
       check_tensor<ND><<<1, block_dim>>>(
@@ -602,13 +603,12 @@ int test_halo_exchange(const Array<ND> &shape,
           tensor.get_shape(),
           tensor.get_global_index(),
           dims[i], error_counter_d);
-      cudaDeviceSynchronize();
+      h2::gpu::sync();
       std::fflush(stdout);
       std::fflush(stderr);
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    cudaMemcpy(&error_counter, error_counter_d, sizeof(int),
-               cudaMemcpyDefault);
+    mem_copy(&error_counter, error_counter_d);
     if (error_counter != 0) {
       util::MPIPrintStreamError()
           << "Verification failed at dimension " << dims[i];
@@ -669,21 +669,19 @@ int test_halo_exchange_reverse(const Array<ND> &shape,
       tensor.get_shape(),
       tensor.get_global_index());
 
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
 
   int_vector dims;
   for(int i = 0; i < ND - 2; ++i)
     dims.push_back(i);
-  cudaStream_t stream_main;
-  cudaStreamCreate(&stream_main);
+  DeviceStream stream_main = make_stream();
   SpatialAttributes<ND, std::shared_ptr<Al::HostTransferBackend::comm_type>> comms;
   apply_to_spatial_sides<ND>([&](int i, Side side) {
-      cudaStream_t stream;
-      cudaStreamCreate(&stream);
+      DeviceStream stream = make_stream();
       comms(i, side) =
           std::make_shared<Al::HostTransferBackend::comm_type>(
               tensor.get_locale().get_comm(), stream);
-    });
+  });
   for (int i = 0; i < ND - 2; ++i) {
     if (tensor.get_split_index()[i] % 2) {
       std::swap(comms(i, LHS), comms(i, RHS));
@@ -753,7 +751,7 @@ int test_halo_exchange_reverse(const Array<ND> &shape,
                      true, true, true, false,
                      tensor::HaloExchangeAccumOp::SUM);
 
-  cudaStreamSynchronize(stream_main);
+  sync(stream_main);
   nvshmem_barrier(method);
   MPI_Barrier(MPI_COMM_WORLD);
 
@@ -761,9 +759,8 @@ int test_halo_exchange_reverse(const Array<ND> &shape,
 
   int error_counter = 0;
   int *error_counter_d;
-  cudaMalloc(&error_counter_d, sizeof(int));
-  cudaMemcpy(error_counter_d, &error_counter, sizeof(int),
-             cudaMemcpyDefault);
+  GPU_MALLOC(&error_counter_d, sizeof(int));
+  mem_copy(error_counter_d, &error_counter);
 
   for (int i = 0; i < dims.size(); ++i) {
     if (tensor.get_local_size() > 0) {
@@ -775,13 +772,12 @@ int test_halo_exchange_reverse(const Array<ND> &shape,
           tensor.get_shape(),
           tensor.get_global_index(),
           dims[i], error_counter_d);
-      cudaDeviceSynchronize();
+      h2::gpu::sync();
       std::fflush(stdout);
       std::fflush(stderr);
     }
     MPI_Barrier(MPI_COMM_WORLD);
-    cudaMemcpy(&error_counter, error_counter_d, sizeof(int),
-               cudaMemcpyDefault);
+    mem_copy(&error_counter, error_counter_d);
     if (error_counter != 0) {
       util::MPIPrintStreamError()
           << "Verification failed at dimension " << dims[i];
@@ -809,7 +805,7 @@ int run_test(int pid, int np,
   nvshmem_barrier(method);
   if (test_halo_exchange<ND, Tensor>(tensor_shape, dist, method, pid, np)) {
     util::MPIPrintStreamError() << "Test failed";
-    cudaDeviceReset();
+    GPU_DEVICE_RESET();
     abort();
   }
   MPI_Barrier(MPI_COMM_WORLD);
@@ -897,8 +893,7 @@ int main(int argc, char *argv[]) {
   methods.push_back(HaloExchangeMethod::NVSHMEM_FUSED_NOTIFY);
 #endif
 
-  int dev = util::choose_gpu();
-  cudaSetDevice(dev);
+  set_gpu(util::choose_gpu());
   Al::Initialize(argc, argv);
   int pid;
   int np;
@@ -914,7 +909,7 @@ int main(int argc, char *argv[]) {
         exit(1);
       };
 
-  util::MPIPrintStreamInfo() << "Using device " << dev;
+  util::MPIPrintStreamInfo() << "Using device " << current_gpu();
 
   // Parse the number of spatial dimensions
   if (argc < 1)

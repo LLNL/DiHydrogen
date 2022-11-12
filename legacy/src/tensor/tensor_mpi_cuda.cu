@@ -1,11 +1,9 @@
-#include "distconv/tensor/tensor_mpi_cuda.hpp"
-#include "distconv/tensor/halo_cuda.hpp"
 #include "distconv/tensor/algorithms/transform_cuda.hpp"
+#include "distconv/tensor/halo_cuda.hpp"
+#include "distconv/tensor/tensor_mpi_cuda.hpp"
 #include "distconv/util/util.hpp"
-#include "distconv/util/util_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
-
-#include <cuda_runtime.h>
 
 namespace distconv {
 namespace tensor {
@@ -65,12 +63,19 @@ struct CastScaleBiasFuctor {
 
 } // namespace internal
 
-#define DEFINE_CLEAR_HALO(TYPE)                                         \
-  template <>                                                           \
-  void TensorImplHelper<TYPE, CUDAAllocator>::clear_halo(int dim, cudaStream_t s) { \
-    TraverseHalo<TensorImplType::TensorType, internal::ClearHaloFunctor<TYPE>>( \
-        *(m_impl.get_tensor()), dim, false, internal::ClearHaloFunctor<TYPE>(), s); \
-  }
+#define DEFINE_CLEAR_HALO(TYPE)                                                \
+    template <>                                                                \
+    void TensorImplHelper<TYPE, CUDAAllocator>::clear_halo(                    \
+        int dim, h2::gpu::DeviceStream s)                                      \
+    {                                                                          \
+        TraverseHalo<TensorImplType::TensorType,                               \
+                     internal::ClearHaloFunctor<TYPE>>(                        \
+            *(m_impl.get_tensor()),                                            \
+            dim,                                                               \
+            false,                                                             \
+            internal::ClearHaloFunctor<TYPE>(),                                \
+            s);                                                                \
+    }
 
 DEFINE_CLEAR_HALO(float)
 DEFINE_CLEAR_HALO(double)
@@ -78,11 +83,13 @@ DEFINE_CLEAR_HALO(int)
 
 #undef DEFINE_CLEAR_HALO
 
-#define DEFINE_SCALE(TYPE)                                              \
-  template <>                                                           \
-  void TensorImplHelper<TYPE, CUDAAllocator>::scale(TYPE v, cudaStream_t s) { \
-    Transform(*(m_impl.get_tensor()), internal::ScaleFunctor<TYPE>(v), s); \
-  }
+#define DEFINE_SCALE(TYPE)                                                     \
+    template <>                                                                \
+    void TensorImplHelper<TYPE, CUDAAllocator>::scale(TYPE v,                  \
+                                                      h2::gpu::DeviceStream s) \
+    {                                                                          \
+        Transform(*(m_impl.get_tensor()), internal::ScaleFunctor<TYPE>(v), s); \
+    }
 
 DEFINE_SCALE(float)
 DEFINE_SCALE(double)
@@ -90,32 +97,36 @@ DEFINE_SCALE(int)
 
 #undef DEFINE_SCALE
 
-#define DEFINE_CAST(T1, T2) \
-  template <>                                                           \
-  int Cast<T1, T2>(Tensor<T1, LocaleMPI, CUDAAllocator> &t_dest,        \
-                   const Tensor<T2, LocaleMPI, CUDAAllocator> &t_src,   \
-                   cudaStream_t stream) {                               \
-    Transform(t_dest, t_src, internal::CastFuctor<T1, T2>(),            \
-              stream);                                                  \
-    return 0;                                                           \
-  }
+#define DEFINE_CAST(T1, T2)                                                    \
+    template <>                                                                \
+    int Cast<T1, T2>(Tensor<T1, LocaleMPI, CUDAAllocator> & t_dest,            \
+                     const Tensor<T2, LocaleMPI, CUDAAllocator>& t_src,        \
+                     h2::gpu::DeviceStream stream)                             \
+    {                                                                          \
+        Transform(t_dest, t_src, internal::CastFuctor<T1, T2>(), stream);      \
+        return 0;                                                              \
+    }
 DEFINE_CAST(float, short)
 DEFINE_CAST(float, unsigned short)
 DEFINE_CAST(double, short)
 DEFINE_CAST(double, unsigned short)
 #undef DEFINE_CAST
 
-#define DEFINE_CAST_SCALE_BIAS(T1, T2) \
-  template <>                                                                    \
-  int CastScaleBias<T1, T2>(Tensor<T1, LocaleMPI, CUDAAllocator> &t_dest,        \
-                            const Tensor<T2, LocaleMPI, CUDAAllocator> &t_src,   \
-                            const T1 alpha,                                      \
-                            const T1 beta,                                       \
-                            cudaStream_t stream) {                               \
-    Transform(t_dest, t_src, internal::CastScaleBiasFuctor<T1, T2>(alpha, beta), \
-              stream);                                                           \
-    return 0;                                                                    \
-  }
+#define DEFINE_CAST_SCALE_BIAS(T1, T2)                                         \
+    template <>                                                                \
+    int CastScaleBias<T1, T2>(                                                 \
+        Tensor<T1, LocaleMPI, CUDAAllocator> & t_dest,                         \
+        const Tensor<T2, LocaleMPI, CUDAAllocator>& t_src,                     \
+        const T1 alpha,                                                        \
+        const T1 beta,                                                         \
+        h2::gpu::DeviceStream stream)                                          \
+    {                                                                          \
+        Transform(t_dest,                                                      \
+                  t_src,                                                       \
+                  internal::CastScaleBiasFuctor<T1, T2>(alpha, beta),          \
+                  stream);                                                     \
+        return 0;                                                              \
+    }
 DEFINE_CAST_SCALE_BIAS(float, float)
 DEFINE_CAST_SCALE_BIAS(float, short)
 DEFINE_CAST_SCALE_BIAS(float, unsigned short)
@@ -216,32 +227,40 @@ struct AddConstIf<false, T> {
   using type = T;
 };
 
-
 template <typename DataType, bool IS_CONCAT>
 int ConcatenateOrSlice(
-    typename AddConstIf<!IS_CONCAT, Tensor<DataType, LocaleMPI, CUDAAllocator>>::type &t_dest,
-    typename AddConstIf<IS_CONCAT, Tensor<DataType, LocaleMPI, CUDAAllocator>>::type &t_src1,
-    typename AddConstIf<IS_CONCAT, Tensor<DataType, LocaleMPI, CUDAAllocator>>::type &t_src2,
-    cudaStream_t s) {
-  const int nd = t_dest.get_num_dims();
-  int block_dim = 256; // tunable
+    typename AddConstIf<!IS_CONCAT,
+                        Tensor<DataType, LocaleMPI, CUDAAllocator>>::type&
+        t_dest,
+    typename AddConstIf<IS_CONCAT,
+                        Tensor<DataType, LocaleMPI, CUDAAllocator>>::type&
+        t_src1,
+    typename AddConstIf<IS_CONCAT,
+                        Tensor<DataType, LocaleMPI, CUDAAllocator>>::type&
+        t_src2,
+    h2::gpu::DeviceStream s)
+{
+    const int nd = t_dest.get_num_dims();
+    int block_dim = 256; // tunable
 
-  int concat_dim = -1;
-  for (int i = 0; i < nd; ++i) {
-    auto dest_dim = t_dest.get_shape()[i];
-    auto src1_dim = t_src1.get_shape()[i];
-    auto src2_dim = t_src2.get_shape()[i];
-    if (dest_dim == src1_dim && dest_dim == src2_dim) {
-      // this is not concat dim
-      continue;
+    int concat_dim = -1;
+    for (int i = 0; i < nd; ++i)
+    {
+        auto dest_dim = t_dest.get_shape()[i];
+        auto src1_dim = t_src1.get_shape()[i];
+        auto src2_dim = t_src2.get_shape()[i];
+        if (dest_dim == src1_dim && dest_dim == src2_dim)
+        {
+            // this is not concat dim
+            continue;
+        }
+        assert_always(dest_dim == src1_dim + src2_dim);
+        concat_dim = i;
+        break;
     }
-    assert_always(dest_dim == src1_dim + src2_dim);
-    concat_dim = i;
-    break;
-  }
 
-  // TODO: only works for U-Net. Concat on channel dim
-  assert_always(concat_dim == nd - 2);
+    // TODO: only works for U-Net. Concat on channel dim
+    assert_always(concat_dim == nd - 2);
 
 #define CALL_KERNEL(ND, INNER_DIM)  do {                                \
     assert_always(concat_dim > INNER_DIM);                              \
@@ -280,34 +299,36 @@ int ConcatenateOrSlice(
 } // namespace internal
 
 template <typename DataType>
-int Concatenate(Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest,
-                const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src1,
-                const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src2,
-                cudaStream_t s) {
-  return internal::ConcatenateOrSlice<DataType, true>(
-      t_dest, t_src1, t_src2, s);
+int Concatenate(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest,
+                const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src1,
+                const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src2,
+                h2::gpu::DeviceStream s)
+{
+    return internal::ConcatenateOrSlice<DataType, true>(
+        t_dest, t_src1, t_src2, s);
 }
 
 template <typename DataType>
-int Slice(Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest1,
-          Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest2,
-          const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src,
-          cudaStream_t s) {
-  return internal::ConcatenateOrSlice<DataType, false>(
-      t_src, t_dest1, t_dest2, s);
+int Slice(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest1,
+          Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest2,
+          const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src,
+          h2::gpu::DeviceStream s)
+{
+    return internal::ConcatenateOrSlice<DataType, false>(
+        t_src, t_dest1, t_dest2, s);
 }
 
-#define DEFINE_CONCATENATE(TYPE)                                        \
-  template                                                              \
-  int Concatenate<TYPE>(Tensor<TYPE, LocaleMPI, CUDAAllocator> &t_dest, \
-      const Tensor<TYPE, LocaleMPI, CUDAAllocator> &t_src1,             \
-                  const Tensor<TYPE, LocaleMPI, CUDAAllocator> &t_src2, \
-                        cudaStream_t s);                                \
-  template                                                              \
-  int Slice<TYPE>(Tensor<TYPE, LocaleMPI, CUDAAllocator> &t_dest1,      \
-                  Tensor<TYPE, LocaleMPI, CUDAAllocator> &t_dest2,      \
-                  const Tensor<TYPE, LocaleMPI, CUDAAllocator> &t_src,  \
-                  cudaStream_t s);
+#define DEFINE_CONCATENATE(TYPE)                                               \
+    template int Concatenate<TYPE>(                                            \
+        Tensor<TYPE, LocaleMPI, CUDAAllocator> & t_dest,                       \
+        const Tensor<TYPE, LocaleMPI, CUDAAllocator>& t_src1,                  \
+        const Tensor<TYPE, LocaleMPI, CUDAAllocator>& t_src2,                  \
+        h2::gpu::DeviceStream s);                                              \
+    template int Slice<TYPE>(                                                  \
+        Tensor<TYPE, LocaleMPI, CUDAAllocator> & t_dest1,                      \
+        Tensor<TYPE, LocaleMPI, CUDAAllocator> & t_dest2,                      \
+        const Tensor<TYPE, LocaleMPI, CUDAAllocator>& t_src,                   \
+        h2::gpu::DeviceStream s);
 DEFINE_CONCATENATE(float)
 DEFINE_CONCATENATE(double)
 DEFINE_CONCATENATE(int)

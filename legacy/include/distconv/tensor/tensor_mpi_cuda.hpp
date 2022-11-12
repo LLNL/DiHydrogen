@@ -1,11 +1,19 @@
 #pragma once
 
-#include "distconv/tensor/tensor_mpi.hpp"
+#include "distconv/runtime_gpu.hpp"
+#include "distconv/tensor/runtime_gpu.hpp"
 #include "distconv/tensor/tensor_cuda.hpp"
+#include "distconv/tensor/tensor_mpi.hpp"
 #include "distconv/util/util.hpp"
+#include "distconv/util/util_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
-#include "distconv/util/util_cuda.hpp"
-#include "distconv/tensor/runtime_cuda.hpp"
+#include <distconv_config.hpp>
+
+#if H2_HAS_CUDA
+#define GPU_MEMCPY_3D_PARAMS cudaMemcpy3DParms
+#elif H2_HAS_ROCM
+#define GPU_MEMCPY_3D_PARAMS hipMemcpy3DParms
+#endif
 
 namespace distconv {
 namespace tensor {
@@ -104,30 +112,34 @@ struct CopyLocalFunctor3D<DataType, CUDAAllocator, CUDAAllocator,
       src_offset += t_src.get_overlap()[i] * tr_shape[i-1];
       dst_offset += t_dst.get_overlap()[i] * tr_shape[i-1];
     }
-    cudaMemcpy3DParms p;
-    memset(&p, 0, sizeof(cudaMemcpy3DParms));
-    p.extent = make_cudaExtent(local_shape[0] * sizeof(DataType),
-                               local_shape[1], local_shape[2]);
+    GPU_MEMCPY_3D_PARAMS p;
+    memset(&p, 0, sizeof(GPU_MEMCPY_3D_PARAMS));
+    p.extent = GPU_MAKE_GPU_EXTENT(
+        local_shape[0] * sizeof(DataType), local_shape[1], local_shape[2]);
     // cudaPitchedPtr does not have const void *
-    p.srcPtr = make_cudaPitchedPtr(const_cast<void*>(static_cast<const void*>(t_src.get_const_buffer())),
-                                   t_src.get_pitch() * sizeof(DataType),
-                                   t_src.get_local_real_shape()[0],
-                                   t_src.get_local_real_shape()[1]);
-    p.dstPtr = make_cudaPitchedPtr(t_dst.get_buffer(), t_dst.get_pitch() * sizeof(DataType),
-                                   t_dst.get_local_real_shape()[0],
-                                   t_dst.get_local_real_shape()[1]);
-    p.kind = cudaMemcpyDefault;
+    p.srcPtr = GPU_MAKE_GPU_PITCHED_PTR(
+        const_cast<void*>(static_cast<const void*>(t_src.get_const_buffer())),
+        t_src.get_pitch() * sizeof(DataType),
+        t_src.get_local_real_shape()[0],
+        t_src.get_local_real_shape()[1]);
+    p.dstPtr = GPU_MAKE_GPU_PITCHED_PTR(t_dst.get_buffer(),
+                                        t_dst.get_pitch() * sizeof(DataType),
+                                        t_dst.get_local_real_shape()[0],
+                                        t_dst.get_local_real_shape()[1]);
+    p.kind = GPU_MEMCPY_DEFAULT;
     for (size_t i = 0; i < num_chunks; ++i) {
-      p.srcPos = make_cudaPos(
-          t_src.get_overlap()[0] * sizeof(DataType),
-          t_src.get_overlap()[1],
-          t_src.get_overlap()[2] + t_src.get_local_real_shape()[2] * (i + src_offset));
-      p.dstPos = make_cudaPos(
-          t_dst.get_overlap()[0] * sizeof(DataType),
-          t_dst.get_overlap()[1],
-          t_dst.get_overlap()[2] + t_dst.get_local_real_shape()[2] * (i + dst_offset));
-      // util::MPIPrintStreamDebug() << "memcpy3d param: " << p << "\n";
-      DISTCONV_CHECK_CUDA(cudaMemcpy3DAsync(&p, get_cuda_stream(stream)));
+        p.srcPos = GPU_MAKE_GPU_POS(t_src.get_overlap()[0] * sizeof(DataType),
+                                    t_src.get_overlap()[1],
+                                    t_src.get_overlap()[2]
+                                        + t_src.get_local_real_shape()[2]
+                                              * (i + src_offset));
+        p.dstPos = GPU_MAKE_GPU_POS(t_dst.get_overlap()[0] * sizeof(DataType),
+                                    t_dst.get_overlap()[1],
+                                    t_dst.get_overlap()[2]
+                                        + t_dst.get_local_real_shape()[2]
+                                              * (i + dst_offset));
+        // util::MPIPrintStreamDebug() << "memcpy3d param: " << p << "\n";
+        DISTCONV_CHECK_GPU(GPU_MEMCPY_3D_ASYNC(&p, get_gpu_stream(stream)));
     }
     return 0;
   }
@@ -140,43 +152,44 @@ class TensorImplHelper<DataType, CUDAAllocator> {
   using TensorImplType = TensorImpl<Tensor<DataType, LocaleMPI, CUDAAllocator>>;
  public:
   TensorImplHelper(TensorImplType &impl): m_impl(impl) {}
-  void clear_halo(int dim, cudaStream_t s);
-  void scale(DataType v, cudaStream_t s);
+  void clear_halo(int dim, h2::gpu::DeviceStream s);
+  void scale(DataType v, h2::gpu::DeviceStream s);
 
- protected:
+  protected:
   TensorImplType &m_impl;
 };
 
 template <typename DataType1, typename DataType2>
-int Cast(Tensor<DataType1, LocaleMPI, CUDAAllocator> &t_dest,
-         const Tensor<DataType2, LocaleMPI, CUDAAllocator> &t_src,
-         cudaStream_t s);
+int Cast(Tensor<DataType1, LocaleMPI, CUDAAllocator>& t_dest,
+         const Tensor<DataType2, LocaleMPI, CUDAAllocator>& t_src,
+         h2::gpu::DeviceStream s);
 
 template <typename DataType>
-inline int Cast(Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest,
-                const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src,
-                cudaStream_t s) {
-  return Copy(t_dest, t_src, s);
+inline int Cast(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest,
+                const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src,
+                h2::gpu::DeviceStream s)
+{
+    return Copy(t_dest, t_src, s);
 }
 
 template <typename DataType1, typename DataType2>
-int CastScaleBias(Tensor<DataType1, LocaleMPI, CUDAAllocator> &t_dest,
-                  const Tensor<DataType2, LocaleMPI, CUDAAllocator> &t_src,
+int CastScaleBias(Tensor<DataType1, LocaleMPI, CUDAAllocator>& t_dest,
+                  const Tensor<DataType2, LocaleMPI, CUDAAllocator>& t_src,
                   const DataType1 alpha,
                   const DataType1 beta,
-                  cudaStream_t s);
+                  h2::gpu::DeviceStream s);
 
 template <typename DataType>
-int Concatenate(Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest,
-                const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src1,
-                const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src2,
-                cudaStream_t s);
+int Concatenate(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest,
+                const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src1,
+                const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src2,
+                h2::gpu::DeviceStream s);
 
 template <typename DataType>
-int Slice(Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest1,
-          Tensor<DataType, LocaleMPI, CUDAAllocator> &t_dest2,
-          const Tensor<DataType, LocaleMPI, CUDAAllocator> &t_src,
-          cudaStream_t s);
+int Slice(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest1,
+          Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest2,
+          const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src,
+          h2::gpu::DeviceStream s);
 
 } // namespace tensor
 } // namespace distconv

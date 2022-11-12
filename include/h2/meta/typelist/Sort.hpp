@@ -37,18 +37,16 @@ using Sort = Force<SortT<List, Compare>>;
 
 namespace details
 {
-template <
-    typename T,
-    typename SortedList,
-    template <typename, typename>
-    class Compare>
+template <typename T,
+          typename SortedList,
+          template <typename, typename>
+          class Compare>
 struct InsertIntoSortedT;
 
-template <
-    typename T,
-    typename SortedList,
-    template <typename, typename>
-    class Compare>
+template <typename T,
+          typename SortedList,
+          template <typename, typename>
+          class Compare>
 using InsertIntoSorted = Force<InsertIntoSortedT<T, SortedList, Compare>>;
 
 template <typename T, template <typename, typename> class Compare>
@@ -57,17 +55,15 @@ struct InsertIntoSortedT<T, Empty, Compare>
     using type = TL<T>;
 };
 
-template <
-    typename T,
-    typename Head,
-    typename... Tail,
-    template <typename, typename>
-    class Compare>
+template <typename T,
+          typename Head,
+          typename... Tail,
+          template <typename, typename>
+          class Compare>
 struct InsertIntoSortedT<T, TL<Head, Tail...>, Compare>
-    : IfThenElseT<
-          Compare<T, Head>::value,
-          TL<T, Head, Tail...>,
-          Cons<Head, InsertIntoSorted<T, TL<Tail...>, Compare>>>
+    : IfThenElseT<Compare<T, Head>::value,
+                  TL<T, Head, Tail...>,
+                  Cons<Head, InsertIntoSorted<T, TL<Tail...>, Compare>>>
 {};
 
 } // namespace details
@@ -80,11 +76,10 @@ struct SortT<Empty, Compare>
 
 // Insertion sort -- it works and is straightforward to implement. If
 // lists grow large, we can reevaluate this choice.
-template <
-    typename Head,
-    typename... Tail,
-    template <typename, typename>
-    class Compare>
+template <typename Head,
+          typename... Tail,
+          template <typename, typename>
+          class Compare>
 struct SortT<TL<Head, Tail...>, Compare>
     : details::InsertIntoSortedT<Head, Sort<TL<Tail...>, Compare>, Compare>
 {};
