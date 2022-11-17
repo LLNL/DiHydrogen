@@ -67,6 +67,7 @@ if (H2_HAS_ROCM)
   find_library(HSA_LIBRARY hsa-runtime64 REQUIRED)
   find_dependency(MIOpen CONFIG)
   find_dependency(hipcub CONFIG)
+  find_dependency(rocm_smi CONFIG)
   find_dependency(Roctracer MODULE)
 endif ()
 

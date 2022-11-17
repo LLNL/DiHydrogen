@@ -213,14 +213,18 @@ if (H2_ENABLE_ROCM)
     message(FATAL_ERROR "HSA Runtime library not found.")
   endif ()
 
+  # These should be part of a bundled ROCm release.
   find_package(MIOpen CONFIG REQUIRED)
   find_package(hipcub CONFIG REQUIRED)
+  find_package(rocm_smi CONFIG REQUIRED)
+
   find_package(Roctracer MODULE REQUIRED)
 
   set(H2_ROCM_LIBS
     hip::host
     hip::hipcub
     MIOpen
+    rocm_smi64
     ${Roctracer_LIBRARIES}
     ${HSA_LIBRARY})
   set(H2_HAS_ROCM TRUE)
@@ -228,6 +232,24 @@ endif ()
 
 if (H2_HAS_CUDA OR H2_HAS_ROCM)
   set(H2_HAS_GPU TRUE)
+endif ()
+
+# DiHydrogen will use MPI-3 features extensively. Until proven
+# otherwise, assume that the CMake module version checking is
+# accurate.
+#
+set(MPI_ASSUME_NO_BUILTIN_MPI ON)
+if (H2_ENABLE_DISTCONV_LEGACY)
+  find_package(MPI 3.0.0 COMPONENTS CXX REQUIRED)
+
+  get_target_property(
+    __mpi_compile_options MPI::MPI_CXX INTERFACE_COMPILE_OPTIONS)
+  if (__mpi_compile_options)
+    set_property(TARGET MPI::MPI_CXX PROPERTY
+      INTERFACE_COMPILE_OPTIONS
+      $<$<COMPILE_LANGUAGE:CXX>:${__mpi_compile_options}>)
+    unset(__mpi_compile_options)
+  endif ()
 endif ()
 
 if (H2_ENABLE_ALUMINUM)
@@ -253,49 +275,34 @@ if (H2_ENABLE_ALUMINUM)
   endif ()
 endif ()
 
-# DiHydrogen will use MPI-3 features extensively. Until proven
-# otherwise, assume that the CMake module version checking is
-# accurate.
-if (H2_ENABLE_DISTCONV_LEGACY)
-  find_package(MPI 3.0.0 COMPONENTS CXX REQUIRED)
-
-  get_target_property(
-    __mpi_compile_options MPI::MPI_CXX INTERFACE_COMPILE_OPTIONS)
-  if (__mpi_compile_options)
-    set_property(TARGET MPI::MPI_CXX PROPERTY
-      INTERFACE_COMPILE_OPTIONS
-      $<$<COMPILE_LANGUAGE:CXX>:${__mpi_compile_options}>)
-    unset(__mpi_compile_options)
+if (MPI_FOUND AND H2_HAS_ROCM)
+  # Fix things in the MPI::MPI_CXX target
+  get_target_property(_MPI_CXX_INCL_DIRS
+    MPI::MPI_CXX INTERFACE_INCLUDE_DIRECTORIES)
+  if (NOT _MPI_CXX_INCL_DIRS)
+    set(_MPI_CXX_INCL_DIRS ${MPI_CXX_COMPILER_INCLUDE_DIRS})
   endif ()
 
-  if (H2_HAS_ROCM)
-    # Fix things in the MPI::MPI_CXX target
-    get_target_property(_MPI_CXX_INCL_DIRS
-      MPI::MPI_CXX INTERFACE_INCLUDE_DIRECTORIES)
-    if (NOT _MPI_CXX_INCL_DIRS)
-      set(_MPI_CXX_INCL_DIRS ${MPI_CXX_COMPILER_INCLUDE_DIRS})
-    endif ()
-    if ((NOT _MPI_CXX_INCL_DIRS)
-        AND (DEFINED ENV{PE_ENV})
-        AND ("${MPI_CXX_COMPILER}" STREQUAL "${CMAKE_CXX_COMPILER}"))
+  if ((NOT _MPI_CXX_INCL_DIRS)
+      AND (DEFINED ENV{PE_ENV})
+      AND ("${MPI_CXX_COMPILER}" STREQUAL "${CMAKE_CXX_COMPILER}"))
 
-      execute_process(
-        COMMAND "${CMAKE_CXX_COMPILER}" "--cray-print-opts=cflags"
-        OUTPUT_VARIABLE _CRAY_INCLUDE_PATHS)
-      if (_CRAY_INCLUDE_PATHS)
-        string(STRIP "${_CRAY_INCLUDE_PATHS}" _CRAY_INCLUDE_PATHS_STRIPPED)
-        string(REPLACE "-I" "" _CRAY_INCLUDE_PATHS_NO_I
-          "${_CRAY_INCLUDE_PATHS_STRIPPED}")
-        string(REPLACE " " ";" _MPI_CXX_INCL_DIRS
-          "${_CRAY_INCLUDE_PATHS_NO_I}")
-      endif ()
+    execute_process(
+      COMMAND "${CMAKE_CXX_COMPILER}" "--cray-print-opts=cflags"
+      OUTPUT_VARIABLE _CRAY_INCLUDE_PATHS)
+    if (_CRAY_INCLUDE_PATHS)
+      string(STRIP "${_CRAY_INCLUDE_PATHS}" _CRAY_INCLUDE_PATHS_STRIPPED)
+      string(REPLACE "-I" "" _CRAY_INCLUDE_PATHS_NO_I
+        "${_CRAY_INCLUDE_PATHS_STRIPPED}")
+      string(REPLACE " " ";" _MPI_CXX_INCL_DIRS
+        "${_CRAY_INCLUDE_PATHS_NO_I}")
     endif ()
+  endif ()
 
-    if (_MPI_CXX_INCL_DIRS)
-      target_include_directories(MPI::MPI_CXX
-        INTERFACE
-        $<$<COMPILE_LANGUAGE:HIP>:${_MPI_CXX_INCL_DIRS}>)
-    endif ()
+  if (_MPI_CXX_INCL_DIRS)
+    target_include_directories(MPI::MPI_CXX
+      INTERFACE
+      $<$<COMPILE_LANGUAGE:HIP>:${_MPI_CXX_INCL_DIRS}>)
   endif ()
 endif ()
 
