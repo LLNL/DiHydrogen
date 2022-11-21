@@ -9,7 +9,8 @@
 namespace distconv
 {
 using BackendDNNLib = cudnn::BackendCUDNN;
-namespace backend = cudnn;
+namespace dnn_lib = cudnn;
+namespace backend = dnn_lib;
 } // namespace distconv
 
 #define GPU_PROFILE_RANGE_POP nvtxRangePop
@@ -20,7 +21,8 @@ namespace backend = cudnn;
 namespace distconv
 {
 using BackendDNNLib = miopen::BackendMIOpen;
-namespace backend = miopen;
+namespace dnn_lib = miopen;
+namespace backend = dnn_lib;
 } // namespace distconv
 
 #define GPU_PROFILE_RANGE_POP roctxRangePop
