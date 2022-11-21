@@ -25,7 +25,7 @@ Build system:
      -- MIOpen
      -- ROC-tracer
 
-Buf fixes:
+Bug fixes:
 
 Retired features:
 
