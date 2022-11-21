@@ -1,4 +1,35 @@
-============================== Release Notes: v0.2.1 ==============================
+========================= Release Notes v0.3.0 =========================
+
+API:
+
+ - H2 added a thin GPU portability layer that supports CUDA and ROCm
+   (HIP) programming environments.
+ - Added a spdlog-based logging capability.
+
+Performance optimizations:
+
+Internal features:
+
+ - MIOpen is supported as a backend for "DNN compute kernels" in DistConv.
+
+Build system:
+
+ - Several updates to support ROCm 5.*.
+ - Requires CMake >= 3.21.
+ - Requires ROCm 5, with the latest available minor release being
+   STRONGLY recommended, when targeting ROCm-based platforms. The
+   current packages we need in this stack are:
+     -- HIP (host)
+     -- hipCUB
+     -- ROCm-SMI
+     -- MIOpen
+     -- ROC-tracer
+
+Bug fixes:
+
+Retired features:
+
+========================= Release Notes v0.2.1 =========================
 
 API:
 
@@ -15,7 +46,7 @@ Bug fixes:
 
 Retired features:
 
-============================== Release Notes: v0.2.0 ==============================
+========================= Release Notes v0.2.0 =========================
 
 API:
 
@@ -33,7 +64,7 @@ Retired features:
 
 
 
-============================== Release Notes: v0.1 ==============================
+========================= Release Notes v0.1 =========================
 
 Initial release of the DiHydrogen Distributed Tensor Library.
 
@@ -75,5 +106,3 @@ Bug fixes:
  - Fixed build issues with GCC8
 
 Retired features:
-
-

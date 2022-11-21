@@ -22,21 +22,21 @@ set(H2_HAS_ALUMINUM @H2_HAS_ALUMINUM@)
 set(H2_HAS_OPENMP @H2_HAS_OPENMP@)
 set(H2_HAS_HALF @H2_HAS_HALF@)
 set(H2_HAS_CUDA @H2_HAS_CUDA@)
-set(H2_HAS_HIP_ROCM @H2_HAS_HIP_ROCM@)
+set(H2_HAS_ROCM @H2_HAS_ROCM@)
 set(H2_DISTCONV_HAS_P2P @P2P_FOUND@)
 set(H2_DISTCONV_HAS_NVSHMEM @NVSHMEM_FOUND@)
 
 find_dependency(spdlog)
+
+if (H2_HAS_DISTCONV)
+  find_dependency(MPI)
+endif ()
 
 if (H2_HAS_ALUMINUM)
   set(_BUILD_AL_DIR "@Aluminum_DIR@")
   set(_MIN_AL_VERSION "@H2_MINIMUM_ALUMINUM_VERSION@")
   find_dependency(Aluminum ${_MIN_AL_VERSION}
     HINTS "${_BUILD_AL_DIR}")
-endif ()
-
-if (H2_HAS_DISTCONV)
-  find_dependency(MPI)
 endif ()
 
 if (H2_HAS_OPENMP)
@@ -67,6 +67,7 @@ if (H2_HAS_ROCM)
   find_library(HSA_LIBRARY hsa-runtime64 REQUIRED)
   find_dependency(MIOpen CONFIG)
   find_dependency(hipcub CONFIG)
+  find_dependency(rocm_smi CONFIG)
   find_dependency(Roctracer MODULE)
 endif ()
 
