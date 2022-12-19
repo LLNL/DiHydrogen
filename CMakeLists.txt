@@ -134,7 +134,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang"
   set(CMAKE_CXX_FLAGS "${H2_CMAKE_CXX_FLAGS_STR} ${CMAKE_CXX_FLAGS}")
 
   # Disable all optimization in debug.
-  list(APPEND CMAKE_CXX_FLAGS_DEBUG -O0)
+  #list(APPEND CMAKE_CXX_FLAGS_DEBUG -O0)
 
 else ()
 

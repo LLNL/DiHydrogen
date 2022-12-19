@@ -159,7 +159,7 @@ public:
             }
         }
 
-        bool use_padding = pads[0] != 0;
+        bool const use_padding = pads[0] != 0;
 
         // As halo exchanges with shared tensors is not yet implemented,
         // the spatial domain must be partitioned without sharing or
@@ -253,14 +253,23 @@ public:
             input.get_const_base_ptr()
             - input.get_local_offset(IndexVector(m_halo_bwd_recv), true);
 
-        backend::pooling_forward(m_be.get_handle(),
+        // Proxies!
+        auto const handle = m_be.get_handle();
+        dnn_lib::PackedTensorReadProxy input_prox(handle,
+                                                  m_input_d,
+                                                  input_ptr);
+        dnn_lib::PackedTensorWriteProxy output_prox(handle,
+                                                    m_output_d,
+                                                    output.get_base_ptr(),
+                                                    beta);
+        backend::pooling_forward(handle,
                                  m_pooling_d,
                                  alpha,
-                                 m_input_d,
-                                 input_ptr,
+                                 input_prox.desc(),
+                                 input_prox.ptr(),
                                  beta,
-                                 m_output_d,
-                                 output.get_base_ptr(),
+                                 output_prox.desc(),
+                                 output_prox.ptr(),
                                  training);
 
         return 0;
@@ -290,18 +299,30 @@ public:
                 d_input.get_base_ptr()
                 - d_input.get_local_offset(IndexVector(m_halo_bwd_recv), true);
 
+            // Proxies
+            auto const handle = m_be.get_handle();
+            dnn_lib::PackedTensorReadProxy output_proxy(handle,
+                                                        m_output_d,
+                                                        output.get_const_base_ptr()),
+                d_output_proxy(handle,
+                               m_d_output_d,
+                               d_output.get_const_base_ptr()),
+                input_proxy(handle, m_input_d, input_ptr);
+            dnn_lib::PackedTensorWriteProxy d_input_proxy(handle,
+                                                          m_d_input_d,
+                                                          d_input_ptr);
             backend::pooling_backward(m_be.get_handle(),
                                       m_pooling_d,
                                       alpha,
-                                      m_output_d,
-                                      output.get_const_base_ptr(),
-                                      m_d_output_d,
-                                      d_output.get_const_base_ptr(),
-                                      m_input_d,
-                                      input_ptr,
+                                      output_proxy.desc(),
+                                      output_proxy.ptr(),
+                                      d_output_proxy.desc(),
+                                      d_output_proxy.ptr(),
+                                      input_proxy.desc(),
+                                      input_proxy.ptr(),
                                       beta,
-                                      m_d_input_d,
-                                      d_input_ptr);
+                                      d_input_proxy.desc(),
+                                      d_input_proxy.ptr());
         }
         {
 #if 0

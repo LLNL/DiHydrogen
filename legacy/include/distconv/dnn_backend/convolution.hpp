@@ -541,6 +541,7 @@ public:
             GPU_PROFILE_RANGE_PUSH("conv/forward/forward");
         }
 
+        auto const handle = m_be.get_handle();
         if (!m_overlap_halo_exchange_fwd)
         {
             record_start_comp();
@@ -554,11 +555,17 @@ public:
                                                   m_output_all_filters_d,
                                                   m_filter_d,
                                                   "stationary-x forward");
+                auto input_proxy = dnn_lib::read_proxy(handle,m_input_d, input_ptr);
+                auto output_proxy = dnn_lib::write_proxy(
+                    handle,
+                    m_output_all_filters_d,
+                    m_output_all_filters_t.get_base_ptr(),
+                    beta);
                 backend::convolution_forward(
-                    m_be.get_handle(),
+                    handle,
                     alpha,
-                    m_input_d,
-                    input_ptr,
+                    input_proxy.desc(),
+                    input_proxy.ptr(),
                     m_filter_d,
                     filter.get_const_base_ptr(),
                     m_conv_fwd_d,
@@ -566,8 +573,8 @@ public:
                     ws,
                     m_ws_size_fwd,
                     beta,
-                    m_output_all_filters_d,
-                    m_output_all_filters_t.get_base_ptr());
+                    output_proxy.desc(),
+                    output_proxy.ptr());
             }
             else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y)
             {
@@ -578,10 +585,17 @@ public:
                                                   m_output_d,
                                                   m_filter_d,
                                                   "stationary-y forward");
-                backend::convolution_forward(m_be.get_handle(),
+                auto input_proxy = dnn_lib::read_proxy(handle,
+                    m_input_gathered_d,
+                    m_input_gathered_t.get_const_base_ptr());
+                auto output_proxy = dnn_lib::write_proxy(handle,
+                                                m_output_d,
+                                                output.get_base_ptr(),
+                                                beta);
+                backend::convolution_forward(handle,
                                              alpha,
-                                             m_input_gathered_d,
-                                             m_input_gathered_t.get_base_ptr(),
+                                             input_proxy.desc(),
+                                             input_proxy.ptr(),
                                              m_filter_d,
                                              filter.get_const_base_ptr(),
                                              m_conv_fwd_d,
@@ -589,8 +603,8 @@ public:
                                              ws,
                                              m_ws_size_fwd,
                                              beta,
-                                             m_output_d,
-                                             output.get_base_ptr());
+                                             output_proxy.desc(),
+                                             output_proxy.ptr());
             }
             else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W)
             {
@@ -603,11 +617,19 @@ public:
                                                   m_output_all_filters_d,
                                                   m_filter_d,
                                                   "stationary-w forward");
-                backend::convolution_forward(
-                    m_be.get_handle(),
-                    alpha,
+                auto input_proxy = dnn_lib::read_proxy(handle,
                     m_input_gathered_d,
-                    m_input_gathered_t.get_base_ptr(),
+                    m_input_gathered_t.get_const_base_ptr());
+                auto output_proxy = dnn_lib::write_proxy(
+                    handle,
+                    m_output_all_filters_d,
+                    m_output_all_filters_t.get_base_ptr(),
+                    beta);
+                backend::convolution_forward(
+                    handle,
+                    alpha,
+                    input_proxy.desc(),
+                    input_proxy.ptr(),
                     m_filter_d,
                     filter.get_const_base_ptr(),
                     m_conv_fwd_d,
@@ -615,8 +637,8 @@ public:
                     ws,
                     m_ws_size_fwd,
                     beta,
-                    m_output_all_filters_d,
-                    m_output_all_filters_t.get_base_ptr());
+                    output_proxy.desc(),
+                    output_proxy.ptr());
             }
             else
             {
@@ -626,10 +648,16 @@ public:
                     ensure_tensors_conform(input, output, filter, "forward");
                     ensure_tensor_descriptors_conform(
                         m_input_d, m_output_d, m_filter_d, "forward");
-                    backend::convolution_forward(m_be.get_handle(),
+                    auto input_proxy = dnn_lib::read_proxy(handle,m_input_d, input_ptr);
+                    auto output_proxy = dnn_lib::write_proxy(
+                        handle,
+                        m_output_d,
+                        output.get_base_ptr(),
+                        beta);
+                    backend::convolution_forward(handle,
                                                  alpha,
-                                                 m_input_d,
-                                                 input_ptr,
+                                                 input_proxy.desc(),
+                                                 input_proxy.ptr(),
                                                  m_filter_d,
                                                  filter.get_const_base_ptr(),
                                                  m_conv_fwd_d,
@@ -637,24 +665,30 @@ public:
                                                  ws,
                                                  m_ws_size_fwd,
                                                  beta,
-                                                 m_output_d,
-                                                 output.get_base_ptr());
-                }
+                                                 output_proxy.desc(),
+                                                 output_proxy.ptr());
+               }
                 else
                 {
-                    backend::convolution_bwd_data(m_be.get_handle(),
+                    auto input_proxy = dnn_lib::read_proxy(handle,m_input_d, input_ptr);
+                    auto output_proxy = dnn_lib::write_proxy(
+                        handle,
+                        m_output_d,
+                        output.get_base_ptr(),
+                        beta);
+                    backend::convolution_bwd_data(handle,
                                                   alpha,
                                                   m_filter_d,
                                                   filter.get_const_base_ptr(),
-                                                  m_input_d,
-                                                  input_ptr,
+                                                  input_proxy.desc(),
+                                                  input_proxy.ptr(),
                                                   m_conv_fwd_d,
                                                   m_bwd_data_algo,
                                                   ws,
                                                   m_ws_size_fwd,
                                                   beta,
-                                                  m_output_d,
-                                                  output.get_base_ptr());
+                                                  output_proxy.desc(),
+                                                  output_proxy.ptr());
                 }
             }
             record_end_comp();
@@ -669,10 +703,17 @@ public:
                     input.get_const_buffer() + m_input_interior_offset;
                 void* output_interior_ptr =
                     output.get_buffer() + m_output_interior_offset;
-                backend::convolution_forward(m_be.get_handle(),
+
+                auto input_proxy = dnn_lib::read_proxy(handle,m_input_interior_d, input_interior_ptr);
+                auto output_proxy = dnn_lib::write_proxy(
+                    handle,
+                    m_output_interior_d,
+                    output_interior_ptr,
+                    beta);
+                backend::convolution_forward(handle,
                                              alpha,
-                                             m_input_interior_d,
-                                             input_interior_ptr,
+                                             input_proxy.desc(),
+                                             input_proxy.ptr(),
                                              m_filter_d,
                                              filter.get_const_base_ptr(),
                                              m_conv_fwd_d,
@@ -680,8 +721,8 @@ public:
                                              ws,
                                              m_ws_size_fwd,
                                              beta,
-                                             m_output_interior_d,
-                                             output_interior_ptr);
+                                             output_proxy.desc(),
+                                             output_proxy.ptr());
             }
             record_end_comp();
             apply_to_spatial_sides(m_num_dims, [&](int i, Side side) {
@@ -701,11 +742,21 @@ public:
                     << "Launching convolution of boundary at dimension " << i
                     << ", side: " << side;
                 record_start_boundary(i, side);
-                backend::set_stream(m_be.get_handle(), st_boundary);
-                backend::convolution_forward(m_be.get_handle(),
+                backend::set_stream(handle, st_boundary);
+
+                auto input_proxy = dnn_lib::read_proxy(
+                    handle,
+                    m_input_boundaries_d(i, side),
+                    boundary_input_ptr);
+                auto output_proxy = dnn_lib::write_proxy(
+                    handle,
+                    m_output_boundaries_d(i, side),
+                    boundary_output_ptr,
+                    beta);
+                backend::convolution_forward(handle,
                                              alpha,
-                                             m_input_boundaries_d(i, side),
-                                             boundary_input_ptr,
+                                             input_proxy.desc(),
+                                             input_proxy.ptr(),
                                              m_filter_d,
                                              filter.get_const_base_ptr(),
                                              m_conv_fwd_d,
@@ -713,14 +764,14 @@ public:
                                              ws_boundary,
                                              m_ws_size_fwd_boundaries(i, side),
                                              beta,
-                                             m_output_boundaries_d(i, side),
-                                             boundary_output_ptr);
+                                             output_proxy.desc(),
+                                             output_proxy.ptr());
                 record_end_boundary(i, side);
                 internal::RuntimeGPU::get_device_memory_pool().release(
                     ws_boundary);
                 util::wait_stream(st_boundary, m_be.get_stream());
             });
-            backend::set_stream(m_be.get_handle(), m_be.get_stream());
+            backend::set_stream(handle, m_be.get_stream());
         }
 
         if (!skip_chanfilt_comm
@@ -864,6 +915,7 @@ public:
             unpack_halo(d_output, m_halo_xch_d_output);
         }
 
+        auto handle = m_be.get_handle();
         record_start_comp();
         if (m_chanfilt_algo == ChannelParallelismAlgorithm::X)
         {
@@ -876,20 +928,30 @@ public:
                                               m_filter_d,
                                               "stationary-x backward-data");
             // Assumes d_output was allgathered by backward_filter.
+
+            auto dy_proxy = dnn_lib::read_proxy(
+                handle,
+                m_d_output_gathered_d,
+                m_d_output_gathered_t.get_const_buffer());
+            auto dx_proxy = dnn_lib::write_proxy(
+                handle,
+                m_d_input_d,
+                d_input_ptr,
+                beta);
             backend::convolution_bwd_data(
                 m_be.get_handle(),
                 alpha,
                 m_filter_d,
                 filter.get_const_base_ptr(),
-                m_d_output_gathered_d,
-                m_d_output_gathered_t.get_const_buffer(),
+                dy_proxy.desc(),
+                dy_proxy.ptr(),
                 m_conv_bwd_d,
                 m_bwd_data_algo,
                 ws,
                 m_ws_size_bwd_data,
                 beta,
-                m_d_input_d,
-                d_input_ptr);
+                dx_proxy.desc(),
+                dx_proxy.ptr());
         }
         else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y)
         {
@@ -902,20 +964,29 @@ public:
                                               m_filter_d,
                                               "stationary-y backward-data");
             // TODO: Handle halos.
+            auto dy_proxy = dnn_lib::read_proxy(
+                handle,
+                m_d_output_d,
+                d_output.get_const_buffer());
+            auto dx_proxy = dnn_lib::write_proxy(
+                handle,
+                m_d_input_all_channels_d,
+                m_d_input_all_channels_t.get_base_ptr(),
+                beta);
             backend::convolution_bwd_data(
                 m_be.get_handle(),
                 alpha,
                 m_filter_d,
                 filter.get_const_base_ptr(),
-                m_d_output_d,
-                d_output.get_const_buffer(),
+                dy_proxy.desc(),
+                dy_proxy.ptr(),
                 m_conv_bwd_d,
                 m_bwd_data_algo,
                 ws,
                 m_ws_size_bwd_data,
                 beta,
-                m_d_input_all_channels_d,
-                m_d_input_all_channels_t.get_base_ptr());
+                dx_proxy.desc(),
+                dx_proxy.ptr());
         }
         else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W)
         {
@@ -929,20 +1000,29 @@ public:
                                               "stationary-w backward-data");
             // TODO: Handle halos.
             // Assumes d_output was allgathered by backward_filter.
+            auto dy_proxy = dnn_lib::read_proxy(
+                handle,
+                m_d_output_gathered_d,
+                m_d_output_gathered_t.get_const_buffer());
+            auto dx_proxy = dnn_lib::write_proxy(
+                handle,
+                m_d_input_all_channels_d,
+                m_d_input_all_channels_t.get_base_ptr(),
+                beta);
             backend::convolution_bwd_data(
                 m_be.get_handle(),
                 alpha,
                 m_filter_d,
                 filter.get_const_base_ptr(),
-                m_d_output_gathered_d,
-                m_d_output_gathered_t.get_const_buffer(),
+                dy_proxy.desc(),
+                dy_proxy.ptr(),
                 m_conv_bwd_d,
                 m_bwd_data_algo,
                 ws,
                 m_ws_size_bwd_data,
                 beta,
-                m_d_input_all_channels_d,
-                m_d_input_all_channels_t.get_base_ptr());
+                dx_proxy.desc(),
+                dx_proxy.ptr());
         }
         else
         {
@@ -952,26 +1032,44 @@ public:
                     d_input, d_output, filter, "backward-data");
                 ensure_tensor_descriptors_conform(
                     m_d_input_d, m_d_output_d, m_filter_d, "backward-data");
+                auto dy_proxy = dnn_lib::read_proxy(
+                    handle,
+                    m_d_output_d,
+                    d_output.get_const_buffer());
+                auto dx_proxy = dnn_lib::write_proxy(
+                    handle,
+                    m_d_input_d,
+                    d_input_ptr,
+                    beta);
                 backend::convolution_bwd_data(m_be.get_handle(),
                                               alpha,
                                               m_filter_d,
                                               filter.get_const_base_ptr(),
-                                              m_d_output_d,
-                                              d_output.get_const_buffer(),
+                                              dy_proxy.desc(),
+                                              dy_proxy.ptr(),
                                               m_conv_bwd_d,
                                               m_bwd_data_algo,
                                               ws,
                                               m_ws_size_bwd_data,
                                               beta,
-                                              m_d_input_d,
-                                              d_input_ptr);
+                                              dx_proxy.desc(),
+                                              dx_proxy.ptr());
             }
             else
             {
+                auto dy_proxy = dnn_lib::read_proxy(
+                    handle,
+                    m_d_output_d,
+                    d_output.get_const_buffer());
+                auto dx_proxy = dnn_lib::write_proxy(
+                    handle,
+                    m_d_input_d,
+                    d_input_ptr,
+                    beta);
                 backend::convolution_forward(m_be.get_handle(),
                                              alpha,
-                                             m_d_output_d,
-                                             d_output.get_const_buffer(),
+                                             dy_proxy.desc(),
+                                             dy_proxy.ptr(),
                                              m_filter_d,
                                              filter.get_const_base_ptr(),
                                              m_conv_bwd_d,
@@ -979,8 +1077,8 @@ public:
                                              ws,
                                              m_ws_size_bwd_data,
                                              beta,
-                                             m_d_input_d,
-                                             d_input_ptr);
+                                             dx_proxy.desc(),
+                                             dx_proxy.ptr());
             }
         }
         if (!skip_chanfilt_comm
@@ -1065,6 +1163,7 @@ public:
                                     d_output.get_buffer());
         setup_workspace_size_bwd_filter();
 
+        auto const handle = m_be.get_handle();
         record_start_comp();
 
         if (input.get_local_size() == 0 || d_output.get_local_size() == 0
@@ -1109,13 +1208,27 @@ public:
                     m_d_output_gathered_d,
                     m_filter_d,
                     "stationary-x backward-filter");
+                auto x_proxy = dnn_lib::read_proxy(
+                    handle,
+                    m_input_d,
+                    input_ptr);
+                auto dy_proxy = dnn_lib::read_proxy(
+                    handle,
+                    m_d_output_gathered_d,
+                    m_d_output_gathered_t.get_const_buffer());
+                // NOTE: In cuDNN, the filters are expressed via
+                // cudnnFilterDescriptor_t, which *MUST BE
+                // FULLY-PACKED*. Since this was all programmed
+                // against cuDNN anyway, we are already guaranteed
+                // that we have a fully-packed tensor for the filters
+                // and thus we don't need to ever proxy them.
                 backend::convolution_bwd_filter(
                     m_be.get_handle(),
                     alpha,
-                    m_input_d,
-                    input_ptr,
-                    m_d_output_gathered_d,
-                    m_d_output_gathered_t.get_const_buffer(),
+                    x_proxy.desc(),
+                    x_proxy.ptr(),
+                    dy_proxy.desc(),
+                    dy_proxy.ptr(),
                     m_conv_bwd_filter_d,
                     m_bwd_filter_algo,
                     ws,
@@ -1135,13 +1248,21 @@ public:
                     m_d_output_d,
                     m_filter_d,
                     "stationary-y backward-filter");
+                auto x_proxy = dnn_lib::read_proxy(
+                    handle,
+                    m_input_gathered_d,
+                    m_input_gathered_t.get_const_base_ptr());
+                auto dy_proxy = dnn_lib::read_proxy(
+                    handle,
+                    m_d_output_d,
+                    d_output.get_const_buffer());
                 backend::convolution_bwd_filter(
                     m_be.get_handle(),
                     alpha,
-                    m_input_gathered_d,
-                    m_input_gathered_t.get_base_ptr(),
-                    m_d_output_d,
-                    d_output.get_const_buffer(),
+                    x_proxy.desc(),
+                    x_proxy.ptr(),
+                    dy_proxy.desc(),
+                    dy_proxy.ptr(),
                     m_conv_bwd_filter_d,
                     m_bwd_filter_algo,
                     ws,
@@ -1161,13 +1282,21 @@ public:
                     m_d_output_gathered_d,
                     m_filter_d,
                     "stationary-w backward-filter");
+                auto x_proxy = dnn_lib::read_proxy(
+                    handle,
+                    m_input_gathered_d,
+                    m_input_gathered_t.get_const_base_ptr());
+                auto dy_proxy = dnn_lib::read_proxy(
+                    handle,
+                    m_d_output_gathered_d,
+                    m_d_output_gathered_t.get_const_buffer());
                 backend::convolution_bwd_filter(
                     m_be.get_handle(),
                     alpha,
-                    m_input_gathered_d,
-                    m_input_gathered_t.get_base_ptr(),
-                    m_d_output_gathered_d,
-                    m_d_output_gathered_t.get_const_buffer(),
+                    x_proxy.desc(),
+                    x_proxy.ptr(),
+                    dy_proxy.desc(),
+                    dy_proxy.ptr(),
                     m_conv_bwd_filter_d,
                     m_bwd_filter_algo,
                     ws,
@@ -1184,12 +1313,20 @@ public:
                         input, d_output, d_filter, "backward-filter");
                     ensure_tensor_descriptors_conform(
                         m_input_d, m_d_output_d, m_filter_d, "backward-filter");
+                    auto x_proxy = dnn_lib::read_proxy(
+                        handle,
+                        m_input_d,
+                        input_ptr);
+                    auto dy_proxy = dnn_lib::read_proxy(
+                        handle,
+                        m_d_output_d,
+                        d_output.get_const_buffer());
                     backend::convolution_bwd_filter(m_be.get_handle(),
                                                     alpha,
-                                                    m_input_d,
-                                                    input_ptr,
-                                                    m_d_output_d,
-                                                    d_output.get_const_buffer(),
+                                                    x_proxy.desc(),
+                                                    x_proxy.ptr(),
+                                                    dy_proxy.desc(),
+                                                    dy_proxy.ptr(),
                                                     m_conv_bwd_filter_d,
                                                     m_bwd_filter_algo,
                                                     ws,
@@ -1200,12 +1337,20 @@ public:
                 }
                 else
                 {
+                    auto x_proxy = dnn_lib::read_proxy(
+                        handle,
+                        m_d_output_d,
+                        d_output.get_const_buffer());
+                    auto dy_proxy = dnn_lib::read_proxy(
+                        handle,
+                        m_input_d,
+                        input_ptr);
                     backend::convolution_bwd_filter(m_be.get_handle(),
                                                     alpha,
-                                                    m_d_output_d,
-                                                    d_output.get_const_buffer(),
-                                                    m_input_d,
-                                                    input_ptr,
+                                                    x_proxy.desc(),
+                                                    x_proxy.ptr(),
+                                                    dy_proxy.desc(),
+                                                    dy_proxy.ptr(),
                                                     m_conv_bwd_filter_d,
                                                     m_bwd_filter_algo,
                                                     ws,
@@ -1363,7 +1508,7 @@ protected:
     IntVector m_halo_fwd_recv;
     IntVector m_halo_bwd_recv;
 
-    using AlgoTuple = std::tuple<backend::ConvFwdAlgo_t, 
+    using AlgoTuple = std::tuple<backend::ConvFwdAlgo_t,
                                  backend::ConvBwdDataAlgo_t,
                                  backend::ConvBwdFilterAlgo_t,
                                  BoundaryAttributesV<backend::ConvFwdAlgo_t>>;
@@ -2000,6 +2145,17 @@ protected:
         }
     }
 
+    // NOTE (trb 12/12/2022): The setup_algorithms_{fwd,bwd} routines
+    // take advantage of the fact that the packed tensor always fits
+    // inside the memory footprint of the strided tensor. The
+    // documention of the underlying "FindConvAlgorithm" functions
+    // suggests that the output tensors might be filled by garbage
+    // values, so I'm assuming at this stage that the whole memory
+    // buffer allocated for a tensor is just garbage and, hence, I
+    // don't have to worry about writing to the output buffers here
+    // and I certainly don't want to unpack the garbage! So I just
+    // pass in the pointers without proxying them.
+
     void setup_algorithms_fwd(void const* input,
                               void const* filter,
                               void* output,
@@ -2023,12 +2179,12 @@ protected:
                 get_tmp_tensor_buffer(m_output_all_filters_t);
                 m_fwd_algo =
                     m_be.get_fwd_algorithm(m_fwd_find_algo,
-                                           &m_input_d,
+                                           dnn_lib::read_proxy(m_input_d).desc(),
                                            input,
-                                           &m_filter_d,
+                                           m_filter_d,
                                            filter,
-                                           &m_conv_fwd_d,
-                                           &m_output_all_filters_d,
+                                           m_conv_fwd_d,
+                                           dnn_lib::write_proxy(m_output_all_filters_d).desc(),
                                            m_output_all_filters_t.get_buffer(),
                                            ws_size);
                 release_tmp_tensor_buffer(m_output_all_filters_t);
@@ -2043,12 +2199,12 @@ protected:
                 get_tmp_tensor_buffer(m_input_gathered_t);
                 m_fwd_algo =
                     m_be.get_fwd_algorithm(m_fwd_find_algo,
-                                           &m_input_gathered_d,
+                                           dnn_lib::read_proxy(m_input_gathered_d).desc(),
                                            m_input_gathered_t.get_buffer(),
-                                           &m_filter_d,
+                                           m_filter_d,
                                            filter,
-                                           &m_conv_fwd_d,
-                                           &m_output_d,
+                                           m_conv_fwd_d,
+                                           dnn_lib::write_proxy(m_output_d).desc(),
                                            output,
                                            ws_size);
                 release_tmp_tensor_buffer(m_input_gathered_t);
@@ -2064,12 +2220,12 @@ protected:
                 get_tmp_tensor_buffer(m_output_all_filters_t);
                 m_fwd_algo =
                     m_be.get_fwd_algorithm(m_fwd_find_algo,
-                                           &m_input_gathered_d,
+                                           dnn_lib::read_proxy(m_input_gathered_d).desc(),
                                            m_input_gathered_t.get_buffer(),
-                                           &m_filter_d,
+                                           m_filter_d,
                                            filter,
-                                           &m_conv_fwd_d,
-                                           &m_output_all_filters_d,
+                                           m_conv_fwd_d,
+                                           dnn_lib::write_proxy(m_output_all_filters_d).desc(),
                                            m_output_all_filters_t.get_buffer(),
                                            ws_size);
                 release_tmp_tensor_buffer(m_input_gathered_t);
@@ -2084,24 +2240,24 @@ protected:
                                                       m_filter_d,
                                                       "setup algos forward");
                     m_fwd_algo = m_be.get_fwd_algorithm(m_fwd_find_algo,
-                                                        &m_input_d,
+                                                        dnn_lib::read_proxy(m_input_d).desc(),
                                                         input,
-                                                        &m_filter_d,
+                                                        m_filter_d,
                                                         filter,
-                                                        &m_conv_fwd_d,
-                                                        &m_output_d,
+                                                        m_conv_fwd_d,
+                                                        dnn_lib::write_proxy(m_output_d).desc(),
                                                         output,
                                                         ws_size);
                 }
                 else
                 {
                     m_bwd_data_algo = m_be.get_bwd_data_algorithm(m_fwd_find_algo,
-                                                                  &m_filter_d,
+                                                                  m_filter_d,
                                                                   filter,
-                                                                  &m_input_d,
+                                                                  dnn_lib::read_proxy(m_input_d).desc(),
                                                                   input,
-                                                                  &m_conv_fwd_d,
-                                                                  &m_output_d,
+                                                                  m_conv_fwd_d,
+                                                                  dnn_lib::write_proxy(m_output_d).desc(),
                                                                   output,
                                                                   ws_size);
                 }
@@ -2116,12 +2272,12 @@ protected:
             if (m_interior_req)
             {
                 m_fwd_algo = m_be.get_fwd_algorithm(m_fwd_find_algo,
-                                                    &m_input_interior_d,
+                                                    dnn_lib::read_proxy(m_input_interior_d).desc(),
                                                     input,
-                                                    &m_filter_d,
+                                                    m_filter_d,
                                                     filter,
-                                                    &m_conv_fwd_d,
-                                                    &m_output_interior_d,
+                                                    m_conv_fwd_d,
+                                                    dnn_lib::write_proxy(m_output_interior_d).desc(),
                                                     output,
                                                     ws_size);
                 util::MPIPrintStreamDebug()
@@ -2137,12 +2293,12 @@ protected:
                     // boundary regions should be set.
                     m_fwd_boundary_algos(i, side) =
                         m_be.get_fwd_algorithm(m_fwd_find_algo,
-                                               &m_input_boundaries_d(i, side),
+                                               dnn_lib::read_proxy(m_input_boundaries_d(i, side)).desc(),
                                                input,
-                                               &m_filter_d,
+                                               m_filter_d,
                                                filter,
-                                               &m_conv_fwd_d,
-                                               &m_output_boundaries_d(i, side),
+                                               m_conv_fwd_d,
+                                               dnn_lib::write_proxy(m_output_boundaries_d(i, side)).desc(),
                                                output,
                                                0);
                     util::MPIPrintStreamDebug()
@@ -2179,12 +2335,12 @@ protected:
                     "stationary-x setup algos backward-data");
                 m_bwd_data_algo = m_be.get_bwd_data_algorithm(
                     m_bwd_data_find_algo,
-                    &m_filter_d,
+                    m_filter_d,
                     filter,
-                    &m_d_output_gathered_d,
+                    dnn_lib::read_proxy(m_d_output_gathered_d).desc(),
                     m_d_output_gathered_t.get_buffer(),
-                    &m_conv_bwd_d,
-                    &m_d_input_d,
+                    m_conv_bwd_d,
+                    dnn_lib::write_proxy(m_d_input_d).desc(),
                     input,
                     ws_size);
             }
@@ -2202,12 +2358,12 @@ protected:
                     "stationary-y setup algos backward-data");
                 m_bwd_data_algo = m_be.get_bwd_data_algorithm(
                     m_bwd_data_find_algo,
-                    &m_filter_d,
+                    m_filter_d,
                     filter,
-                    &m_d_output_d,
+                    dnn_lib::read_proxy(m_d_output_d).desc(),
                     output,
-                    &m_conv_bwd_d,
-                    &m_d_input_all_channels_d,
+                    m_conv_bwd_d,
+                    dnn_lib::write_proxy(m_d_input_all_channels_d).desc(),
                     m_d_input_all_channels_t.get_buffer(),
                     ws_size);
             }
@@ -2226,12 +2382,12 @@ protected:
                     "stationary-w setup algos backward-data");
                 m_bwd_data_algo = m_be.get_bwd_data_algorithm(
                     m_bwd_data_find_algo,
-                    &m_filter_d,
+                    m_filter_d,
                     filter,
-                    &m_d_output_gathered_d,
+                    dnn_lib::read_proxy(m_d_output_gathered_d).desc(),
                     m_d_output_gathered_t.get_buffer(),
-                    &m_conv_bwd_d,
-                    &m_d_input_all_channels_d,
+                    m_conv_bwd_d,
+                    dnn_lib::write_proxy(m_d_input_all_channels_d).desc(),
                     m_d_input_all_channels_t.get_buffer(),
                     ws_size);
             }
@@ -2250,24 +2406,24 @@ protected:
                         m_filter_d,
                         "setup algos backward-data");
                     m_bwd_data_algo = m_be.get_bwd_data_algorithm(m_bwd_data_find_algo,
-                                                                  &m_filter_d,
+                                                                  m_filter_d,
                                                                   filter,
-                                                                  &m_d_output_d,
+                                                                  dnn_lib::read_proxy(m_d_output_d).desc(),
                                                                   output,
-                                                                  &m_conv_bwd_d,
-                                                                  &m_d_input_d,
+                                                                  m_conv_bwd_d,
+                                                                  dnn_lib::write_proxy(m_d_input_d).desc(),
                                                                   input,
                                                                   ws_size);
                 }
                 else
                 {
                     m_fwd_algo = m_be.get_fwd_algorithm(m_bwd_data_find_algo,
-                                                        &m_d_output_d,
+                                                        dnn_lib::read_proxy(m_d_output_d).desc(),
                                                         output,
-                                                        &m_filter_d,
+                                                        m_filter_d,
                                                         filter,
-                                                        &m_conv_bwd_d,
-                                                        &m_d_input_d,
+                                                        m_conv_bwd_d,
+                                                        dnn_lib::write_proxy(m_d_input_d).desc(),
                                                         input,
                                                         ws_size);
                 }
@@ -2368,12 +2524,12 @@ protected:
                     "setup algos backward-filter");
                 m_bwd_filter_algo =
                     m_be.get_bwd_filter_algorithm(m_bwd_filter_find_algo,
-                                                  &m_input_d,
+                                                  dnn_lib::read_proxy(m_input_d).desc(),
                                                   input,
-                                                  &m_d_output_d,
+                                                  dnn_lib::read_proxy(m_d_output_d).desc(),
                                                   output,
-                                                  &m_conv_bwd_filter_d,
-                                                  &m_d_filter_d,
+                                                  m_conv_bwd_filter_d,
+                                                  m_d_filter_d,
                                                   filter,
                                                   ws_size);
             }
@@ -2381,12 +2537,12 @@ protected:
             {
                 m_bwd_filter_algo =
                     m_be.get_bwd_filter_algorithm(m_bwd_filter_find_algo,
-                                                  &m_d_output_d,
+                                                  dnn_lib::read_proxy(m_d_output_d).desc(),
                                                   output,
-                                                  &m_input_d,
+                                                  dnn_lib::read_proxy(m_input_d).desc(),
                                                   input,
-                                                  &m_conv_bwd_filter_d,
-                                                  &m_d_filter_d,
+                                                  m_conv_bwd_filter_d,
+                                                  m_d_filter_d,
                                                   filter,
                                                   ws_size);
             }
@@ -2424,10 +2580,10 @@ protected:
                     "stationary-x workspace forward");
                 s = backend::get_conv_forward_workspace_size(
                     m_be.get_handle(),
-                    m_input_d,
+                    dnn_lib::read_proxy(m_input_d).desc(),
                     m_filter_d,
                     m_conv_fwd_d,
-                    m_output_all_filters_d,
+                    dnn_lib::write_proxy(m_output_all_filters_d).desc(),
                     m_fwd_algo);
             }
             else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y)
@@ -2438,10 +2594,10 @@ protected:
                     m_filter_d,
                     "stationary-y workspace forward");
                 s = backend::get_conv_forward_workspace_size(m_be.get_handle(),
-                                                             m_input_gathered_d,
+                                                             dnn_lib::read_proxy(m_input_gathered_d).desc(),
                                                              m_filter_d,
                                                              m_conv_fwd_d,
-                                                             m_output_d,
+                                                             dnn_lib::write_proxy(m_output_d).desc(),
                                                              m_fwd_algo);
             }
             else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W)
@@ -2453,17 +2609,19 @@ protected:
                     "stationary-w workspace forward");
                 s = backend::get_conv_forward_workspace_size(
                     m_be.get_handle(),
-                    m_input_gathered_d,
+                    dnn_lib::read_proxy(m_input_gathered_d).desc(),
                     m_filter_d,
                     m_conv_fwd_d,
-                    m_output_all_filters_d,
+                    dnn_lib::write_proxy(m_output_all_filters_d).desc(),
                     m_fwd_algo);
             }
             else
             {
                 ensure_tensor_descriptors_conform(
                     m_input_d, m_output_d, m_filter_d, "workspace forward");
-                s = get_workspace_size_fwd(m_input_d, m_filter_d, m_output_d);
+                s = get_workspace_size_fwd(m_input_d,
+                                           m_filter_d,
+                                           m_output_d);
             }
         }
         else
@@ -2473,10 +2631,10 @@ protected:
                 // TODO: Handle with chanfilt.
                 s = backend::get_conv_forward_workspace_size(
                     m_be.get_handle(),
-                    m_input_interior_d,
+                    dnn_lib::read_proxy(m_input_interior_d).desc(),
                     m_filter_d,
                     m_conv_fwd_d,
-                    m_output_interior_d,
+                    dnn_lib::read_proxy(m_output_interior_d).desc(),
                     m_fwd_algo);
             }
             else
@@ -2495,19 +2653,19 @@ protected:
         if (!m_deconv)
         {
             s = backend::get_conv_forward_workspace_size(m_be.get_handle(),
-                                                         input,
+                                                         dnn_lib::read_proxy(input).desc(),
                                                          filter,
                                                          m_conv_fwd_d,
-                                                         output,
+                                                         dnn_lib::write_proxy(output).desc(),
                                                          m_fwd_algo);
         }
         else
         {
             s = backend::get_conv_bwd_data_workspace_size(m_be.get_handle(),
                                                           filter,
-                                                          input,
+                                                          dnn_lib::read_proxy(input).desc(),
                                                           m_conv_fwd_d,
-                                                          output,
+                                                          dnn_lib::write_proxy(output).desc(),
                                                           m_bwd_data_algo);
         }
         return s;
@@ -2523,10 +2681,10 @@ protected:
             {
                 size_t const s = backend::get_conv_forward_workspace_size(
                     m_be.get_handle(),
-                    m_input_boundaries_d(i, side),
+                    dnn_lib::read_proxy(m_input_boundaries_d(i, side)).desc(),
                     m_filter_d,
                     m_conv_fwd_d,
-                    m_output_boundaries_d(i, side),
+                    dnn_lib::write_proxy(m_output_boundaries_d(i, side)).desc(),
                     m_fwd_boundary_algos(i, side));
                 m_ws_size_fwd_boundaries(i, side) = s;
             }
@@ -2547,9 +2705,9 @@ protected:
                 "stationary-x workspace backward-data");
             s = backend::get_conv_bwd_data_workspace_size(m_be.get_handle(),
                                                           m_filter_d,
-                                                          m_d_output_gathered_d,
+                                                          dnn_lib::read_proxy(m_d_output_gathered_d).desc(),
                                                           m_conv_bwd_d,
-                                                          m_d_input_d,
+                                                          dnn_lib::write_proxy(m_d_input_d).desc(),
                                                           m_bwd_data_algo);
         }
         else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y)
@@ -2562,9 +2720,9 @@ protected:
             s = backend::get_conv_bwd_data_workspace_size(
                 m_be.get_handle(),
                 m_filter_d,
-                m_d_output_d,
+                dnn_lib::read_proxy(m_d_output_d).desc(),
                 m_conv_bwd_d,
-                m_d_input_all_channels_d,
+                dnn_lib::write_proxy(m_d_input_all_channels_d).desc(),
                 m_bwd_data_algo);
         }
         else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W)
@@ -2577,9 +2735,9 @@ protected:
             s = backend::get_conv_bwd_data_workspace_size(
                 m_be.get_handle(),
                 m_filter_d,
-                m_d_output_gathered_d,
+                dnn_lib::read_proxy(m_d_output_gathered_d).desc(),
                 m_conv_bwd_d,
-                m_d_input_all_channels_d,
+                dnn_lib::write_proxy(m_d_input_all_channels_d).desc(),
                 m_bwd_data_algo);
         }
         else
@@ -2589,7 +2747,9 @@ protected:
                                               m_filter_d,
                                               "workspace backward-data");
             s = get_workspace_size_bwd_data(
-                m_filter_d, m_d_output_d, m_d_input_d);
+                m_filter_d,
+                m_d_output_d,
+                m_d_input_d);
         }
         m_ws_size_bwd_data = s;
     }
@@ -2603,18 +2763,18 @@ protected:
         {
             s = backend::get_conv_bwd_data_workspace_size(m_be.get_handle(),
                                                           filter,
-                                                          d_output,
+                                                          dnn_lib::read_proxy(d_output).desc(),
                                                           m_conv_bwd_d,
-                                                          d_input,
+                                                          dnn_lib::write_proxy(d_input).desc(),
                                                           m_bwd_data_algo);
         }
         else
         {
             s = backend::get_conv_forward_workspace_size(m_be.get_handle(),
-                                                         d_output,
+                                                         dnn_lib::read_proxy(d_output).desc(),
                                                          filter,
                                                          m_conv_bwd_d,
-                                                         d_input,
+                                                         dnn_lib::write_proxy(d_input).desc(),
                                                          m_fwd_algo);
         }
         return s;
@@ -2637,8 +2797,8 @@ protected:
                 "stationary-x workspace backward-filter");
             s = backend::get_conv_bwd_filter_workspace_size(
                 m_be.get_handle(),
-                m_input_d,
-                m_d_output_gathered_d,
+                dnn_lib::read_proxy(m_input_d).desc(),
+                dnn_lib::read_proxy(m_d_output_gathered_d).desc(),
                 m_conv_bwd_filter_d,
                 m_d_filter_d,
                 m_bwd_filter_algo);
@@ -2651,8 +2811,8 @@ protected:
                 m_d_filter_d,
                 "stationary-y workspace backward-filter");
             s = backend::get_conv_bwd_filter_workspace_size(m_be.get_handle(),
-                                                            m_input_gathered_d,
-                                                            m_d_output_d,
+                                                            dnn_lib::read_proxy(m_input_gathered_d).desc(),
+                                                            dnn_lib::read_proxy(m_d_output_d).desc(),
                                                             m_conv_bwd_filter_d,
                                                             m_d_filter_d,
                                                             m_bwd_filter_algo);
@@ -2666,8 +2826,8 @@ protected:
                 "stationary-w workspace backward-filter");
             s = backend::get_conv_bwd_filter_workspace_size(
                 m_be.get_handle(),
-                m_input_gathered_d,
-                m_d_output_gathered_d,
+                dnn_lib::read_proxy(m_input_gathered_d).desc(),
+                dnn_lib::read_proxy(m_d_output_gathered_d).desc(),
                 m_conv_bwd_filter_d,
                 m_d_filter_d,
                 m_bwd_filter_algo);
@@ -2692,8 +2852,8 @@ protected:
         if (!m_deconv)
         {
             s = backend::get_conv_bwd_filter_workspace_size(m_be.get_handle(),
-                                                            input,
-                                                            d_output,
+                                                            dnn_lib::read_proxy(input).desc(),
+                                                            dnn_lib::read_proxy(d_output).desc(),
                                                             m_conv_bwd_filter_d,
                                                             d_filter,
                                                             m_bwd_filter_algo);
@@ -2701,8 +2861,8 @@ protected:
         else
         {
             s = backend::get_conv_bwd_filter_workspace_size(m_be.get_handle(),
-                                                            d_output,
-                                                            input,
+                                                            dnn_lib::read_proxy(d_output).desc(),
+                                                            dnn_lib::read_proxy(input).desc(),
                                                             m_conv_bwd_filter_d,
                                                             d_filter,
                                                             m_bwd_filter_algo);
@@ -3195,7 +3355,7 @@ protected:
             m_bwd_data_algo = std::get<1>(algos);
             m_bwd_filter_algo = std::get<2>(algos);
             m_fwd_boundary_algos = std::get<3>(algos);
-            
+
             return true;
         }
 
@@ -3229,7 +3389,7 @@ protected:
             << int(ws_size / 1024.0 / 1024.0)
             << " MB), actual size: " << actual_ws_size << " ("
             << int(actual_ws_size / 1024.0 / 1024.0) << " MB)";
-        
+
         ws_size = actual_ws_size;
     }
 };

@@ -251,13 +251,13 @@ autotune_fwd_algorithm(miopenHandle_t handle,
 
 // FIXME (trb 08/11/2022): CLEANUP THE ws_size ARGUMENT TO THE MIOpen CALLS!
 miopenConvFwdAlgorithm_t
-BackendMIOpen::get_fwd_algorithm(std::string const& name,
-                                 miopenTensorDescriptor_t const* input_desc,
+BackendMIOpen::get_fwd_algorithm(std::string const name,
+                                 miopenTensorDescriptor_t const input_desc,
                                  void const* input,
-                                 miopenTensorDescriptor_t const* filter_desc,
+                                 miopenTensorDescriptor_t const filter_desc,
                                  void const* filter,
-                                 miopenConvolutionDescriptor_t const* conv_desc,
-                                 miopenTensorDescriptor_t const* output_desc,
+                                 miopenConvolutionDescriptor_t const conv_desc,
+                                 miopenTensorDescriptor_t const output_desc,
                                  void* output,
                                  size_t ws_size)
 {
@@ -279,23 +279,23 @@ BackendMIOpen::get_fwd_algorithm(std::string const& name,
     WSBuffer ws(CONVOLUTION_WORKSPACE_SIZE);
     if (n == "HEURISTIC")
         return get_fwd_algorithm_by_heuristics(get_handle(),
-                                               *input_desc,
+                                               input_desc,
                                                input,
-                                               *filter_desc,
+                                               filter_desc,
                                                filter,
-                                               *conv_desc,
-                                               *output_desc,
+                                               conv_desc,
+                                               output_desc,
                                                output,
                                                ws,
                                                ws_size);
     else if (n == "AUTOTUNE")
         return autotune_fwd_algorithm(get_handle(),
-                                      *input_desc,
+                                      input_desc,
                                       input,
-                                      *filter_desc,
+                                      filter_desc,
                                       filter,
-                                      *conv_desc,
-                                      *output_desc,
+                                      conv_desc,
+                                      output_desc,
                                       output,
                                       ws,
                                       ws_size);
@@ -409,13 +409,13 @@ autotune_bwd_data_algorithm(miopenHandle_t handle,
 }
 
 miopenConvBwdDataAlgorithm_t BackendMIOpen::get_bwd_data_algorithm(
-    std::string const& name,
-    miopenTensorDescriptor_t const* filter_desc,
+    std::string const name,
+    miopenTensorDescriptor_t const filter_desc,
     void const* filter,
-    miopenTensorDescriptor_t const* d_output_desc,
+    miopenTensorDescriptor_t const d_output_desc,
     void const* d_output,
-    miopenConvolutionDescriptor_t const* conv_desc,
-    miopenTensorDescriptor_t const* d_input_desc,
+    miopenConvolutionDescriptor_t const conv_desc,
+    miopenTensorDescriptor_t const d_input_desc,
     void* d_input,
     size_t ws_size)
 {
@@ -437,23 +437,23 @@ miopenConvBwdDataAlgorithm_t BackendMIOpen::get_bwd_data_algorithm(
     WSBuffer ws(CONVOLUTION_WORKSPACE_SIZE);
     if (n == "HEURISTIC")
         return get_bwd_data_algorithm_by_heuristics(get_handle(),
-                                                    *filter_desc,
+                                                    filter_desc,
                                                     filter,
-                                                    *d_output_desc,
+                                                    d_output_desc,
                                                     d_output,
-                                                    *conv_desc,
-                                                    *d_input_desc,
+                                                    conv_desc,
+                                                    d_input_desc,
                                                     d_input,
                                                     ws,
                                                     ws_size);
     else if (n == "AUTOTUNE")
         return autotune_bwd_data_algorithm(get_handle(),
-                                           *filter_desc,
+                                           filter_desc,
                                            filter,
-                                           *d_output_desc,
+                                           d_output_desc,
                                            d_output,
-                                           *conv_desc,
-                                           *d_input_desc,
+                                           conv_desc,
+                                           d_input_desc,
                                            d_input,
                                            ws,
                                            ws_size);
@@ -566,13 +566,13 @@ autotune_bwd_weights_algorithm(miopenHandle_t handle,
 }
 
 miopenConvBwdWeightsAlgorithm_t BackendMIOpen::get_bwd_filter_algorithm(
-    std::string const& name,
-    miopenTensorDescriptor_t const* input_desc,
+    std::string const name,
+    miopenTensorDescriptor_t const input_desc,
     void const* input,
-    miopenTensorDescriptor_t const* d_output_desc,
+    miopenTensorDescriptor_t const d_output_desc,
     void const* d_output,
-    miopenConvolutionDescriptor_t const* conv_desc,
-    miopenTensorDescriptor_t const* d_filter_desc,
+    miopenConvolutionDescriptor_t const conv_desc,
+    miopenTensorDescriptor_t const d_filter_desc,
     void* d_filter,
     size_t ws_size)
 {
@@ -598,12 +598,12 @@ miopenConvBwdWeightsAlgorithm_t BackendMIOpen::get_bwd_filter_algorithm(
     if (n == "HEURISTIC")
     {
         return get_bwd_weights_algorithm_by_heuristics(get_handle(),
-                                                       *input_desc,
+                                                       input_desc,
                                                        input,
-                                                       *d_output_desc,
+                                                       d_output_desc,
                                                        d_output,
-                                                       *conv_desc,
-                                                       *d_filter_desc,
+                                                       conv_desc,
+                                                       d_filter_desc,
                                                        d_filter,
                                                        ws,
                                                        ws_size);
@@ -611,12 +611,12 @@ miopenConvBwdWeightsAlgorithm_t BackendMIOpen::get_bwd_filter_algorithm(
     else if (n == "AUTOTUNE")
     {
         return autotune_bwd_weights_algorithm(get_handle(),
-                                              *input_desc,
+                                              input_desc,
                                               input,
-                                              *d_output_desc,
+                                              d_output_desc,
                                               d_output,
-                                              *conv_desc,
-                                              *d_filter_desc,
+                                              conv_desc,
+                                              d_filter_desc,
                                               d_filter,
                                               ws,
                                               ws_size);
