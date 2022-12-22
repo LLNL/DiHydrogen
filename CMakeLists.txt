@@ -278,6 +278,10 @@ if (H2_ENABLE_ALUMINUM)
   if (NOT Aluminum_FOUND)
     message(FATAL_ERROR "Aluminum support required but not found.")
   endif ()
+  if (H2_ENABLE_DISTCONV_LEGACY AND NOT AL_HAS_NCCL)
+    message(FATAL_ERROR
+      "DistConv requires Aluminum with at least the NCCLBackend enabled.")
+  endif ()
 endif ()
 
 if (MPI_FOUND AND H2_HAS_ROCM)

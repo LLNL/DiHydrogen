@@ -798,7 +798,7 @@ public:
 
     MPI_Comm get_comm() { return m_comm; }
 
-    std::shared_ptr<Al::HostTransferBackend::comm_type> get_al_mpi_cuda_comm()
+    std::shared_ptr<Al::NCCLBackend::comm_type> get_al_mpi_cuda_comm()
     {
         return m_al_mpi_cuda_comm;
     }
@@ -847,7 +847,7 @@ public:
         return m_internal_streams_pr[idx];
     }
 
-    std::shared_ptr<Al::HostTransferBackend::comm_type>&
+    std::shared_ptr<Al::NCCLBackend::comm_type>&
     get_internal_al_mpi_cuda_comm(int idx)
     {
         assert_always(idx < (int) m_internal_streams_pr.size());
@@ -979,7 +979,7 @@ public:
 
 protected:
     MPI_Comm m_comm;
-    std::shared_ptr<Al::HostTransferBackend::comm_type> m_al_mpi_cuda_comm;
+    std::shared_ptr<Al::NCCLBackend::comm_type> m_al_mpi_cuda_comm;
     // Keeps a heap object as copying a NCCLCommunicator destroys
     // ncclComm_t
     std::unique_ptr<Al::NCCLBackend::comm_type> m_al_nccl_comm;
@@ -996,10 +996,10 @@ protected:
     std::vector<cudaStream_t> m_internal_streams;
     static constexpr int m_num_internal_streams_pr = 8;
     std::vector<cudaStream_t> m_internal_streams_pr;
-    // The communicator of HostTransferBackend creates new MPI communicators
+    // The communicator of NCCLBackend creates new MPI communicators
     // when constructed even without no argument. Having them as heap
     // objects prevent that.
-    std::vector<std::shared_ptr<Al::HostTransferBackend::comm_type>>
+    std::vector<std::shared_ptr<Al::NCCLBackend::comm_type>>
         m_internal_al_mpi_cuda_comms;
     Options m_opts;
 
@@ -1018,7 +1018,7 @@ protected:
     {
         DISTCONV_CHECK_MPI(MPI_Comm_dup(comm, &m_comm));
         m_al_mpi_cuda_comm =
-            std::make_shared<Al::HostTransferBackend::comm_type>(m_comm,
+            std::make_shared<Al::NCCLBackend::comm_type>(m_comm,
                                                                  m_stream);
         m_al_nccl_comm.reset(new Al::NCCLBackend::comm_type(m_comm, m_stream));
         DISTCONV_CHECK_CUDNN(cudnnSetStream(m_cudnn_h, m_stream));
@@ -1046,7 +1046,7 @@ protected:
         for (int i = 0; i < m_num_internal_streams_pr; ++i)
         {
             m_internal_al_mpi_cuda_comms.push_back(
-                std::make_shared<Al::HostTransferBackend::comm_type>(
+                std::make_shared<Al::NCCLBackend::comm_type>(
                     m_comm, m_internal_streams_pr[i]));
         }
     }
