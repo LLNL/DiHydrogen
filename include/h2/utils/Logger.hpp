@@ -27,8 +27,6 @@ public:
         ERROR = 0x10,
         CRITICAL = 0x20,
         OFF = 0x40,
-        //FIXME: Or set as default?
-        ALL = 0x7F
     };// enum class LogLevelType
 
     /** @brief Logger constructor.
@@ -45,8 +43,15 @@ public:
     ::spdlog::logger& get() { return *m_logger; }
 
     void load_levels(const char* input);
-    void set_log_level(std::vector<LogLevelType> levels);
+    void set_log_level(LogLevelType level);
     void set_mask(unsigned char mask);
+
+  template <template <class...> class Container, typename NonExistentLoggerPolicy>
+  void setup_levels_and_masks(Container<Logger>& loggers,
+                            char const* const level_env_var,
+                            char const* const mask_env_var,
+                            NonExistentLoggerPolicy logger_does_not_exist);
+
 
     bool should_log(LogLevelType level) const noexcept;
 
