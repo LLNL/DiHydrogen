@@ -49,10 +49,37 @@ class PackedTensorReadProxy
     void* m_packed_data = nullptr;
 
 public:
-    PackedTensorReadProxy(TensorDescriptor_t unpacked_desc);
+    /** @brief Construct a "descriptor-only" read proxy.
+     *
+     *  @param[in] unpacked_desc The descriptor for a (potentially)
+     *                           non-packed tensor. If this is
+     *                           actually packed, we just alias it. If
+     *                           it's not packed, we create a
+     *                           descriptor for a fully-packed tensor
+     *                           of the same shape.
+     *  @param[in] force If true, always proxy regardless of
+     *                   the env var controls.
+     */
+    PackedTensorReadProxy(TensorDescriptor_t unpacked_desc, bool force = false);
+
+    /** @brief Construct a full read proxy.
+     *
+     *  A read proxy will pack the input data on construction, making
+     *  it suitable for input to APIs that require packed tensors. The
+     *  unpacked descriptor and data pointer are maintained for
+     *  reference, but, strictly speaking, they are not needed by the
+     *  internal mechanics of this proxy after this constructor
+     *  exits. However, if the input tensor is actually packed
+     *  already, the "packed_" APIs return aliases to the input
+     *  descriptor and data.
+     *
+     *  @param[in] force If true, always proxy regardless of
+     *                   the env var controls.
+     */
     PackedTensorReadProxy(Handle_t handle,
                           TensorDescriptor_t unpacked_desc,
-                          void const* unpacked_data);
+                          void const* unpacked_data,
+                          bool force = false);
     // This dtor can throw -- if the proxy code were "unrolled", this
     // would correspond to freeing any allocated memory/descriptors,
     // which can detect async errors and should be allowed to
@@ -105,15 +132,29 @@ class PackedTensorWriteProxy
     DataType_t m_dt;
 
 public:
-    PackedTensorWriteProxy(TensorDescriptor_t unpacked_desc);
+    /** @brief Construct a "descriptor-only" read proxy.
+     *
+     *  @param[in] unpacked_desc The descriptor for a (potentially)
+     *                           non-packed tensor. If this is
+     *                           actually packed, we just alias it. If
+     *                           it's not packed, we create a
+     *                           descriptor for a fully-packed tensor
+     *                           of the same shape.
+     *  @param[in] force If true, always proxy regardless of
+     *                   the env var controls.
+     */
+    PackedTensorWriteProxy(TensorDescriptor_t unpacked_desc,
+                           bool force = false);
     // Per the discussion above, this class will "copy on
     // construction" if beta!=0. If we switch to option 2 in the
     // future, we would need to add an alpha argument as well.
     PackedTensorWriteProxy(Handle_t handle,
                            TensorDescriptor_t unpacked_desc,
                            void* unpacked_data,
-                           double beta = 0.);
-    // This dtor can throw. See explanation/details below.
+                           double beta = 0.,
+                           bool force = false);
+    // This dtor can throw (whomp whomp). See explanation/details
+    // below.
     ~PackedTensorWriteProxy();
 
     // Direct access for those who know what they want
@@ -133,9 +174,8 @@ inline PackedTensorReadProxy read_proxy(TensorDescriptor_t desc)
     return PackedTensorReadProxy{desc};
 }
 
-inline PackedTensorReadProxy read_proxy(Handle_t handle,
-                                 TensorDescriptor_t desc,
-                                 void const* data)
+inline PackedTensorReadProxy
+read_proxy(Handle_t handle, TensorDescriptor_t desc, void const* data)
 {
     return PackedTensorReadProxy{handle, desc, data};
 }
@@ -151,6 +191,31 @@ inline PackedTensorWriteProxy write_proxy(Handle_t handle,
                                           double beta = 0.)
 {
     return PackedTensorWriteProxy{handle, desc, data, beta};
+}
+
+// Force the proxies.
+inline PackedTensorReadProxy force_read_proxy(TensorDescriptor_t desc)
+{
+    return PackedTensorReadProxy{desc, /*force=*/true};
+}
+
+inline PackedTensorReadProxy
+force_read_proxy(Handle_t handle, TensorDescriptor_t desc, void const* data)
+{
+    return PackedTensorReadProxy{handle, desc, data, /*force=*/true};
+}
+
+inline PackedTensorWriteProxy force_write_proxy(TensorDescriptor_t desc)
+{
+    return PackedTensorWriteProxy{desc, /*force=*/true};
+}
+
+inline PackedTensorWriteProxy force_write_proxy(Handle_t handle,
+                                                TensorDescriptor_t desc,
+                                                void* data,
+                                                double beta = 0.)
+{
+    return PackedTensorWriteProxy{handle, desc, data, beta, /*force=*/true};
 }
 
 }// namespace H2_DNN_BACKEND_NS

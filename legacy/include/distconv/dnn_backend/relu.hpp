@@ -67,14 +67,22 @@ public:
             return 0;
         }
         set_num_samples(input.get_local_shape()[-1]);
+        auto const& handle = m_be.get_handle();
+        // Note: These proxies do not need to be "forced" since cuDNN
+        //       only cares about stride information when an in-place
+        //       operation is performed, which is never the case here.
+        auto input_proxy =
+            dnn_lib::read_proxy(handle, m_input_d, input.get_const_base_ptr());
+        auto output_proxy = dnn_lib::write_proxy(
+            handle, m_output_d, output.get_base_ptr(), beta);
         backend::activation_forward(m_be.get_handle(),
                                     m_activation_d,
                                     alpha,
-                                    m_input_d,
-                                    input.get_const_base_ptr(),
+                                    input_proxy.desc(),
+                                    input_proxy.data(),
                                     beta,
-                                    m_output_d,
-                                    output.get_base_ptr());
+                                    output_proxy.desc(),
+                                    output_proxy.data());
         return 0;
     }
 
@@ -94,18 +102,32 @@ public:
             return 0;
         }
         set_num_samples(d_input.get_local_shape()[-1]);
-        backend::activation_backward(m_be.get_handle(),
+        // The _actual_ requirement here is that "strides(m_output_d)
+        // == strides(m_d_output_d) && strids(m_input_d) ==
+        // strides(m_d_input_d)" We can't handle that directly, so
+        // instead we proxy everything, leaving plenty of room for
+        // future optimization.
+        auto const& handle = m_be.get_handle();
+        auto y_proxy = dnn_lib::force_read_proxy(
+            handle, m_output_d, output.get_const_base_ptr());
+        auto dy_proxy = dnn_lib::force_read_proxy(
+            handle, m_d_output_d, d_output.get_const_base_ptr());
+        auto x_proxy = dnn_lib::force_read_proxy(
+            handle, m_input_d, input.get_const_base_ptr());
+        auto dx_proxy = dnn_lib::force_write_proxy(
+            handle, m_d_input_d, d_input.get_base_ptr(), beta);
+        backend::activation_backward(handle,
                                      m_activation_d,
                                      alpha,
-                                     m_output_d,
-                                     output.get_const_base_ptr(),
-                                     m_d_output_d,
-                                     d_output.get_const_base_ptr(),
-                                     m_input_d,
-                                     input.get_const_base_ptr(),
+                                     y_proxy.desc(),
+                                     y_proxy.data(),
+                                     dy_proxy.desc(),
+                                     dy_proxy.data(),
+                                     x_proxy.desc(),
+                                     x_proxy.data(),
                                      beta,
-                                     m_d_input_d,
-                                     d_input.get_base_ptr());
+                                     dx_proxy.desc(),
+                                     dx_proxy.data());
         return 0;
     }
 

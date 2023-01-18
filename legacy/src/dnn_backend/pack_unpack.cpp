@@ -237,13 +237,8 @@ struct MyTypeErasedPtr
 
 MyTypeErasedPtr allocate(Handle_t handle, TensorDescriptor_t desc)
 {
-#if H2_HAS_CUDA
-    size_t mem_size;
-    DISTCONV_CHECK_CUDNN(cudnnGetTensorSizeInBytes(desc, &mem_size));
-#elif H2_HAS_ROCM
     auto const [dt, dims, strides] = get_details(desc);
     auto const mem_size = dims[0] * strides[0] * datatype_size(dt);
-#endif
 
     // Stream-aware allocation
     void* data;
@@ -305,25 +300,27 @@ void copy_tensor(
 
 // Read proxy impl
 
-PackedTensorReadProxy::PackedTensorReadProxy(TensorDescriptor_t unpacked_desc)
+PackedTensorReadProxy::PackedTensorReadProxy(TensorDescriptor_t unpacked_desc,
+                                             bool const force)
     : m_unpacked_desc{unpacked_desc},
       m_packed_desc{unpacked_desc},
       m_unpacked_data{nullptr},
       m_packed_data{nullptr}
 {
-    if (do_pack_unpack())
+    if (force || do_pack_unpack())
         m_packed_desc = get_packed_desc(m_unpacked_desc);
 }
 
 PackedTensorReadProxy::PackedTensorReadProxy(Handle_t handle,
                                              TensorDescriptor_t unpacked_desc,
-                                             void const* unpacked_data)
+                                             void const* unpacked_data,
+                                             bool const force)
     : m_unpacked_desc{unpacked_desc},
       m_packed_desc{unpacked_desc},
       m_unpacked_data{unpacked_data},
       m_packed_data{nullptr}
 {
-    if (do_pack_unpack())
+    if (force || do_pack_unpack())
         m_packed_desc = get_packed_desc(m_unpacked_desc);
 
     if (m_unpacked_desc == m_packed_desc)
@@ -360,28 +357,29 @@ PackedTensorReadProxy::~PackedTensorReadProxy()
 
 // Write proxy -- possibly copy in/copy out
 
-PackedTensorWriteProxy::PackedTensorWriteProxy(TensorDescriptor_t unpacked_desc)
+PackedTensorWriteProxy::PackedTensorWriteProxy(TensorDescriptor_t unpacked_desc,
+                                               bool const force)
     : m_unpacked_desc{unpacked_desc},
       m_packed_desc{unpacked_desc},
       m_unpacked_data{nullptr},
       m_packed_data{nullptr}
 {
-    if (do_pack_unpack())
+    if (force || do_pack_unpack())
         m_packed_desc = get_packed_desc(unpacked_desc);
 }
 
-PackedTensorWriteProxy::PackedTensorWriteProxy(
-    Handle_t handle,
-    TensorDescriptor_t unpacked_desc,
-    void* unpacked_data,
-    double beta)
+PackedTensorWriteProxy::PackedTensorWriteProxy(Handle_t handle,
+                                               TensorDescriptor_t unpacked_desc,
+                                               void* unpacked_data,
+                                               double beta,
+                                               bool const force)
     : m_unpacked_desc{unpacked_desc},
       m_packed_desc{unpacked_desc},
       m_unpacked_data{unpacked_data},
       m_packed_data{nullptr},
       m_handle{handle}
 {
-    if (do_pack_unpack())
+    if (force || do_pack_unpack())
         m_packed_desc = get_packed_desc(unpacked_desc);
 
     // When "unpacked" == "packed", we don't actually need dt, so we
@@ -390,11 +388,6 @@ PackedTensorWriteProxy::PackedTensorWriteProxy(
         m_packed_data = m_unpacked_data;
     else
     {
-#if 0
-        auto [ptr, data_type] = allocate(m_handle, m_packed_desc);
-        m_packed_data = ptr;
-        m_dt = data_type;
-#endif
         std::tie(m_packed_data, m_dt) = allocate(m_handle, m_packed_desc);
 
         if (beta != 0.)
