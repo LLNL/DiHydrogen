@@ -79,10 +79,10 @@ public:
                                     m_activation_d,
                                     alpha,
                                     input_proxy.desc(),
-                                    input_proxy.data(),
+                                    input_proxy.ptr(),
                                     beta,
                                     output_proxy.desc(),
-                                    output_proxy.data());
+                                    output_proxy.ptr());
         return 0;
     }
 
@@ -120,14 +120,14 @@ public:
                                      m_activation_d,
                                      alpha,
                                      y_proxy.desc(),
-                                     y_proxy.data(),
+                                     y_proxy.ptr(),
                                      dy_proxy.desc(),
-                                     dy_proxy.data(),
+                                     dy_proxy.ptr(),
                                      x_proxy.desc(),
-                                     x_proxy.data(),
+                                     x_proxy.ptr(),
                                      beta,
                                      dx_proxy.desc(),
-                                     dx_proxy.data());
+                                     dx_proxy.ptr());
         return 0;
     }
 
