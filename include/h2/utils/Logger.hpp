@@ -14,7 +14,6 @@
 
 namespace h2
 {
-
 class Logger
 {
 public:
@@ -40,18 +39,11 @@ public:
     Logger(std::string name, std::string sink,
          std::string pattern = "[%D %H:%M %z] [%h (Rank %w/%W)] [%^%L%$] %v");
     ~Logger() {}
+    std::string name() const { return m_logger->name(); }
     ::spdlog::logger& get() { return *m_logger; }
 
-    void load_levels(const char* input);
     void set_log_level(LogLevelType level);
     void set_mask(unsigned char mask);
-
-  template <template <class...> class Container, typename NonExistentLoggerPolicy>
-  void setup_levels_and_masks(Container<Logger>& loggers,
-                            char const* const level_env_var,
-                            char const* const mask_env_var,
-                            NonExistentLoggerPolicy logger_does_not_exist);
-
 
     bool should_log(LogLevelType level) const noexcept;
 
@@ -61,6 +53,30 @@ private:
     unsigned char m_mask;
 
 }; // class Logger
+
+class NonExistentLoggerPolicy
+{
+public:
+
+  NonExistentLoggerPolicy() {}
+  ~NonExistentLoggerPolicy() {}
+
+  void handle(std::string)
+  {
+    //std::cout << "Logger does not exist" << std::endl;
+  }
+};
+
+void setup_levels_and_masks(std::vector<Logger*>& loggers,
+                            char const* const level_env_var,
+                            char const* const mask_env_var);
+
+void setup_levels(std::vector<Logger*>& loggers,
+                  char const* const level_env_var);
+
+void setup_masks(std::vector<Logger*>& loggers,
+                 char const* const mask_env_var);
+
 } // namespace h2
 
 #endif // H2_UTILS_LOGGER_HPP_INCLUDED

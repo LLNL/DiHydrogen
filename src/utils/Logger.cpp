@@ -293,7 +293,6 @@ unsigned char extract_mask(std::string levels)
 
   std::string token;
   std::istringstream token_stream(levels);
-  std::unordered_map<std::string, std::string> rv{};
   while (std::getline(token_stream, token, '|'))
   {
     if (token.empty())
@@ -312,7 +311,6 @@ h2::Logger::LogLevelType extract_level(std::string level)
 
   std::string token;
   std::istringstream token_stream(level);
-  std::unordered_map<std::string, std::string> rv{};
   while (std::getline(token_stream, token, '|'))
   {
     if (token.empty())
@@ -326,7 +324,7 @@ h2::Logger::LogLevelType extract_level(std::string level)
   return lvl;
 }
 
-std::pair<std::string, unsigned char> extract_key_and_mask(
+std::pair<std::string, std::string> extract_key_and_val(
   char delim, const std::string &str)
 {
   auto n = str.find(delim);
@@ -334,37 +332,15 @@ std::pair<std::string, unsigned char> extract_key_and_mask(
   unsigned char mask;
   if (n == std::string::npos)
   {
-    return std::make_pair("", extract_mask(str));
+    return std::make_pair("", str);
   }
   else
   {
     key = str.substr(0, n);
     val = str.substr(n + 1);
-    mask = extract_mask(val);
   }
 
-  return std::make_pair(trim(key), mask);
-}
-
-std::pair<std::string, h2::Logger::LogLevelType> extract_key_and_level(
-  char delim, const std::string &str)
-{
-  auto n = str.find(delim);
-  std::string key, val;
-  h2::Logger::LogLevelType level;
-  if (n == std::string::npos)
-  {
-    return std::make_pair("", h2::Logger::LogLevelType::TRACE);
-  }
-  else
-  {
-    key = str.substr(0, n);
-    val = str.substr(n + 1);
-    std::cout << "val: " << val << std::endl;
-    level = extract_level(val);
-  }
-
-  return std::make_pair(trim(key), level);
+  return std::make_pair(trim(key), val);
 }
 
 std::unordered_map<std::string, unsigned char> get_keys_and_masks(
@@ -372,18 +348,18 @@ std::unordered_map<std::string, unsigned char> get_keys_and_masks(
 {
   std::string token;
   std::istringstream token_stream(str);
-  std::unordered_map<std::string, unsigned char> rv{};
+  std::unordered_map<std::string, unsigned char> km{};
   while (std::getline(token_stream, token, ','))
   {
     if (token.empty())
     {
       continue;
     }
-    auto kv = extract_key_and_mask('=', token);
+    auto kv = extract_key_and_val('=', token);
 
-    rv[kv.first] = kv.second;
+    km[kv.first] = extract_mask(kv.second);
   }
-  return rv;
+  return km;
 }
 
 std::unordered_map<std::string, h2::Logger::LogLevelType> get_keys_and_levels(
@@ -391,46 +367,27 @@ std::unordered_map<std::string, h2::Logger::LogLevelType> get_keys_and_levels(
 {
   std::string token;
   std::istringstream token_stream(str);
-  std::unordered_map<std::string, h2::Logger::LogLevelType> rv{};
+  std::unordered_map<std::string, h2::Logger::LogLevelType> kl{};
   while (std::getline(token_stream, token, ','))
   {
     if (token.empty())
     {
       continue;
     }
-    auto kv = extract_key_and_level('=', token);
+    auto kv = extract_key_and_val('=', token);
 
-    rv[kv.first] = kv.second;
+    kl[kv.first] = extract_level(kv.second);
   }
-  return rv;
+  return kl;
 }
 
 }// namespace
 
 namespace h2
 {
-
 Logger::Logger(std::string name, std::string sink_name, std::string pattern)
   : m_logger{make_logger(std::move(name), sink_name, pattern)}
 {}
-
-// FIXME: should this be levels or masks, or have both?
-void Logger::load_levels(const char* level_env_var)
-{
-  if (level_env_var == nullptr || level_env_var[0] == '\0')
-  {
-    throw std::runtime_error("Environmental variables not found.");
-  }
-
-  auto key_vals = get_keys_and_masks(std::getenv(level_env_var));
-
-  std::cout << "Who am I? : " << m_logger->name() << std::endl;
-  //FIXME set_mask. Is this ok?
-  if(key_vals[m_logger->name()])
-    set_mask(key_vals[m_logger->name()]);
-  else
-    set_mask(key_vals[""]);
-}
 
 void Logger::set_log_level(LogLevelType level)
 {
@@ -455,44 +412,6 @@ void Logger::set_mask(unsigned char mask)
     m_mask = mask;
 }
 
-template <template <class...> class Container, typename NonExistentLoggerPolicy>
-void Logger::setup_levels_and_masks(Container<Logger>& loggers,
-                            char const* const level_env_var,
-                            char const* const mask_env_var,
-                            NonExistentLoggerPolicy logger_does_not_exist)
-{
-  auto level_kv = get_keys_and_levels(std::getenv(level_env_var));
-  auto mask_kv = get_keys_and_masks(std::getenv(mask_env_var));
-
-  // Masks win, so let's do levels first:
-  /*
-    first handle the empty string as key; you write this bit
-  */
-
-  if(level_kv[m_logger->name()])
-    set_log_level(level_kv[m_logger->name()]);
-  else
-    set_log_level(level_kv[""]);
-
-  /* Note this change over previous suggestion: */
-
-  // Now handle the rest of the levels
-  for (auto const& [k,v] : level_kv)
-  {
-    if (k == "") continue;
-    auto const i = std::find_if(begin(loggers), end(loggers), [k](auto const& l){ return l.name() == k; });
-    if (i == end(loggers))
-      logger_does_not_exist.handle(k); // < This line is different
-    i->set_level(v);
-  }
-
-  // Now do masks...
-  if(mask_kv[m_logger->name()])
-    set_mask(mask_kv[m_logger->name()]);
-  else
-    set_mask(mask_kv[""]);
-}
-
 bool Logger::should_log(LogLevelType level) const noexcept
 {
     if ((m_mask & level) == level)
@@ -500,4 +419,51 @@ bool Logger::should_log(LogLevelType level) const noexcept
     else
         return false;
 }
+
+void setup_levels(std::vector<Logger*>& loggers,
+                  char const* const level_env_var)
+{
+  auto level_kv = get_keys_and_levels(std::getenv(level_env_var));
+  auto const default_level = (level_kv.count("") ? level_kv.at("") : h2::Logger::LogLevelType::OFF);
+  level_kv.erase("");
+
+  for (auto& l : loggers)
+  {
+    auto const name = l->name();
+    l->set_log_level(level_kv.count(name) ? level_kv.at(name) : default_level);
+    level_kv.erase(name);
+  }
+
+  //FIXME: throw right error
+  for (auto const& [k, _] : level_kv)
+    throw std::string(k);
+}
+
+void setup_masks(std::vector<Logger*>& loggers,
+                 char const* const mask_env_var)
+{
+  auto mask_kv = get_keys_and_masks(std::getenv(mask_env_var));
+  auto const default_mask = (mask_kv.count("") ? mask_kv.at("") : h2::Logger::LogLevelType::OFF);
+  mask_kv.erase("");
+
+  for (auto& l : loggers)
+  {
+    auto const name = l->name();
+    l->set_mask(mask_kv.count(name) ? mask_kv.at(name) : default_mask);
+    mask_kv.erase(name);
+  }
+
+  //FIXME: throw right error
+  for (auto const& [k, _] : mask_kv)
+    throw std::string(k);
+}
+
+void setup_levels_and_masks(std::vector<Logger*>& loggers,
+                            char const* const level_env_var,
+                            char const* const mask_env_var)
+{
+  setup_levels(loggers, level_env_var);
+  setup_masks(loggers, mask_env_var);
+}
+
 } // namespace h2
