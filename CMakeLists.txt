@@ -92,6 +92,11 @@ option(H2_ENABLE_WERROR
   "Enable the \"-Werror\" flag. Requires compiler support."
   OFF)
 
+# Hack
+set(MPI_ASSUME_NO_BUILTIN_MPI ON
+  CACHE BOOL
+  "Force compiler interrogation for MPI")
+
 include(GNUInstallDirs)
 include(H2CMakeUtils)
 include(H2CXXFeatureDetection)
