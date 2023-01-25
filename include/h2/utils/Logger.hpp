@@ -54,19 +54,6 @@ private:
 
 }; // class Logger
 
-class NonExistentLoggerPolicy
-{
-public:
-
-  NonExistentLoggerPolicy() {}
-  ~NonExistentLoggerPolicy() {}
-
-  void handle(std::string)
-  {
-    //std::cout << "Logger does not exist" << std::endl;
-  }
-};
-
 void setup_levels_and_masks(std::vector<Logger*>& loggers,
                             char const* const level_env_var,
                             char const* const mask_env_var);
