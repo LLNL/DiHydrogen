@@ -23,7 +23,7 @@
 #define H2_LOG_LEVEL_OFF SPDLOG_LEVEL_OFF
 
 #ifndef H2_GPU_LOG_ACTIVE_LEVEL
-#define H2_GPU_LOG_ACTIVE_LEVEL H2_LOG_LEVEL_INFO
+#define H2_GPU_LOG_ACTIVE_LEVEL H2_LOG_LEVEL_TRACE
 #endif
 
 #define H2_GPU_LOG(level, ...)                                                 \
