@@ -54,15 +54,13 @@ private:
 
 }; // class Logger
 
-void setup_levels_and_masks(std::vector<Logger*>& loggers,
-                            char const* const level_env_var,
-                            char const* const mask_env_var);
-
 void setup_levels(std::vector<Logger*>& loggers,
                   char const* const level_env_var);
 
 void setup_masks(std::vector<Logger*>& loggers,
                  char const* const mask_env_var);
+
+spdlog::level::level_enum to_spdlog_level(Logger::LogLevelType level);
 
 } // namespace h2
 

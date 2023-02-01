@@ -317,7 +317,7 @@ h2::Logger::LogLevelType extract_level(std::string level)
     {
       continue;
     }
-    //FIXME: If multiple are listed it will pick the last level in the list
+    //FIXME: throw exception
     lvl = get_log_level_type(trim(to_upper(token)));
   }
 
@@ -458,12 +458,18 @@ void setup_masks(std::vector<Logger*>& loggers,
     throw std::string(k);
 }
 
-void setup_levels_and_masks(std::vector<Logger*>& loggers,
-                            char const* const level_env_var,
-                            char const* const mask_env_var)
+spdlog::level::level_enum to_spdlog_level(Logger::LogLevelType level)
 {
-  setup_levels(loggers, level_env_var);
-  setup_masks(loggers, mask_env_var);
+  switch (level)
+  {
+  case Logger::LogLevelType::TRACE: return spdlog::level::level_enum::trace;
+      case Logger::LogLevelType::DEBUG: return spdlog::level::level_enum::debug;
+      case Logger::LogLevelType::INFO: return spdlog::level::level_enum::info;
+      case Logger::LogLevelType::WARN: return spdlog::level::level_enum::warn;
+      case Logger::LogLevelType::ERROR: return spdlog::level::level_enum::err;
+      case Logger::LogLevelType::CRITICAL: return spdlog::level::level_enum::critical;
+        break;
+      default: return spdlog::level::off;
+  }
 }
-
 } // namespace h2
