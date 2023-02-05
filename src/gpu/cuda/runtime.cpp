@@ -205,7 +205,7 @@ int h2::gpu::current_gpu()
 
 void h2::gpu::set_gpu(int id)
 {
-    H2_GPU_INFO("setting device to id={}", id);
+    H2_GPU_TRACE("setting device to id={}", id);
     H2_CHECK_CUDA(cudaSetDevice(id));
 }
 
@@ -214,8 +214,8 @@ void h2::gpu::init_runtime()
     if (initialized_)
         return;
 
-    H2_GPU_INFO("initializing gpu runtime");
-    H2_GPU_INFO("found {} devices", num_gpus());
+    H2_GPU_TRACE("initializing gpu runtime");
+    H2_GPU_TRACE("found {} devices", num_gpus());
     set_reasonable_default_gpu();
     initialized_ = true;
 }
@@ -225,7 +225,7 @@ void h2::gpu::finalize_runtime()
     if (!initialized_)
         return;
 
-    H2_GPU_INFO("finalizing gpu runtime");
+    H2_GPU_TRACE("finalizing gpu runtime");
     initialized_ = false;
 }
 
@@ -243,7 +243,7 @@ cudaStream_t h2::gpu::make_stream()
 {
     cudaStream_t stream;
     H2_CHECK_CUDA(cudaStreamCreate(&stream));
-    H2_GPU_INFO("created stream {}", (void*) stream);
+    H2_GPU_TRACE("created stream {}", (void*) stream);
     return stream;
 }
 
@@ -251,13 +251,13 @@ cudaStream_t h2::gpu::make_stream_nonblocking()
 {
     cudaStream_t stream;
     H2_CHECK_CUDA(cudaStreamCreateWithFlags(&stream, cudaStreamNonBlocking));
-    H2_GPU_INFO("created non-blocking stream {}", (void*) stream);
+    H2_GPU_TRACE("created non-blocking stream {}", (void*) stream);
     return stream;
 }
 
 void h2::gpu::destroy(cudaStream_t const stream)
 {
-    H2_GPU_INFO("destroy stream {}", (void*) stream);
+    H2_GPU_TRACE("destroy stream {}", (void*) stream);
     H2_CHECK_CUDA(cudaStreamDestroy(stream));
 }
 
@@ -265,7 +265,7 @@ cudaEvent_t h2::gpu::make_event()
 {
     cudaEvent_t event;
     H2_CHECK_CUDA(cudaEventCreate(&event));
-    H2_GPU_INFO("created event {}", (void*) event);
+    H2_GPU_TRACE("created event {}", (void*) event);
     return event;
 }
 
@@ -273,30 +273,30 @@ cudaEvent_t h2::gpu::make_event_notiming()
 {
     cudaEvent_t event;
     H2_CHECK_CUDA(cudaEventCreateWithFlags(&event, cudaEventDisableTiming));
-    H2_GPU_INFO("created non-timing event {}", (void*) event);
+    H2_GPU_TRACE("created non-timing event {}", (void*) event);
     return event;
 }
 
 void h2::gpu::destroy(cudaEvent_t const event)
 {
-    H2_GPU_INFO("destroy event {}", (void*) event);
+    H2_GPU_TRACE("destroy event {}", (void*) event);
     H2_CHECK_CUDA(cudaEventDestroy(event));
 }
 
 void h2::gpu::sync()
 {
-    H2_GPU_INFO("synchronizing gpu");
+    H2_GPU_TRACE("synchronizing gpu");
     H2_CHECK_CUDA(cudaDeviceSynchronize());
 }
 
 void h2::gpu::sync(cudaEvent_t event)
 {
-    H2_GPU_INFO("synchronizing event {}", (void*) event);
+    H2_GPU_TRACE("synchronizing event {}", (void*) event);
     H2_CHECK_CUDA(cudaEventSynchronize(event));
 }
 
 void h2::gpu::sync(cudaStream_t stream)
 {
-    H2_GPU_INFO("synchronizing stream {}", (void*) stream);
+    H2_GPU_TRACE("synchronizing stream {}", (void*) stream);
     H2_CHECK_CUDA(cudaStreamSynchronize(stream));
 }

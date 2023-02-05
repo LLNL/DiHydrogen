@@ -303,13 +303,13 @@ static void log_gpu_info(int const gpu_id)
     {
         H2_CHECK_RSMI(rsmi_init(0));
         auto const name = get_device_name_by_pci_bus(pci);
-        H2_GPU_INFO("GPU ID {}: name=\"{}\", pci={:#04x}", gpu_id, name, pci);
+        H2_GPU_TRACE("GPU ID {}: name=\"{}\", pci={:#04x}", gpu_id, name, pci);
     }
     catch (std::runtime_error const& e)
     {
         // Report the error; just log the PCI bus and move on.
         H2_GPU_ERROR("Non-fatal ROCm-SMI error: {}", e.what());
-        H2_GPU_INFO("GPU ID {}: pci={:#04x}", gpu_id, pci);
+        H2_GPU_TRACE("GPU ID {}: pci={:#04x}", gpu_id, pci);
     }
 
     // Ignoring the error code here because we're done with RSMI
@@ -341,7 +341,7 @@ int h2::gpu::current_gpu()
 
 void h2::gpu::set_gpu(int id)
 {
-    H2_GPU_INFO("setting device to id={}", id);
+    H2_GPU_TRACE("setting device to id={}", id);
     H2_CHECK_HIP(hipSetDevice(id));
 }
 
@@ -349,15 +349,15 @@ void h2::gpu::init_runtime()
 {
     if (!initialized_)
     {
-        H2_GPU_INFO("initializing gpu runtime");
+        H2_GPU_TRACE("initializing gpu runtime");
         H2_CHECK_HIP(hipInit(0));
-        H2_GPU_INFO("found {} devices", num_gpus());
+        H2_GPU_TRACE("found {} devices", num_gpus());
         set_reasonable_default_gpu();
         initialized_ = true;
     }
     else
     {
-        H2_GPU_INFO("H2 GPU already initialized; current gpu={}", current_gpu());
+        H2_GPU_TRACE("H2 GPU already initialized; current gpu={}", current_gpu());
     }
     log_gpu_info(current_gpu());
 }
@@ -367,7 +367,7 @@ void h2::gpu::finalize_runtime()
     if (!initialized_)
         return;
 
-    H2_GPU_INFO("finalizing gpu runtime");
+    H2_GPU_TRACE("finalizing gpu runtime");
     initialized_ = false;
 }
 
@@ -385,7 +385,7 @@ hipStream_t h2::gpu::make_stream()
 {
     hipStream_t stream;
     H2_CHECK_HIP(hipStreamCreate(&stream));
-    H2_GPU_INFO("created stream {}", (void*) stream);
+    H2_GPU_TRACE("created stream {}", (void*) stream);
     return stream;
 }
 
@@ -393,13 +393,13 @@ hipStream_t h2::gpu::make_stream_nonblocking()
 {
     hipStream_t stream;
     H2_CHECK_HIP(hipStreamCreateWithFlags(&stream, hipStreamNonBlocking));
-    H2_GPU_INFO("created non-blocking stream {}", (void*) stream);
+    H2_GPU_TRACE("created non-blocking stream {}", (void*) stream);
     return stream;
 }
 
 void h2::gpu::destroy(hipStream_t stream)
 {
-    H2_GPU_INFO("destroy stream {}", (void*) stream);
+    H2_GPU_TRACE("destroy stream {}", (void*) stream);
     H2_CHECK_HIP(hipStreamDestroy(stream));
 }
 
@@ -407,7 +407,7 @@ hipEvent_t h2::gpu::make_event()
 {
     hipEvent_t event;
     H2_CHECK_HIP(hipEventCreate(&event));
-    H2_GPU_INFO("created event {}", (void*) event);
+    H2_GPU_TRACE("created event {}", (void*) event);
     return event;
 }
 
@@ -415,30 +415,30 @@ hipEvent_t h2::gpu::make_event_notiming()
 {
     hipEvent_t event;
     H2_CHECK_HIP(hipEventCreateWithFlags(&event, hipEventDisableTiming));
-    H2_GPU_INFO("created non-timing event {}", (void*) event);
+    H2_GPU_TRACE("created non-timing event {}", (void*) event);
     return event;
 }
 
 void h2::gpu::destroy(hipEvent_t const event)
 {
-    H2_GPU_INFO("destroy event {}", (void*) event);
+    H2_GPU_TRACE("destroy event {}", (void*) event);
     H2_CHECK_HIP(hipEventDestroy(event));
 }
 
 void h2::gpu::sync()
 {
-    H2_GPU_INFO("synchronizing gpu");
+    H2_GPU_TRACE("synchronizing gpu");
     H2_CHECK_HIP(hipDeviceSynchronize());
 }
 
 void h2::gpu::sync(hipEvent_t event)
 {
-    H2_GPU_INFO("synchronizing event {}", (void*) event);
+    H2_GPU_TRACE("synchronizing event {}", (void*) event);
     H2_CHECK_HIP(hipEventSynchronize(event));
 }
 
 void h2::gpu::sync(hipStream_t stream)
 {
-    H2_GPU_INFO("synchronizing stream {}", (void*) stream);
+    H2_GPU_TRACE("synchronizing stream {}", (void*) stream);
     H2_CHECK_HIP(hipStreamSynchronize(stream));
 }

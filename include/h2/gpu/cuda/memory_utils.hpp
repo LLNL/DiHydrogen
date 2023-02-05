@@ -41,7 +41,7 @@ using RawCUBAllocType = cub::CachingDeviceAllocator;
 
 inline void mem_copy(void* dst, void const* src, size_t bytes)
 {
-    H2_GPU_INFO("cudaMemcpy(dst={}, src={}, bytes={}, kind=cudaMemcpyDefault)",
+    H2_GPU_TRACE("cudaMemcpy(dst={}, src={}, bytes={}, kind=cudaMemcpyDefault)",
                 dst,
                 src,
                 bytes);
@@ -51,7 +51,7 @@ inline void mem_copy(void* dst, void const* src, size_t bytes)
 inline void
 mem_copy(void* dst, void const* src, size_t bytes, DeviceStream stream)
 {
-    H2_GPU_INFO("cudaMemcpyAsync(dst={}, src={}, bytes={}, "
+    H2_GPU_TRACE("cudaMemcpyAsync(dst={}, src={}, bytes={}, "
                 "kind=cudaMemcpyDefault, stream={})",
                 dst,
                 src,
@@ -62,13 +62,13 @@ mem_copy(void* dst, void const* src, size_t bytes, DeviceStream stream)
 
 inline void mem_zero(void* mem, size_t bytes)
 {
-    H2_GPU_INFO("cudaMemset(mem={}, value=0x0, bytes={})", mem, bytes);
+    H2_GPU_TRACE("cudaMemset(mem={}, value=0x0, bytes={})", mem, bytes);
     H2_CHECK_CUDA(cudaMemset(mem, 0x0, bytes));
 }
 
 inline void mem_zero(void* mem, size_t bytes, DeviceStream stream)
 {
-    H2_GPU_INFO("cudaMemsetAsync(mem={}, value=0x0, bytes={}, stream={})",
+    H2_GPU_TRACE("cudaMemsetAsync(mem={}, value=0x0, bytes={}, stream={})",
                 mem,
                 bytes,
                 (void*) stream);

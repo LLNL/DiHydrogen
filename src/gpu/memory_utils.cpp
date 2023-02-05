@@ -82,7 +82,7 @@ h2::gpu::RawCUBAllocType make_allocator(unsigned int const gf,
                                         size_t const max_cached,
                                         bool const debug)
 {
-    H2_GPU_INFO("hipcub allocator"
+    H2_GPU_TRACE("hipcub allocator"
                 "(gf={}, min={}, max={}, max_cached={}, debug={})",
                 gf,
                 min,

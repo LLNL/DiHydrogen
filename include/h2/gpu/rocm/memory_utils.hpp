@@ -41,7 +41,7 @@ inline MemInfo mem_info()
 
 inline void mem_copy(void* const dst, void const* const src, size_t const bytes)
 {
-    H2_GPU_INFO("hipMemcpy(dst={}, src={}, bytes={}, kind=hipMemcpyDefault)",
+    H2_GPU_TRACE("hipMemcpy(dst={}, src={}, bytes={}, kind=hipMemcpyDefault)",
                 dst,
                 src,
                 bytes);
@@ -53,7 +53,7 @@ inline void mem_copy(void* const dst,
                      size_t const bytes,
                      DeviceStream const stream)
 {
-    H2_GPU_INFO("hipMemcpyAsync(dst={}, src={}, bytes={}, "
+    H2_GPU_TRACE("hipMemcpyAsync(dst={}, src={}, bytes={}, "
                 "kind=hipMemcpyDefault, stream={})",
                 dst,
                 src,
@@ -64,13 +64,13 @@ inline void mem_copy(void* const dst,
 
 inline void mem_zero(void* mem, size_t bytes)
 {
-    H2_GPU_INFO("hipMemset(mem={}, value=0x0, bytes={})", mem, bytes);
+    H2_GPU_TRACE("hipMemset(mem={}, value=0x0, bytes={})", mem, bytes);
     H2_CHECK_HIP(hipMemset(mem, 0x0, bytes));
 }
 
 inline void mem_zero(void* mem, size_t bytes, DeviceStream stream)
 {
-    H2_GPU_INFO("hipMemsetAsync(mem={}, value=0x0, bytes={}, stream={})",
+    H2_GPU_TRACE("hipMemsetAsync(mem={}, value=0x0, bytes={}, stream={})",
                 mem,
                 bytes,
                 (void*) stream);
