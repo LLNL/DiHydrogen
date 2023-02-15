@@ -2192,7 +2192,6 @@ protected:
         }
         else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y)
         {
-            get_tmp_tensor_buffer(m_input_gathered_t);
             get_tmp_tensor_buffer(m_d_input_all_channels_t);
             if (!m_skip_bp_data)
             {
@@ -2212,12 +2211,10 @@ protected:
                     m_d_input_all_channels_t.get_buffer(),
                     ws_size);
             }
-            release_tmp_tensor_buffer(m_input_gathered_t);
             release_tmp_tensor_buffer(m_d_input_all_channels_t);
         }
         else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W)
         {
-            get_tmp_tensor_buffer(m_input_gathered_t);
             get_tmp_tensor_buffer(m_d_output_gathered_t);
             get_tmp_tensor_buffer(m_d_input_all_channels_t);
             if (!m_skip_bp_data)
@@ -2238,7 +2235,6 @@ protected:
                     m_d_input_all_channels_t.get_buffer(),
                     ws_size);
             }
-            release_tmp_tensor_buffer(m_input_gathered_t);
             release_tmp_tensor_buffer(m_d_output_gathered_t);
             release_tmp_tensor_buffer(m_d_input_all_channels_t);
         }
@@ -2322,7 +2318,6 @@ protected:
         else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y)
         {
             get_tmp_tensor_buffer(m_input_gathered_t);
-            get_tmp_tensor_buffer(m_d_input_all_channels_t);
             ensure_tensor_descriptors_conform(
                 m_input_gathered_d,
                 m_d_output_d,
@@ -2339,13 +2334,11 @@ protected:
                                               filter,
                                               ws_size);
             release_tmp_tensor_buffer(m_input_gathered_t);
-            release_tmp_tensor_buffer(m_d_input_all_channels_t);
         }
         else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W)
         {
             get_tmp_tensor_buffer(m_input_gathered_t);
             get_tmp_tensor_buffer(m_d_output_gathered_t);
-            get_tmp_tensor_buffer(m_d_input_all_channels_t);
             ensure_tensor_descriptors_conform(
                 m_input_gathered_d,
                 m_d_output_gathered_d,
@@ -2363,7 +2356,6 @@ protected:
                 ws_size);
             release_tmp_tensor_buffer(m_input_gathered_t);
             release_tmp_tensor_buffer(m_d_output_gathered_t);
-            release_tmp_tensor_buffer(m_d_input_all_channels_t);
         }
         else
         {
