@@ -520,7 +520,8 @@ public:
         setup_algorithms_fwd(input.get_buffer(),
                              filter.get_buffer(),
                              output.get_buffer());
-        setup_workspace_sizes();
+        setup_workspace_size_fwd();
+        setup_workspace_size_fwd_boundaries();
 
         void* ws = internal::RuntimeGPU::get_device_memory_pool().get(
             m_ws_size_fwd, m_be.get_stream());
@@ -848,7 +849,7 @@ public:
         setup_algorithms_bwd_data(d_input.get_buffer(),
                                   filter.get_buffer(),
                                   d_output.get_buffer());
-        setup_workspace_sizes();
+        setup_workspace_size_bwd_data();
 
         void* ws = internal::RuntimeGPU::get_device_memory_pool().get(
             m_ws_size_bwd_data, m_be.get_stream());
@@ -1062,7 +1063,7 @@ public:
         setup_algorithms_bwd_filter(input.get_buffer(),
                                     d_filter.get_buffer(),
                                     d_output.get_buffer());
-        setup_workspace_sizes();
+        setup_workspace_size_bwd_filter();
 
         record_start_comp();
 
@@ -1306,7 +1307,6 @@ public:
                 backend::set_tensor_num_samples(m_input_gathered_d, n);
                 backend::set_tensor_num_samples(m_d_input_all_channels_d, n);
             }
-            setup_workspace_sizes();
         }
     }
 
