@@ -326,19 +326,7 @@ unsigned char extract_mask(std::string levels)
 
 h2::Logger::LogLevelType extract_level(std::string level)
 {
-  h2::Logger::LogLevelType lvl;
-
-  std::string token;
-  std::istringstream token_stream(level);
-  while (std::getline(token_stream, token, '|'))
-  {
-    if (token.empty())
-      continue;
-
-    lvl = get_log_level_type(trim(to_upper(token)));
-  }
-
-  return lvl;
+  return get_log_level_type(trim(to_upper(level)));
 }
 
 std::pair<std::string, std::string> extract_key_and_val(
