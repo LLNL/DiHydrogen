@@ -6,6 +6,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "h2/utils/Logger.hpp"
+#include "logger_internals.hpp"
 
 #include <spdlog/pattern_formatter.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -177,7 +178,7 @@ public:
 
 } // namespace
 
-namespace
+namespace h2_internal
 {
 
 ::spdlog::sink_ptr make_file_sink(std::string const& sinkname)
@@ -200,56 +201,75 @@ namespace
 }
 
 std::unique_ptr<::spdlog::pattern_formatter> make_h2_formatter(
-  std::string pattern)
+  std::string const& pattern_prefix)
 {
     auto formatter = std::make_unique<spdlog::pattern_formatter>();
     formatter->add_flag<HostnameFlag>('h');
     formatter->add_flag<MPISizeFlag>('W');
     formatter->add_flag<MPIRankFlag>('w');
-    formatter->set_pattern(pattern + " %v");
+    formatter->set_pattern(pattern_prefix + "%v");
 
     return formatter;
 }
 
 std::shared_ptr<::spdlog::logger> make_logger(std::string name,
                                               std::string const& sink_name,
-                                              std::string pattern)
+                                              std::string const& pattern_prefix)
 {
     auto logger = std::make_shared<::spdlog::logger>(std::move(name),
                                                      get_file_sink(sink_name));
-    logger->set_formatter(make_h2_formatter(pattern));
+    logger->set_formatter(make_h2_formatter(pattern_prefix));
     ::spdlog::register_logger(logger);
     logger->set_level(::spdlog::level::trace);
     return logger;
 }
 
-h2::Logger::LogLevelType get_log_level_type(std::string level)
+h2::Logger::LogLevelType get_log_level_type(std::string const& level)
 {
-  if (level == "TRACE")
-    return h2::Logger::LogLevelType::TRACE;
-  else if (level == "DEBUG")
-    return h2::Logger::LogLevelType::DEBUG;
-  else if (level == "INFO")
-    return h2::Logger::LogLevelType::INFO;
-  else if (level == "WARN")
-    return h2::Logger::LogLevelType::WARN;
-  else if (level == "WARNING")
-    return h2::Logger::LogLevelType::WARN;
-  else if (level == "ERR")
-    return h2::Logger::LogLevelType::ERROR;
-  else if (level == "ERROR")
-    return h2::Logger::LogLevelType::ERROR;
-  else if (level == "CRITICAL")
-    return h2::Logger::LogLevelType::CRITICAL;
-  else if (level == "OFF")
-    return h2::Logger::LogLevelType::OFF;
-  else
+    char const* const s = level.data();
+    size_t const l = level.length();
+
+    switch (s[0])
+    {
+    case 'T':
+        if (strncmp(s, "TRACE", l) == 0)
+            return h2::Logger::LogLevelType::TRACE;
+        break;
+    case 'D':
+        if (strncmp(s, "DEBUG", l) == 0)
+            return h2::Logger::LogLevelType::DEBUG;
+        break;
+    case 'I':
+        if (strncmp(s, "INFO", l) == 0)
+            return h2::Logger::LogLevelType::INFO;
+        break;
+    case 'W':
+        if (strncmp(s, "WARNING", l) == 0)
+            return h2::Logger::LogLevelType::WARN;
+        break;
+    case 'E':
+        if (strncmp(s, "ERROR", l) == 0)
+            return h2::Logger::LogLevelType::ERROR;
+        break;
+    case 'C':
+        if (strncmp(s, "CRITICAL", l) == 0)
+            return h2::Logger::LogLevelType::CRITICAL;
+        break;
+    case 'O':
+        if (strncmp(s, "OFF", l) == 0)
+            return h2::Logger::LogLevelType::OFF;
+        break;
+    default:
+        break;
+    }
     throw std::runtime_error("Unknown log level: " + level);
+    return h2::Logger::LogLevelType::OFF;
 }
 
-std::string get_log_level_string(h2::Logger::LogLevelType level)
+std::string get_log_level_string(h2::Logger::LogLevelType const& level)
 {
-  switch (level) {
+  switch (level)
+  {
     case h2::Logger::LogLevelType::TRACE:
       return "TRACE";
     case h2::Logger::LogLevelType::DEBUG:
@@ -296,9 +316,8 @@ unsigned char extract_mask(std::string levels)
   while (std::getline(token_stream, token, '|'))
   {
     if (token.empty())
-    {
       continue;
-    }
+
     mask |= get_log_level_type(trim(to_upper(token)));
   }
 
@@ -314,9 +333,8 @@ h2::Logger::LogLevelType extract_level(std::string level)
   while (std::getline(token_stream, token, '|'))
   {
     if (token.empty())
-    {
       continue;
-    }
+
     lvl = get_log_level_type(trim(to_upper(token)));
   }
 
@@ -330,9 +348,7 @@ std::pair<std::string, std::string> extract_key_and_val(
   std::string key, val;
   unsigned char mask;
   if (n == std::string::npos)
-  {
     return std::make_pair("", str);
-  }
   else
   {
     key = str.substr(0, n);
@@ -342,18 +358,16 @@ std::pair<std::string, std::string> extract_key_and_val(
   return std::make_pair(trim(key), val);
 }
 
-std::unordered_map<std::string, unsigned char> get_keys_and_masks(
-  std::string const& str)
+MaskMapType get_keys_and_masks(std::string const& str)
 {
   std::string token;
   std::istringstream token_stream(str);
-  std::unordered_map<std::string, unsigned char> km{};
+  MaskMapType km{};
   while (std::getline(token_stream, token, ','))
   {
     if (token.empty())
-    {
       continue;
-    }
+
     auto kv = extract_key_and_val('=', token);
 
     km[kv.first] = extract_mask(kv.second);
@@ -361,18 +375,16 @@ std::unordered_map<std::string, unsigned char> get_keys_and_masks(
   return km;
 }
 
-std::unordered_map<std::string, h2::Logger::LogLevelType> get_keys_and_levels(
-  std::string const& str)
+LevelMapType get_keys_and_levels(std::string const& str)
 {
   std::string token;
   std::istringstream token_stream(str);
-  std::unordered_map<std::string, h2::Logger::LogLevelType> kl{};
+  LevelMapType kl{};
   while (std::getline(token_stream, token, ','))
   {
     if (token.empty())
-    {
       continue;
-    }
+
     auto kv = extract_key_and_val('=', token);
 
     kl[kv.first] = extract_level(kv.second);
@@ -380,12 +392,15 @@ std::unordered_map<std::string, h2::Logger::LogLevelType> get_keys_and_levels(
   return kl;
 }
 
-}// namespace
+}// namespace h2_internal
 
 namespace h2
 {
-Logger::Logger(std::string name, std::string sink_name, std::string pattern)
-  : m_logger{make_logger(std::move(name), sink_name, pattern)}
+using LevelMapType = std::unordered_map<std::string, h2::Logger::LogLevelType>;
+using MaskMapType = std::unordered_map<std::string, unsigned char>;
+
+Logger::Logger(std::string name, std::string const& sink_name, std::string const& pattern_prefix)
+  : m_logger{h2_internal::make_logger(std::move(name), sink_name, pattern_prefix)}
 {}
 
 void Logger::set_log_level(LogLevelType level)
@@ -420,11 +435,17 @@ bool Logger::should_log(LogLevelType level) const noexcept
 }
 
 void setup_levels(std::vector<Logger*>& loggers,
-                  char const* const level_env_var)
+                  char const* const level_env_var,
+                  h2::Logger::LogLevelType default_level)
 {
-  auto level_kv = get_keys_and_levels(std::getenv(level_env_var));
-  auto const default_level = (level_kv.count("") ? level_kv.at("") : h2::Logger::LogLevelType::OFF);
-  level_kv.erase("");
+  char const* const var = std::getenv(level_env_var);
+  auto level_kv = (var ? h2_internal::get_keys_and_levels(var) : LevelMapType{});
+
+  if (level_kv.count(""))
+  {
+    default_level = level_kv.at("");
+    level_kv.erase("");
+  }
 
   for (auto& l : loggers)
   {
@@ -432,21 +453,27 @@ void setup_levels(std::vector<Logger*>& loggers,
     l->set_log_level(level_kv.count(name) ? level_kv.at(name) : default_level);
     level_kv.erase(name);
   }
-
-  //FIXME: throw right error
-  std::string err = "Unknown loggers: ";
-  for (auto const& [k, _] : level_kv) {
-    err += k + ", ";
-    throw std::string(k);
+  if (level_kv.size())
+  {
+    std::string err = "Unknown loggers: ";
+    for (auto const& [k, _] : level_kv)
+      err += k + " ";
+    throw std::runtime_error(err);
   }
 }
 
 void setup_masks(std::vector<Logger*>& loggers,
-                 char const* const mask_env_var)
+                 char const* const mask_env_var,
+                 unsigned char default_mask)
 {
-  auto mask_kv = get_keys_and_masks(std::getenv(mask_env_var));
-  auto const default_mask = (mask_kv.count("") ? mask_kv.at("") : h2::Logger::LogLevelType::OFF);
-  mask_kv.erase("");
+  char const* const var = std::getenv(mask_env_var);
+  auto mask_kv = (var ? h2_internal::get_keys_and_masks(var) : MaskMapType{});
+
+  if (mask_kv.count(""))
+  {
+    default_mask =  mask_kv.at("");
+    mask_kv.erase("");
+  }
 
   for (auto& l : loggers)
   {
@@ -455,11 +482,12 @@ void setup_masks(std::vector<Logger*>& loggers,
     mask_kv.erase(name);
   }
 
-  //FIXME: throw right error
-  std::string err = "Unknown loggers: ";
-  for (auto const& [k, _] : mask_kv) {
-    err += k + ", ";
-    throw std::string(k);
+  if (mask_kv.size())
+  {
+    std::string err = "Unknown loggers: ";
+    for (auto const& [k, _] : mask_kv)
+      err += k + " ";
+    throw std::runtime_error(err);
   }
 }
 
@@ -467,13 +495,12 @@ spdlog::level::level_enum to_spdlog_level(Logger::LogLevelType level)
 {
   switch (level)
   {
-  case Logger::LogLevelType::TRACE: return spdlog::level::level_enum::trace;
+      case Logger::LogLevelType::TRACE: return spdlog::level::level_enum::trace;
       case Logger::LogLevelType::DEBUG: return spdlog::level::level_enum::debug;
       case Logger::LogLevelType::INFO: return spdlog::level::level_enum::info;
       case Logger::LogLevelType::WARN: return spdlog::level::level_enum::warn;
       case Logger::LogLevelType::ERROR: return spdlog::level::level_enum::err;
       case Logger::LogLevelType::CRITICAL: return spdlog::level::level_enum::critical;
-        break;
       default: return spdlog::level::off;
   }
 }

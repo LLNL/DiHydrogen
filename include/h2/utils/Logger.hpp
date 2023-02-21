@@ -25,23 +25,23 @@ public:
         WARN = 0x8,
         ERROR = 0x10,
         CRITICAL = 0x20,
-        OFF = 0x40,
+        OFF = 0x0,
     };// enum class LogLevelType
 
     /** @brief Logger constructor. Logs to stdout.
-     *  @param std::string name Name of logger. (Default = "logger")
+     *  @param name Name of logger.
      **/
      Logger(std::string name)
        : Logger(std::move(name), "stdout")
     {}
     /** @brief Logger constructor.
-     *  @param std::string name Name of logger.
-     *  @param std::string sink Name of output/file sink.
-     *  @param std::string pattern Pattern for log message tags.
+     *  @param name Name of logger.
+     *  @param sink Name of output/file sink.
+     *  @param pattern_prefix Pattern for log message tags.
      *  Default = [<Date> <Time> <Timezone>] [<Hostname> <Rank>] [<Log Level>]
      **/
-    Logger(std::string name, std::string sink,
-         std::string pattern = "[%D %H:%M %z] [%h (Rank %w/%W)] [%^%L%$] %v");
+    Logger(std::string name, std::string const& sink,
+           std::string const& pattern_prefix = "[%D %H:%M %z] [%h (Rank %w/%W)] [%^%L%$] ");
     Logger() = default;
     ~Logger() {}
 
@@ -52,12 +52,12 @@ public:
     ::spdlog::logger& get() { return *m_logger; }
 
     /** @brief Set log level (Hierarchical logging levels).
-     *  @param LogLevelType level Logging level.
+     *  @param level Logging level.
      **/
     void set_log_level(LogLevelType level);
 
     /** @brief Set logging mask.
-     *  @param unsigned char mask Logging mask.
+     *  @param mask Logging mask.
      **/
     void set_mask(unsigned char mask);
 
@@ -74,21 +74,23 @@ private:
 }; // class Logger
 
 /** @brief Set log levels for multiple loggers (Hierarchical logging levels).
- *  @param std::vector<Logger*> loggers Vector of Logger pointers.
- *  @param char const* const level_env_var Name of environmental variable.
+ *  @param loggers Vector of Logger pointers.
+ *  @param level_env_var Name of environmental variable.
  **/
 void setup_levels(std::vector<Logger*>& loggers,
-                  char const* const level_env_var);
+                  char const* const level_env_var,
+                  h2::Logger::LogLevelType default_level = h2::Logger::LogLevelType::OFF);
 
 /** @brief Set log masks for multiple loggers (Hierarchical logging levels).
- *  @param std::vector<Logger*> loggers Vector of Logger pointers.
- *  @param char const* const level_env_var Name of environmental variable.
+ *  @param loggers Vector of Logger pointers.
+ *  @param level_env_var Name of environmental variable.
  **/
 void setup_masks(std::vector<Logger*>& loggers,
-                 char const* const mask_env_var);
+                 char const* const mask_env_var,
+                 unsigned char default_mask = 0);
 
 /** @brief Get spdlog::level type
- *  @param LogLevelType level H2::Logging level.
+ *  @param level H2::Logging level.
  **/
 spdlog::level::level_enum to_spdlog_level(Logger::LogLevelType level);
 
