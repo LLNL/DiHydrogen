@@ -224,6 +224,15 @@ std::shared_ptr<::spdlog::logger> make_logger(std::string name,
     return logger;
 }
 
+// convert to uppercase
+std::string& to_upper(std::string &str)
+{
+  std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
+      return std::toupper(c); });
+
+  return str;
+}
+
 h2::Logger::LogLevelType get_log_level_type(std::string const& level)
 {
     char const* const s = level.data();
@@ -289,15 +298,6 @@ std::string get_log_level_string(h2::Logger::LogLevelType const& level)
   }
 }
 
-// convert to uppercase
-std::string& to_upper(std::string &str)
-{
-  std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
-      return std::toupper(c); });
-
-  return str;
-}
-
 // trim spaces
 std::string& trim(std::string &str)
 {
@@ -335,8 +335,9 @@ std::pair<std::string, std::string> extract_key_and_val(
   auto n = str.find(delim);
   std::string key, val;
   unsigned char mask;
-  if (n == std::string::npos)
+  if (n == std::string::npos){
     return std::make_pair("", str);
+  }
   else
   {
     key = str.substr(0, n);
@@ -377,6 +378,7 @@ LevelMapType get_keys_and_levels(std::string const& str)
 
     kl[kv.first] = extract_level(kv.second);
   }
+
   return kl;
 }
 
