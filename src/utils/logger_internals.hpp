@@ -8,8 +8,8 @@
 #include "spdlog/spdlog.h"
 
 #pragma once
-#ifndef H2_UTILS_INTERNALS_LOGGER_HPP_INCLUDED
-#define H2_UTILS_INTERNALS_LOGGER_HPP_INCLUDED
+#ifndef H2_UTILS_LOGGER_INTERNALS_HPP_INCLUDED
+#define H2_UTILS_LOGGER_INTERNALS_HPP_INCLUDED
 
 namespace h2_internal
 {
@@ -48,4 +48,4 @@ LevelMapType get_keys_and_levels(std::string const& str);
 
 }
 
-#endif // H2_UTILS_INTERNALS_LOGGER_HPP_INCLUDED
+#endif // H2_UTILS_LOGGER_INTERNALS_HPP_INCLUDED

@@ -25,7 +25,7 @@ public:
         WARN = 0x8,
         ERROR = 0x10,
         CRITICAL = 0x20,
-        OFF = 0x0,
+        OFF = 0x40,
     };// enum class LogLevelType
 
     /** @brief Logger constructor. Logs to stdout.

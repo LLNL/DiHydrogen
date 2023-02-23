@@ -271,7 +271,7 @@ h2::Logger::LogLevelType get_log_level_type(std::string const& level)
     default:
         break;
     }
-    throw std::runtime_error("Unknown log level: " + level);
+    throw std::runtime_error("Invalid log level: " + level);
     return h2::Logger::LogLevelType::OFF;
 }
 
@@ -294,7 +294,7 @@ std::string get_log_level_string(h2::Logger::LogLevelType const& level)
     case h2::Logger::LogLevelType::OFF:
       return "OFF";
     default:
-      throw std::runtime_error("Unknown log level");
+      throw std::runtime_error("Invalid log level");
   }
 }
 

@@ -29,28 +29,26 @@ TEST_CASE("Testing the internal functions used by the logging class",
     CHECK(h2_internal::get_log_level_type("CRITICAL") == LogLevelType::CRITICAL);
     CHECK(h2_internal::get_log_level_type("OFF") == LogLevelType::OFF);
 
-    //FIXME: As or with? Should I move to_upper to this function?
-    CHECK_THROWS_AS(h2_internal::get_log_level_type("TRSCE"),
-                    std::runtime_error);
+    CHECK_THROWS_WITH(h2_internal::get_log_level_type("TRSCE"),
+                      "Invalid log level: TRSCE");
     CHECK_THROWS_WITH(h2_internal::get_log_level_type("trace"),
-                      "Unknown log level: trace");
+                      "Invalid log level: trace");
     CHECK_THROWS_WITH(h2_internal::get_log_level_type("debug"),
-                      "Unknown log level: debug");
+                      "Invalid log level: debug");
     CHECK_THROWS_WITH(h2_internal::get_log_level_type("info"),
-                      "Unknown log level: info");
+                      "Invalid log level: info");
     CHECK_THROWS_WITH(h2_internal::get_log_level_type("warn"),
-                      "Unknown log level: warn");
+                      "Invalid log level: warn");
     CHECK_THROWS_WITH(h2_internal::get_log_level_type("error"),
-                      "Unknown log level: error");
+                      "Invalid log level: error");
     CHECK_THROWS_WITH(h2_internal::get_log_level_type("critical"),
-                      "Unknown log level: critical");
+                      "Invalid log level: critical");
     CHECK_THROWS_WITH(h2_internal::get_log_level_type("off"),
-                      "Unknown log level: off");
+                      "Invalid log level: off");
   }
 
   SECTION("Switch from LogLevelType to string")
   {
-    //FIXME: How to test throws?
     CHECK(h2_internal::get_log_level_string(LogLevelType::TRACE) == "TRACE");
     CHECK(h2_internal::get_log_level_string(LogLevelType::DEBUG) == "DEBUG");
     CHECK(h2_internal::get_log_level_string(LogLevelType::INFO) == "INFO");
@@ -80,8 +78,6 @@ TEST_CASE("Testing the internal functions used by the logging class",
     CHECK(h2_internal::trim(s) == "leadAndTrailing");
     s = "        manySpaces         ";
     CHECK(h2_internal::trim(s) == "manySpaces");
-    //FIXME: Best way I could think of to test a failing case. This doesn't
-    //       really help anything though
     s = "middle spaces";
     CHECK_FALSE(h2_internal::trim(s) == "middlespaces");
   }
@@ -122,9 +118,8 @@ TEST_CASE("Testing the internal functions used by the logging class",
     CHECK(h2_internal::extract_mask("trace|debug|info|warn|error|critical") ==
           (LogLevelType::TRACE | LogLevelType::DEBUG | LogLevelType::INFO |
            LogLevelType::WARN | LogLevelType::ERROR | LogLevelType::CRITICAL));
-    CHECK(h2_internal::extract_mask("off") == LogLevelType::OFF);
-    CHECK(h2_internal::extract_mask("TRACE|INFO") ==
-          (LogLevelType::TRACE | LogLevelType::INFO));
+    CHECK(h2_internal::extract_mask("critical|off") ==
+          (LogLevelType::CRITICAL | LogLevelType::OFF));
 
     CHECK(h2_internal::extract_mask("trace|trace|trace|trace|trace|trace|trace")
           == LogLevelType::TRACE);
@@ -134,7 +129,8 @@ TEST_CASE("Testing the internal functions used by the logging class",
           == (LogLevelType::DEBUG | LogLevelType::CRITICAL));
     CHECK(h2_internal::extract_mask("debug|crit|debug|crit|warn|crit|debug")
           == (LogLevelType::DEBUG | LogLevelType::CRITICAL | LogLevelType::WARN));
-    CHECK_THROWS_AS(h2_internal::extract_mask("trace|debug|info|warn|error|crit|trsce|debug|info|warn|error|crit"), std::runtime_error);
+
+    CHECK_THROWS_WITH(h2_internal::extract_mask("trace|debug|info|warn|error|crit|trsce|debug|info|warn|error|crit"), "Invalid log level: TRSCE");
   }
 
   SECTION("Extract level from string variable")
@@ -158,8 +154,10 @@ TEST_CASE("Testing the internal functions used by the logging class",
     CHECK(h2_internal::extract_level("OFF") == LogLevelType::OFF);
     CHECK(h2_internal::extract_level("off") == LogLevelType::OFF);
 
-    CHECK_THROWS_AS(h2_internal::extract_level("debig"), std::runtime_error);
-    CHECK_THROWS_AS(h2_internal::extract_level("trace|debug"), std::runtime_error);
+    CHECK_THROWS_WITH(h2_internal::extract_level("debig"),
+                      "Invalid log level: DEBIG");
+    CHECK_THROWS_WITH(h2_internal::extract_level("trace|debug"),
+                      "Invalid log level: TRACE|DEBUG");
   }
 
   SECTION("Extract key and value pair from string")
@@ -175,12 +173,46 @@ TEST_CASE("Testing the internal functions used by the logging class",
 
   SECTION("Get map with keys and masks")
   {
-    auto m = h2_internal::get_keys_and_masks("critical,io=warn|critical,training=trace|info|error");
-
+    auto m = h2_internal::get_keys_and_masks(
+      "critical,io=warn|critical,training=trace|info|error");
     CHECK(m.at("") == LogLevelType::CRITICAL);
     CHECK(m.at("io") == (LogLevelType::WARN | LogLevelType::CRITICAL));
     CHECK(m.at("training") == (LogLevelType::TRACE | LogLevelType::INFO |
                                LogLevelType::ERROR));
+
+    m = h2_internal::get_keys_and_masks(
+      ",io=error|critical,training=info|warn|error");
+    CHECK(m.count("") == 0);
+    CHECK(m.at("io") == (LogLevelType::ERROR | LogLevelType::CRITICAL));
+    CHECK(m.at("training") == (LogLevelType::INFO | LogLevelType::WARN |
+                               LogLevelType::ERROR));
+
+    m = h2_internal::get_keys_and_masks(
+      ",,,,io=trace,,,training=warn|info,,,,");
+    CHECK(m.count("") == 0);
+    CHECK(m.at("io") == (LogLevelType::TRACE));
+    CHECK(m.at("training") == (LogLevelType::WARN | LogLevelType::INFO));
+
+    m = h2_internal::get_keys_and_masks(
+      "critical|error,warn,io=warn|critical,training=trace|info|error");
+    CHECK(m.at("") == LogLevelType::WARN);
+    CHECK(m.at("io") == (LogLevelType::WARN | LogLevelType::CRITICAL));
+    CHECK(m.at("training") == (LogLevelType::TRACE | LogLevelType::INFO |
+                               LogLevelType::ERROR));
+
+    m = h2_internal::get_keys_and_masks(
+      "critical|error,io=warn|error,training=debug|warn|critical,trace");
+    CHECK(m.at("") == LogLevelType::TRACE);
+    CHECK(m.at("io") == (LogLevelType::WARN | LogLevelType::ERROR));
+    CHECK(m.at("training") == (LogLevelType::DEBUG | LogLevelType::WARN |
+                               LogLevelType::CRITICAL));
+
+    m = h2_internal::get_keys_and_masks(
+      "critical|error,io=warn|error,training=debug|warn|critical,trace,info,error");
+    CHECK(m.at("") == LogLevelType::ERROR);
+    CHECK(m.at("io") == (LogLevelType::WARN | LogLevelType::ERROR));
+    CHECK(m.at("training") == (LogLevelType::DEBUG | LogLevelType::WARN |
+                               LogLevelType::CRITICAL));
   }
 
   SECTION("Get map with keys and levels")
@@ -190,6 +222,32 @@ TEST_CASE("Testing the internal functions used by the logging class",
     CHECK(m.at("") == LogLevelType::CRITICAL);
     CHECK(m.at("io") == LogLevelType::WARN);
     CHECK(m.at("training") == LogLevelType::DEBUG);
-  }
 
+    m = h2_internal::get_keys_and_levels(",io=error,training=info");
+    CHECK(m.count("") == 0);
+    CHECK(m.at("io") == LogLevelType::ERROR);
+    CHECK(m.at("training") == LogLevelType::INFO);
+
+    m = h2_internal::get_keys_and_levels(
+      ",,,,io=trace,,,training=warn,,,,");
+    CHECK(m.count("") == 0);
+    CHECK(m.at("io") == LogLevelType::TRACE);
+    CHECK(m.at("training") == LogLevelType::WARN);
+
+    m = h2_internal::get_keys_and_levels("error,warn,io=critical,training=trace");
+    CHECK(m.at("") == LogLevelType::WARN);
+    CHECK(m.at("io") == LogLevelType::CRITICAL);
+    CHECK(m.at("training") == LogLevelType::TRACE);
+
+    m = h2_internal::get_keys_and_levels("critical,io=debug,training=trace,trace");
+    CHECK(m.at("") == LogLevelType::TRACE);
+    CHECK(m.at("io") == LogLevelType::DEBUG);
+    CHECK(m.at("training") == LogLevelType::TRACE);
+
+    m = h2_internal::get_keys_and_levels(
+      "error,io=warn,training=debug,trace,info,error");
+    CHECK(m.at("") == LogLevelType::ERROR);
+    CHECK(m.at("io") == LogLevelType::WARN);
+    CHECK(m.at("training") == LogLevelType::DEBUG);
+  }
 }

@@ -44,14 +44,6 @@ add_test(NAME "[==[Testing the Version String.]==]"
 set_tests_properties("[==[Testing the Version String.]==]" PROPERTIES
   PASS_REGULAR_EXPRESSION "${PROJECT_VERSION}")
 
-# Add a test for logger
-#add_executable(LoggerTestExe LoggerTest.cpp)
-#target_link_libraries(LoggerTestExe PRIVATE ${H2_LIBRARIES} Catch2::Catch2)
-
-#FIXME(KLG): Delete this
-add_executable(LoggerDriver LoggerDriver.cpp)
-target_link_libraries(LoggerDriver PRIVATE ${H2_LIBRARIES})
-
 #
 # Add the sequential Catch2 driver.
 #
