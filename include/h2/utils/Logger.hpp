@@ -14,6 +14,10 @@
 
 namespace h2
 {
+
+/** @brief Logger class to wrap spdlog logger implementation. For spdlog usage
+ *  see https://github.com/gabime/spdlog/wiki/1.-QuickStart.
+ */
 class Logger
 {
 public:
