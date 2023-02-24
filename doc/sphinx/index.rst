@@ -16,7 +16,11 @@ over time.
    :maxdepth: 2
    :caption: Contents:
 
+.. toctree::
+   :maxdepth: 2
+   :caption: Developer Documentation
 
+   continuous_integration
 
 ==============================
 Indices and tables
