@@ -30,13 +30,4 @@ namespace backend = dnn_lib;
 
 #endif
 
-#include "distconv/dnn_backend/batchnorm.hpp"
-#include "distconv/dnn_backend/convolution.hpp"
-#include "distconv/dnn_backend/cross_entropy.hpp"
-#include "distconv/dnn_backend/leaky_relu.hpp"
-#include "distconv/dnn_backend/mean_squared_error.hpp"
-#include "distconv/dnn_backend/pooling.hpp"
-#include "distconv/dnn_backend/relu.hpp"
-#include "distconv/dnn_backend/softmax.hpp"
-
 #endif // H2_LEGACY_INCLUDE_DISTCONV_CUDNN_BACKEND_HPP_INCLUDED
