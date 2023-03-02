@@ -21,7 +21,6 @@ void do_gpu_tensor_repack(
     int const* dims,
     int const* src_strides,
     int const* tgt_strides,
-    int const* packed_strides,
     float const* src_data,
     float* tgt_data,
     hipStream_t stream);
@@ -274,7 +273,6 @@ void copy_tensor(
     auto const [tgt_dt, tgt_dims, tgt_strides] = get_details(tgt_desc);
     assert_always(src_dt == tgt_dt);
     assert_always(src_dims == tgt_dims);
-    auto const packed_strides = get_fully_packed_strides(src_dims);
     switch (src_dt)
     {
     case miopenFloat:
@@ -285,7 +283,6 @@ void copy_tensor(
             src_dims.data(),
             src_strides.data(),
             tgt_strides.data(),
-            packed_strides.data(),
             reinterpret_cast<float const*>(src_data),
             reinterpret_cast<float*>(tgt_data),
             stream);
