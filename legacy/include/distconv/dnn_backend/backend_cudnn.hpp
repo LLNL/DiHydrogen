@@ -669,10 +669,10 @@ inline void activation_forward(cudnnHandle_t handle,
                                cudnnActivationDescriptor_t const& desc,
                                T const& alpha,
                                cudnnTensorDescriptor_t const& in_desc,
-                               T const* in_data,
+                               void const* in_data,
                                T const& beta,
                                cudnnTensorDescriptor_t const& out_desc,
-                               T* out_data)
+                               void* out_data)
 {
     DISTCONV_CHECK_CUDNN(cudnnActivationForward(
         handle, desc, &alpha, in_desc, in_data, &beta, out_desc, out_data));
@@ -683,14 +683,14 @@ inline void activation_backward(cudnnHandle_t handle,
                                 cudnnActivationDescriptor_t const& desc,
                                 T const& alpha,
                                 cudnnTensorDescriptor_t const& out_desc,
-                                T const* out_data,
+                                void const* out_data,
                                 cudnnTensorDescriptor_t const& d_out_desc,
-                                T const* d_out_data,
+                                void const* d_out_data,
                                 cudnnTensorDescriptor_t const& in_desc,
-                                T const* in_data,
+                                void const* in_data,
                                 T const& beta,
                                 cudnnTensorDescriptor_t const& d_in_desc,
-                                T* d_in_data)
+                                void* d_in_data)
 {
     DISTCONV_CHECK_CUDNN(cudnnActivationBackward(handle,
                                                  desc,
