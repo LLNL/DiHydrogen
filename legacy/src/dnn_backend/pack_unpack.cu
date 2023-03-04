@@ -63,7 +63,7 @@ __forceinline__ __host__ __device__ auto ceillog2(IType const& d)
     static constexpr auto nbits = NBits<IType>;
     int ell = 0;
     for (ell = 0; ell < nbits; ++ell)
-        if ((1U << ell) >= d)
+        if ((static_cast<IType>(1) << ell) >= d)
             break;
     return ell;
 }
