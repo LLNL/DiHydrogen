@@ -26,7 +26,7 @@ using DataType = float;
 using namespace distconv;
 using namespace distconv::tensor;
 using namespace h2::gpu;
-using AlBackend = Al::HostTransferBackend;
+using AlBackend = Al::NCCLBackend;
 
 MPI_Comm local_comm;
 int local_comm_size;

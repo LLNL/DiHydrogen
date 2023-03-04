@@ -16,7 +16,7 @@ class TensorMPICUDAShufflerHybrid:
   TensorMPICUDAShufflerHybrid(const TensorType &src_tensor,
                               const TensorType &dst_tensor,
                               p2p::P2P &p2p,
-                              Al::HostTransferBackend::comm_type &al_comm,
+                              Al::NCCLBackend::comm_type &al_comm,
                               DataType *src_buf=nullptr,
                               DataType *dst_buf=nullptr):
       TensorMPICUDAShuffler<DataType>(src_tensor, dst_tensor, src_buf, dst_buf),
@@ -48,7 +48,7 @@ class TensorMPICUDAShufflerHybrid:
 
  protected:
   p2p::P2P &m_p2p;
-  Al::HostTransferBackend::comm_type &m_al_comm;
+  Al::NCCLBackend::comm_type &m_al_comm;
   p2p::P2P::connection_type *m_conns;
   void **m_peer_addrs[2];
   size_t *m_peer_offsets[2];
@@ -159,7 +159,7 @@ class TensorMPICUDAShufflerHybrid:
                 DataType *recv_buf,
                 size_t recv_buffer_size,
                 bool is_forward, cudaStream_t stream) override {
-    std::vector<Al::HostTransferBackend::req_type> requests;
+    std::vector<Al::NCCLBackend::req_type> requests;
     int num_peers = this->get_num_peers();
     for (int i = 0; i < num_peers; ++i) {
       auto peer = this->m_peers[i];
@@ -178,9 +178,9 @@ class TensorMPICUDAShufflerHybrid:
                   * sizeof(DataType),
                   m_streams[i]);
       } else {
-        requests.push_back(Al::HostTransferBackend::null_req);
+        requests.push_back(Al::NCCLBackend::null_req);
         auto &req = requests.back();
-        Al::NonblockingSendRecv<Al::HostTransferBackend, DataType>(
+        Al::NonblockingSendRecv<Al::NCCLBackend, DataType>(
           send_buf +this->get_send_displs_h(is_forward)[peer],
           this->get_send_counts(is_forward)[peer], peer,
             recv_buf + this->get_recv_displs_h(is_forward)[peer],
@@ -197,7 +197,7 @@ class TensorMPICUDAShufflerHybrid:
     }
     // synchornize the Al transfers
     for (auto &req: requests) {
-      Al::Wait<Al::HostTransferBackend>(req);
+      Al::Wait<Al::NCCLBackend>(req);
     }
   }
 

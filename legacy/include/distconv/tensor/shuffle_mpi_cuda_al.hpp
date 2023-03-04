@@ -16,7 +16,7 @@ class TensorMPICUDAShufflerAL:
  public:
   TensorMPICUDAShufflerAL(const TensorType &src_tensor,
                           const TensorType &dst_tensor,
-                          Al::HostTransferBackend::comm_type &al_comm,
+                          Al::NCCLBackend::comm_type &al_comm,
                           DataType *src_buf=nullptr,
                           DataType *dst_buf=nullptr):
       TensorMPICUDAShuffler<DataType>(src_tensor, dst_tensor, src_buf, dst_buf),
@@ -26,7 +26,7 @@ class TensorMPICUDAShufflerAL:
   virtual ~TensorMPICUDAShufflerAL() = default;
 
  protected:
-  Al::HostTransferBackend::comm_type &m_al_comm;
+  Al::NCCLBackend::comm_type &m_al_comm;
 
   void transfer(const DataType* send_buf,
                 size_t send_buffer_size,
@@ -36,13 +36,13 @@ class TensorMPICUDAShufflerAL:
                 h2::gpu::DeviceStream stream) override
   {
       // Assumes stream is the same as m_al_comm.get_stream()
-      std::vector<Al::HostTransferBackend::req_type> requests;
+      std::vector<Al::NCCLBackend::req_type> requests;
       for (int i = 0; i < this->get_num_peers(); ++i)
       {
-          requests.push_back(Al::HostTransferBackend::null_req);
+          requests.push_back(Al::NCCLBackend::null_req);
           auto& req = requests.back();
           auto peer = this->m_peers[i];
-          Al::NonblockingSendRecv<Al::HostTransferBackend, DataType>(
+          Al::NonblockingSendRecv<Al::NCCLBackend, DataType>(
               send_buf + this->get_send_displs_h(is_forward)[peer],
               this->get_send_counts(is_forward)[peer],
               peer,
@@ -54,7 +54,7 @@ class TensorMPICUDAShufflerAL:
       }
       for (auto& req : requests)
       {
-          Al::Wait<Al::HostTransferBackend>(req);
+          Al::Wait<Al::NCCLBackend>(req);
       }
   }
 };
