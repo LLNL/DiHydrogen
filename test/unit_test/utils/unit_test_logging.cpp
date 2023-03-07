@@ -7,7 +7,7 @@
 
 #include "catch2/catch.hpp"
 #include <h2/utils/Logger.hpp>
-#include "../../src/utils/logger_internals.hpp"
+#include "../src/utils/logger_internals.hpp"
 #include <cstdlib>
 #include <iostream>
 
