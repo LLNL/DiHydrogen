@@ -16,7 +16,6 @@
 
 namespace
 {
-// FIXME(KLG): Need to set this up in cmake?
 // #ifdef HAS_UNISTD_H
 #if 1
 static std::string get_hostname_raw()

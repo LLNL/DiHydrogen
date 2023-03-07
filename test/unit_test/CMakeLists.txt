@@ -44,10 +44,6 @@ add_test(NAME "[==[Testing the Version String.]==]"
 set_tests_properties("[==[Testing the Version String.]==]" PROPERTIES
   PASS_REGULAR_EXPRESSION "${PROJECT_VERSION}")
 
-# Add a test for logger
-add_executable(LoggerTestExe LoggerTest.cpp)
-target_link_libraries(LoggerTestExe PRIVATE ${H2_LIBRARIES})
-
 #
 # Add the sequential Catch2 driver.
 #
@@ -57,6 +53,7 @@ add_executable(SeqCatchTests SequentialCatchMain.cpp)
 # Add Catch2 unit tests
 add_subdirectory(patterns/factory)
 add_subdirectory(patterns/multimethods)
+add_subdirectory(utils)
 
 target_link_libraries(SeqCatchTests
   PRIVATE ${H2_LIBRARIES} Catch2::Catch2)
