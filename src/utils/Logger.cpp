@@ -335,16 +335,11 @@ h2::Logger::LogLevelType h2_internal::extract_level(std::string level)
 std::pair<std::string, std::string> h2_internal::extract_key_and_val(
     char delim, const std::string &str)
 {
-    auto n = str.find(delim);
-    std::string key, val;
-    unsigned char mask;
+    auto const n = str.find(delim);
     if (n == std::string::npos)
-        return std::make_pair("", str);
-    else
-    {
-        key = str.substr(0, n);
-        val = str.substr(n + 1);
-    }
+      return std::make_pair("", str);
+    auto key = str.substr(0, n);
+    auto const val = str.substr(n + 1);
 
     return std::make_pair(trim(key), val);
 }
@@ -396,13 +391,13 @@ void Logger::set_log_level(LogLevelType level)
     unsigned char mask = 0x0;
 
     switch(level) {
-        case LogLevelType::TRACE: mask |= LogLevelType::TRACE;
-        case LogLevelType::DEBUG: mask |= LogLevelType::DEBUG;
-        case LogLevelType::INFO: mask |= LogLevelType::INFO;
-        case LogLevelType::WARN: mask |= LogLevelType::WARN;
-        case LogLevelType::ERROR: mask |= LogLevelType::ERROR;
+        case LogLevelType::TRACE: mask |= LogLevelType::TRACE; [[fallthrough]];
+        case LogLevelType::DEBUG: mask |= LogLevelType::DEBUG; [[fallthrough]];
+        case LogLevelType::INFO: mask |= LogLevelType::INFO; [[fallthrough]];
+        case LogLevelType::WARN: mask |= LogLevelType::WARN; [[fallthrough]];
+        case LogLevelType::ERROR: mask |= LogLevelType::ERROR; [[fallthrough]];
         case LogLevelType::CRITICAL: mask |= LogLevelType::CRITICAL;
-          break;
+            break;
         default: mask = LogLevelType::OFF;
     }
 
@@ -416,10 +411,7 @@ void Logger::set_mask(unsigned char mask)
 
 bool Logger::should_log(LogLevelType level) const noexcept
 {
-    if ((m_mask & level) == level)
-        return true;
-    else
-        return false;
+    return ((m_mask & level) == level);
 }
 
 void setup_levels(std::vector<Logger*>& loggers,
