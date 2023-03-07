@@ -178,10 +178,10 @@ public:
 
 } // namespace
 
-namespace h2_internal
-{
+using LevelMapType = std::unordered_map<std::string, h2::Logger::LogLevelType>;
+using MaskMapType = std::unordered_map<std::string, unsigned char>;
 
-::spdlog::sink_ptr make_file_sink(std::string const& sinkname)
+::spdlog::sink_ptr h2_internal::make_file_sink(std::string const& sinkname)
 {
     if (sinkname == "stdout")
         return std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
@@ -190,7 +190,7 @@ namespace h2_internal
     return std::make_shared<spdlog::sinks::basic_file_sink_mt>(sinkname);
 }
 
-::spdlog::sink_ptr get_file_sink(std::string const& sinkname)
+::spdlog::sink_ptr h2_internal::get_file_sink(std::string const& sinkname)
 {
     static std::unordered_map<std::string, ::spdlog::sink_ptr> sink_map_;
 
@@ -200,8 +200,8 @@ namespace h2_internal
     return sink;
 }
 
-std::unique_ptr<::spdlog::pattern_formatter> make_h2_formatter(
-  std::string const& pattern_prefix)
+std::unique_ptr<::spdlog::pattern_formatter> h2_internal::make_h2_formatter(
+    std::string const& pattern_prefix)
 {
     auto formatter = std::make_unique<spdlog::pattern_formatter>();
     formatter->add_flag<HostnameFlag>('h');
@@ -212,9 +212,10 @@ std::unique_ptr<::spdlog::pattern_formatter> make_h2_formatter(
     return formatter;
 }
 
-std::shared_ptr<::spdlog::logger> make_logger(std::string name,
-                                              std::string const& sink_name,
-                                              std::string const& pattern_prefix)
+std::shared_ptr<::spdlog::logger> h2_internal::make_logger(
+    std::string name,
+    std::string const& sink_name,
+    std::string const& pattern_prefix)
 {
     auto logger = std::make_shared<::spdlog::logger>(std::move(name),
                                                      get_file_sink(sink_name));
@@ -225,15 +226,16 @@ std::shared_ptr<::spdlog::logger> make_logger(std::string name,
 }
 
 // convert to uppercase
-std::string& to_upper(std::string &str)
+std::string& h2_internal::to_upper(std::string &str)
 {
-  std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
-      return std::toupper(c); });
+    std::transform(str.begin(), str.end(), str.begin(), [](unsigned char c) {
+        return std::toupper(c); });
 
-  return str;
+    return str;
 }
 
-h2::Logger::LogLevelType get_log_level_type(std::string const& level)
+h2::Logger::LogLevelType h2_internal::get_log_level_type(
+    std::string const& level)
 {
     char const* const s = level.data();
     size_t const l = level.length();
@@ -275,119 +277,115 @@ h2::Logger::LogLevelType get_log_level_type(std::string const& level)
     return h2::Logger::LogLevelType::OFF;
 }
 
-std::string get_log_level_string(h2::Logger::LogLevelType const& level)
+std::string h2_internal::get_log_level_string(
+    h2::Logger::LogLevelType const& level)
 {
-  switch (level)
-  {
-    case h2::Logger::LogLevelType::TRACE:
-      return "TRACE";
-    case h2::Logger::LogLevelType::DEBUG:
-      return "DEBUG";
-    case h2::Logger::LogLevelType::INFO:
-      return "INFO";
-    case h2::Logger::LogLevelType::WARN:
-      return "WARN";
-    case h2::Logger::LogLevelType::ERROR:
-      return "ERROR";
-    case h2::Logger::LogLevelType::CRITICAL:
-      return "CRITICAL";
-    case h2::Logger::LogLevelType::OFF:
-      return "OFF";
-    default:
-      throw std::runtime_error("Invalid log level");
-  }
+    switch (level)
+    {
+        case h2::Logger::LogLevelType::TRACE:
+            return "TRACE";
+        case h2::Logger::LogLevelType::DEBUG:
+            return "DEBUG";
+        case h2::Logger::LogLevelType::INFO:
+            return "INFO";
+        case h2::Logger::LogLevelType::WARN:
+            return "WARN";
+        case h2::Logger::LogLevelType::ERROR:
+            return "ERROR";
+        case h2::Logger::LogLevelType::CRITICAL:
+            return "CRITICAL";
+        case h2::Logger::LogLevelType::OFF:
+            return "OFF";
+        default:
+            throw std::runtime_error("Invalid log level");
+    }
 }
 
 // trim spaces
-std::string& trim(std::string &str)
+std::string& h2_internal::trim(std::string &str)
 {
-  const char *spaces = " \n\r\t";
-  str.erase(str.find_last_not_of(spaces) + 1);
-  str.erase(0, str.find_first_not_of(spaces));
-  return str;
+    const char *spaces = " \n\r\t";
+    str.erase(str.find_last_not_of(spaces) + 1);
+    str.erase(0, str.find_first_not_of(spaces));
+    return str;
 }
 
-unsigned char extract_mask(std::string levels)
+unsigned char h2_internal::extract_mask(std::string levels)
 {
-  unsigned char mask = 0x0;
+    unsigned char mask = 0x0;
 
-  std::string token;
-  std::istringstream token_stream(levels);
-  while (std::getline(token_stream, token, '|'))
-  {
-    if (token.empty())
-      continue;
+    std::string token;
+    std::istringstream token_stream(levels);
+    while (std::getline(token_stream, token, '|'))
+    {
+        if (token.empty())
+            continue;
 
-    mask |= get_log_level_type(trim(to_upper(token)));
-  }
+        mask |= get_log_level_type(trim(to_upper(token)));
+    }
 
-  return mask;
+    return mask;
 }
 
-h2::Logger::LogLevelType extract_level(std::string level)
+h2::Logger::LogLevelType h2_internal::extract_level(std::string level)
 {
-  return get_log_level_type(trim(to_upper(level)));
+    return get_log_level_type(trim(to_upper(level)));
 }
 
-std::pair<std::string, std::string> extract_key_and_val(
-  char delim, const std::string &str)
+std::pair<std::string, std::string> h2_internal::extract_key_and_val(
+    char delim, const std::string &str)
 {
-  auto n = str.find(delim);
-  std::string key, val;
-  unsigned char mask;
-  if (n == std::string::npos){
-    return std::make_pair("", str);
-  }
-  else
-  {
-    key = str.substr(0, n);
-    val = str.substr(n + 1);
-  }
+    auto n = str.find(delim);
+    std::string key, val;
+    unsigned char mask;
+    if (n == std::string::npos)
+        return std::make_pair("", str);
+    else
+    {
+        key = str.substr(0, n);
+        val = str.substr(n + 1);
+    }
 
-  return std::make_pair(trim(key), val);
+    return std::make_pair(trim(key), val);
 }
 
-MaskMapType get_keys_and_masks(std::string const& str)
+MaskMapType h2_internal::get_keys_and_masks(std::string const& str)
 {
-  std::string token;
-  std::istringstream token_stream(str);
-  MaskMapType km{};
-  while (std::getline(token_stream, token, ','))
-  {
-    if (token.empty())
-      continue;
+    std::string token;
+    std::istringstream token_stream(str);
+    MaskMapType km{};
+    while (std::getline(token_stream, token, ','))
+    {
+        if (token.empty())
+            continue;
 
-    auto kv = extract_key_and_val('=', token);
+        auto kv = extract_key_and_val('=', token);
 
-    km[kv.first] = extract_mask(kv.second);
-  }
-  return km;
+        km[kv.first] = extract_mask(kv.second);
+    }
+    return km;
 }
 
-LevelMapType get_keys_and_levels(std::string const& str)
+LevelMapType h2_internal::get_keys_and_levels(std::string const& str)
 {
-  std::string token;
-  std::istringstream token_stream(str);
-  LevelMapType kl{};
-  while (std::getline(token_stream, token, ','))
-  {
-    if (token.empty())
-      continue;
+    std::string token;
+    std::istringstream token_stream(str);
+    LevelMapType kl{};
+    while (std::getline(token_stream, token, ','))
+    {
+        if (token.empty())
+            continue;
 
-    auto kv = extract_key_and_val('=', token);
+        auto kv = extract_key_and_val('=', token);
 
-    kl[kv.first] = extract_level(kv.second);
-  }
+        kl[kv.first] = extract_level(kv.second);
+    }
 
-  return kl;
+    return kl;
 }
-
-}// namespace h2_internal
 
 namespace h2
 {
-using LevelMapType = std::unordered_map<std::string, h2::Logger::LogLevelType>;
-using MaskMapType = std::unordered_map<std::string, unsigned char>;
 
 Logger::Logger(std::string name, std::string const& sink_name, std::string const& pattern_prefix)
   : m_logger{h2_internal::make_logger(std::move(name), sink_name, pattern_prefix)}
