@@ -10,7 +10,7 @@
 #include "backend_cudnn.hpp"
 namespace distconv
 {
-using BackendDNNLib = cudnn::BackendCUDNN;
+using BackendDNNLib_ = cudnn::BackendCUDNN;
 namespace dnn_lib = cudnn;
 namespace backend = dnn_lib;
 } // namespace distconv
@@ -22,7 +22,7 @@ namespace backend = dnn_lib;
 #include "backend_miopen.hpp"
 namespace distconv
 {
-using BackendDNNLib = miopen::BackendMIOpen;
+using BackendDNNLib_ = miopen::BackendMIOpen;
 namespace dnn_lib = miopen;
 namespace backend = dnn_lib;
 } // namespace distconv
@@ -30,6 +30,23 @@ namespace backend = dnn_lib;
 #define GPU_PROFILE_RANGE_POP roctxRangePop
 #define GPU_PROFILE_RANGE_PUSH roctxRangePushA
 
+#endif
+
+// DaCe JIT compiler wrapper backend
+#ifdef H2_HAS_DACE
+#include "backend_dace.hpp"
+
+namespace distconv
+{
+using BackendDNNLib = BackendDaCe;
+using BackendOptions = DaCeOptions;
+} // namespace distconv
+#else
+namespace distconv
+{
+using BackendDNNLib = BackendDNNLib_;
+using BackendOptions = backend::Options;
+} // namespace distconv
 #endif
 
 #endif // H2_LEGACY_INCLUDE_DISTCONV_CUDNN_BACKEND_HPP_INCLUDED

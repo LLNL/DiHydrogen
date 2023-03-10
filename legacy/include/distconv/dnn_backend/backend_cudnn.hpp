@@ -93,18 +93,6 @@ inline void destroy_handle(cudnnHandle_t handle)
     DISTCONV_CHECK_CUDNN(cudnnDestroy(handle));
 }
 
-inline Stream_t get_stream(cudnnHandle_t handle)
-{
-    Stream_t stream;
-    DISTCONV_CHECK_CUDNN(cudnnGetStream(handle, &stream));
-    return stream;
-}
-
-inline void set_stream(cudnnHandle_t handle, Stream_t stream)
-{
-    DISTCONV_CHECK_CUDNN(cudnnSetStream(handle, stream));
-}
-
 constexpr int nb_dims_requested = 100;
 
 inline cudnnFilterDescriptor_t make_filter_descriptor()
@@ -364,96 +352,6 @@ inline void copy_convolution_descriptor(cudnnConvolutionDescriptor_t& dst,
                                                          &dt));
     DISTCONV_CHECK_CUDNN(cudnnSetConvolutionNdDescriptor(
         dst, array_length, pads, strides, dilations, mode, dt));
-}
-
-template <typename T>
-void convolution_forward(Handle_t handle,
-                         T const& alpha,
-                         TensorDescriptor_t const& in_desc,
-                         void const* in_data,
-                         FilterDescriptor_t const& filter_desc,
-                         void const* filter_data,
-                         ConvolutionDescriptor_t const& conv_desc,
-                         ConvFwdAlgo_t const& conv_algo,
-                         void* work_data,
-                         size_t work_data_size,
-                         T const& beta,
-                         TensorDescriptor_t const& out_desc,
-                         void* out_data)
-{
-    DISTCONV_CHECK_CUDNN(cudnnConvolutionForward(handle,
-                                                 &alpha,
-                                                 in_desc,
-                                                 in_data,
-                                                 filter_desc,
-                                                 filter_data,
-                                                 conv_desc,
-                                                 conv_algo,
-                                                 work_data,
-                                                 work_data_size,
-                                                 &beta,
-                                                 out_desc,
-                                                 out_data));
-}
-
-template <typename T>
-void convolution_bwd_data(Handle_t handle,
-                          T const& alpha,
-                          FilterDescriptor_t const& filter_desc,
-                          void const* filter_data,
-                          TensorDescriptor_t const& dy_desc,
-                          void const* dy_data,
-                          ConvolutionDescriptor_t const& conv_desc,
-                          ConvBwdDataAlgo_t const& conv_algo,
-                          void* work_data,
-                          size_t work_data_size,
-                          T const& beta,
-                          TensorDescriptor_t const& dx_desc,
-                          void* dx_data)
-{
-    DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardData(handle,
-                                                      &alpha,
-                                                      filter_desc,
-                                                      filter_data,
-                                                      dy_desc,
-                                                      dy_data,
-                                                      conv_desc,
-                                                      conv_algo,
-                                                      work_data,
-                                                      work_data_size,
-                                                      &beta,
-                                                      dx_desc,
-                                                      dx_data));
-}
-
-template <typename T>
-void convolution_bwd_filter(Handle_t handle,
-                            T const& alpha,
-                            TensorDescriptor_t const& in_desc,
-                            void const* in_data,
-                            TensorDescriptor_t const& dy_desc,
-                            void const* dy_data,
-                            ConvolutionDescriptor_t const& conv_desc,
-                            ConvBwdFilterAlgo_t const& conv_algo,
-                            void* work_data,
-                            size_t work_data_size,
-                            T const& beta,
-                            FilterDescriptor_t const& dw_desc,
-                            void* dw_data)
-{
-    DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardFilter(handle,
-                                                        &alpha,
-                                                        in_desc,
-                                                        in_data,
-                                                        dy_desc,
-                                                        dy_data,
-                                                        conv_desc,
-                                                        conv_algo,
-                                                        work_data,
-                                                        work_data_size,
-                                                        &beta,
-                                                        dw_desc,
-                                                        dw_data));
 }
 
 inline constexpr auto default_conv_mode = CUDNN_CROSS_CORRELATION;
@@ -790,7 +688,7 @@ public:
         init(comm);
     }
 
-    ~BackendCUDNN()
+    virtual ~BackendCUDNN()
     {
 #ifdef DISTCONV_HAS_P2P
         m_p2p.disconnect_all();
@@ -984,6 +882,108 @@ public:
         return nullptr;
     }
 
+    inline Stream_t get_stream(cudnnHandle_t handle)
+    {
+        Stream_t stream;
+        DISTCONV_CHECK_CUDNN(cudnnGetStream(handle, &stream));
+        return stream;
+    }
+
+    inline void set_stream(cudnnHandle_t handle, Stream_t stream)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnSetStream(handle, stream));
+    }
+
+    template <typename T>
+    void convolution_forward(Handle_t handle,
+                             T const& alpha,
+                             TensorDescriptor_t const& in_desc,
+                             void const* in_data,
+                             FilterDescriptor_t const& filter_desc,
+                             void const* filter_data,
+                             ConvolutionDescriptor_t const& conv_desc,
+                             ConvFwdAlgo_t const& conv_algo,
+                             void* work_data,
+                             size_t work_data_size,
+                             T const& beta,
+                             TensorDescriptor_t const& out_desc,
+                             void* out_data)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnConvolutionForward(handle,
+                                                     &alpha,
+                                                     in_desc,
+                                                     in_data,
+                                                     filter_desc,
+                                                     filter_data,
+                                                     conv_desc,
+                                                     conv_algo,
+                                                     work_data,
+                                                     work_data_size,
+                                                     &beta,
+                                                     out_desc,
+                                                     out_data));
+    }
+
+    template <typename T>
+    void convolution_bwd_data(Handle_t handle,
+                              T const& alpha,
+                              FilterDescriptor_t const& filter_desc,
+                              void const* filter_data,
+                              TensorDescriptor_t const& dy_desc,
+                              void const* dy_data,
+                              ConvolutionDescriptor_t const& conv_desc,
+                              ConvBwdDataAlgo_t const& conv_algo,
+                              void* work_data,
+                              size_t work_data_size,
+                              T const& beta,
+                              TensorDescriptor_t const& dx_desc,
+                              void* dx_data)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardData(handle,
+                                                          &alpha,
+                                                          filter_desc,
+                                                          filter_data,
+                                                          dy_desc,
+                                                          dy_data,
+                                                          conv_desc,
+                                                          conv_algo,
+                                                          work_data,
+                                                          work_data_size,
+                                                          &beta,
+                                                          dx_desc,
+                                                          dx_data));
+    }
+
+    template <typename T>
+    void convolution_bwd_filter(Handle_t handle,
+                                T const& alpha,
+                                TensorDescriptor_t const& in_desc,
+                                void const* in_data,
+                                TensorDescriptor_t const& dy_desc,
+                                void const* dy_data,
+                                ConvolutionDescriptor_t const& conv_desc,
+                                ConvBwdFilterAlgo_t const& conv_algo,
+                                void* work_data,
+                                size_t work_data_size,
+                                T const& beta,
+                                FilterDescriptor_t const& dw_desc,
+                                void* dw_data)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardFilter(handle,
+                                                            &alpha,
+                                                            in_desc,
+                                                            in_data,
+                                                            dy_desc,
+                                                            dy_data,
+                                                            conv_desc,
+                                                            conv_algo,
+                                                            work_data,
+                                                            work_data_size,
+                                                            &beta,
+                                                            dw_desc,
+                                                            dw_data));
+    }
+
 protected:
     MPI_Comm m_comm;
     std::shared_ptr<Al::NCCLBackend::comm_type> m_al_mpi_cuda_comm;
@@ -1028,7 +1028,7 @@ protected:
             std::make_shared<Al::NCCLBackend::comm_type>(m_comm,
                                                                  m_stream);
         m_al_nccl_comm.reset(new Al::NCCLBackend::comm_type(m_comm, m_stream));
-        DISTCONV_CHECK_CUDNN(cudnnSetStream(m_cudnn_h, m_stream));
+        set_stream(m_cudnn_h, m_stream);
         setup_internal_streams();
         setup_al_comms();
     }

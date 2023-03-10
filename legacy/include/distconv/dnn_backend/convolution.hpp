@@ -1,7 +1,7 @@
 #pragma once
 
-#include "distconv/dnn_backend/backend.hpp"
 #include "distconv/distconv.hpp"
+#include "distconv/dnn_backend/backend.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/halo_exchange_cuda.hpp"
 #include "distconv/tensor/halo_exchange_cuda_al.hpp"
@@ -561,7 +561,7 @@ public:
                     m_output_all_filters_d,
                     m_output_all_filters_t.get_base_ptr(),
                     beta);
-                backend::convolution_forward(
+                m_be.convolution_forward(
                     handle,
                     alpha,
                     input_proxy.desc(),
@@ -592,7 +592,7 @@ public:
                                                 m_output_d,
                                                 output.get_base_ptr(),
                                                 beta);
-                backend::convolution_forward(handle,
+                m_be.convolution_forward(handle,
                                              alpha,
                                              input_proxy.desc(),
                                              input_proxy.ptr(),
@@ -625,7 +625,7 @@ public:
                     m_output_all_filters_d,
                     m_output_all_filters_t.get_base_ptr(),
                     beta);
-                backend::convolution_forward(
+                m_be.convolution_forward(
                     handle,
                     alpha,
                     input_proxy.desc(),
@@ -654,7 +654,7 @@ public:
                         m_output_d,
                         output.get_base_ptr(),
                         beta);
-                    backend::convolution_forward(handle,
+                    m_be.convolution_forward(handle,
                                                  alpha,
                                                  input_proxy.desc(),
                                                  input_proxy.ptr(),
@@ -676,7 +676,7 @@ public:
                         m_output_d,
                         output.get_base_ptr(),
                         beta);
-                    backend::convolution_bwd_data(handle,
+                    m_be.convolution_bwd_data(handle,
                                                   alpha,
                                                   m_filter_d,
                                                   filter.get_const_base_ptr(),
@@ -710,7 +710,7 @@ public:
                     m_output_interior_d,
                     output_interior_ptr,
                     beta);
-                backend::convolution_forward(handle,
+                m_be.convolution_forward(handle,
                                              alpha,
                                              input_proxy.desc(),
                                              input_proxy.ptr(),
@@ -742,7 +742,7 @@ public:
                     << "Launching convolution of boundary at dimension " << i
                     << ", side: " << side;
                 record_start_boundary(i, side);
-                backend::set_stream(handle, st_boundary);
+                m_be.set_stream(handle, st_boundary);
 
                 auto input_proxy = dnn_lib::read_proxy(
                     handle,
@@ -753,7 +753,7 @@ public:
                     m_output_boundaries_d(i, side),
                     boundary_output_ptr,
                     beta);
-                backend::convolution_forward(handle,
+                m_be.convolution_forward(handle,
                                              alpha,
                                              input_proxy.desc(),
                                              input_proxy.ptr(),
@@ -771,7 +771,7 @@ public:
                     ws_boundary);
                 util::wait_stream(st_boundary, m_be.get_stream());
             });
-            backend::set_stream(handle, m_be.get_stream());
+            m_be.set_stream(handle, m_be.get_stream());
         }
 
         if (!skip_chanfilt_comm
@@ -825,7 +825,7 @@ public:
 
         set_num_samples(output.get_local_shape()[-1]);
 
-        backend::apply_fwd_bias(m_be.get_handle(),
+        m_be.apply_fwd_bias(m_be.get_handle(),
                                 alpha,
                                 m_bias_d,
                                 bias.get_const_base_ptr(),
@@ -938,7 +938,7 @@ public:
                 m_d_input_d,
                 d_input_ptr,
                 beta);
-            backend::convolution_bwd_data(
+            m_be.convolution_bwd_data(
                 m_be.get_handle(),
                 alpha,
                 m_filter_d,
@@ -973,7 +973,7 @@ public:
                 m_d_input_all_channels_d,
                 m_d_input_all_channels_t.get_base_ptr(),
                 beta);
-            backend::convolution_bwd_data(
+            m_be.convolution_bwd_data(
                 m_be.get_handle(),
                 alpha,
                 m_filter_d,
@@ -1009,7 +1009,7 @@ public:
                 m_d_input_all_channels_d,
                 m_d_input_all_channels_t.get_base_ptr(),
                 beta);
-            backend::convolution_bwd_data(
+            m_be.convolution_bwd_data(
                 m_be.get_handle(),
                 alpha,
                 m_filter_d,
@@ -1041,7 +1041,7 @@ public:
                     m_d_input_d,
                     d_input_ptr,
                     beta);
-                backend::convolution_bwd_data(m_be.get_handle(),
+                m_be.convolution_bwd_data(m_be.get_handle(),
                                               alpha,
                                               m_filter_d,
                                               filter.get_const_base_ptr(),
@@ -1066,7 +1066,7 @@ public:
                     m_d_input_d,
                     d_input_ptr,
                     beta);
-                backend::convolution_forward(m_be.get_handle(),
+                m_be.convolution_forward(m_be.get_handle(),
                                              alpha,
                                              dy_proxy.desc(),
                                              dy_proxy.ptr(),
@@ -1222,7 +1222,7 @@ public:
                 // against cuDNN anyway, we are already guaranteed
                 // that we have a fully-packed tensor for the filters
                 // and thus we don't need to ever proxy them.
-                backend::convolution_bwd_filter(
+                m_be.convolution_bwd_filter(
                     m_be.get_handle(),
                     alpha,
                     x_proxy.desc(),
@@ -1256,7 +1256,7 @@ public:
                     handle,
                     m_d_output_d,
                     d_output.get_const_buffer());
-                backend::convolution_bwd_filter(
+                m_be.convolution_bwd_filter(
                     m_be.get_handle(),
                     alpha,
                     x_proxy.desc(),
@@ -1290,7 +1290,7 @@ public:
                     handle,
                     m_d_output_gathered_d,
                     m_d_output_gathered_t.get_const_buffer());
-                backend::convolution_bwd_filter(
+                m_be.convolution_bwd_filter(
                     m_be.get_handle(),
                     alpha,
                     x_proxy.desc(),
@@ -1321,7 +1321,7 @@ public:
                         handle,
                         m_d_output_d,
                         d_output.get_const_buffer());
-                    backend::convolution_bwd_filter(m_be.get_handle(),
+                    m_be.convolution_bwd_filter(m_be.get_handle(),
                                                     alpha,
                                                     x_proxy.desc(),
                                                     x_proxy.ptr(),
@@ -1345,7 +1345,7 @@ public:
                         handle,
                         m_input_d,
                         input_ptr);
-                    backend::convolution_bwd_filter(m_be.get_handle(),
+                    m_be.convolution_bwd_filter(m_be.get_handle(),
                                                     alpha,
                                                     x_proxy.desc(),
                                                     x_proxy.ptr(),
@@ -1402,7 +1402,7 @@ public:
 
         set_num_samples(d_output.get_local_shape()[-1]);
         record_start_comp();
-        backend::apply_bwd_bias(m_be.get_handle(),
+        m_be.apply_bwd_bias(m_be.get_handle(),
                                 alpha,
                                 m_d_output_no_halo_d,
                                 d_output.get_const_base_ptr(),
