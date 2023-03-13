@@ -33,7 +33,7 @@ namespace backend = dnn_lib;
 #endif
 
 // DaCe JIT compiler wrapper backend
-#ifdef H2_HAS_DACE
+#if H2_HAS_DACE
 #include "backend_dace.hpp"
 
 namespace distconv
