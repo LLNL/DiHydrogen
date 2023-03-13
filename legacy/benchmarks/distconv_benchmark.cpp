@@ -655,20 +655,20 @@ struct ConvolutionTester<NSD, ref::Backend, DataType> {
 
 #ifdef DISTCONV_HAS_CUDNN
 template <int NSD, typename DataType>
-struct ConvolutionTester<NSD, cudnn::BackendCUDNN, DataType> {
+struct ConvolutionTester<NSD, BackendDNNLib, DataType> {
   ConvolutionTester() {}
-  int operator()(Data<NSD, cudnn::BackendCUDNN, DataType> &d,
+  int operator()(Data<NSD, BackendDNNLib, DataType> &d,
                  const BenchmarkConfig<NSD> &cfg, MPI_Comm comm,
                  Profile<NSD> &prof) {
     int pid;
     DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
     cudnnHandle_t cudnn_h;
     DISTCONV_CHECK_CUDNN(cudnnCreate(&cudnn_h));
-    cudnn::Options be_opts(cfg.overlap_halo_exchange,
+    BackendOptions be_opts(cfg.overlap_halo_exchange,
                            cfg.deterministic,
                            cfg.profiling);
-    cudnn::BackendCUDNN be(comm, cudnn_h, be_opts);
-    Convolution<cudnn::BackendCUDNN, DataType> conv(
+    BackendDNNLib be(comm, cudnn_h, be_opts);
+    Convolution<BackendDNNLib, DataType> conv(
         be, 2 + NSD, cfg.halo_exchange_method, cfg.chanfilt_algo);
     conv.setup(d.input, d.filter, d.output,
                d.d_input, d.d_filter, d.d_output,
@@ -702,25 +702,25 @@ struct ConvolutionTester<NSD, cudnn::BackendCUDNN, DataType> {
         cfg.conv_bwd_filter_algo == "AUTOTUNE") {
       d.initialize();
     }
-    start_profiler<cudnn::BackendCUDNN>();
+    start_profiler<BackendDNNLib>();
     if (cfg.nvtx_marking) {
       be.enable_nvtx_marking();
     }
-    test_convolution_forward<NSD, cudnn::BackendCUDNN, DataType>(
+    test_convolution_forward<NSD, BackendDNNLib, DataType>(
       d, cfg, comm, be, conv, prof);
     // These individual tests are mostly redundant as they are also
     // executed as prt of test_convolution_backward.
 #if 0
-    test_convolution_backward_filter<NSD, cudnn::BackendCUDNN, DataType>(
+    test_convolution_backward_filter<NSD, BackendDNNLib, DataType>(
         d, cfg, comm, be, conv, prof);
-    test_convolution_backward_data<NSD, cudnn::BackendCUDNN, DataType>(
+    test_convolution_backward_data<NSD, BackendDNNLib, DataType>(
         d, cfg, comm, be, conv, prof);
     if (cfg.use_bias) {
-      test_convolution_backward_bias<NSD, cudnn::BackendCUDNN, DataType>(
+      test_convolution_backward_bias<NSD, BackendDNNLib, DataType>(
           d, cfg, comm, be, conv, prof);
     }
 #endif
-    test_convolution_backward<NSD, cudnn::BackendCUDNN, DataType>(
+    test_convolution_backward<NSD, BackendDNNLib, DataType>(
       d, cfg, comm, be, conv, prof);
     // This seems necessary to avoid hang using NVSHMEM v0.3.3
     DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());

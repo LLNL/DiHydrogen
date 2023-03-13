@@ -39,7 +39,7 @@ struct TensorType;
 
 #ifdef DISTCONV_HAS_CUDNN
 template <typename DataType>
-struct TensorType<distconv::cudnn::BackendCUDNN, DataType> {
+struct TensorType<distconv::BackendDNNLib, DataType> {
   using type =
       distconv::tensor::Tensor<DataType,
                                distconv::tensor::LocaleMPI,
@@ -216,11 +216,11 @@ struct Clock<ref::Backend> {
 
 #ifdef DISTCONV_HAS_CUDNN
 template <>
-struct Clock<cudnn::BackendCUDNN> {
-  cudnn::BackendCUDNN &m_be;
+struct Clock<BackendDNNLib> {
+  BackendDNNLib &m_be;
   cudaEvent_t m_ev1;
   cudaEvent_t m_ev2;
-  Clock(cudnn::BackendCUDNN &be):
+  Clock(BackendDNNLib &be):
       m_be(be) {
     DISTCONV_CHECK_CUDA(cudaEventCreate(&m_ev1));
     DISTCONV_CHECK_CUDA(cudaEventCreate(&m_ev2));
@@ -245,7 +245,7 @@ inline void complete_async() {}
 
 #ifdef DISTCONV_HAS_CUDNN
 template <>
-inline void complete_async<cudnn::BackendCUDNN>() {
+inline void complete_async<BackendDNNLib>() {
   DISTCONV_CHECK_CUDA(cudaDeviceSynchronize());
 }
 #endif
@@ -255,8 +255,8 @@ inline void spin_async_device(int ms, Backend &be) {}
 
 #ifdef DISTCONV_HAS_CUDNN
 template <>
-inline void spin_async_device<cudnn::BackendCUDNN>(int ms,
-                                                   cudnn::BackendCUDNN &be) {
+inline void spin_async_device<BackendDNNLib>(int ms,
+                                             BackendDNNLib &be) {
   spin_gpu(ms, 0);
 }
 #endif
@@ -268,11 +268,11 @@ inline void stop_profiler() {}
 
 #ifdef DISTCONV_HAS_CUDNN
 template <>
-inline void start_profiler<cudnn::BackendCUDNN>() {
+inline void start_profiler<BackendDNNLib>() {
   DISTCONV_CHECK_CUDA(cudaProfilerStart());
 }
 template <>
-inline void stop_profiler<cudnn::BackendCUDNN>() {
+inline void stop_profiler<BackendDNNLib>() {
   DISTCONV_CHECK_CUDA(cudaProfilerStop());
 }
 #endif
@@ -359,7 +359,7 @@ inline int run_test(const BenchmarkConfig<NSD> &cfg, MPI_Comm comm) {
   } else if (cfg.backend == "CUDNN") {
     util::MPIRootPrintStreamInfo() << "Using " <<
         util::get_cudnn_version_number_string();
-    return run_test_with_backend<NSD, cudnn::BackendCUDNN, Data, Profile, Tester>(
+    return run_test_with_backend<NSD, BackendDNNLib, Data, Profile, Tester>(
         cfg, MPI_COMM_WORLD);
 #endif
   } else {

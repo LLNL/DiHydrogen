@@ -30,7 +30,7 @@ struct TensorType;
 
 #ifdef DISTCONV_HAS_CUDNN
 template <>
-struct TensorType<cudnn::BackendCUDNN> {
+struct TensorType<BackendDNNLib> {
   using type =
       tensor::Tensor<DataType, tensor::LocaleMPI,
                      tensor::CUDAAllocator>;
@@ -200,16 +200,16 @@ int test_all(Data<Backend> &d, const test::Config &cfg,
 
 #ifdef DISTCONV_HAS_CUDNN
 template <>
-int test_all<cudnn::BackendCUDNN>(Data<cudnn::BackendCUDNN> &d,
-                                  const test::Config &cfg,
-                                  MPI_Comm comm) {
+int test_all<BackendDNNLib>(Data<BackendDNNLib> &d,
+                            const test::Config &cfg,
+                            MPI_Comm comm) {
   int pid;
   DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
   cudnnHandle_t cudnn_h;
   DISTCONV_CHECK_CUDNN(cudnnCreate(&cudnn_h));
-  cudnn::BackendCUDNN be(comm, cudnn_h);
-  test_forward<cudnn::BackendCUDNN>(d, cfg, comm, be);
-  test_backward<cudnn::BackendCUDNN>(d, cfg, comm, be);
+  BackendDNNLib be(comm, cudnn_h);
+  test_forward<BackendDNNLib>(d, cfg, comm, be);
+  test_backward<BackendDNNLib>(d, cfg, comm, be);
   be.wait();
   return 0;
 }
@@ -296,7 +296,7 @@ int main(int argc, char *argv[]) {
     int dev = util::choose_gpu();
     util::MPIPrintStreamDebug() << "Using GPU " << dev;
     DISTCONV_CHECK_CUDA(cudaSetDevice(dev));
-    run<cudnn::BackendCUDNN>(cfg, MPI_COMM_WORLD);
+    run<BackendDNNLib>(cfg, MPI_COMM_WORLD);
 #endif
   } else {
     util::MPIRootPrintStreamError() << "Unknown backend name";

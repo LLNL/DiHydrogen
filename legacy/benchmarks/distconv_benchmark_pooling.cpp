@@ -266,24 +266,24 @@ int test_backward(Data<NSD, Backend, DataType> &d,
 
 #ifdef DISTCONV_HAS_CUDNN
 template <int NSD, typename DataType>
-struct PoolingTester<NSD, cudnn::BackendCUDNN, DataType> {
+struct PoolingTester<NSD, BackendDNNLib, DataType> {
   PoolingTester() {}
-  int operator()(Data<NSD, cudnn::BackendCUDNN, DataType> &d,
+  int operator()(Data<NSD, BackendDNNLib, DataType> &d,
                  const BenchmarkConfig<NSD> &cfg, MPI_Comm comm,
                  Profile<NSD> &prof) {
     int pid;
     DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
     cudnnHandle_t cudnn_h;
     DISTCONV_CHECK_CUDNN(cudnnCreate(&cudnn_h));
-    cudnn::Options be_opts(cfg.overlap_halo_exchange,
+    BackendOptions be_opts(cfg.overlap_halo_exchange,
                            cfg.deterministic);
-    cudnn::BackendCUDNN be(comm, cudnn_h, be_opts);
+    BackendDNNLib be(comm, cudnn_h, be_opts);
     if (cfg.nvtx_marking) {
       be.enable_nvtx_marking();
     }
-    test_forward<NSD, cudnn::BackendCUDNN, DataType>(
+    test_forward<NSD, BackendDNNLib, DataType>(
         d, cfg, comm, be, prof);
-    test_backward<NSD, cudnn::BackendCUDNN, DataType>(
+    test_backward<NSD, BackendDNNLib, DataType>(
         d, cfg, comm, be, prof);
     return 0;
   }

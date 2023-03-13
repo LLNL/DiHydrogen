@@ -397,23 +397,23 @@ struct BNTester<NSD, ref::Backend, DataType> {
 
 #ifdef DISTCONV_HAS_CUDNN
 template <int NSD, typename DataType>
-struct BNTester<NSD, cudnn::BackendCUDNN, DataType> {
+struct BNTester<NSD, BackendDNNLib, DataType> {
   BNTester() {}
-  int operator()(Data<NSD, cudnn::BackendCUDNN, DataType> &d,
+  int operator()(Data<NSD, BackendDNNLib, DataType> &d,
                  const BenchmarkConfig<NSD> &cfg, MPI_Comm comm,
                  Profile<NSD> &prof) {
     int pid;
     DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
     cudnnHandle_t cudnn_h;
     DISTCONV_CHECK_CUDNN(cudnnCreate(&cudnn_h));
-    cudnn::Options be_opts(cfg.overlap_halo_exchange,
+    BackendOptions be_opts(cfg.overlap_halo_exchange,
                            cfg.deterministic,
                            cfg.profiling);
-    cudnn::BackendCUDNN be(comm, cudnn_h, be_opts);
-    BatchNormalization<cudnn::BackendCUDNN, DataType> bn(
+    BackendDNNLib be(comm, cudnn_h, be_opts);
+    BatchNormalization<BackendDNNLib, DataType> bn(
         be, 2 + NSD, 0.9, 1e-5, cfg.global_stat, cfg.batchnorm_impl);
     bn.set_num_samples(d.input.get_shape()[-1]);
-    start_profiler<cudnn::BackendCUDNN>();
+    start_profiler<BackendDNNLib>();
     if (cfg.nvtx_marking) {
       be.enable_nvtx_marking();
     }
@@ -454,9 +454,9 @@ struct BNTester<NSD, cudnn::BackendCUDNN, DataType> {
     }
 #endif // DISTCONV_HAS_NVSHMEM
 
-    test_forward<NSD, cudnn::BackendCUDNN, DataType>(
+    test_forward<NSD, BackendDNNLib, DataType>(
         d, cfg, comm, be, bn, prof);
-    test_backward<NSD, cudnn::BackendCUDNN, DataType>(
+    test_backward<NSD, BackendDNNLib, DataType>(
         d, cfg, comm, be, bn, prof);
     return 0;
   }
