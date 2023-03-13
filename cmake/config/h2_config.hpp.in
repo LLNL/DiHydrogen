@@ -19,6 +19,7 @@
 #cmakedefine01 H2_HAS_HALF
 #cmakedefine01 H2_HAS_OPENMP
 
+#cmakedefine01 H2_HAS_DACE
 #cmakedefine01 H2_HAS_CUDA
 #cmakedefine01 H2_HAS_ROCM
 #if H2_HAS_CUDA || H2_HAS_ROCM
