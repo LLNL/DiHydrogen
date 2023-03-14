@@ -1,7 +1,7 @@
 #pragma once
 
-#include "distconv/dnn_backend/backend.hpp"
 #include "distconv/distconv.hpp"
+#include "distconv/dnn_backend/backend.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/halo_exchange_cuda.hpp"
 #include "distconv/tensor/halo_exchange_cuda_al.hpp"
@@ -17,7 +17,6 @@
 
 namespace distconv
 {
-
 #if H2_HAS_CUDA
 namespace cudnn
 {
@@ -88,21 +87,21 @@ public:
         : m_be(backend),
           m_num_dims(num_dims),
           m_num_spatial_dims(num_dims - 2),
-          m_input_d{backend::make_tensor_descriptor()},
-          m_output_d{backend::make_tensor_descriptor()},
-          m_d_input_d{backend::make_tensor_descriptor()},
-          m_d_output_d{backend::make_tensor_descriptor()},
-          m_pooling_d{backend::make_pooling_descriptor()},
+          m_input_d{backend.make_tensor_descriptor()},
+          m_output_d{backend.make_tensor_descriptor()},
+          m_d_input_d{backend.make_tensor_descriptor()},
+          m_d_output_d{backend.make_tensor_descriptor()},
+          m_pooling_d{backend.make_pooling_descriptor()},
           m_halo_xch_method(method)
     {}
 
     ~Pooling()
     {
-        backend::destroy_pooling_descriptor(m_pooling_d);
-        backend::destroy_tensor_descriptor(m_d_output_d);
-        backend::destroy_tensor_descriptor(m_d_input_d);
-        backend::destroy_tensor_descriptor(m_output_d);
-        backend::destroy_tensor_descriptor(m_input_d);
+        m_be.destroy_pooling_descriptor(m_pooling_d);
+        m_be.destroy_tensor_descriptor(m_d_output_d);
+        m_be.destroy_tensor_descriptor(m_d_input_d);
+        m_be.destroy_tensor_descriptor(m_output_d);
+        m_be.destroy_tensor_descriptor(m_input_d);
     }
 
     Pooling<BackendDNNLib, DataType>
@@ -110,11 +109,11 @@ public:
     {
         assert_always(&m_be == &x.m_be);
         m_num_dims = x.m_num_dims;
-        backend::copy_tensor_descriptor(m_input_d, x.m_input_d);
-        backend::copy_tensor_descriptor(m_output_d, x.m_output_d);
-        backend::copy_tensor_descriptor(m_d_input_d, x.m_d_input_d);
-        backend::copy_tensor_descriptor(m_d_output_d, x.m_d_output_d);
-        backend::copy_pooling_descriptor(m_pooling_d, x.m_pooling_d);
+        m_be.copy_tensor_descriptor(m_input_d, x.m_input_d);
+        m_be.copy_tensor_descriptor(m_output_d, x.m_output_d);
+        m_be.copy_tensor_descriptor(m_d_input_d, x.m_d_input_d);
+        m_be.copy_tensor_descriptor(m_d_output_d, x.m_d_output_d);
+        m_be.copy_pooling_descriptor(m_pooling_d, x.m_pooling_d);
         return *this;
     }
 
@@ -193,17 +192,17 @@ public:
                                      use_padding);
         }
 
-        backend::setup_tensor_descriptor(m_input_d,
-                                         input,
-                                         IntVector(m_halo_fwd_recv),
-                                         IntVector(m_halo_bwd_recv));
+        m_be.setup_tensor_descriptor(m_input_d,
+                                     input,
+                                     IntVector(m_halo_fwd_recv),
+                                     IntVector(m_halo_bwd_recv));
         util::MPIPrintStreamDebug() << "pooling input desc: " << m_input_d;
-        backend::setup_tensor_descriptor(m_output_d, output, false);
+        m_be.setup_tensor_descriptor(m_output_d, output, false);
 
-        backend::setup_tensor_descriptor(
+        m_be.setup_tensor_descriptor(
             m_d_input_d, d_input, m_halo_fwd_recv, m_halo_bwd_recv);
         util::MPIPrintStreamDebug() << "pooling d_input desc: " << m_d_input_d;
-        backend::setup_tensor_descriptor(m_d_output_d, d_output, false);
+        m_be.setup_tensor_descriptor(m_d_output_d, d_output, false);
 
         m_mode =
             backend::get_pooling_mode(mode, m_be.get_options().m_deterministic);
@@ -255,22 +254,18 @@ public:
 
         // Proxies!
         auto const handle = m_be.get_handle();
-        dnn_lib::PackedTensorReadProxy input_prox(handle,
-                                                  m_input_d,
-                                                  input_ptr);
-        dnn_lib::PackedTensorWriteProxy output_prox(handle,
-                                                    m_output_d,
-                                                    output.get_base_ptr(),
-                                                    beta);
-        backend::pooling_forward(handle,
-                                 m_pooling_d,
-                                 alpha,
-                                 input_prox.desc(),
-                                 input_prox.ptr(),
-                                 beta,
-                                 output_prox.desc(),
-                                 output_prox.ptr(),
-                                 training);
+        dnn_lib::PackedTensorReadProxy input_prox(handle, m_input_d, input_ptr);
+        dnn_lib::PackedTensorWriteProxy output_prox(
+            handle, m_output_d, output.get_base_ptr(), beta);
+        m_be.pooling_forward(handle,
+                             m_pooling_d,
+                             alpha,
+                             input_prox.desc(),
+                             input_prox.ptr(),
+                             beta,
+                             output_prox.desc(),
+                             output_prox.ptr(),
+                             training);
 
         return 0;
     }
@@ -301,28 +296,25 @@ public:
 
             // Proxies
             auto const handle = m_be.get_handle();
-            dnn_lib::PackedTensorReadProxy output_proxy(handle,
-                                                        m_output_d,
-                                                        output.get_const_base_ptr()),
-                d_output_proxy(handle,
-                               m_d_output_d,
-                               d_output.get_const_base_ptr()),
+            dnn_lib::PackedTensorReadProxy output_proxy(
+                handle, m_output_d, output.get_const_base_ptr()),
+                d_output_proxy(
+                    handle, m_d_output_d, d_output.get_const_base_ptr()),
                 input_proxy(handle, m_input_d, input_ptr);
-            dnn_lib::PackedTensorWriteProxy d_input_proxy(handle,
-                                                          m_d_input_d,
-                                                          d_input_ptr);
-            backend::pooling_backward(m_be.get_handle(),
-                                      m_pooling_d,
-                                      alpha,
-                                      output_proxy.desc(),
-                                      output_proxy.ptr(),
-                                      d_output_proxy.desc(),
-                                      d_output_proxy.ptr(),
-                                      input_proxy.desc(),
-                                      input_proxy.ptr(),
-                                      beta,
-                                      d_input_proxy.desc(),
-                                      d_input_proxy.ptr());
+            dnn_lib::PackedTensorWriteProxy d_input_proxy(
+                handle, m_d_input_d, d_input_ptr);
+            m_be.pooling_backward(m_be.get_handle(),
+                                  m_pooling_d,
+                                  alpha,
+                                  output_proxy.desc(),
+                                  output_proxy.ptr(),
+                                  d_output_proxy.desc(),
+                                  d_output_proxy.ptr(),
+                                  input_proxy.desc(),
+                                  input_proxy.ptr(),
+                                  beta,
+                                  d_input_proxy.desc(),
+                                  d_input_proxy.ptr());
         }
         {
 #if 0
@@ -349,13 +341,13 @@ public:
 
     void set_num_samples(int n)
     {
-        if (n != backend::get_tensor_num_samples(m_input_d))
+        if (n != m_be.get_tensor_num_samples(m_input_d))
         {
             util::MPIPrintStreamDebug() << "Setting #sample to " << n;
-            backend::set_tensor_num_samples(m_input_d, n);
-            backend::set_tensor_num_samples(m_output_d, n);
-            backend::set_tensor_num_samples(m_d_input_d, n);
-            backend::set_tensor_num_samples(m_d_output_d, n);
+            m_be.set_tensor_num_samples(m_input_d, n);
+            m_be.set_tensor_num_samples(m_output_d, n);
+            m_be.set_tensor_num_samples(m_d_input_d, n);
+            m_be.set_tensor_num_samples(m_d_output_d, n);
         }
     }
 
@@ -378,28 +370,21 @@ private:
     backend::PoolingMode_t m_mode;
 
     HaloExchangeMethod m_halo_xch_method;
-    using HaloExchange = tensor::
-        HaloExchange<DataType, tensor::CUDAAllocator, Al::NCCLBackend>;
-    using HaloExchangeMPI = tensor::HaloExchangeMPI<DataType,
-                                                    tensor::CUDAAllocator,
-                                                    Al::NCCLBackend>;
-    using HaloExchangeAL = tensor::HaloExchangeAL<DataType,
-                                                  tensor::CUDAAllocator,
-                                                  Al::NCCLBackend>;
+    using HaloExchange =
+        tensor::HaloExchange<DataType, tensor::CUDAAllocator, Al::NCCLBackend>;
+    using HaloExchangeMPI = tensor::
+        HaloExchangeMPI<DataType, tensor::CUDAAllocator, Al::NCCLBackend>;
+    using HaloExchangeAL = tensor::
+        HaloExchangeAL<DataType, tensor::CUDAAllocator, Al::NCCLBackend>;
 #ifdef DISTCONV_HAS_P2P
-    using HaloExchangeP2P = tensor::HaloExchangeP2P<DataType,
-                                                    tensor::CUDAAllocator,
-                                                    Al::NCCLBackend>;
-    using HaloExchangeHybrid =
-        tensor::HaloExchangeHybrid<DataType,
-                                   tensor::CUDAAllocator,
-                                   Al::NCCLBackend>;
+    using HaloExchangeP2P = tensor::
+        HaloExchangeP2P<DataType, tensor::CUDAAllocator, Al::NCCLBackend>;
+    using HaloExchangeHybrid = tensor::
+        HaloExchangeHybrid<DataType, tensor::CUDAAllocator, Al::NCCLBackend>;
 #endif // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
-    using HaloExchangeNVSHMEM =
-        tensor::HaloExchangeNVSHMEM<DataType,
-                                    tensor::CUDAAllocator,
-                                    Al::NCCLBackend>;
+    using HaloExchangeNVSHMEM = tensor::
+        HaloExchangeNVSHMEM<DataType, tensor::CUDAAllocator, Al::NCCLBackend>;
 #ifdef DISTCONV_HAS_CUDA_GRAPH
     using HaloExchangeNVSHMEMGraph =
         tensor::HaloExchangeNVSHMEMGraph<DataType,
@@ -428,12 +413,12 @@ private:
                                   int_vector strides,
                                   backend::PoolingDescriptor_t& pool_d)
     {
-        backend::setup_pooling_descriptor(pool_d,
-                                          m_mode,
-                                          m_num_spatial_dims,
-                                          util::reverse(windows).data(),
-                                          util::reverse(pads).data(),
-                                          util::reverse(strides).data());
+        m_be.setup_pooling_descriptor(pool_d,
+                                      m_mode,
+                                      m_num_spatial_dims,
+                                      util::reverse(windows).data(),
+                                      util::reverse(pads).data(),
+                                      util::reverse(strides).data());
     }
 
     void bp_accumulate_sum(

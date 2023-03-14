@@ -33,7 +33,6 @@ namespace distconv
 {
 namespace cudnn
 {
-
 using ActivationDescriptor_t = cudnnActivationDescriptor_t;
 using ConvolutionDescriptor_t = cudnnConvolutionDescriptor_t;
 using ConvolutionMode_t = cudnnConvolutionMode_t;
@@ -49,37 +48,8 @@ using Handle_t = cudnnHandle_t;
 using Stream_t = cudaStream_t;
 using Event_t = cudaEvent_t;
 
-inline Event_t make_event()
-{
-    cudaEvent_t event;
-    DISTCONV_CHECK_CUDA(cudaEventCreate(&event));
-    return event;
-}
-
-inline void destroy_event(cudaEvent_t const& event)
-{
-    DISTCONV_CHECK_CUDA(cudaEventDestroy(event));
-}
-
-inline void record_event(cudaEvent_t const& event, cudaStream_t const& stream)
-{
-    DISTCONV_CHECK_CUDA(cudaEventRecord(event, stream));
-}
-
-inline float elapsed_time(cudaEvent_t const& start, cudaEvent_t const& end)
-{
-    float elapsed;
-    DISTCONV_CHECK_CUDA(cudaEventElapsedTime(&elapsed, start, end));
-    return elapsed;
-}
-
-inline size_t get_available_memory()
-{
-    size_t available;
-    size_t total;
-    DISTCONV_CHECK_CUDA(cudaMemGetInfo(&available, &total));
-    return available;
-}
+inline constexpr auto default_conv_mode = CUDNN_CROSS_CORRELATION;
+constexpr int nb_dims_requested = 100;
 
 inline Handle_t make_handle()
 {
@@ -91,517 +61,6 @@ inline Handle_t make_handle()
 inline void destroy_handle(cudnnHandle_t handle)
 {
     DISTCONV_CHECK_CUDNN(cudnnDestroy(handle));
-}
-
-constexpr int nb_dims_requested = 100;
-
-inline cudnnFilterDescriptor_t make_filter_descriptor()
-{
-    cudnnFilterDescriptor_t desc;
-    DISTCONV_CHECK_CUDNN(cudnnCreateFilterDescriptor(&desc));
-    return desc;
-}
-
-inline void destroy_filter_descriptor(cudnnFilterDescriptor_t const& desc)
-{
-    DISTCONV_CHECK_CUDNN(cudnnDestroyFilterDescriptor(desc));
-}
-
-template <typename Tensor>
-inline void setup_filter_descriptor(FilterDescriptor_t& desc,
-                                    Tensor const& tensor)
-{
-    // Lifted out of convolution.hpp; modified to not use data members.
-    cudnnDataType_t dt = util::get_cudnn_type<typename Tensor::data_type>();
-    const int_vector shape =
-        tensor.get_local_real_shape().template get_vector<int>();
-    DISTCONV_CHECK_CUDNN(
-        cudnnSetFilterNdDescriptor(desc,
-                                   dt,
-                                   CUDNN_TENSOR_NCHW,
-                                   shape.size(),
-                                   util::reverse(shape).data()));
-}
-
-inline cudnnTensorDescriptor_t make_tensor_descriptor()
-{
-    cudnnTensorDescriptor_t desc;
-    DISTCONV_CHECK_CUDNN(cudnnCreateTensorDescriptor(&desc));
-    return desc;
-}
-
-inline void destroy_tensor_descriptor(cudnnTensorDescriptor_t const& desc)
-{
-    DISTCONV_CHECK_CUDNN(cudnnDestroyTensorDescriptor(desc));
-}
-
-template <typename Tensor, typename ShapeType>
-inline void setup_tensor_descriptor(cudnnTensorDescriptor_t& desc,
-                                    const Tensor& tensor,
-                                    const ShapeType& shape)
-{
-    cudnnDataType_t dt = util::get_cudnn_type<typename Tensor::data_type>();
-    assert_eq(tensor.get_num_dims(), shape.num_dims());
-
-    if (shape.get_size() == 0)
-        return;
-
-    // set descriptor for input tensor
-    // The size should include halo regions. Convolution will not be
-    // done for the halo regions by disabling padding
-    IndexVector strides = tensor::get_strides(
-        tensor.get_local_shape(), tensor.get_halo_width(), tensor.get_pitch());
-
-    util::MPIPrintStreamDebug()
-        << "setup_tensor_descriptor. "
-        << "tensor: " << tensor << ", shape: " << util::join_array(shape, ", ")
-        << ", strides: " << util::join_array(strides, ", ") << "\n";
-
-    DISTCONV_CHECK_CUDNN(cudnnSetTensorNdDescriptor(
-        desc,
-        dt,
-        shape.num_dims(),
-        util::reverse(IntVector(shape)).data(),
-        util::reverse(strides).get_vector<int>().data()));
-}
-
-template <typename Tensor>
-inline void setup_tensor_descriptor(cudnnTensorDescriptor_t& desc,
-                                    const Tensor& tensor,
-                                    const IntVector& halo_fwd,
-                                    const IntVector& halo_bwd)
-{
-    auto shape = tensor.get_local_shape();
-    shape = shape + tensor::Shape(halo_fwd) + tensor::Shape(halo_bwd);
-    return setup_tensor_descriptor(desc, tensor, shape);
-}
-
-template <typename Tensor>
-inline void setup_tensor_descriptor(cudnnTensorDescriptor_t& desc,
-                                    const Tensor& tensor,
-                                    const std::vector<bool>& include_halo_fwd,
-                                    const std::vector<bool>& include_halo_bwd)
-{
-    const int nd = tensor.get_num_dims();
-    auto overlap = tensor.get_overlap();
-    IntVector halo_fwd(nd, 0), halo_bwd(nd, 0);
-    for (int i = 0; i < nd; ++i)
-    {
-        if (include_halo_bwd[i])
-            halo_bwd[i] = overlap[i];
-        if (include_halo_fwd[i])
-            halo_fwd[i] = overlap[i];
-    }
-    setup_tensor_descriptor(desc, tensor, halo_fwd, halo_bwd);
-}
-
-template <typename Tensor>
-inline void setup_tensor_descriptor(cudnnTensorDescriptor_t& desc,
-                                    const Tensor& tensor,
-                                    bool include_halo = true)
-{
-    std::vector<bool> include_halo_array(tensor.get_num_dims(), include_halo);
-    setup_tensor_descriptor(
-        desc, tensor, include_halo_array, include_halo_array);
-}
-
-inline int get_tensor_dimension(const cudnnTensorDescriptor_t& desc, int d)
-{
-    cudnnDataType_t dt;
-    int dims[nb_dims_requested];
-    int strides[nb_dims_requested];
-    int nbdims;
-    DISTCONV_CHECK_CUDNN(cudnnGetTensorNdDescriptor(
-        desc, nb_dims_requested, &dt, &nbdims, dims, strides));
-    d = d < 0 ? nbdims + d : d;
-    assert_always(d < nbdims);
-    return dims[nbdims - d - 1];
-}
-
-inline void set_tensor_dimension(cudnnTensorDescriptor_t& desc, int d, int n)
-{
-    cudnnDataType_t dt;
-    int dims[nb_dims_requested];
-    int strides[nb_dims_requested];
-    int nbdims;
-    DISTCONV_CHECK_CUDNN(cudnnGetTensorNdDescriptor(
-        desc, nb_dims_requested, &dt, &nbdims, dims, strides));
-    d = d < 0 ? nbdims + d : d;
-    assert_always(d < nbdims);
-    dims[nbdims - d - 1] = n;
-    DISTCONV_CHECK_CUDNN(
-        cudnnSetTensorNdDescriptor(desc, dt, nbdims, dims, strides));
-}
-
-inline int get_tensor_num_dimensions(const cudnnTensorDescriptor_t& desc)
-{
-    cudnnDataType_t dt;
-    int nbdims;
-    DISTCONV_CHECK_CUDNN(
-        cudnnGetTensorNdDescriptor(desc, 0, &dt, &nbdims, nullptr, nullptr));
-    return nbdims;
-}
-
-inline void set_tensor_num_samples(cudnnTensorDescriptor_t& desc, int n)
-{
-    int num_sample_dim = get_tensor_num_dimensions(desc) - 1;
-    set_tensor_dimension(desc, num_sample_dim, n);
-}
-
-inline int get_tensor_num_samples(const cudnnTensorDescriptor_t& desc)
-{
-    int num_sample_dim = get_tensor_num_dimensions(desc) - 1;
-    return get_tensor_dimension(desc, num_sample_dim);
-}
-
-inline void copy_tensor_descriptor(cudnnTensorDescriptor_t& dst,
-                                   const cudnnTensorDescriptor_t& src)
-{
-    cudnnDataType_t dt;
-    int dims[nb_dims_requested];
-    int strides[nb_dims_requested];
-    int nbdims;
-    DISTCONV_CHECK_CUDNN(cudnnGetTensorNdDescriptor(
-        src, nb_dims_requested, &dt, &nbdims, dims, strides));
-    DISTCONV_CHECK_CUDNN(
-        cudnnSetTensorNdDescriptor(dst, dt, nbdims, dims, strides));
-}
-
-inline void copy_filter_descriptor(cudnnFilterDescriptor_t& dst,
-                                   const cudnnFilterDescriptor_t& src)
-{
-    cudnnDataType_t dt;
-    int dims[nb_dims_requested];
-    int nbdims;
-    cudnnTensorFormat_t fmt;
-    DISTCONV_CHECK_CUDNN(cudnnGetFilterNdDescriptor(
-        src, nb_dims_requested, &dt, &fmt, &nbdims, dims));
-    DISTCONV_CHECK_CUDNN(
-        cudnnSetFilterNdDescriptor(dst, dt, fmt, nbdims, dims));
-}
-
-template <int ND>
-inline int get_filter_descriptor_dimension(const cudnnFilterDescriptor_t& desc,
-                                           int d)
-{
-    cudnnDataType_t dt;
-    int dims[nb_dims_requested];
-    int nbdims;
-    cudnnTensorFormat_t fmt;
-    DISTCONV_CHECK_CUDNN(
-        cudnnGetFilterNdDescriptor(desc, ND, &dt, &fmt, &nbdims, dims));
-    d = d < 0 ? nbdims + d : d;
-    assert_always(d < nbdims);
-    return dims[nbdims - d - 1];
-}
-
-inline cudnnConvolutionDescriptor_t make_convolution_descriptor()
-{
-    cudnnConvolutionDescriptor_t desc;
-    DISTCONV_CHECK_CUDNN(cudnnCreateConvolutionDescriptor(&desc));
-    return desc;
-}
-
-inline void
-destroy_convolution_descriptor(cudnnConvolutionDescriptor_t const& desc)
-{
-    DISTCONV_CHECK_CUDNN(cudnnDestroyConvolutionDescriptor(desc));
-}
-
-inline void
-set_convolution_group_count(cudnnConvolutionDescriptor_t const& desc, int ngrps)
-{
-    DISTCONV_CHECK_CUDNN(cudnnSetConvolutionGroupCount(desc, ngrps));
-}
-
-inline void set_convolution_descriptor(ConvolutionDescriptor_t& conv_desc,
-                                       int const array_len,
-                                       int const* const pad,
-                                       int const* const stride,
-                                       int const* const dilation,
-                                       ConvolutionMode_t const& mode,
-                                       DataType_t const& data_type)
-{
-    DISTCONV_CHECK_CUDNN(
-        cudnnSetConvolutionNdDescriptor(conv_desc,
-                                        array_len,
-                                        const_cast<int*>(pad),
-                                        const_cast<int*>(stride),
-                                        const_cast<int*>(dilation),
-                                        mode,
-                                        data_type));
-}
-
-inline void copy_convolution_descriptor(cudnnConvolutionDescriptor_t& dst,
-                                        const cudnnConvolutionDescriptor_t& src)
-{
-    int array_length;
-    const int arrayLengthRequested = 100;
-    int pads[arrayLengthRequested];
-    int strides[arrayLengthRequested];
-    int dilations[arrayLengthRequested];
-    cudnnConvolutionMode_t mode;
-    cudnnDataType_t dt;
-    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionNdDescriptor(src,
-                                                         arrayLengthRequested,
-                                                         &array_length,
-                                                         pads,
-                                                         strides,
-                                                         dilations,
-                                                         &mode,
-                                                         &dt));
-    DISTCONV_CHECK_CUDNN(cudnnSetConvolutionNdDescriptor(
-        dst, array_length, pads, strides, dilations, mode, dt));
-}
-
-inline constexpr auto default_conv_mode = CUDNN_CROSS_CORRELATION;
-
-inline size_t
-get_conv_forward_workspace_size(Handle_t const& handle,
-                                TensorDescriptor_t const& in_desc,
-                                FilterDescriptor_t const& filter_desc,
-                                ConvolutionDescriptor_t const& conv_desc,
-                                TensorDescriptor_t const& out_desc,
-                                ConvFwdAlgo_t const& algo)
-{
-    size_t s;
-    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(
-        handle, in_desc, filter_desc, conv_desc, out_desc, algo, &s));
-    return s;
-}
-
-inline size_t
-get_conv_bwd_data_workspace_size(Handle_t const& handle,
-                                 FilterDescriptor_t const& filter_desc,
-                                 TensorDescriptor_t const& dy_desc,
-                                 ConvolutionDescriptor_t const& conv_desc,
-                                 TensorDescriptor_t const& dx_desc,
-                                 ConvBwdDataAlgo_t const& algo)
-{
-    size_t s;
-    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardDataWorkspaceSize(
-        handle, filter_desc, dy_desc, conv_desc, dx_desc, algo, &s));
-    return s;
-}
-
-inline size_t
-get_conv_bwd_filter_workspace_size(Handle_t const& handle,
-                                   TensorDescriptor_t const& in_desc,
-                                   TensorDescriptor_t const& dy_desc,
-                                   ConvolutionDescriptor_t const& conv_desc,
-                                   FilterDescriptor_t const& dw_desc,
-                                   ConvBwdFilterAlgo_t const& algo)
-{
-    size_t s;
-    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(
-        handle, in_desc, dy_desc, conv_desc, dw_desc, algo, &s));
-    return s;
-}
-
-template <typename T>
-inline void apply_fwd_bias(Handle_t handle,
-                           T const& alpha,
-                           TensorDescriptor_t const& bias_desc,
-                           T const* const bias,
-                           T const& beta,
-                           TensorDescriptor_t const& y_desc,
-                           T* const y)
-{
-    DISTCONV_CHECK_CUDNN(
-        cudnnAddTensor(handle, &alpha, bias_desc, bias, &beta, y_desc, y));
-}
-
-template <typename T>
-inline void apply_bwd_bias(Handle_t handle,
-                           T const& alpha,
-                           TensorDescriptor_t const& dy_desc,
-                           T const* dy_data,
-                           T const& beta,
-                           TensorDescriptor_t const& db_desc,
-                           T* const db_data)
-{
-    DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardBias(
-        handle, &alpha, dy_desc, dy_data, &beta, db_desc, db_data));
-}
-
-inline cudnnPoolingDescriptor_t make_pooling_descriptor()
-{
-    cudnnPoolingDescriptor_t desc;
-    DISTCONV_CHECK_CUDNN(cudnnCreatePoolingDescriptor(&desc));
-    return desc;
-}
-
-inline void destroy_pooling_descriptor(cudnnPoolingDescriptor_t const& desc)
-{
-    DISTCONV_CHECK_CUDNN(cudnnDestroyPoolingDescriptor(desc));
-}
-
-inline void setup_pooling_descriptor(cudnnPoolingDescriptor_t& desc,
-                                     cudnnPoolingMode_t mode,
-                                     int nb_dims,
-                                     int* window_dim,
-                                     int* pad,
-                                     int* stride)
-{
-    auto const max_pooling_nan_opt = CUDNN_PROPAGATE_NAN;
-    DISTCONV_CHECK_CUDNN(cudnnSetPoolingNdDescriptor(
-        desc, mode, max_pooling_nan_opt, nb_dims, window_dim, pad, stride));
-}
-
-inline void copy_pooling_descriptor(cudnnPoolingDescriptor_t& dst,
-                                    const cudnnPoolingDescriptor_t& src)
-{
-    cudnnPoolingMode_t mode;
-    cudnnNanPropagation_t nan_prop;
-    int ndims;
-    int window_dims[nb_dims_requested];
-    int padding[nb_dims_requested];
-    int strides[nb_dims_requested];
-
-    DISTCONV_CHECK_CUDNN(cudnnGetPoolingNdDescriptor(src,
-                                                     nb_dims_requested,
-                                                     &mode,
-                                                     &nan_prop,
-                                                     &ndims,
-                                                     window_dims,
-                                                     padding,
-                                                     strides));
-    DISTCONV_CHECK_CUDNN(cudnnSetPoolingNdDescriptor(
-        dst, mode, nan_prop, ndims, window_dims, padding, strides));
-}
-
-template <typename T>
-inline void pooling_forward(cudnnHandle_t handle,
-                            cudnnPoolingDescriptor_t desc,
-                            T const& alpha,
-                            cudnnTensorDescriptor_t const& in_desc,
-                            void const* in_data,
-                            T const& beta,
-                            cudnnTensorDescriptor_t const& out_desc,
-                            void* out_data,
-                            bool const& /*training*/)
-{
-    DISTCONV_CHECK_CUDNN(cudnnPoolingForward(
-        handle, desc, &alpha, in_desc, in_data, &beta, out_desc, out_data));
-}
-
-template <typename T>
-inline void pooling_backward(cudnnHandle_t handle,
-                             cudnnPoolingDescriptor_t desc,
-                             T const& alpha,
-                             cudnnTensorDescriptor_t const& out_desc,
-                             void const* out_data,
-                             cudnnTensorDescriptor_t const& d_out_desc,
-                             void const* d_out_data,
-                             cudnnTensorDescriptor_t const& in_desc,
-                             void const* in_data,
-                             T const& beta,
-                             cudnnTensorDescriptor_t const& d_in_desc,
-                             void* d_in_data)
-{
-    cudnnStatus_t status = cudnnPoolingBackward(handle,
-                                                desc,
-                                                &alpha,
-                                                out_desc,
-                                                out_data,
-                                                d_out_desc,
-                                                d_out_data,
-                                                in_desc,
-                                                in_data,
-                                                &beta,
-                                                d_in_desc,
-                                                d_in_data);
-    if (status != CUDNN_STATUS_SUCCESS)
-    {
-        util::MPIPrintStreamError()
-            << "cuDNN error: " << cudnnGetErrorString(status) << "\n"
-            << "Error at " << __FILE__ << ":" << __LINE__;
-        if (status == CUDNN_STATUS_BAD_PARAM)
-        {
-            util::MPIPrintStreamError()
-                << "Parameters: "
-                << "output_d: " << out_desc << ", output: " << out_data
-                << ", d_output_d: " << d_out_desc
-                << ", d_output: " << d_out_data << ", input_d: " << in_desc
-                << ", input: " << in_data << ", d_input_d: " << d_in_desc
-                << ", d_input: " << d_in_data;
-        }
-        DISTCONV_CHECK_CUDA(cudaDeviceReset());
-        abort();
-    }
-}
-
-inline cudnnActivationDescriptor_t make_activation_descriptor()
-{
-    cudnnActivationDescriptor_t desc;
-    DISTCONV_CHECK_CUDNN(cudnnCreateActivationDescriptor(&desc));
-    return desc;
-}
-
-inline void
-destroy_activation_descriptor(cudnnActivationDescriptor_t const& desc)
-{
-    DISTCONV_CHECK_CUDNN(cudnnDestroyActivationDescriptor(desc));
-}
-
-inline void copy_activation_descriptor(cudnnActivationDescriptor_t& dst,
-                                       const cudnnActivationDescriptor_t& src)
-{
-    cudnnActivationMode_t mode;
-    cudnnNanPropagation_t nan_prop;
-    double coef;
-    DISTCONV_CHECK_CUDNN(
-        cudnnGetActivationDescriptor(src, &mode, &nan_prop, &coef));
-    DISTCONV_CHECK_CUDNN(
-        cudnnSetActivationDescriptor(dst, mode, nan_prop, coef));
-}
-
-inline void setup_relu_activation_descriptor(cudnnActivationDescriptor_t& desc)
-{
-    DISTCONV_CHECK_CUDNN(cudnnSetActivationDescriptor(
-        desc, CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0.0));
-}
-
-template <typename T>
-inline void activation_forward(cudnnHandle_t handle,
-                               cudnnActivationDescriptor_t const& desc,
-                               T const& alpha,
-                               cudnnTensorDescriptor_t const& in_desc,
-                               void const* in_data,
-                               T const& beta,
-                               cudnnTensorDescriptor_t const& out_desc,
-                               void* out_data)
-{
-    DISTCONV_CHECK_CUDNN(cudnnActivationForward(
-        handle, desc, &alpha, in_desc, in_data, &beta, out_desc, out_data));
-}
-
-template <typename T>
-inline void activation_backward(cudnnHandle_t handle,
-                                cudnnActivationDescriptor_t const& desc,
-                                T const& alpha,
-                                cudnnTensorDescriptor_t const& out_desc,
-                                void const* out_data,
-                                cudnnTensorDescriptor_t const& d_out_desc,
-                                void const* d_out_data,
-                                cudnnTensorDescriptor_t const& in_desc,
-                                void const* in_data,
-                                T const& beta,
-                                cudnnTensorDescriptor_t const& d_in_desc,
-                                void* d_in_data)
-{
-    DISTCONV_CHECK_CUDNN(cudnnActivationBackward(handle,
-                                                 desc,
-                                                 &alpha,
-                                                 out_desc,
-                                                 out_data,
-                                                 d_out_desc,
-                                                 d_out_data,
-                                                 in_desc,
-                                                 in_data,
-                                                 &beta,
-                                                 d_in_desc,
-                                                 d_in_data));
 }
 
 struct Options
@@ -892,6 +351,556 @@ public:
     inline void set_stream(cudnnHandle_t handle, Stream_t stream)
     {
         DISTCONV_CHECK_CUDNN(cudnnSetStream(handle, stream));
+    }
+
+    inline Event_t make_event()
+    {
+        cudaEvent_t event;
+        DISTCONV_CHECK_CUDA(cudaEventCreate(&event));
+        return event;
+    }
+
+    inline void destroy_event(cudaEvent_t const& event)
+    {
+        DISTCONV_CHECK_CUDA(cudaEventDestroy(event));
+    }
+
+    inline void record_event(cudaEvent_t const& event,
+                             cudaStream_t const& stream)
+    {
+        DISTCONV_CHECK_CUDA(cudaEventRecord(event, stream));
+    }
+
+    inline float elapsed_time(cudaEvent_t const& start, cudaEvent_t const& end)
+    {
+        float elapsed;
+        DISTCONV_CHECK_CUDA(cudaEventElapsedTime(&elapsed, start, end));
+        return elapsed;
+    }
+
+    inline size_t get_available_memory()
+    {
+        size_t available;
+        size_t total;
+        DISTCONV_CHECK_CUDA(cudaMemGetInfo(&available, &total));
+        return available;
+    }
+
+    inline cudnnFilterDescriptor_t make_filter_descriptor()
+    {
+        cudnnFilterDescriptor_t desc;
+        DISTCONV_CHECK_CUDNN(cudnnCreateFilterDescriptor(&desc));
+        return desc;
+    }
+
+    inline void destroy_filter_descriptor(cudnnFilterDescriptor_t const& desc)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnDestroyFilterDescriptor(desc));
+    }
+
+    inline cudnnTensorDescriptor_t make_tensor_descriptor()
+    {
+        cudnnTensorDescriptor_t desc;
+        DISTCONV_CHECK_CUDNN(cudnnCreateTensorDescriptor(&desc));
+        return desc;
+    }
+
+    inline void destroy_tensor_descriptor(cudnnTensorDescriptor_t const& desc)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnDestroyTensorDescriptor(desc));
+    }
+
+    template <typename T>
+    inline void apply_fwd_bias(Handle_t handle,
+                               T const& alpha,
+                               TensorDescriptor_t const& bias_desc,
+                               T const* const bias,
+                               T const& beta,
+                               TensorDescriptor_t const& y_desc,
+                               T* const y)
+    {
+        DISTCONV_CHECK_CUDNN(
+            cudnnAddTensor(handle, &alpha, bias_desc, bias, &beta, y_desc, y));
+    }
+
+    template <typename T>
+    inline void apply_bwd_bias(Handle_t handle,
+                               T const& alpha,
+                               TensorDescriptor_t const& dy_desc,
+                               T const* dy_data,
+                               T const& beta,
+                               TensorDescriptor_t const& db_desc,
+                               T* const db_data)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnConvolutionBackwardBias(
+            handle, &alpha, dy_desc, dy_data, &beta, db_desc, db_data));
+    }
+
+    inline cudnnPoolingDescriptor_t make_pooling_descriptor()
+    {
+        cudnnPoolingDescriptor_t desc;
+        DISTCONV_CHECK_CUDNN(cudnnCreatePoolingDescriptor(&desc));
+        return desc;
+    }
+
+    inline void destroy_pooling_descriptor(cudnnPoolingDescriptor_t const& desc)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnDestroyPoolingDescriptor(desc));
+    }
+
+    inline void setup_pooling_descriptor(cudnnPoolingDescriptor_t& desc,
+                                         cudnnPoolingMode_t mode,
+                                         int nb_dims,
+                                         int* window_dim,
+                                         int* pad,
+                                         int* stride)
+    {
+        auto const max_pooling_nan_opt = CUDNN_PROPAGATE_NAN;
+        DISTCONV_CHECK_CUDNN(cudnnSetPoolingNdDescriptor(
+            desc, mode, max_pooling_nan_opt, nb_dims, window_dim, pad, stride));
+    }
+
+    inline void copy_pooling_descriptor(cudnnPoolingDescriptor_t& dst,
+                                        const cudnnPoolingDescriptor_t& src)
+    {
+        cudnnPoolingMode_t mode;
+        cudnnNanPropagation_t nan_prop;
+        int ndims;
+        int window_dims[nb_dims_requested];
+        int padding[nb_dims_requested];
+        int strides[nb_dims_requested];
+
+        DISTCONV_CHECK_CUDNN(cudnnGetPoolingNdDescriptor(src,
+                                                         nb_dims_requested,
+                                                         &mode,
+                                                         &nan_prop,
+                                                         &ndims,
+                                                         window_dims,
+                                                         padding,
+                                                         strides));
+        DISTCONV_CHECK_CUDNN(cudnnSetPoolingNdDescriptor(
+            dst, mode, nan_prop, ndims, window_dims, padding, strides));
+    }
+
+    template <typename T>
+    inline void pooling_forward(cudnnHandle_t handle,
+                                cudnnPoolingDescriptor_t desc,
+                                T const& alpha,
+                                cudnnTensorDescriptor_t const& in_desc,
+                                void const* in_data,
+                                T const& beta,
+                                cudnnTensorDescriptor_t const& out_desc,
+                                void* out_data,
+                                bool const& /*training*/)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnPoolingForward(
+            handle, desc, &alpha, in_desc, in_data, &beta, out_desc, out_data));
+    }
+
+    template <typename T>
+    inline void pooling_backward(cudnnHandle_t handle,
+                                 cudnnPoolingDescriptor_t desc,
+                                 T const& alpha,
+                                 cudnnTensorDescriptor_t const& out_desc,
+                                 void const* out_data,
+                                 cudnnTensorDescriptor_t const& d_out_desc,
+                                 void const* d_out_data,
+                                 cudnnTensorDescriptor_t const& in_desc,
+                                 void const* in_data,
+                                 T const& beta,
+                                 cudnnTensorDescriptor_t const& d_in_desc,
+                                 void* d_in_data)
+    {
+        cudnnStatus_t status = cudnnPoolingBackward(handle,
+                                                    desc,
+                                                    &alpha,
+                                                    out_desc,
+                                                    out_data,
+                                                    d_out_desc,
+                                                    d_out_data,
+                                                    in_desc,
+                                                    in_data,
+                                                    &beta,
+                                                    d_in_desc,
+                                                    d_in_data);
+        if (status != CUDNN_STATUS_SUCCESS)
+        {
+            util::MPIPrintStreamError()
+                << "cuDNN error: " << cudnnGetErrorString(status) << "\n"
+                << "Error at " << __FILE__ << ":" << __LINE__;
+            if (status == CUDNN_STATUS_BAD_PARAM)
+            {
+                util::MPIPrintStreamError()
+                    << "Parameters: "
+                    << "output_d: " << out_desc << ", output: " << out_data
+                    << ", d_output_d: " << d_out_desc
+                    << ", d_output: " << d_out_data << ", input_d: " << in_desc
+                    << ", input: " << in_data << ", d_input_d: " << d_in_desc
+                    << ", d_input: " << d_in_data;
+            }
+            DISTCONV_CHECK_CUDA(cudaDeviceReset());
+            abort();
+        }
+    }
+
+    inline cudnnActivationDescriptor_t make_activation_descriptor()
+    {
+        cudnnActivationDescriptor_t desc;
+        DISTCONV_CHECK_CUDNN(cudnnCreateActivationDescriptor(&desc));
+        return desc;
+    }
+
+    inline void
+    destroy_activation_descriptor(cudnnActivationDescriptor_t const& desc)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnDestroyActivationDescriptor(desc));
+    }
+
+    inline void
+    copy_activation_descriptor(cudnnActivationDescriptor_t& dst,
+                               const cudnnActivationDescriptor_t& src)
+    {
+        cudnnActivationMode_t mode;
+        cudnnNanPropagation_t nan_prop;
+        double coef;
+        DISTCONV_CHECK_CUDNN(
+            cudnnGetActivationDescriptor(src, &mode, &nan_prop, &coef));
+        DISTCONV_CHECK_CUDNN(
+            cudnnSetActivationDescriptor(dst, mode, nan_prop, coef));
+    }
+
+    inline void
+    setup_relu_activation_descriptor(cudnnActivationDescriptor_t& desc)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnSetActivationDescriptor(
+            desc, CUDNN_ACTIVATION_RELU, CUDNN_PROPAGATE_NAN, 0.0));
+    }
+
+    template <typename T>
+    inline void activation_forward(cudnnHandle_t handle,
+                                   cudnnActivationDescriptor_t const& desc,
+                                   T const& alpha,
+                                   cudnnTensorDescriptor_t const& in_desc,
+                                   T const* in_data,
+                                   T const& beta,
+                                   cudnnTensorDescriptor_t const& out_desc,
+                                   T* out_data)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnActivationForward(
+            handle, desc, &alpha, in_desc, in_data, &beta, out_desc, out_data));
+    }
+
+    template <typename T>
+    inline void activation_backward(cudnnHandle_t handle,
+                                    cudnnActivationDescriptor_t const& desc,
+                                    T const& alpha,
+                                    cudnnTensorDescriptor_t const& out_desc,
+                                    T const* out_data,
+                                    cudnnTensorDescriptor_t const& d_out_desc,
+                                    T const* d_out_data,
+                                    cudnnTensorDescriptor_t const& in_desc,
+                                    T const* in_data,
+                                    T const& beta,
+                                    cudnnTensorDescriptor_t const& d_in_desc,
+                                    T* d_in_data)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnActivationBackward(handle,
+                                                     desc,
+                                                     &alpha,
+                                                     out_desc,
+                                                     out_data,
+                                                     d_out_desc,
+                                                     d_out_data,
+                                                     in_desc,
+                                                     in_data,
+                                                     &beta,
+                                                     d_in_desc,
+                                                     d_in_data));
+    }
+
+    template <typename Tensor>
+    inline void setup_filter_descriptor(FilterDescriptor_t& desc,
+                                        Tensor const& tensor)
+    {
+        // Lifted out of convolution.hpp; modified to not use data members.
+        cudnnDataType_t dt = util::get_cudnn_type<typename Tensor::data_type>();
+        const int_vector shape =
+            tensor.get_local_real_shape().template get_vector<int>();
+        DISTCONV_CHECK_CUDNN(
+            cudnnSetFilterNdDescriptor(desc,
+                                       dt,
+                                       CUDNN_TENSOR_NCHW,
+                                       shape.size(),
+                                       util::reverse(shape).data()));
+    }
+
+    template <typename Tensor, typename ShapeType>
+    inline void setup_tensor_descriptor(cudnnTensorDescriptor_t& desc,
+                                        const Tensor& tensor,
+                                        const ShapeType& shape)
+    {
+        cudnnDataType_t dt = util::get_cudnn_type<typename Tensor::data_type>();
+        assert_eq(tensor.get_num_dims(), shape.num_dims());
+
+        if (shape.get_size() == 0)
+            return;
+
+        // set descriptor for input tensor
+        // The size should include halo regions. Convolution will not be
+        // done for the halo regions by disabling padding
+        IndexVector strides = tensor::get_strides(tensor.get_local_shape(),
+                                                  tensor.get_halo_width(),
+                                                  tensor.get_pitch());
+
+        util::MPIPrintStreamDebug()
+            << "setup_tensor_descriptor. "
+            << "tensor: " << tensor
+            << ", shape: " << util::join_array(shape, ", ")
+            << ", strides: " << util::join_array(strides, ", ") << "\n";
+
+        DISTCONV_CHECK_CUDNN(cudnnSetTensorNdDescriptor(
+            desc,
+            dt,
+            shape.num_dims(),
+            util::reverse(IntVector(shape)).data(),
+            util::reverse(strides).get_vector<int>().data()));
+    }
+
+    template <typename Tensor>
+    inline void setup_tensor_descriptor(cudnnTensorDescriptor_t& desc,
+                                        const Tensor& tensor,
+                                        const IntVector& halo_fwd,
+                                        const IntVector& halo_bwd)
+    {
+        auto shape = tensor.get_local_shape();
+        shape = shape + tensor::Shape(halo_fwd) + tensor::Shape(halo_bwd);
+        return setup_tensor_descriptor(desc, tensor, shape);
+    }
+
+    template <typename Tensor>
+    inline void
+    setup_tensor_descriptor(cudnnTensorDescriptor_t& desc,
+                            const Tensor& tensor,
+                            const std::vector<bool>& include_halo_fwd,
+                            const std::vector<bool>& include_halo_bwd)
+    {
+        const int nd = tensor.get_num_dims();
+        auto overlap = tensor.get_overlap();
+        IntVector halo_fwd(nd, 0), halo_bwd(nd, 0);
+        for (int i = 0; i < nd; ++i)
+        {
+            if (include_halo_bwd[i])
+                halo_bwd[i] = overlap[i];
+            if (include_halo_fwd[i])
+                halo_fwd[i] = overlap[i];
+        }
+        setup_tensor_descriptor(desc, tensor, halo_fwd, halo_bwd);
+    }
+
+    template <typename Tensor>
+    inline void setup_tensor_descriptor(cudnnTensorDescriptor_t& desc,
+                                        const Tensor& tensor,
+                                        bool include_halo = true)
+    {
+        std::vector<bool> include_halo_array(tensor.get_num_dims(),
+                                             include_halo);
+        setup_tensor_descriptor(
+            desc, tensor, include_halo_array, include_halo_array);
+    }
+
+    inline int get_tensor_dimension(const cudnnTensorDescriptor_t& desc, int d)
+    {
+        cudnnDataType_t dt;
+        int dims[nb_dims_requested];
+        int strides[nb_dims_requested];
+        int nbdims;
+        DISTCONV_CHECK_CUDNN(cudnnGetTensorNdDescriptor(
+            desc, nb_dims_requested, &dt, &nbdims, dims, strides));
+        d = d < 0 ? nbdims + d : d;
+        assert_always(d < nbdims);
+        return dims[nbdims - d - 1];
+    }
+
+    inline void
+    set_tensor_dimension(cudnnTensorDescriptor_t& desc, int d, int n)
+    {
+        cudnnDataType_t dt;
+        int dims[nb_dims_requested];
+        int strides[nb_dims_requested];
+        int nbdims;
+        DISTCONV_CHECK_CUDNN(cudnnGetTensorNdDescriptor(
+            desc, nb_dims_requested, &dt, &nbdims, dims, strides));
+        d = d < 0 ? nbdims + d : d;
+        assert_always(d < nbdims);
+        dims[nbdims - d - 1] = n;
+        DISTCONV_CHECK_CUDNN(
+            cudnnSetTensorNdDescriptor(desc, dt, nbdims, dims, strides));
+    }
+
+    inline int get_tensor_num_dimensions(const cudnnTensorDescriptor_t& desc)
+    {
+        cudnnDataType_t dt;
+        int nbdims;
+        DISTCONV_CHECK_CUDNN(cudnnGetTensorNdDescriptor(
+            desc, 0, &dt, &nbdims, nullptr, nullptr));
+        return nbdims;
+    }
+
+    inline void set_tensor_num_samples(cudnnTensorDescriptor_t& desc, int n)
+    {
+        int num_sample_dim = get_tensor_num_dimensions(desc) - 1;
+        set_tensor_dimension(desc, num_sample_dim, n);
+    }
+
+    inline int get_tensor_num_samples(const cudnnTensorDescriptor_t& desc)
+    {
+        int num_sample_dim = get_tensor_num_dimensions(desc) - 1;
+        return get_tensor_dimension(desc, num_sample_dim);
+    }
+
+    inline void copy_tensor_descriptor(cudnnTensorDescriptor_t& dst,
+                                       const cudnnTensorDescriptor_t& src)
+    {
+        cudnnDataType_t dt;
+        int dims[nb_dims_requested];
+        int strides[nb_dims_requested];
+        int nbdims;
+        DISTCONV_CHECK_CUDNN(cudnnGetTensorNdDescriptor(
+            src, nb_dims_requested, &dt, &nbdims, dims, strides));
+        DISTCONV_CHECK_CUDNN(
+            cudnnSetTensorNdDescriptor(dst, dt, nbdims, dims, strides));
+    }
+
+    inline void copy_filter_descriptor(cudnnFilterDescriptor_t& dst,
+                                       const cudnnFilterDescriptor_t& src)
+    {
+        cudnnDataType_t dt;
+        int dims[nb_dims_requested];
+        int nbdims;
+        cudnnTensorFormat_t fmt;
+        DISTCONV_CHECK_CUDNN(cudnnGetFilterNdDescriptor(
+            src, nb_dims_requested, &dt, &fmt, &nbdims, dims));
+        DISTCONV_CHECK_CUDNN(
+            cudnnSetFilterNdDescriptor(dst, dt, fmt, nbdims, dims));
+    }
+
+    template <int ND>
+    inline int
+    get_filter_descriptor_dimension(const cudnnFilterDescriptor_t& desc, int d)
+    {
+        cudnnDataType_t dt;
+        int dims[nb_dims_requested];
+        int nbdims;
+        cudnnTensorFormat_t fmt;
+        DISTCONV_CHECK_CUDNN(
+            cudnnGetFilterNdDescriptor(desc, ND, &dt, &fmt, &nbdims, dims));
+        d = d < 0 ? nbdims + d : d;
+        assert_always(d < nbdims);
+        return dims[nbdims - d - 1];
+    }
+
+    inline cudnnConvolutionDescriptor_t make_convolution_descriptor()
+    {
+        cudnnConvolutionDescriptor_t desc;
+        DISTCONV_CHECK_CUDNN(cudnnCreateConvolutionDescriptor(&desc));
+        return desc;
+    }
+
+    inline void
+    destroy_convolution_descriptor(cudnnConvolutionDescriptor_t const& desc)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnDestroyConvolutionDescriptor(desc));
+    }
+
+    inline void
+    set_convolution_group_count(cudnnConvolutionDescriptor_t const& desc,
+                                int ngrps)
+    {
+        DISTCONV_CHECK_CUDNN(cudnnSetConvolutionGroupCount(desc, ngrps));
+    }
+
+    inline void set_convolution_descriptor(ConvolutionDescriptor_t& conv_desc,
+                                           int const array_len,
+                                           int const* const pad,
+                                           int const* const stride,
+                                           int const* const dilation,
+                                           ConvolutionMode_t const& mode,
+                                           DataType_t const& data_type)
+    {
+        DISTCONV_CHECK_CUDNN(
+            cudnnSetConvolutionNdDescriptor(conv_desc,
+                                            array_len,
+                                            const_cast<int*>(pad),
+                                            const_cast<int*>(stride),
+                                            const_cast<int*>(dilation),
+                                            mode,
+                                            data_type));
+    }
+
+    inline void
+    copy_convolution_descriptor(cudnnConvolutionDescriptor_t& dst,
+                                const cudnnConvolutionDescriptor_t& src)
+    {
+        int array_length;
+        const int arrayLengthRequested = 100;
+        int pads[arrayLengthRequested];
+        int strides[arrayLengthRequested];
+        int dilations[arrayLengthRequested];
+        cudnnConvolutionMode_t mode;
+        cudnnDataType_t dt;
+        DISTCONV_CHECK_CUDNN(
+            cudnnGetConvolutionNdDescriptor(src,
+                                            arrayLengthRequested,
+                                            &array_length,
+                                            pads,
+                                            strides,
+                                            dilations,
+                                            &mode,
+                                            &dt));
+        DISTCONV_CHECK_CUDNN(cudnnSetConvolutionNdDescriptor(
+            dst, array_length, pads, strides, dilations, mode, dt));
+    }
+
+    inline size_t
+    get_conv_forward_workspace_size(Handle_t const& handle,
+                                    TensorDescriptor_t const& in_desc,
+                                    FilterDescriptor_t const& filter_desc,
+                                    ConvolutionDescriptor_t const& conv_desc,
+                                    TensorDescriptor_t const& out_desc,
+                                    ConvFwdAlgo_t const& algo)
+    {
+        size_t s;
+        DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardWorkspaceSize(
+            handle, in_desc, filter_desc, conv_desc, out_desc, algo, &s));
+        return s;
+    }
+
+    inline size_t
+    get_conv_bwd_data_workspace_size(Handle_t const& handle,
+                                     FilterDescriptor_t const& filter_desc,
+                                     TensorDescriptor_t const& dy_desc,
+                                     ConvolutionDescriptor_t const& conv_desc,
+                                     TensorDescriptor_t const& dx_desc,
+                                     ConvBwdDataAlgo_t const& algo)
+    {
+        size_t s;
+        DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardDataWorkspaceSize(
+            handle, filter_desc, dy_desc, conv_desc, dx_desc, algo, &s));
+        return s;
+    }
+
+    inline size_t
+    get_conv_bwd_filter_workspace_size(Handle_t const& handle,
+                                       TensorDescriptor_t const& in_desc,
+                                       TensorDescriptor_t const& dy_desc,
+                                       ConvolutionDescriptor_t const& conv_desc,
+                                       FilterDescriptor_t const& dw_desc,
+                                       ConvBwdFilterAlgo_t const& algo)
+    {
+        size_t s;
+        DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterWorkspaceSize(
+            handle, in_desc, dy_desc, conv_desc, dw_desc, algo, &s));
+        return s;
     }
 
     template <typename T>

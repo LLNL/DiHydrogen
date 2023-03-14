@@ -5,37 +5,36 @@
 
 namespace distconv
 {
-
 template <>
 class ReLU<BackendDNNLib>
 {
 public:
     ReLU(BackendDNNLib& backend)
         : m_be(backend),
-          m_activation_d{backend::make_activation_descriptor()},
-          m_input_d{backend::make_tensor_descriptor()},
-          m_output_d{backend::make_tensor_descriptor()},
-          m_d_input_d{backend::make_tensor_descriptor()},
-          m_d_output_d{backend::make_tensor_descriptor()}
+          m_activation_d{backend.make_activation_descriptor()},
+          m_input_d{backend.make_tensor_descriptor()},
+          m_output_d{backend.make_tensor_descriptor()},
+          m_d_input_d{backend.make_tensor_descriptor()},
+          m_d_output_d{backend.make_tensor_descriptor()}
     {}
 
     ~ReLU()
     {
-        backend::destroy_tensor_descriptor(m_d_output_d);
-        backend::destroy_tensor_descriptor(m_d_input_d);
-        backend::destroy_tensor_descriptor(m_output_d);
-        backend::destroy_tensor_descriptor(m_input_d);
-        backend::destroy_activation_descriptor(m_activation_d);
+        m_be.destroy_tensor_descriptor(m_d_output_d);
+        m_be.destroy_tensor_descriptor(m_d_input_d);
+        m_be.destroy_tensor_descriptor(m_output_d);
+        m_be.destroy_tensor_descriptor(m_input_d);
+        m_be.destroy_activation_descriptor(m_activation_d);
     }
 
     ReLU<BackendDNNLib> operator=(const ReLU<BackendDNNLib>& x)
     {
         assert_always(&m_be == &x.m_be);
-        backend::copy_tensor_descriptor(m_input_d, x.m_input_d);
-        backend::copy_tensor_descriptor(m_output_d, x.m_output_d);
-        backend::copy_tensor_descriptor(m_d_input_d, x.m_d_input_d);
-        backend::copy_tensor_descriptor(m_d_output_d, x.m_d_output_d);
-        backend::copy_activation_descriptor(m_activation_d, x.m_activation_d);
+        m_be.copy_tensor_descriptor(m_input_d, x.m_input_d);
+        m_be.copy_tensor_descriptor(m_output_d, x.m_output_d);
+        m_be.copy_tensor_descriptor(m_d_input_d, x.m_d_input_d);
+        m_be.copy_tensor_descriptor(m_d_output_d, x.m_d_output_d);
+        m_be.copy_activation_descriptor(m_activation_d, x.m_activation_d);
         return *this;
     }
 
@@ -45,11 +44,11 @@ public:
                const Tensor& d_input,
                const ConstTensor& d_output)
     {
-        backend::setup_tensor_descriptor(m_input_d, input, false);
-        backend::setup_tensor_descriptor(m_output_d, output, false);
-        backend::setup_tensor_descriptor(m_d_input_d, d_input, false);
-        backend::setup_tensor_descriptor(m_d_output_d, d_output, false);
-        backend::setup_relu_activation_descriptor(m_activation_d);
+        m_be.setup_tensor_descriptor(m_input_d, input, false);
+        m_be.setup_tensor_descriptor(m_output_d, output, false);
+        m_be.setup_tensor_descriptor(m_d_input_d, d_input, false);
+        m_be.setup_tensor_descriptor(m_d_output_d, d_output, false);
+        m_be.setup_relu_activation_descriptor(m_activation_d);
     }
 
     template <typename Tensor>
@@ -75,14 +74,14 @@ public:
             dnn_lib::read_proxy(handle, m_input_d, input.get_const_base_ptr());
         auto output_proxy = dnn_lib::write_proxy(
             handle, m_output_d, output.get_base_ptr(), beta);
-        backend::activation_forward(m_be.get_handle(),
-                                    m_activation_d,
-                                    alpha,
-                                    input_proxy.desc(),
-                                    input_proxy.ptr(),
-                                    beta,
-                                    output_proxy.desc(),
-                                    output_proxy.ptr());
+        m_be.activation_forward(m_be.get_handle(),
+                                m_activation_d,
+                                alpha,
+                                input_proxy.desc(),
+                                input_proxy.ptr(),
+                                beta,
+                                output_proxy.desc(),
+                                output_proxy.ptr());
         return 0;
     }
 
@@ -116,29 +115,29 @@ public:
             handle, m_input_d, input.get_const_base_ptr());
         auto dx_proxy = dnn_lib::force_write_proxy(
             handle, m_d_input_d, d_input.get_base_ptr(), beta);
-        backend::activation_backward(handle,
-                                     m_activation_d,
-                                     alpha,
-                                     y_proxy.desc(),
-                                     y_proxy.ptr(),
-                                     dy_proxy.desc(),
-                                     dy_proxy.ptr(),
-                                     x_proxy.desc(),
-                                     x_proxy.ptr(),
-                                     beta,
-                                     dx_proxy.desc(),
-                                     dx_proxy.ptr());
+        m_be.activation_backward(handle,
+                                 m_activation_d,
+                                 alpha,
+                                 y_proxy.desc(),
+                                 y_proxy.ptr(),
+                                 dy_proxy.desc(),
+                                 dy_proxy.ptr(),
+                                 x_proxy.desc(),
+                                 x_proxy.ptr(),
+                                 beta,
+                                 dx_proxy.desc(),
+                                 dx_proxy.ptr());
         return 0;
     }
 
     void set_num_samples(int n)
     {
-        if (n != backend::get_tensor_num_samples(m_input_d))
+        if (n != m_be.get_tensor_num_samples(m_input_d))
         {
-            backend::set_tensor_num_samples(m_input_d, n);
-            backend::set_tensor_num_samples(m_output_d, n);
-            backend::set_tensor_num_samples(m_d_input_d, n);
-            backend::set_tensor_num_samples(m_d_output_d, n);
+            m_be.set_tensor_num_samples(m_input_d, n);
+            m_be.set_tensor_num_samples(m_output_d, n);
+            m_be.set_tensor_num_samples(m_d_input_d, n);
+            m_be.set_tensor_num_samples(m_d_output_d, n);
         }
     }
 

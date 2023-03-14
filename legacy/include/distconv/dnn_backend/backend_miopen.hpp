@@ -6,9 +6,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "h2/gpu/memory_utils.hpp"
-#include "h2/gpu/runtime.hpp"
-
 #include "distconv/base.hpp"
 #include "distconv/layers.hpp"
 #include "distconv/tensor/memory.hpp"
@@ -18,6 +15,8 @@
 #include "distconv/util/util.hpp"
 #include "distconv/util/util_miopen.hpp"
 #include "distconv/util/util_rocm.hpp"
+#include "h2/gpu/memory_utils.hpp"
+#include "h2/gpu/runtime.hpp"
 
 #ifdef DISTCONV_HAS_P2P
 #include "p2p/p2p.hpp"
@@ -36,7 +35,6 @@ namespace distconv
 {
 namespace miopen
 {
-
 using ActivationDescriptor_t = miopenActivationDescriptor_t;
 using ConvolutionDescriptor_t = miopenConvolutionDescriptor_t;
 using ConvolutionMode_t = miopenConvolutionMode_t;
@@ -50,31 +48,9 @@ using PoolingMode_t = miopenPoolingMode_t;
 using TensorDescriptor_t = miopenTensorDescriptor_t;
 using Handle_t = miopenHandle_t;
 using Stream_t = hipStream_t;
-
-// TODO: Move to the runtime stuff.
 using Event_t = hipEvent_t;
-inline Event_t make_event()
-{
-    return h2::gpu::make_event();
-}
-inline void destroy_event(hipEvent_t const& event)
-{
-    h2::gpu::destroy(event);
-}
-inline void record_event(hipEvent_t const& event, hipStream_t const& stream)
-{
-    DISTCONV_CHECK_HIP(hipEventRecord(event, stream));
-}
-inline float elapsed_time(hipEvent_t const& start, hipEvent_t const& end)
-{
-    float elapsed;
-    DISTCONV_CHECK_HIP(hipEventElapsedTime(&elapsed, start, end));
-    return elapsed;
-}
-inline size_t get_available_memory()
-{
-    return h2::gpu::mem_info().free;
-}
+
+inline constexpr auto default_conv_mode = miopenConvolution;
 
 inline Handle_t make_handle()
 {
@@ -86,337 +62,6 @@ inline Handle_t make_handle()
 inline void destroy_handle(miopenHandle_t handle)
 {
     DISTCONV_CHECK_MIOPEN(miopenDestroy(handle));
-}
-
-inline miopenTensorDescriptor_t make_tensor_descriptor()
-{
-    miopenTensorDescriptor_t desc;
-    DISTCONV_CHECK_MIOPEN(miopenCreateTensorDescriptor(&desc));
-    return desc;
-}
-
-inline void destroy_tensor_descriptor(miopenTensorDescriptor_t const& desc)
-{
-    DISTCONV_CHECK_MIOPEN(miopenDestroyTensorDescriptor(desc));
-}
-
-inline miopenTensorDescriptor_t make_filter_descriptor()
-{
-    return make_tensor_descriptor();
-}
-
-inline void destroy_filter_descriptor(miopenTensorDescriptor_t const& desc)
-{
-    destroy_tensor_descriptor(desc);
-}
-
-template <typename T>
-void print_array(T const* const data,
-                 size_t const size,
-                 std::ostream& os = std::cout)
-{
-    os << "[";
-    for (size_t ii = 0; ii < size; ++ii)
-        os << " " << data[ii];
-    os << " ]";
-}
-
-template <typename Tensor>
-inline void setup_filter_descriptor(FilterDescriptor_t& desc,
-                                    Tensor const& tensor)
-{
-    auto const dt = util::get_miopen_type<typename Tensor::data_type>();
-    int_vector const shape =
-        tensor.get_local_real_shape().template get_vector<int>();
-    std::vector<int> strides;
-    strides.reserve(shape.size());
-    strides.push_back(1);
-    std::partial_sum(shape.begin(),
-                     shape.end() - 1,
-                     std::back_inserter(strides),
-                     std::multiplies<int>());
-    std::reverse(begin(strides), end(strides));
-    DISTCONV_CHECK_MIOPEN(miopenSetTensorDescriptor(
-        desc, dt, shape.size(), util::reverse(shape).data(), strides.data()));
-}
-
-template <typename Tensor, typename ShapeType>
-inline void setup_tensor_descriptor(miopenTensorDescriptor_t& desc,
-                                    Tensor const& tensor,
-                                    ShapeType const& shape)
-{
-    miopenDataType_t const dt =
-        util::get_miopen_type<typename Tensor::data_type>();
-    assert_eq(tensor.get_num_dims(), shape.num_dims());
-
-    if (shape.get_size() == 0)
-        return;
-
-    // set descriptor for input tensor
-    // The size should include halo regions. Convolution will not be
-    // done for the halo regions by disabling padding
-    IndexVector strides = tensor::get_strides(
-        tensor.get_local_shape(), tensor.get_halo_width(), tensor.get_pitch());
-
-    util::MPIPrintStreamDebug()
-        << "setup_tensor_descriptor. "
-        << "tensor: " << tensor << ", shape: " << util::join_array(shape, ", ")
-        << ", strides: " << util::join_array(strides, ", ") << "\n";
-
-    DISTCONV_CHECK_MIOPEN(miopenSetTensorDescriptor(
-        desc,
-        dt,
-        shape.num_dims(),
-        util::reverse(IntVector(shape)).data(),
-        util::reverse(strides).get_vector<int>().data()));
-}
-
-template <typename Tensor>
-inline void setup_tensor_descriptor(miopenTensorDescriptor_t& desc,
-                                    Tensor const& tensor,
-                                    IntVector const& halo_fwd,
-                                    IntVector const& halo_bwd)
-{
-    auto shape = tensor.get_local_shape();
-    shape = shape + tensor::Shape(halo_fwd) + tensor::Shape(halo_bwd);
-    return setup_tensor_descriptor(desc, tensor, shape);
-}
-
-template <typename Tensor>
-inline void setup_tensor_descriptor(miopenTensorDescriptor_t& desc,
-                                    Tensor const& tensor,
-                                    std::vector<bool> const& include_halo_fwd,
-                                    std::vector<bool> const& include_halo_bwd)
-{
-    int const nd = tensor.get_num_dims();
-    auto const overlap = tensor.get_overlap();
-    IntVector halo_fwd(nd, 0), halo_bwd(nd, 0);
-    for (int i = 0; i < nd; ++i)
-    {
-        if (include_halo_bwd[i])
-            halo_bwd[i] = overlap[i];
-        if (include_halo_fwd[i])
-            halo_fwd[i] = overlap[i];
-    }
-    setup_tensor_descriptor(desc, tensor, halo_fwd, halo_bwd);
-}
-
-template <typename Tensor>
-inline void setup_tensor_descriptor(miopenTensorDescriptor_t& desc,
-                                    Tensor const& tensor,
-                                    bool include_halo = true)
-{
-    std::vector<bool> include_halo_array(tensor.get_num_dims(), include_halo);
-    setup_tensor_descriptor(
-        desc, tensor, include_halo_array, include_halo_array);
-}
-
-inline int get_tensor_rank(miopenTensorDescriptor_t const& desc)
-{
-    int num_dims = -1;
-    // This API is TERRIBLY named. This actually gets the number of
-    // dimensions in the tensor.
-    DISTCONV_CHECK_MIOPEN(miopenGetTensorDescriptorSize(desc, &num_dims));
-    return num_dims;
-}
-
-inline int get_tensor_dimension(miopenTensorDescriptor_t const& desc, int d)
-{
-    int const num_dims = get_tensor_rank(desc);
-    d = d < 0 ? num_dims + d : d;
-    assert_always(d < num_dims);
-
-    miopenDataType_t dt;
-    std::vector<int> dims, strides;
-    dims.reserve(num_dims);
-    strides.reserve(num_dims);
-    DISTCONV_CHECK_MIOPEN(
-        miopenGetTensorDescriptor(desc, &dt, dims.data(), strides.data()));
-    return dims[num_dims - d - 1];
-}
-
-inline void set_tensor_dimension(miopenTensorDescriptor_t& desc, int d, int n)
-{
-    int const num_dims = get_tensor_rank(desc);
-    d = d < 0 ? num_dims + d : d;
-    assert_always(d < num_dims);
-
-    miopenDataType_t dt;
-    std::vector<int> dims, strides;
-    dims.reserve(num_dims);
-    strides.reserve(num_dims);
-
-    DISTCONV_CHECK_MIOPEN(
-        miopenGetTensorDescriptor(desc, &dt, dims.data(), strides.data()));
-    dims[num_dims - d - 1] = n;
-    // FIXME (TRB): Need to recompute strides??
-    DISTCONV_CHECK_MIOPEN(miopenSetTensorDescriptor(
-        desc, dt, num_dims, dims.data(), strides.data()));
-}
-
-inline int get_tensor_num_dimensions(miopenTensorDescriptor_t const& desc)
-{
-    return get_tensor_rank(desc);
-}
-
-inline void set_tensor_num_samples(miopenTensorDescriptor_t& desc, int n)
-{
-    int const num_sample_dim = get_tensor_num_dimensions(desc) - 1;
-    set_tensor_dimension(desc, num_sample_dim, n);
-}
-
-inline int get_tensor_num_samples(miopenTensorDescriptor_t const& desc)
-{
-    int const num_sample_dim = get_tensor_num_dimensions(desc) - 1;
-    return get_tensor_dimension(desc, num_sample_dim);
-}
-
-inline void copy_tensor_descriptor(miopenTensorDescriptor_t& dst,
-                                   miopenTensorDescriptor_t const& src)
-{
-    auto const num_dims = get_tensor_rank(src);
-    miopenDataType_t dt;
-    std::vector<int> dims, strides;
-    dims.reserve(num_dims);
-    strides.reserve(num_dims);
-
-    DISTCONV_CHECK_MIOPEN(
-        miopenGetTensorDescriptor(src, &dt, dims.data(), strides.data()));
-
-    DISTCONV_CHECK_MIOPEN(miopenSetTensorDescriptor(
-        dst, dt, num_dims, dims.data(), strides.data()));
-}
-
-inline void copy_filter_descriptor(miopenTensorDescriptor_t& dst,
-                                   miopenTensorDescriptor_t const& src)
-{
-    copy_tensor_descriptor(dst, src);
-}
-
-template <int ND>
-inline int get_filter_descriptor_dimension(miopenTensorDescriptor_t const& desc,
-                                           int d)
-{
-    return get_tensor_dimension(desc, d);
-}
-
-inline miopenConvolutionDescriptor_t make_convolution_descriptor()
-{
-    miopenConvolutionDescriptor_t desc;
-    DISTCONV_CHECK_MIOPEN(miopenCreateConvolutionDescriptor(&desc));
-    return desc;
-}
-
-inline void
-destroy_convolution_descriptor(miopenConvolutionDescriptor_t const& desc)
-{
-    DISTCONV_CHECK_MIOPEN(miopenDestroyConvolutionDescriptor(desc));
-}
-
-inline void
-set_convolution_group_count(miopenConvolutionDescriptor_t const& desc,
-                            int ngrps)
-{
-    DISTCONV_CHECK_MIOPEN(miopenSetConvolutionGroupCount(desc, ngrps));
-}
-
-inline void set_convolution_descriptor(ConvolutionDescriptor_t& conv_desc,
-                                       int const array_len,
-                                       int const* const pad,
-                                       int const* const stride,
-                                       int const* const dilation,
-                                       ConvolutionMode_t const& mode,
-                                       DataType_t const& /*data_type*/)
-{
-    DISTCONV_CHECK_MIOPEN(
-        miopenInitConvolutionNdDescriptor(conv_desc,
-                                          array_len,
-                                          const_cast<int*>(pad),
-                                          const_cast<int*>(stride),
-                                          const_cast<int*>(dilation),
-                                          mode));
-}
-
-inline void
-copy_convolution_descriptor(miopenConvolutionDescriptor_t& dst,
-                            miopenConvolutionDescriptor_t const& src)
-{
-    int spatial_dims = -1;
-    // This gets the correct value for spatial_dims.
-    DISTCONV_CHECK_MIOPEN(miopenGetConvolutionNdDescriptor(
-        src, 0, &spatial_dims, nullptr, nullptr, nullptr, nullptr));
-
-    std::vector<int> data;
-    data.reserve(3 * spatial_dims);
-    int* const pads = data.data();
-    int* const strides = data.data() + spatial_dims;
-    int* const dilations = data.data() + 2 * spatial_dims;
-    miopenConvolutionMode_t mode;
-    DISTCONV_CHECK_MIOPEN(miopenGetConvolutionNdDescriptor(
-        src, spatial_dims, &spatial_dims, pads, strides, dilations, &mode));
-    DISTCONV_CHECK_MIOPEN(miopenInitConvolutionNdDescriptor(
-        dst, spatial_dims, pads, strides, dilations, mode));
-}
-
-inline constexpr auto default_conv_mode = miopenConvolution;
-
-inline size_t
-get_conv_forward_workspace_size(Handle_t const& /*handle*/,
-                                TensorDescriptor_t const& /*in_desc*/,
-                                FilterDescriptor_t const& /*filter_desc*/,
-                                ConvolutionDescriptor_t const& /*conv_desc*/,
-                                TensorDescriptor_t const& /*out_desc*/,
-                                ConvFwdAlgo_t const& /*algo*/)
-{
-    return 1 << 30;
-}
-
-inline size_t
-get_conv_bwd_data_workspace_size(Handle_t const& /*handle*/,
-                                 FilterDescriptor_t const& /*filter_desc*/,
-                                 TensorDescriptor_t const& /*dy_desc*/,
-                                 ConvolutionDescriptor_t const& /*conv_desc*/,
-                                 TensorDescriptor_t const& /*dx_desc*/,
-                                 ConvBwdDataAlgo_t const& /*algo*/)
-{
-    return 1 << 30;
-}
-
-inline size_t
-get_conv_bwd_filter_workspace_size(Handle_t const& /*handle*/,
-                                   TensorDescriptor_t const& /*in_desc*/,
-                                   TensorDescriptor_t const& /*dy_Desc*/,
-                                   ConvolutionDescriptor_t const& /*conv_Desc*/,
-                                   FilterDescriptor_t const& /*dw_desc*/,
-                                   ConvBwdFilterAlgo_t const& /*algo*/)
-{
-    return 1 << 30;
-}
-
-template <typename T>
-inline void apply_fwd_bias(Handle_t handle,
-                           T const& alpha,
-                           TensorDescriptor_t const& bias_desc,
-                           void const* const bias,
-                           T const& beta,
-                           TensorDescriptor_t const& y_desc,
-                           void* const y)
-{
-    DISTCONV_CHECK_MIOPEN(miopenConvolutionForwardBias(
-        handle, &alpha, bias_desc, bias, &beta, y_desc, y));
-}
-
-template <typename T>
-inline void apply_bwd_bias(Handle_t handle,
-                           T const& alpha,
-                           TensorDescriptor_t const& dy_desc,
-                           void const* dy_data,
-                           T const& beta,
-                           TensorDescriptor_t const& db_desc,
-                           void* const db_data)
-{
-    DISTCONV_CHECK_MIOPEN(miopenConvolutionBackwardBias(
-        handle, &alpha, dy_desc, dy_data, &beta, db_desc, db_data));
 }
 
 namespace details
@@ -456,208 +101,6 @@ inline void print_index_type(miopenPoolingDescriptor_t desc,
 }
 
 } // namespace details
-
-inline miopenPoolingDescriptor_t make_pooling_descriptor()
-{
-    miopenPoolingDescriptor_t desc;
-    DISTCONV_CHECK_MIOPEN(miopenCreatePoolingDescriptor(&desc));
-    DISTCONV_CHECK_MIOPEN(
-        miopenSetPoolingIndexType(desc, details::get_index_type()));
-    return desc;
-}
-
-inline void destroy_pooling_descriptor(miopenPoolingDescriptor_t const& desc)
-{
-    DISTCONV_CHECK_MIOPEN(miopenDestroyPoolingDescriptor(desc));
-}
-
-inline void setup_pooling_descriptor(miopenPoolingDescriptor_t& desc,
-                                     miopenPoolingMode_t mode,
-                                     int nb_dims,
-                                     int* window_dim,
-                                     int* pad,
-                                     int* stride)
-{
-    DISTCONV_CHECK_MIOPEN(miopenSetNdPoolingDescriptor(
-        desc, mode, nb_dims, window_dim, pad, stride));
-    DISTCONV_CHECK_MIOPEN(
-        miopenSetPoolingIndexType(desc, details::get_index_type()));
-}
-
-inline int get_pooling_descriptor_dims(miopenPoolingDescriptor_t const& desc)
-{
-    int num_dims = -1;
-    DISTCONV_CHECK_MIOPEN(miopenGetNdPoolingDescriptor(
-        desc, 0, nullptr, &num_dims, nullptr, nullptr, nullptr));
-    return num_dims;
-}
-
-inline void copy_pooling_descriptor(miopenPoolingDescriptor_t& dst,
-                                    miopenPoolingDescriptor_t const& src)
-{
-    int num_dims = get_pooling_descriptor_dims(src);
-    miopenPoolingMode_t mode;
-    miopenNanPropagation_t nan_prop;
-    std::vector<int> data;
-    data.reserve(3 * num_dims);
-    int* const window_dims = data.data();
-    int* const padding = data.data() + num_dims;
-    int* const strides = data.data() + 2 * num_dims;
-    DISTCONV_CHECK_MIOPEN(miopenGetNdPoolingDescriptor(
-        src, num_dims, &mode, &num_dims, window_dims, padding, strides));
-    DISTCONV_CHECK_MIOPEN(miopenSetNdPoolingDescriptor(
-        dst, mode, num_dims, window_dims, padding, strides));
-
-    miopenIndexType_t idx_t;
-    DISTCONV_CHECK_MIOPEN(miopenGetPoolingIndexType(src, &idx_t));
-    DISTCONV_CHECK_MIOPEN(miopenSetPoolingIndexType(dst, idx_t));
-}
-
-namespace details
-{
-void set_workspace(miopenPoolingDescriptor_t const& desc, void* workspace);
-void* get_workspace(miopenPoolingDescriptor_t const& desc);
-void clear_workspace(miopenPoolingDescriptor_t const& desc);
-std::pair<void*, size_t> make_workspace(miopenHandle_t handle,
-                                        miopenPoolingDescriptor_t desc,
-                                        miopenTensorDescriptor_t out_desc);
-
-} // namespace details
-
-template <typename T>
-inline void pooling_forward(miopenHandle_t handle,
-                            miopenPoolingDescriptor_t desc,
-                            T const& alpha,
-                            miopenTensorDescriptor_t const& in_desc,
-                            void const* in_data,
-                            T const& beta,
-                            miopenTensorDescriptor_t const& out_desc,
-                            void* out_data,
-                            bool training)
-{
-    // Set up the index type first.
-    DISTCONV_CHECK_MIOPEN(
-        miopenSetPoolingIndexType(desc, details::get_index_type()));
-    // Then get the workspace size.
-    auto workspace = (training ? details::make_workspace(handle, desc, out_desc)
-                               : std::make_pair((void*) nullptr, (size_t) 0UL));
-    DISTCONV_CHECK_MIOPEN(miopenPoolingForward(handle,
-                                               desc,
-                                               &alpha,
-                                               in_desc,
-                                               in_data,
-                                               &beta,
-                                               out_desc,
-                                               out_data,
-                                               /*do_backward=*/training,
-                                               workspace.first,
-                                               workspace.second));
-}
-
-template <typename T>
-inline void pooling_backward(miopenHandle_t handle,
-                             miopenPoolingDescriptor_t desc,
-                             T const& alpha,
-                             miopenTensorDescriptor_t const& out_desc,
-                             void const* out_data,
-                             miopenTensorDescriptor_t const& d_out_desc,
-                             void const* d_out_data,
-                             miopenTensorDescriptor_t const& in_desc,
-                             void const* in_data,
-                             T const& beta,
-                             miopenTensorDescriptor_t const& d_in_desc,
-                             void* d_in_data)
-{
-    // FIXME
-    void* workspace = details::get_workspace(desc);
-    assert_always((bool) workspace);
-    DISTCONV_CHECK_MIOPEN(miopenPoolingBackward(handle,
-                                                desc,
-                                                &alpha,
-                                                out_desc,
-                                                out_data,
-                                                d_out_desc,
-                                                d_out_data,
-                                                in_desc,
-                                                in_data,
-                                                &beta,
-                                                d_in_desc,
-                                                d_in_data,
-                                                workspace));
-    details::clear_workspace(desc);
-}
-
-inline miopenActivationDescriptor_t make_activation_descriptor()
-{
-    miopenActivationDescriptor_t desc;
-    DISTCONV_CHECK_MIOPEN(miopenCreateActivationDescriptor(&desc));
-    return desc;
-}
-
-inline void
-destroy_activation_descriptor(miopenActivationDescriptor_t const& desc)
-{
-    DISTCONV_CHECK_MIOPEN(miopenDestroyActivationDescriptor(desc));
-}
-
-inline void copy_activation_descriptor(miopenActivationDescriptor_t& dst,
-                                       miopenActivationDescriptor_t const& src)
-{
-    miopenActivationMode_t mode;
-    double alpha, beta, gamma;
-    DISTCONV_CHECK_MIOPEN(
-        miopenGetActivationDescriptor(src, &mode, &alpha, &beta, &gamma));
-    DISTCONV_CHECK_MIOPEN(
-        miopenSetActivationDescriptor(dst, mode, alpha, beta, gamma));
-}
-
-inline void setup_relu_activation_descriptor(miopenActivationDescriptor_t& desc)
-{
-    DISTCONV_CHECK_MIOPEN(miopenSetActivationDescriptor(
-        desc, miopenActivationRELU, 0.0, 0.0, 0.0));
-}
-
-template <typename T>
-inline void activation_forward(miopenHandle_t handle,
-                               miopenActivationDescriptor_t const& desc,
-                               T const& alpha,
-                               miopenTensorDescriptor_t const& in_desc,
-                               void const* in_data,
-                               T const& beta,
-                               miopenTensorDescriptor_t const& out_desc,
-                               void* out_data)
-{
-    DISTCONV_CHECK_MIOPEN(miopenActivationForward(
-        handle, desc, &alpha, in_desc, in_data, &beta, out_desc, out_data));
-}
-
-template <typename T>
-inline void activation_backward(miopenHandle_t handle,
-                                miopenActivationDescriptor_t const& desc,
-                                T const& alpha,
-                                miopenTensorDescriptor_t const& out_desc,
-                                void const* out_data,
-                                miopenTensorDescriptor_t const& d_out_desc,
-                                void const* d_out_data,
-                                miopenTensorDescriptor_t const& in_desc,
-                                void const* in_data,
-                                T const& beta,
-                                miopenTensorDescriptor_t const& d_in_desc,
-                                void* d_in_data)
-{
-    DISTCONV_CHECK_MIOPEN(miopenActivationBackward(handle,
-                                                   desc,
-                                                   &alpha,
-                                                   out_desc,
-                                                   out_data,
-                                                   d_out_desc,
-                                                   d_out_data,
-                                                   in_desc,
-                                                   in_data,
-                                                   &beta,
-                                                   d_in_desc,
-                                                   d_in_data));
-}
 
 struct Options
 {
@@ -840,6 +283,568 @@ public:
     void sync_internal_stream_pr(int idx)
     {
         util::sync_stream(m_stream, get_internal_stream_pr(idx));
+    }
+
+    inline Event_t make_event() { return h2::gpu::make_event(); }
+    inline void destroy_event(hipEvent_t const& event)
+    {
+        h2::gpu::destroy(event);
+    }
+    inline void record_event(hipEvent_t const& event, hipStream_t const& stream)
+    {
+        DISTCONV_CHECK_HIP(hipEventRecord(event, stream));
+    }
+    inline float elapsed_time(hipEvent_t const& start, hipEvent_t const& end)
+    {
+        float elapsed;
+        DISTCONV_CHECK_HIP(hipEventElapsedTime(&elapsed, start, end));
+        return elapsed;
+    }
+    inline size_t get_available_memory() { return h2::gpu::mem_info().free; }
+
+    inline miopenTensorDescriptor_t make_tensor_descriptor()
+    {
+        miopenTensorDescriptor_t desc;
+        DISTCONV_CHECK_MIOPEN(miopenCreateTensorDescriptor(&desc));
+        return desc;
+    }
+
+    inline void destroy_tensor_descriptor(miopenTensorDescriptor_t const& desc)
+    {
+        DISTCONV_CHECK_MIOPEN(miopenDestroyTensorDescriptor(desc));
+    }
+
+    inline miopenTensorDescriptor_t make_filter_descriptor()
+    {
+        return make_tensor_descriptor();
+    }
+
+    inline void destroy_filter_descriptor(miopenTensorDescriptor_t const& desc)
+    {
+        destroy_tensor_descriptor(desc);
+    }
+
+    template <typename T>
+    void print_array(T const* const data,
+                     size_t const size,
+                     std::ostream& os = std::cout)
+    {
+        os << "[";
+        for (size_t ii = 0; ii < size; ++ii)
+            os << " " << data[ii];
+        os << " ]";
+    }
+
+    template <typename Tensor>
+    inline void setup_filter_descriptor(FilterDescriptor_t& desc,
+                                        Tensor const& tensor)
+    {
+        auto const dt = util::get_miopen_type<typename Tensor::data_type>();
+        int_vector const shape =
+            tensor.get_local_real_shape().template get_vector<int>();
+        std::vector<int> strides;
+        strides.reserve(shape.size());
+        strides.push_back(1);
+        std::partial_sum(shape.begin(),
+                         shape.end() - 1,
+                         std::back_inserter(strides),
+                         std::multiplies<int>());
+        std::reverse(begin(strides), end(strides));
+        DISTCONV_CHECK_MIOPEN(
+            miopenSetTensorDescriptor(desc,
+                                      dt,
+                                      shape.size(),
+                                      util::reverse(shape).data(),
+                                      strides.data()));
+    }
+
+    template <typename Tensor, typename ShapeType>
+    inline void setup_tensor_descriptor(miopenTensorDescriptor_t& desc,
+                                        Tensor const& tensor,
+                                        ShapeType const& shape)
+    {
+        miopenDataType_t const dt =
+            util::get_miopen_type<typename Tensor::data_type>();
+        assert_eq(tensor.get_num_dims(), shape.num_dims());
+
+        if (shape.get_size() == 0)
+            return;
+
+        // set descriptor for input tensor
+        // The size should include halo regions. Convolution will not be
+        // done for the halo regions by disabling padding
+        IndexVector strides = tensor::get_strides(tensor.get_local_shape(),
+                                                  tensor.get_halo_width(),
+                                                  tensor.get_pitch());
+
+        util::MPIPrintStreamDebug()
+            << "setup_tensor_descriptor. "
+            << "tensor: " << tensor
+            << ", shape: " << util::join_array(shape, ", ")
+            << ", strides: " << util::join_array(strides, ", ") << "\n";
+
+        DISTCONV_CHECK_MIOPEN(miopenSetTensorDescriptor(
+            desc,
+            dt,
+            shape.num_dims(),
+            util::reverse(IntVector(shape)).data(),
+            util::reverse(strides).get_vector<int>().data()));
+    }
+
+    template <typename Tensor>
+    inline void setup_tensor_descriptor(miopenTensorDescriptor_t& desc,
+                                        Tensor const& tensor,
+                                        IntVector const& halo_fwd,
+                                        IntVector const& halo_bwd)
+    {
+        auto shape = tensor.get_local_shape();
+        shape = shape + tensor::Shape(halo_fwd) + tensor::Shape(halo_bwd);
+        return setup_tensor_descriptor(desc, tensor, shape);
+    }
+
+    template <typename Tensor>
+    inline void
+    setup_tensor_descriptor(miopenTensorDescriptor_t& desc,
+                            Tensor const& tensor,
+                            std::vector<bool> const& include_halo_fwd,
+                            std::vector<bool> const& include_halo_bwd)
+    {
+        int const nd = tensor.get_num_dims();
+        auto const overlap = tensor.get_overlap();
+        IntVector halo_fwd(nd, 0), halo_bwd(nd, 0);
+        for (int i = 0; i < nd; ++i)
+        {
+            if (include_halo_bwd[i])
+                halo_bwd[i] = overlap[i];
+            if (include_halo_fwd[i])
+                halo_fwd[i] = overlap[i];
+        }
+        setup_tensor_descriptor(desc, tensor, halo_fwd, halo_bwd);
+    }
+
+    template <typename Tensor>
+    inline void setup_tensor_descriptor(miopenTensorDescriptor_t& desc,
+                                        Tensor const& tensor,
+                                        bool include_halo = true)
+    {
+        std::vector<bool> include_halo_array(tensor.get_num_dims(),
+                                             include_halo);
+        setup_tensor_descriptor(
+            desc, tensor, include_halo_array, include_halo_array);
+    }
+
+    inline int get_tensor_rank(miopenTensorDescriptor_t const& desc)
+    {
+        int num_dims = -1;
+        // This API is TERRIBLY named. This actually gets the number of
+        // dimensions in the tensor.
+        DISTCONV_CHECK_MIOPEN(miopenGetTensorDescriptorSize(desc, &num_dims));
+        return num_dims;
+    }
+
+    inline int get_tensor_dimension(miopenTensorDescriptor_t const& desc, int d)
+    {
+        int const num_dims = get_tensor_rank(desc);
+        d = d < 0 ? num_dims + d : d;
+        assert_always(d < num_dims);
+
+        miopenDataType_t dt;
+        std::vector<int> dims, strides;
+        dims.reserve(num_dims);
+        strides.reserve(num_dims);
+        DISTCONV_CHECK_MIOPEN(
+            miopenGetTensorDescriptor(desc, &dt, dims.data(), strides.data()));
+        return dims[num_dims - d - 1];
+    }
+
+    inline void
+    set_tensor_dimension(miopenTensorDescriptor_t& desc, int d, int n)
+    {
+        int const num_dims = get_tensor_rank(desc);
+        d = d < 0 ? num_dims + d : d;
+        assert_always(d < num_dims);
+
+        miopenDataType_t dt;
+        std::vector<int> dims, strides;
+        dims.reserve(num_dims);
+        strides.reserve(num_dims);
+
+        DISTCONV_CHECK_MIOPEN(
+            miopenGetTensorDescriptor(desc, &dt, dims.data(), strides.data()));
+        dims[num_dims - d - 1] = n;
+        // FIXME (TRB): Need to recompute strides??
+        DISTCONV_CHECK_MIOPEN(miopenSetTensorDescriptor(
+            desc, dt, num_dims, dims.data(), strides.data()));
+    }
+
+    inline int get_tensor_num_dimensions(miopenTensorDescriptor_t const& desc)
+    {
+        return get_tensor_rank(desc);
+    }
+
+    inline void set_tensor_num_samples(miopenTensorDescriptor_t& desc, int n)
+    {
+        int const num_sample_dim = get_tensor_num_dimensions(desc) - 1;
+        set_tensor_dimension(desc, num_sample_dim, n);
+    }
+
+    inline int get_tensor_num_samples(miopenTensorDescriptor_t const& desc)
+    {
+        int const num_sample_dim = get_tensor_num_dimensions(desc) - 1;
+        return get_tensor_dimension(desc, num_sample_dim);
+    }
+
+    inline void copy_tensor_descriptor(miopenTensorDescriptor_t& dst,
+                                       miopenTensorDescriptor_t const& src)
+    {
+        auto const num_dims = get_tensor_rank(src);
+        miopenDataType_t dt;
+        std::vector<int> dims, strides;
+        dims.reserve(num_dims);
+        strides.reserve(num_dims);
+
+        DISTCONV_CHECK_MIOPEN(
+            miopenGetTensorDescriptor(src, &dt, dims.data(), strides.data()));
+
+        DISTCONV_CHECK_MIOPEN(miopenSetTensorDescriptor(
+            dst, dt, num_dims, dims.data(), strides.data()));
+    }
+
+    inline void copy_filter_descriptor(miopenTensorDescriptor_t& dst,
+                                       miopenTensorDescriptor_t const& src)
+    {
+        copy_tensor_descriptor(dst, src);
+    }
+
+    template <int ND>
+    inline int
+    get_filter_descriptor_dimension(miopenTensorDescriptor_t const& desc, int d)
+    {
+        return get_tensor_dimension(desc, d);
+    }
+
+    inline miopenConvolutionDescriptor_t make_convolution_descriptor()
+    {
+        miopenConvolutionDescriptor_t desc;
+        DISTCONV_CHECK_MIOPEN(miopenCreateConvolutionDescriptor(&desc));
+        return desc;
+    }
+
+    inline void
+    destroy_convolution_descriptor(miopenConvolutionDescriptor_t const& desc)
+    {
+        DISTCONV_CHECK_MIOPEN(miopenDestroyConvolutionDescriptor(desc));
+    }
+
+    inline void
+    set_convolution_group_count(miopenConvolutionDescriptor_t const& desc,
+                                int ngrps)
+    {
+        DISTCONV_CHECK_MIOPEN(miopenSetConvolutionGroupCount(desc, ngrps));
+    }
+
+    inline void set_convolution_descriptor(ConvolutionDescriptor_t& conv_desc,
+                                           int const array_len,
+                                           int const* const pad,
+                                           int const* const stride,
+                                           int const* const dilation,
+                                           ConvolutionMode_t const& mode,
+                                           DataType_t const& /*data_type*/)
+    {
+        DISTCONV_CHECK_MIOPEN(
+            miopenInitConvolutionNdDescriptor(conv_desc,
+                                              array_len,
+                                              const_cast<int*>(pad),
+                                              const_cast<int*>(stride),
+                                              const_cast<int*>(dilation),
+                                              mode));
+    }
+
+    inline void
+    copy_convolution_descriptor(miopenConvolutionDescriptor_t& dst,
+                                miopenConvolutionDescriptor_t const& src)
+    {
+        int spatial_dims = -1;
+        // This gets the correct value for spatial_dims.
+        DISTCONV_CHECK_MIOPEN(miopenGetConvolutionNdDescriptor(
+            src, 0, &spatial_dims, nullptr, nullptr, nullptr, nullptr));
+
+        std::vector<int> data;
+        data.reserve(3 * spatial_dims);
+        int* const pads = data.data();
+        int* const strides = data.data() + spatial_dims;
+        int* const dilations = data.data() + 2 * spatial_dims;
+        miopenConvolutionMode_t mode;
+        DISTCONV_CHECK_MIOPEN(miopenGetConvolutionNdDescriptor(
+            src, spatial_dims, &spatial_dims, pads, strides, dilations, &mode));
+        DISTCONV_CHECK_MIOPEN(miopenInitConvolutionNdDescriptor(
+            dst, spatial_dims, pads, strides, dilations, mode));
+    }
+
+    inline size_t get_conv_forward_workspace_size(
+        Handle_t const& /*handle*/,
+        TensorDescriptor_t const& /*in_desc*/,
+        FilterDescriptor_t const& /*filter_desc*/,
+        ConvolutionDescriptor_t const& /*conv_desc*/,
+        TensorDescriptor_t const& /*out_desc*/,
+        ConvFwdAlgo_t const& /*algo*/)
+    {
+        return 1 << 30;
+    }
+
+    inline size_t get_conv_bwd_data_workspace_size(
+        Handle_t const& /*handle*/,
+        FilterDescriptor_t const& /*filter_desc*/,
+        TensorDescriptor_t const& /*dy_desc*/,
+        ConvolutionDescriptor_t const& /*conv_desc*/,
+        TensorDescriptor_t const& /*dx_desc*/,
+        ConvBwdDataAlgo_t const& /*algo*/)
+    {
+        return 1 << 30;
+    }
+
+    inline size_t get_conv_bwd_filter_workspace_size(
+        Handle_t const& /*handle*/,
+        TensorDescriptor_t const& /*in_desc*/,
+        TensorDescriptor_t const& /*dy_Desc*/,
+        ConvolutionDescriptor_t const& /*conv_Desc*/,
+        FilterDescriptor_t const& /*dw_desc*/,
+        ConvBwdFilterAlgo_t const& /*algo*/)
+    {
+        return 1 << 30;
+    }
+
+    template <typename T>
+    inline void apply_fwd_bias(Handle_t handle,
+                               T const& alpha,
+                               TensorDescriptor_t const& bias_desc,
+                               void const* const bias,
+                               T const& beta,
+                               TensorDescriptor_t const& y_desc,
+                               void* const y)
+    {
+        DISTCONV_CHECK_MIOPEN(miopenConvolutionForwardBias(
+            handle, &alpha, bias_desc, bias, &beta, y_desc, y));
+    }
+
+    template <typename T>
+    inline void apply_bwd_bias(Handle_t handle,
+                               T const& alpha,
+                               TensorDescriptor_t const& dy_desc,
+                               void const* dy_data,
+                               T const& beta,
+                               TensorDescriptor_t const& db_desc,
+                               void* const db_data)
+    {
+        DISTCONV_CHECK_MIOPEN(miopenConvolutionBackwardBias(
+            handle, &alpha, dy_desc, dy_data, &beta, db_desc, db_data));
+    }
+
+    inline miopenPoolingDescriptor_t make_pooling_descriptor()
+    {
+        miopenPoolingDescriptor_t desc;
+        DISTCONV_CHECK_MIOPEN(miopenCreatePoolingDescriptor(&desc));
+        DISTCONV_CHECK_MIOPEN(
+            miopenSetPoolingIndexType(desc, details::get_index_type()));
+        return desc;
+    }
+
+    inline void
+    destroy_pooling_descriptor(miopenPoolingDescriptor_t const& desc)
+    {
+        DISTCONV_CHECK_MIOPEN(miopenDestroyPoolingDescriptor(desc));
+    }
+
+    inline void setup_pooling_descriptor(miopenPoolingDescriptor_t& desc,
+                                         miopenPoolingMode_t mode,
+                                         int nb_dims,
+                                         int* window_dim,
+                                         int* pad,
+                                         int* stride)
+    {
+        DISTCONV_CHECK_MIOPEN(miopenSetNdPoolingDescriptor(
+            desc, mode, nb_dims, window_dim, pad, stride));
+        DISTCONV_CHECK_MIOPEN(
+            miopenSetPoolingIndexType(desc, details::get_index_type()));
+    }
+
+    inline int
+    get_pooling_descriptor_dims(miopenPoolingDescriptor_t const& desc)
+    {
+        int num_dims = -1;
+        DISTCONV_CHECK_MIOPEN(miopenGetNdPoolingDescriptor(
+            desc, 0, nullptr, &num_dims, nullptr, nullptr, nullptr));
+        return num_dims;
+    }
+
+    inline void copy_pooling_descriptor(miopenPoolingDescriptor_t& dst,
+                                        miopenPoolingDescriptor_t const& src)
+    {
+        int num_dims = get_pooling_descriptor_dims(src);
+        miopenPoolingMode_t mode;
+        miopenNanPropagation_t nan_prop;
+        std::vector<int> data;
+        data.reserve(3 * num_dims);
+        int* const window_dims = data.data();
+        int* const padding = data.data() + num_dims;
+        int* const strides = data.data() + 2 * num_dims;
+        DISTCONV_CHECK_MIOPEN(miopenGetNdPoolingDescriptor(
+            src, num_dims, &mode, &num_dims, window_dims, padding, strides));
+        DISTCONV_CHECK_MIOPEN(miopenSetNdPoolingDescriptor(
+            dst, mode, num_dims, window_dims, padding, strides));
+
+        miopenIndexType_t idx_t;
+        DISTCONV_CHECK_MIOPEN(miopenGetPoolingIndexType(src, &idx_t));
+        DISTCONV_CHECK_MIOPEN(miopenSetPoolingIndexType(dst, idx_t));
+    }
+
+    namespace details
+    {
+    void set_workspace(miopenPoolingDescriptor_t const& desc, void* workspace);
+    void* get_workspace(miopenPoolingDescriptor_t const& desc);
+    void clear_workspace(miopenPoolingDescriptor_t const& desc);
+    std::pair<void*, size_t> make_workspace(miopenHandle_t handle,
+                                            miopenPoolingDescriptor_t desc,
+                                            miopenTensorDescriptor_t out_desc);
+
+    } // namespace details
+
+    template <typename T>
+    inline void pooling_forward(miopenHandle_t handle,
+                                miopenPoolingDescriptor_t desc,
+                                T const& alpha,
+                                miopenTensorDescriptor_t const& in_desc,
+                                void const* in_data,
+                                T const& beta,
+                                miopenTensorDescriptor_t const& out_desc,
+                                void* out_data,
+                                bool training)
+    {
+        // Set up the index type first.
+        DISTCONV_CHECK_MIOPEN(
+            miopenSetPoolingIndexType(desc, details::get_index_type()));
+        // Then get the workspace size.
+        auto workspace =
+            (training ? details::make_workspace(handle, desc, out_desc)
+                      : std::make_pair((void*) nullptr, (size_t) 0UL));
+        DISTCONV_CHECK_MIOPEN(miopenPoolingForward(handle,
+                                                   desc,
+                                                   &alpha,
+                                                   in_desc,
+                                                   in_data,
+                                                   &beta,
+                                                   out_desc,
+                                                   out_data,
+                                                   /*do_backward=*/training,
+                                                   workspace.first,
+                                                   workspace.second));
+    }
+
+    template <typename T>
+    inline void pooling_backward(miopenHandle_t handle,
+                                 miopenPoolingDescriptor_t desc,
+                                 T const& alpha,
+                                 miopenTensorDescriptor_t const& out_desc,
+                                 void const* out_data,
+                                 miopenTensorDescriptor_t const& d_out_desc,
+                                 void const* d_out_data,
+                                 miopenTensorDescriptor_t const& in_desc,
+                                 void const* in_data,
+                                 T const& beta,
+                                 miopenTensorDescriptor_t const& d_in_desc,
+                                 void* d_in_data)
+    {
+        // FIXME
+        void* workspace = details::get_workspace(desc);
+        assert_always((bool) workspace);
+        DISTCONV_CHECK_MIOPEN(miopenPoolingBackward(handle,
+                                                    desc,
+                                                    &alpha,
+                                                    out_desc,
+                                                    out_data,
+                                                    d_out_desc,
+                                                    d_out_data,
+                                                    in_desc,
+                                                    in_data,
+                                                    &beta,
+                                                    d_in_desc,
+                                                    d_in_data,
+                                                    workspace));
+        details::clear_workspace(desc);
+    }
+
+    inline miopenActivationDescriptor_t make_activation_descriptor()
+    {
+        miopenActivationDescriptor_t desc;
+        DISTCONV_CHECK_MIOPEN(miopenCreateActivationDescriptor(&desc));
+        return desc;
+    }
+
+    inline void
+    destroy_activation_descriptor(miopenActivationDescriptor_t const& desc)
+    {
+        DISTCONV_CHECK_MIOPEN(miopenDestroyActivationDescriptor(desc));
+    }
+
+    inline void
+    copy_activation_descriptor(miopenActivationDescriptor_t& dst,
+                               miopenActivationDescriptor_t const& src)
+    {
+        miopenActivationMode_t mode;
+        double alpha, beta, gamma;
+        DISTCONV_CHECK_MIOPEN(
+            miopenGetActivationDescriptor(src, &mode, &alpha, &beta, &gamma));
+        DISTCONV_CHECK_MIOPEN(
+            miopenSetActivationDescriptor(dst, mode, alpha, beta, gamma));
+    }
+
+    inline void
+    setup_relu_activation_descriptor(miopenActivationDescriptor_t& desc)
+    {
+        DISTCONV_CHECK_MIOPEN(miopenSetActivationDescriptor(
+            desc, miopenActivationRELU, 0.0, 0.0, 0.0));
+    }
+
+    template <typename T>
+    inline void activation_forward(miopenHandle_t handle,
+                                   miopenActivationDescriptor_t const& desc,
+                                   T const& alpha,
+                                   miopenTensorDescriptor_t const& in_desc,
+                                   T const* in_data,
+                                   T const& beta,
+                                   miopenTensorDescriptor_t const& out_desc,
+                                   T* out_data)
+    {
+        DISTCONV_CHECK_MIOPEN(miopenActivationForward(
+            handle, desc, &alpha, in_desc, in_data, &beta, out_desc, out_data));
+    }
+
+    template <typename T>
+    inline void activation_backward(miopenHandle_t handle,
+                                    miopenActivationDescriptor_t const& desc,
+                                    T const& alpha,
+                                    miopenTensorDescriptor_t const& out_desc,
+                                    T const* out_data,
+                                    miopenTensorDescriptor_t const& d_out_desc,
+                                    T const* d_out_data,
+                                    miopenTensorDescriptor_t const& in_desc,
+                                    T const* in_data,
+                                    T const& beta,
+                                    miopenTensorDescriptor_t const& d_in_desc,
+                                    T* d_in_data)
+    {
+        DISTCONV_CHECK_MIOPEN(miopenActivationBackward(handle,
+                                                       desc,
+                                                       &alpha,
+                                                       out_desc,
+                                                       out_data,
+                                                       d_out_desc,
+                                                       d_out_data,
+                                                       in_desc,
+                                                       in_data,
+                                                       &beta,
+                                                       d_in_desc,
+                                                       d_in_data));
     }
 
     miopenConvFwdAlgorithm_t
