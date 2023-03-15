@@ -30,6 +30,10 @@ struct ConvParams
     int pads[3];
     int strides[3];
     int dilation[3];
+    int groups;
+
+    bool operator<(const ConvParams& other) const;
+    bool operator==(const ConvParams& other) const;
 };
 
 // 5D shape
@@ -61,9 +65,24 @@ struct ConvDescriptor
     }
 
     std::string hash() const;
+
+    bool operator<(const ConvDescriptor& other) const;
 };
 
-using state_and_func = std::tuple<void*, void*>;
+typedef void* dacehandle_t;
+// Not really void const* but this allows us to use one handle type for fwd/bwd
+typedef void (*daceprogram_t)(dacehandle_t handle,
+                              void const* w,
+                              void const* x,
+                              void const* y,
+                              float alpha,
+                              float beta);
+struct dace_state
+{
+    void* library;
+    dacehandle_t handle;
+    daceprogram_t func;
+};
 
 struct DaCeOptions : public backend::Options
 {
@@ -142,8 +161,15 @@ public:
         return BackendDNNLib_::get_name() + std::string("_DaCe");
     }
 
-    state_and_func try_load(const std::string& hash);
-    bool unload(const std::string& hash, state_and_func library);
+    dace_state compile(const ConvDescriptor& desc, const std::string& hash);
+    dace_state try_load(const std::string& hash);
+    bool unload(const std::string& hash, dace_state library);
+    bool invoke(const ConvDescriptor& desc,
+                void const* x,
+                void const* w,
+                void const* y,
+                float alpha,
+                float beta, void* workspace);
 
     void set_stream(backend::Handle_t handle, backend::Stream_t stream);
 
@@ -162,7 +188,34 @@ public:
                              backend::TensorDescriptor_t const& out_desc,
                              void* out_data)
     {
-        printf("FWD\n");
+        ConvDescriptor desc;
+        desc.x_shape = m_shapes[in_desc];
+        desc.x_strides = m_strides[in_desc];
+        desc.w_shape = m_shapes[(backend::TensorDescriptor_t) filter_desc];
+        desc.y_shape = m_shapes[out_desc];
+        desc.y_strides = m_strides[out_desc];
+        desc.type = FORWARD;
+        desc.params = m_convs[conv_desc];
+        if (!invoke(desc,
+                    in_data,
+                    filter_data,
+                    out_data,
+                    float(alpha),
+                    float(beta),
+                    work_data))
+            BackendDNNLib_::convolution_forward(handle,
+                                                alpha,
+                                                in_desc,
+                                                in_data,
+                                                filter_desc,
+                                                filter_data,
+                                                conv_desc,
+                                                conv_algo,
+                                                work_data,
+                                                work_data_size,
+                                                beta,
+                                                out_desc,
+                                                out_data);
     }
 
     template <typename T>
@@ -180,7 +233,29 @@ public:
                               backend::TensorDescriptor_t const& dx_desc,
                               void* dx_data)
     {
-        printf("BWD-D\n");
+        ConvDescriptor desc;
+        desc.x_shape = m_shapes[dx_desc];
+        desc.x_strides = m_strides[dx_desc];
+        desc.w_shape = m_shapes[(backend::TensorDescriptor_t) filter_desc];
+        desc.y_shape = m_shapes[dy_desc];
+        desc.y_strides = m_strides[dy_desc];
+        desc.type = BACKWARD_DATA;
+        desc.params = m_convs[conv_desc];
+        if (!invoke(
+                desc, dx_data, filter_data, dy_data, float(alpha), float(beta), work_data))
+            BackendDNNLib_::convolution_bwd_data(handle,
+                                                 alpha,
+                                                 filter_desc,
+                                                 filter_data,
+                                                 dy_desc,
+                                                 dy_data,
+                                                 conv_desc,
+                                                 conv_algo,
+                                                 work_data,
+                                                 work_data_size,
+                                                 beta,
+                                                 dx_desc,
+                                                 dx_data);
     }
 
     template <typename T>
@@ -199,7 +274,28 @@ public:
                            backend::FilterDescriptor_t const& dw_desc,
                            void* dw_data)
     {
-        printf("BWD-F\n");
+        ConvDescriptor desc;
+        desc.x_shape = m_shapes[in_desc];
+        desc.x_strides = m_strides[in_desc];
+        desc.w_shape = m_shapes[(backend::TensorDescriptor_t) dw_desc];
+        desc.y_shape = m_shapes[dy_desc];
+        desc.y_strides = m_strides[dy_desc];
+        desc.type = BACKWARD_FILTER;
+        desc.params = m_convs[conv_desc];
+        if (!invoke(desc, in_data, dw_data, dy_data, float(alpha), float(beta), work_data))
+            BackendDNNLib_::convolution_bwd_filter(handle,
+                                                   alpha,
+                                                   in_desc,
+                                                   in_data,
+                                                   dy_desc,
+                                                   dy_data,
+                                                   conv_desc,
+                                                   conv_algo,
+                                                   work_data,
+                                                   work_data_size,
+                                                   beta,
+                                                   dw_desc,
+                                                   dw_data);
     }
 
 protected:
@@ -213,7 +309,7 @@ protected:
     std::map<backend::ConvolutionDescriptor_t, ConvParams> m_convs;
 
     // JIT-compiled libraries
-    std::map<ConvDescriptor, state_and_func> m_dace_libraries;
+    std::map<ConvDescriptor, dace_state> m_dace_libraries;
 
     backend::Stream_t m_curstream;
 };
