@@ -358,6 +358,16 @@ public:
                                       strides.data()));
     }
 
+    virtual void
+    setup_tensor_descriptor_internal(TensorDescriptor_t& desc,
+                                     DataType_t dt,
+                                     const std::vector<int>& shape,
+                                     const std::vector<int>& strides)
+    {
+        DISTCONV_CHECK_MIOPEN(miopenSetTensorDescriptor(
+            desc, dt, shape.size(), shape.data(), strides.data()));
+    }
+
     template <typename Tensor, typename ShapeType>
     inline void setup_tensor_descriptor(miopenTensorDescriptor_t& desc,
                                         Tensor const& tensor,
@@ -383,12 +393,11 @@ public:
             << ", shape: " << util::join_array(shape, ", ")
             << ", strides: " << util::join_array(strides, ", ") << "\n";
 
-        DISTCONV_CHECK_MIOPEN(miopenSetTensorDescriptor(
+        setup_tensor_descriptor_internal(
             desc,
             dt,
-            shape.num_dims(),
-            util::reverse(IntVector(shape)).data(),
-            util::reverse(strides).get_vector<int>().data()));
+            util::reverse(IntVector(shape)).get_vector<int>(),
+            util::reverse(strides).get_vector<int>());
     }
 
     template <typename Tensor>

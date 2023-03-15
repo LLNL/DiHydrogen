@@ -634,6 +634,19 @@ public:
                                        util::reverse(shape).data()));
     }
 
+    virtual void
+    setup_tensor_descriptor_internal(TensorDescriptor_t& desc,
+                                     DataType_t dt,
+                                     const std::vector<int>& shape,
+                                     const std::vector<int>& strides)
+    {
+        if (shape.size() == 0)
+            return;
+
+        DISTCONV_CHECK_CUDNN(cudnnSetTensorNdDescriptor(
+            desc, dt, shape.size(), shape.data(), strides.data()));
+    }
+
     template <typename Tensor, typename ShapeType>
     inline void setup_tensor_descriptor(cudnnTensorDescriptor_t& desc,
                                         const Tensor& tensor,
@@ -641,9 +654,6 @@ public:
     {
         cudnnDataType_t dt = util::get_cudnn_type<typename Tensor::data_type>();
         assert_eq(tensor.get_num_dims(), shape.num_dims());
-
-        if (shape.get_size() == 0)
-            return;
 
         // set descriptor for input tensor
         // The size should include halo regions. Convolution will not be
@@ -658,12 +668,11 @@ public:
             << ", shape: " << util::join_array(shape, ", ")
             << ", strides: " << util::join_array(strides, ", ") << "\n";
 
-        DISTCONV_CHECK_CUDNN(cudnnSetTensorNdDescriptor(
+        setup_tensor_descriptor_internal(
             desc,
             dt,
-            shape.num_dims(),
-            util::reverse(IntVector(shape)).data(),
-            util::reverse(strides).get_vector<int>().data()));
+            util::reverse(IntVector(shape)).get_vector<int>(),
+            util::reverse(strides).get_vector<int>());
     }
 
     template <typename Tensor>
