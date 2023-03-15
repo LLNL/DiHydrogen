@@ -37,11 +37,15 @@ std::string ConvDescriptor::hash() const
              : (this->type == BACKWARD_FILTER ? "bwdfilt" : "bwddata"));
     stream << "conv" << this->get_dimensionality() << "d_";
     write_s5d(stream, this->x_shape);
+    stream << '_';
     write_s5d(stream, this->x_strides);
+    stream << '_';
     write_s5d(stream, this->w_shape);
+    stream << '_';
     write_s5d(stream, this->y_shape);
+    stream << '_';
     write_s5d(stream, this->y_strides);
-    stream << ctype;
+    stream << '_' << ctype;
     return stream.str();
 }
 
