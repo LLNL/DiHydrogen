@@ -6,7 +6,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "distconv/util/util_mpi.hpp"
+#include "distconv/tensor/tensor.hpp" // For the tensor namespace
+#include "distconv/util/util.hpp"     // For reverse
+#include "distconv/util/util_mpi.hpp" // For MPIRootPrintStream
+#include "distconv/vector.hpp"        // For {Int, Index}Vector
 
 #include <Al.hpp>
 
@@ -38,6 +41,18 @@ struct ConvParams
 
 // 5D shape
 using s5d = std::tuple<int, int, int, int, int>;
+inline void set_value(s5d& shape, int d, int n)
+{
+    switch (d)
+    {
+    case 0: std::get<0>(shape) = n; break;
+    case 1: std::get<1>(shape) = n; break;
+    case 2: std::get<2>(shape) = n; break;
+    case 3: std::get<3>(shape) = n; break;
+    case 4: std::get<4>(shape) = n; break;
+    default: break;
+    }
+}
 
 struct ConvDescriptor
 {
@@ -169,9 +184,138 @@ public:
                 void const* w,
                 void const* y,
                 float alpha,
-                float beta, void* workspace);
+                float beta,
+                void* workspace);
 
     void set_stream(backend::Handle_t handle, backend::Stream_t stream);
+
+    //////////////////////////////////////////////////////////////////////////
+    // Tensor/convolution descriptor management
+
+    template <typename Tensor>
+    inline void setup_filter_descriptor(backend::FilterDescriptor_t& desc,
+                                        Tensor const& tensor)
+    {
+        int ashape[5] = {0};
+
+        BackendDNNLib_::setup_filter_descriptor(desc, tensor);
+
+        const std::vector<int> shape =
+            tensor.get_local_real_shape().template get_vector<int>();
+
+        if (shape.size() > 5)
+        {
+            util::MPIPrintStreamError()
+                << "Shape dimensionality for filter is too large: "
+                << shape.size();
+            return;
+        }
+
+        memcpy(ashape, shape.data(), sizeof(int) * shape.size());
+        m_shapes[(backend::TensorDescriptor_t) desc] = std::make_tuple(
+            ashape[0], ashape[1], ashape[2], ashape[3], ashape[4]);
+    }
+    inline void copy_filter_descriptor(backend::FilterDescriptor_t& dst,
+                                       const backend::FilterDescriptor_t& src)
+    {
+        m_shapes[(backend::TensorDescriptor_t) dst] =
+            m_shapes[(backend::TensorDescriptor_t) src];
+        m_strides[(backend::TensorDescriptor_t) dst] =
+            m_strides[(backend::TensorDescriptor_t) src];
+        BackendDNNLib_::copy_filter_descriptor(dst, src);
+    }
+
+    virtual void
+    setup_tensor_descriptor_internal(backend::TensorDescriptor_t& desc,
+                                     backend::DataType_t dt,
+                                     const std::vector<int>& shape,
+                                     const std::vector<int>& strides) override
+    {
+        int ashape[5] = {0};
+        int astrides[5] = {0};
+        BackendDNNLib_::setup_tensor_descriptor_internal(
+            desc, dt, shape, strides);
+
+        size_t ndims = shape.size();
+        if (ndims > 5)
+        {
+            util::MPIPrintStreamError()
+                << "Shape dimensionality for tensor is too large: " << ndims;
+            return;
+        }
+        memcpy(ashape, shape.data(), sizeof(int) * ndims);
+        memcpy(astrides, strides.data(), sizeof(int) * ndims);
+
+        m_shapes[desc] = std::make_tuple(
+            ashape[0], ashape[1], ashape[2], ashape[3], ashape[4]);
+        m_strides[desc] = std::make_tuple(
+            astrides[0], astrides[1], astrides[2], astrides[3], astrides[4]);
+    }
+
+    inline void
+    set_tensor_dimension(backend::TensorDescriptor_t& desc, int d, int n)
+    {
+        // Strides stay the same, shape dimension changes
+        set_value(m_shapes[desc], d, n);
+
+        BackendDNNLib_::set_tensor_dimension(desc, d, n);
+    }
+
+    inline void copy_tensor_descriptor(backend::TensorDescriptor_t& dst,
+                                       const backend::TensorDescriptor_t& src)
+    {
+        m_shapes[dst] = m_shapes[src];
+        m_strides[dst] = m_strides[src];
+        BackendDNNLib_::copy_tensor_descriptor(dst, src);
+    }
+
+    inline void
+    set_convolution_descriptor(backend::ConvolutionDescriptor_t& conv_desc,
+                               int const array_len,
+                               int const* const pad,
+                               int const* const stride,
+                               int const* const dilation,
+                               backend::ConvolutionMode_t const& mode,
+                               backend::DataType_t const& data_type)
+    {
+        BackendDNNLib_::set_convolution_descriptor(
+            conv_desc, array_len, pad, stride, dilation, mode, data_type);
+
+        // Store convolution parameters
+        if (array_len <= 0 || array_len > 3)
+        {
+            util::MPIPrintStreamError()
+                << "Convolution dimensionality is malformed: " << array_len;
+            return;
+        }
+
+        ConvParams p;
+        memset(&p, 0, sizeof(ConvParams));
+        memcpy(p.pads, pad, array_len * sizeof(int));
+        memcpy(p.strides, stride, array_len * sizeof(int));
+        memcpy(p.dilation, dilation, array_len * sizeof(int));
+
+        m_convs[conv_desc] = p;
+    }
+
+    inline void
+    copy_convolution_descriptor(backend::ConvolutionDescriptor_t& dst,
+                                const backend::ConvolutionDescriptor_t& src)
+    {
+        m_convs[dst] = m_convs[src];
+        BackendDNNLib_::copy_convolution_descriptor(dst, src);
+    }
+
+    inline void
+    set_convolution_group_count(backend::ConvolutionDescriptor_t const& desc,
+                                int ngrps)
+    {
+        m_convs[desc].groups = ngrps;
+        BackendDNNLib_::set_convolution_group_count(desc, ngrps);
+    }
+
+    //////////////////////////////////////////////////////////////////////////
+    // Convolution invocation
 
     template <typename T>
     void convolution_forward(backend::Handle_t handle,
@@ -241,8 +385,13 @@ public:
         desc.y_strides = m_strides[dy_desc];
         desc.type = BACKWARD_DATA;
         desc.params = m_convs[conv_desc];
-        if (!invoke(
-                desc, dx_data, filter_data, dy_data, float(alpha), float(beta), work_data))
+        if (!invoke(desc,
+                    dx_data,
+                    filter_data,
+                    dy_data,
+                    float(alpha),
+                    float(beta),
+                    work_data))
             BackendDNNLib_::convolution_bwd_data(handle,
                                                  alpha,
                                                  filter_desc,
@@ -282,7 +431,13 @@ public:
         desc.y_strides = m_strides[dy_desc];
         desc.type = BACKWARD_FILTER;
         desc.params = m_convs[conv_desc];
-        if (!invoke(desc, in_data, dw_data, dy_data, float(alpha), float(beta), work_data))
+        if (!invoke(desc,
+                    in_data,
+                    dw_data,
+                    dy_data,
+                    float(alpha),
+                    float(beta),
+                    work_data))
             BackendDNNLib_::convolution_bwd_filter(handle,
                                                    alpha,
                                                    in_desc,

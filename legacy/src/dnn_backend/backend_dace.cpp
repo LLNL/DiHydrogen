@@ -5,8 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
+// clang-format off
 #include "distconv/dnn_backend/backend.hpp"
 #include "distconv/dnn_backend/backend_dace.hpp"
+// clang-format on
 
 #include <dlfcn.h>
 
@@ -28,6 +30,16 @@ std::basic_ostream<C, T>& write_s5d(std::basic_ostream<C, T>& os, const s5d& s)
               << std::get<4>(s);
 }
 
+template <class C, class T>
+std::basic_ostream<C, T>& write_convparams(std::basic_ostream<C, T>& os,
+                                           const ConvParams& p)
+{
+    return os << p.pads[0] << '_' << p.pads[1] << '_' << p.pads[2] << '_'
+              << p.strides[0] << '_' << p.strides[1] << '_' << p.strides[2]
+              << '_' << p.dilation[0] << '_' << p.dilation[1] << '_'
+              << p.dilation[2] << '_' << p.groups;
+}
+
 std::string ConvDescriptor::hash() const
 {
     std::stringstream stream;
@@ -45,6 +57,8 @@ std::string ConvDescriptor::hash() const
     write_s5d(stream, this->y_shape);
     stream << '_';
     write_s5d(stream, this->y_strides);
+    stream << '_';
+    write_convparams(stream, this->params);
     stream << '_' << ctype;
     return stream.str();
 }
@@ -195,7 +209,8 @@ void BackendDaCe::set_stream(backend::Handle_t handle, backend::Stream_t stream)
     this->m_curstream = stream;
 }
 
-dace_state BackendDaCe::compile(const ConvDescriptor& desc, const std::string& hash)
+dace_state BackendDaCe::compile(const ConvDescriptor& desc,
+                                const std::string& hash)
 {
     dace_state result{nullptr, nullptr, nullptr};
     std::string script =
