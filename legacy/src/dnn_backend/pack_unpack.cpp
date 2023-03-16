@@ -35,16 +35,31 @@ namespace H2_DNN_BACKEND_NS
 namespace
 {
 
-// The behavior we WANT is to just be able to shove whatever tensor we
-// want through these interfaces. Thus, packing is "opt-in". In LBANN,
-// we can force this to be ON for ROCm platforms.
+// The behavior we should have is to just be able to shove whatever
+// (valid) tensor we want through these interfaces. HOWEVER, doing
+// this on ROCm platfmorms means accepting incorrect results, and this
+// is not acceptible. The default behavior, therefore, is to "opt-in"
+// on CUDA platforms and "opt-out" on ROCm platforms. In the code
+// below, explicitly setting the environment variable will use the
+// truthiness of the variable's value to determine whether to
+// pack/unpack or just pass tensors through. Leaving the variable
+// unset will pass tensors through on non-ROCm platforms and will
+// pack/unpack on ROCm platforms.
 bool do_pack_unpack() noexcept
 {
     static bool const val = []() {
         char const* env = std::getenv("H2_DISTCONV_FORCE_PACKED");
-        bool const tf = (env && std::strlen(env) && env[0] != '0');
-        H2_GPU_INFO("Doing pack/unpack: {}", tf);
-        return tf;
+        if (env)
+        {
+            bool const tf = (env && std::strlen(env) && env[0] != '0');
+            H2_GPU_INFO("Doing pack/unpack: {}", tf);
+            return tf;
+        }
+#if H2_HAS_ROCM
+        return true;
+#else
+        return false;
+#endif
         // Any nonempty string matching "[^0].*" is truthy.
     } ();
 
