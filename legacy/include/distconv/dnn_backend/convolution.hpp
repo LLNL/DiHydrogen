@@ -434,35 +434,9 @@ public:
                                     << "\n bwd data: " << m_conv_bwd_d
                                     << "\n bwd filter: " << m_conv_bwd_filter_d;
 
-        // when 0 is given as workspace size, use 80 % of currently
-        // available memory
-        // TODO: Parameterize the constant "0.8"?
-        if (ws_size == 0)
-        {
-            size_t const available = backend::get_available_memory();
-            ws_size = available * 0.8;
-        }
-
-        auto& mempool = internal::RuntimeGPU::get_device_memory_pool();
-        // take the maximum size that does not exceed the request size
-        auto actual_ws_size = mempool.get_max_allocatable_size(ws_size);
-        // adjust the size with an option value
-        actual_ws_size *= m_be.get_options().m_ws_capacity_factor;
-        actual_ws_size = mempool.get_max_allocatable_size(actual_ws_size);
-
-        util::MPIRootPrintStreamDebug()
-            << "Requested workspace size: " << ws_size << " ("
-            << int(ws_size / 1024.0 / 1024.0)
-            << " MB), actual size: " << actual_ws_size << " ("
-            << int(actual_ws_size / 1024.0 / 1024.0) << " MB)";
-        setup_algorithms(fwd_algo,
-                         bwd_data_algo,
-                         bwd_filter_algo,
-                         input.get_buffer(),
-                         d_filter.get_buffer(),
-                         d_output.get_buffer(),
-                         actual_ws_size);
-        setup_workspace_sizes();
+        m_fwd_find_algo = fwd_algo;
+        m_bwd_data_find_algo = bwd_data_algo;
+        m_bwd_filter_find_algo = bwd_filter_algo;
     }
 
     // Setup of bias gradient should be done by a different function as
@@ -542,6 +516,12 @@ public:
             // Allgather to assemble x by channels.
             allgather_chanfilt(input, m_input_gathered_t, true);
         }
+
+        setup_algorithms_fwd(input.get_buffer(),
+                             filter.get_buffer(),
+                             output.get_buffer());
+        setup_workspace_size_fwd();
+        setup_workspace_size_fwd_boundaries();
 
         void* ws = internal::RuntimeGPU::get_device_memory_pool().get(
             m_ws_size_fwd, m_be.get_stream());
@@ -866,6 +846,11 @@ public:
             backward_data_exchange_halo(d_output);
         }
 
+        setup_algorithms_bwd_data(d_input.get_buffer(),
+                                  filter.get_buffer(),
+                                  d_output.get_buffer());
+        setup_workspace_size_bwd_data();
+
         void* ws = internal::RuntimeGPU::get_device_memory_pool().get(
             m_ws_size_bwd_data, m_be.get_stream());
         if (ws == nullptr)
@@ -1074,6 +1059,11 @@ public:
 
         // Is there any case where d_filter is empty?
         assert_always(d_filter.get_local_size() != 0);
+
+        setup_algorithms_bwd_filter(input.get_buffer(),
+                                    d_filter.get_buffer(),
+                                    d_output.get_buffer());
+        setup_workspace_size_bwd_filter();
 
         record_start_comp();
 
@@ -1317,7 +1307,6 @@ public:
                 backend::set_tensor_num_samples(m_input_gathered_d, n);
                 backend::set_tensor_num_samples(m_d_input_all_channels_d, n);
             }
-            setup_workspace_sizes();
         }
     }
 
@@ -1373,6 +1362,19 @@ protected:
     IntVector m_halo_bwd_send;
     IntVector m_halo_fwd_recv;
     IntVector m_halo_bwd_recv;
+
+    using AlgoTuple = std::tuple<backend::ConvFwdAlgo_t, 
+                                 backend::ConvBwdDataAlgo_t,
+                                 backend::ConvBwdFilterAlgo_t,
+                                 BoundaryAttributesV<backend::ConvFwdAlgo_t>>;
+    using AlgoCache = std::unordered_map<int, AlgoTuple>;
+
+    AlgoCache m_fwd_algo_cache;
+    AlgoCache m_bwd_data_algo_cache;
+    AlgoCache m_bwd_filter_algo_cache;
+    std::string m_fwd_find_algo;
+    std::string m_bwd_data_find_algo;
+    std::string m_bwd_filter_find_algo;
 
     HaloExchangeMethod m_halo_xch_method;
     using HaloExchange = tensor::
@@ -1998,25 +2000,15 @@ protected:
         }
     }
 
-    void setup_algorithms(const std::string& fwd_algo,
-                          const std::string& bwd_data_algo,
-                          const std::string& bwd_filter_algo,
-                          void* input,
-                          void* filter,
-                          void* output,
-                          size_t ws_size = 0)
-    {
-        setup_algorithms_fwd(fwd_algo, input, filter, output, ws_size);
-        setup_algorithms_bwd(
-            bwd_data_algo, bwd_filter_algo, input, filter, output, ws_size);
-    }
-
-    void setup_algorithms_fwd(const std::string& fwd_algo,
-                              void* input,
-                              void* filter,
+    void setup_algorithms_fwd(void const* input,
+                              void const* filter,
                               void* output,
                               size_t ws_size = 0)
     {
+        if (check_cache_and_restore_algos(m_fwd_algo_cache)) return;
+
+        set_find_workspace_size(ws_size);
+
         // Note that m_bwd algo is set when deconv is used. Support for
         // deconv is partial.
         if (!m_overlap_halo_exchange_fwd)
@@ -2030,7 +2022,7 @@ protected:
                     "stationary-x setup algos forward");
                 get_tmp_tensor_buffer(m_output_all_filters_t);
                 m_fwd_algo =
-                    m_be.get_fwd_algorithm(fwd_algo,
+                    m_be.get_fwd_algorithm(m_fwd_find_algo,
                                            &m_input_d,
                                            input,
                                            &m_filter_d,
@@ -2050,7 +2042,7 @@ protected:
                     "stationary-y setup algos forward");
                 get_tmp_tensor_buffer(m_input_gathered_t);
                 m_fwd_algo =
-                    m_be.get_fwd_algorithm(fwd_algo,
+                    m_be.get_fwd_algorithm(m_fwd_find_algo,
                                            &m_input_gathered_d,
                                            m_input_gathered_t.get_buffer(),
                                            &m_filter_d,
@@ -2071,7 +2063,7 @@ protected:
                 get_tmp_tensor_buffer(m_input_gathered_t);
                 get_tmp_tensor_buffer(m_output_all_filters_t);
                 m_fwd_algo =
-                    m_be.get_fwd_algorithm(fwd_algo,
+                    m_be.get_fwd_algorithm(m_fwd_find_algo,
                                            &m_input_gathered_d,
                                            m_input_gathered_t.get_buffer(),
                                            &m_filter_d,
@@ -2091,7 +2083,7 @@ protected:
                                                       m_output_d,
                                                       m_filter_d,
                                                       "setup algos forward");
-                    m_fwd_algo = m_be.get_fwd_algorithm(fwd_algo,
+                    m_fwd_algo = m_be.get_fwd_algorithm(m_fwd_find_algo,
                                                         &m_input_d,
                                                         input,
                                                         &m_filter_d,
@@ -2103,7 +2095,7 @@ protected:
                 }
                 else
                 {
-                    m_bwd_data_algo = m_be.get_bwd_data_algorithm(fwd_algo,
+                    m_bwd_data_algo = m_be.get_bwd_data_algorithm(m_fwd_find_algo,
                                                                   &m_filter_d,
                                                                   filter,
                                                                   &m_input_d,
@@ -2123,7 +2115,7 @@ protected:
         {
             if (m_interior_req)
             {
-                m_fwd_algo = m_be.get_fwd_algorithm(fwd_algo,
+                m_fwd_algo = m_be.get_fwd_algorithm(m_fwd_find_algo,
                                                     &m_input_interior_d,
                                                     input,
                                                     &m_filter_d,
@@ -2144,7 +2136,7 @@ protected:
                     // sub-tensor. To be more robust, workspace sizes for
                     // boundary regions should be set.
                     m_fwd_boundary_algos(i, side) =
-                        m_be.get_fwd_algorithm(fwd_algo,
+                        m_be.get_fwd_algorithm(m_fwd_find_algo,
                                                &m_input_boundaries_d(i, side),
                                                input,
                                                &m_filter_d,
@@ -2159,16 +2151,20 @@ protected:
                         << util::get_name(m_fwd_boundary_algos(i, side));
                 }
             });
+
+            cache_algos(m_fwd_algo_cache);
         }
     }
 
-    void setup_algorithms_bwd(const std::string& bwd_data_algo,
-                              const std::string& bwd_filter_algo,
-                              void* input,
-                              void* filter,
-                              void* output,
-                              size_t ws_size = 0)
+    void setup_algorithms_bwd_data(void* input,
+                                   void const* filter,
+                                   void const* output,
+                                   size_t ws_size = 0)
     {
+        if (check_cache_and_restore_algos(m_bwd_data_algo_cache)) return;
+
+        set_find_workspace_size(ws_size);
+
         // Similarly to setup_algorithms_fwd, m_fwd_algo is set when
         // deconv is used.
         if (m_chanfilt_algo == ChannelParallelismAlgorithm::X)
@@ -2182,7 +2178,7 @@ protected:
                     m_filter_d,
                     "stationary-x setup algos backward-data");
                 m_bwd_data_algo = m_be.get_bwd_data_algorithm(
-                    bwd_data_algo,
+                    m_bwd_data_find_algo,
                     &m_filter_d,
                     filter,
                     &m_d_output_gathered_d,
@@ -2192,26 +2188,10 @@ protected:
                     input,
                     ws_size);
             }
-            ensure_tensor_descriptors_conform(
-                m_input_d,
-                m_d_output_gathered_d,
-                m_filter_d,
-                "stationary-x setup algos backward-filter");
-            m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
-                bwd_filter_algo,
-                &m_input_d,
-                input,
-                &m_d_output_gathered_d,
-                m_d_output_gathered_t.get_buffer(),
-                &m_conv_bwd_filter_d,
-                &m_d_filter_d,
-                filter,
-                ws_size);
             release_tmp_tensor_buffer(m_d_output_gathered_t);
         }
         else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y)
         {
-            get_tmp_tensor_buffer(m_input_gathered_t);
             get_tmp_tensor_buffer(m_d_input_all_channels_t);
             if (!m_skip_bp_data)
             {
@@ -2221,7 +2201,7 @@ protected:
                     m_filter_d,
                     "stationary-y setup algos backward-data");
                 m_bwd_data_algo = m_be.get_bwd_data_algorithm(
-                    bwd_data_algo,
+                    m_bwd_data_find_algo,
                     &m_filter_d,
                     filter,
                     &m_d_output_d,
@@ -2231,27 +2211,10 @@ protected:
                     m_d_input_all_channels_t.get_buffer(),
                     ws_size);
             }
-            ensure_tensor_descriptors_conform(
-                m_input_gathered_d,
-                m_d_output_d,
-                m_filter_d,
-                "stationary-y setup algos backward-filter");
-            m_bwd_filter_algo =
-                m_be.get_bwd_filter_algorithm(bwd_filter_algo,
-                                              &m_input_gathered_d,
-                                              m_input_gathered_t.get_buffer(),
-                                              &m_d_output_d,
-                                              output,
-                                              &m_conv_bwd_filter_d,
-                                              &m_d_filter_d,
-                                              filter,
-                                              ws_size);
-            release_tmp_tensor_buffer(m_input_gathered_t);
             release_tmp_tensor_buffer(m_d_input_all_channels_t);
         }
         else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W)
         {
-            get_tmp_tensor_buffer(m_input_gathered_t);
             get_tmp_tensor_buffer(m_d_output_gathered_t);
             get_tmp_tensor_buffer(m_d_input_all_channels_t);
             if (!m_skip_bp_data)
@@ -2262,7 +2225,7 @@ protected:
                     m_filter_d,
                     "stationary-w setup algos backward-data");
                 m_bwd_data_algo = m_be.get_bwd_data_algorithm(
-                    bwd_data_algo,
+                    m_bwd_data_find_algo,
                     &m_filter_d,
                     filter,
                     &m_d_output_gathered_d,
@@ -2272,22 +2235,6 @@ protected:
                     m_d_input_all_channels_t.get_buffer(),
                     ws_size);
             }
-            ensure_tensor_descriptors_conform(
-                m_input_gathered_d,
-                m_d_output_gathered_d,
-                m_filter_d,
-                "stationary-w setup algos backward-filter");
-            m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
-                bwd_filter_algo,
-                &m_input_gathered_d,
-                m_input_gathered_t.get_buffer(),
-                &m_d_output_gathered_d,
-                m_d_output_gathered_t.get_buffer(),
-                &m_conv_bwd_filter_d,
-                &m_d_filter_d,
-                filter,
-                ws_size);
-            release_tmp_tensor_buffer(m_input_gathered_t);
             release_tmp_tensor_buffer(m_d_output_gathered_t);
             release_tmp_tensor_buffer(m_d_input_all_channels_t);
         }
@@ -2302,7 +2249,7 @@ protected:
                         m_d_output_d,
                         m_filter_d,
                         "setup algos backward-data");
-                    m_bwd_data_algo = m_be.get_bwd_data_algorithm(bwd_data_algo,
+                    m_bwd_data_algo = m_be.get_bwd_data_algorithm(m_bwd_data_find_algo,
                                                                   &m_filter_d,
                                                                   filter,
                                                                   &m_d_output_d,
@@ -2314,7 +2261,7 @@ protected:
                 }
                 else
                 {
-                    m_fwd_algo = m_be.get_fwd_algorithm(bwd_data_algo,
+                    m_fwd_algo = m_be.get_fwd_algorithm(m_bwd_data_find_algo,
                                                         &m_d_output_d,
                                                         output,
                                                         &m_filter_d,
@@ -2325,6 +2272,93 @@ protected:
                                                         ws_size);
                 }
             }
+        }
+        if (!m_skip_bp_data)
+        {
+            util::MPIPrintStreamDebug()
+                << "Convolution backward data algorithm: "
+                << (m_deconv ? util::get_name(m_fwd_algo)
+                             : util::get_name(m_bwd_data_algo));
+        }
+
+        cache_algos(m_bwd_data_algo_cache);
+    }
+
+    void setup_algorithms_bwd_filter(void const* input,
+                                     void* filter,
+                                     void const* output,
+                                     size_t ws_size = 0)
+    {
+        if (check_cache_and_restore_algos(m_bwd_filter_algo_cache)) return;
+
+        set_find_workspace_size(ws_size);
+
+        // Similarly to setup_algorithms_fwd, m_fwd_algo is set when
+        // deconv is used.
+        if (m_chanfilt_algo == ChannelParallelismAlgorithm::X)
+        {
+            get_tmp_tensor_buffer(m_d_output_gathered_t);
+            ensure_tensor_descriptors_conform(
+                m_input_d,
+                m_d_output_gathered_d,
+                m_filter_d,
+                "stationary-x setup algos backward-filter");
+            m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
+                m_bwd_filter_find_algo,
+                &m_input_d,
+                input,
+                &m_d_output_gathered_d,
+                m_d_output_gathered_t.get_buffer(),
+                &m_conv_bwd_filter_d,
+                &m_d_filter_d,
+                filter,
+                ws_size);
+            release_tmp_tensor_buffer(m_d_output_gathered_t);
+        }
+        else if (m_chanfilt_algo == ChannelParallelismAlgorithm::Y)
+        {
+            get_tmp_tensor_buffer(m_input_gathered_t);
+            ensure_tensor_descriptors_conform(
+                m_input_gathered_d,
+                m_d_output_d,
+                m_filter_d,
+                "stationary-y setup algos backward-filter");
+            m_bwd_filter_algo =
+                m_be.get_bwd_filter_algorithm(m_bwd_filter_find_algo,
+                                              &m_input_gathered_d,
+                                              m_input_gathered_t.get_buffer(),
+                                              &m_d_output_d,
+                                              output,
+                                              &m_conv_bwd_filter_d,
+                                              &m_d_filter_d,
+                                              filter,
+                                              ws_size);
+            release_tmp_tensor_buffer(m_input_gathered_t);
+        }
+        else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W)
+        {
+            get_tmp_tensor_buffer(m_input_gathered_t);
+            get_tmp_tensor_buffer(m_d_output_gathered_t);
+            ensure_tensor_descriptors_conform(
+                m_input_gathered_d,
+                m_d_output_gathered_d,
+                m_filter_d,
+                "stationary-w setup algos backward-filter");
+            m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
+                m_bwd_filter_find_algo,
+                &m_input_gathered_d,
+                m_input_gathered_t.get_buffer(),
+                &m_d_output_gathered_d,
+                m_d_output_gathered_t.get_buffer(),
+                &m_conv_bwd_filter_d,
+                &m_d_filter_d,
+                filter,
+                ws_size);
+            release_tmp_tensor_buffer(m_input_gathered_t);
+            release_tmp_tensor_buffer(m_d_output_gathered_t);
+        }
+        else
+        {
             if (!m_deconv)
             {
                 ensure_tensor_descriptors_conform(
@@ -2333,7 +2367,7 @@ protected:
                     m_filter_d,
                     "setup algos backward-filter");
                 m_bwd_filter_algo =
-                    m_be.get_bwd_filter_algorithm(bwd_filter_algo,
+                    m_be.get_bwd_filter_algorithm(m_bwd_filter_find_algo,
                                                   &m_input_d,
                                                   input,
                                                   &m_d_output_d,
@@ -2346,7 +2380,7 @@ protected:
             else
             {
                 m_bwd_filter_algo =
-                    m_be.get_bwd_filter_algorithm(bwd_filter_algo,
+                    m_be.get_bwd_filter_algorithm(m_bwd_filter_find_algo,
                                                   &m_d_output_d,
                                                   output,
                                                   &m_input_d,
@@ -2357,15 +2391,10 @@ protected:
                                                   ws_size);
             }
         }
-        if (!m_skip_bp_data)
-        {
-            util::MPIPrintStreamDebug()
-                << "Convolution backward data algorithm: "
-                << (m_deconv ? util::get_name(m_fwd_algo)
-                             : util::get_name(m_bwd_data_algo));
-        }
         util::MPIPrintStreamDebug() << "Convolution backward filter algorithm: "
                                     << util::get_name(m_bwd_filter_algo);
+
+        cache_algos(m_bwd_filter_algo_cache);
     }
 
     void setup_workspace_sizes()
@@ -3154,6 +3183,54 @@ protected:
                 << "Unsupported num_dims " << m_num_dims;
             std::abort();
         }
+    }
+
+    bool check_cache_and_restore_algos(AlgoCache cache){
+        int num_samples = backend::get_tensor_num_samples(m_input_d);
+
+        auto cached_algos = cache.find(num_samples);
+        if (cached_algos != cache.end()){
+            AlgoTuple algos = cached_algos->second;
+            m_fwd_algo = std::get<0>(algos);
+            m_bwd_data_algo = std::get<1>(algos);
+            m_bwd_filter_algo = std::get<2>(algos);
+            m_fwd_boundary_algos = std::get<3>(algos);
+            
+            return true;
+        }
+
+        return false;
+    }
+
+    void cache_algos(AlgoCache cache){
+        int num_samples = backend::get_tensor_num_samples(m_input_d);
+        cache[num_samples] = AlgoTuple(m_fwd_algo,
+                                       m_bwd_data_algo,
+                                       m_bwd_filter_algo,
+                                       m_fwd_boundary_algos);
+    }
+
+    void set_find_workspace_size(size_t& ws_size){
+        if (ws_size == 0)
+        {
+            size_t const available = backend::get_available_memory();
+            ws_size = available * 0.8;
+        }
+
+        auto& mempool = internal::RuntimeGPU::get_device_memory_pool();
+        // take the maximum size that does not exceed the request size
+        auto actual_ws_size = mempool.get_max_allocatable_size(ws_size);
+        // adjust the size with an option value
+        actual_ws_size *= m_be.get_options().m_ws_capacity_factor;
+        actual_ws_size = mempool.get_max_allocatable_size(actual_ws_size);
+
+        util::MPIRootPrintStreamDebug()
+            << "Requested workspace size: " << ws_size << " ("
+            << int(ws_size / 1024.0 / 1024.0)
+            << " MB), actual size: " << actual_ws_size << " ("
+            << int(actual_ws_size / 1024.0 / 1024.0) << " MB)";
+        
+        ws_size = actual_ws_size;
     }
 };
 
