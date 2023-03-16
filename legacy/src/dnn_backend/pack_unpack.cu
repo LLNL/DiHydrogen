@@ -1,131 +1,8 @@
+#include "h2/utils/IntegerMath.hpp"
+
 #include <hip/hip_runtime.h>
 
-namespace
-{
-template <typename T>
-struct IntegerTraits;
-
-template <>
-struct IntegerTraits<int32_t>
-{
-    using type = int32_t;
-    using signed_type = int32_t;
-    using unsigned_type = uint32_t;
-    static constexpr int nbits = 32;
-};
-
-template <>
-struct IntegerTraits<uint32_t>
-{
-    using type = uint32_t;
-    using signed_type = int32_t;
-    using unsigned_type = uint32_t;
-    static constexpr int nbits = 32;
-};
-
-template <>
-struct IntegerTraits<int64_t>
-{
-    using type = int64_t;
-    using signed_type = int64_t;
-    using unsigned_type = uint64_t;
-    static constexpr int nbits = 64;
-};
-
-template <>
-struct IntegerTraits<uint64_t>
-{
-    using type = uint64_t;
-    using signed_type = int64_t;
-    using unsigned_type = uint64_t;
-    static constexpr int nbits = 64;
-};
-
-template <typename IType>
-using SType = typename IntegerTraits<IType>::signed_type;
-
-template <typename IType>
-using UType = typename IntegerTraits<IType>::unsigned_type;
-
-template <typename IType>
-inline constexpr auto NBits = IntegerTraits<IType>::nbits;
-
-template <typename IType>
-inline constexpr bool IsSigned = std::is_same_v<SType<IType>, IType>;
-
-template <typename IType>
-inline constexpr bool IsUnsigned = std::is_same_v<UType<IType>, IType>;
-
-template <typename IType>
-__forceinline__ __host__ __device__ auto ceillog2(IType const& d)
-{
-    static_assert(IsUnsigned<IType>, "divisor should be unsigned");
-    static constexpr auto nbits = NBits<IType>;
-    int ell = 0;
-    for (ell = 0; ell < nbits; ++ell)
-        if ((static_cast<IType>(1) << ell) >= d)
-            break;
-    return ell;
-}
-
-__forceinline__ __device__ uint32_t mulhi(uint32_t x, uint32_t y)
-{
-    return __umulhi(x, y);
-}
-
-__forceinline__ __device__ uint64_t mulhi(uint64_t x, uint64_t y)
-{
-    return __umul64hi(x, y);
-}
-
-// Handy container for the "l" and "m'" values in Figure 4.1 of
-// https://gmplib.org/~tege/divcnst-pldi94.pdf
-template <typename IType>
-class FastDiv
-{
-    static_assert(IsUnsigned<IType>, "FastDiv for unsigned division only");
-
-public:
-    using UInt = UType<IType>;
-
-public:
-    FastDiv() : FastDiv(1u) {}
-    FastDiv(UInt d) : div_{d}
-    {
-        int ell = ceillog2(d);
-        mprime_ =
-            static_cast<UInt>(((1ul << 32) * ((1ul << ell) - d) / d) + 1ul);
-        sh1_ = min(ell, 1);
-        sh2_ = max(ell - 1, 0);
-    }
-
-    // This lets it masquerade as a dim if needed
-    __host__ __device__ operator UInt const&() const noexcept { return div_; }
-    __forceinline__ __host__ __device__ void
-    divmod(UInt const& in, UInt& q, UInt& r) const noexcept
-    {
-        UInt const t1 = mulhi(mprime_, in);
-        // There's a warning in the paper not to compute it this way
-        // since the sum may overflow N bits. In preliminary tests,
-        // overflow was not observed, but the measurable impact on
-        // performance was negligible. So safety first and all that...
-        // But I'm leaving it here in case anyone wants to reevaluate
-        // that claim later on. One shift is better than two. (An
-        // alternative approach could be to use 2*N bits for the
-        // result of (t1+in) and cast the result of the shift back to
-        // N bits before return. I have not looked into any
-        // performance implications of this.)
-        // q = (t1 + in) >> ell_;
-        q = (t1 + ((in - t1) >> sh1_)) >> sh2_;
-        r = in - (q * div_);
-    }
-
-private:
-    UInt div_;
-    UInt mprime_;
-    int sh1_;
-    int sh2_;
-};
+namespace {
 
 template <typename T, size_t ND>
 struct array
@@ -135,7 +12,7 @@ struct array
 
 template <typename IType, size_t ND>
 __forceinline__ __host__ __device__ auto
-get_size(array<FastDiv<IType>, ND> const& dims)
+get_size(array<h2::FastDiv<IType>, ND> const& dims)
 {
     IType size = 1;
 #pragma unroll
@@ -147,7 +24,7 @@ get_size(array<FastDiv<IType>, ND> const& dims)
 template <typename IType, size_t ND>
 __forceinline__ __host__ __device__ IType
 get_real_idx(IType idx,
-             array<FastDiv<IType>, ND> const& dims,
+             array<h2::FastDiv<IType>, ND> const& dims,
              array<IType, ND> const& strides)
 {
     IType real_idx = 0;
@@ -166,13 +43,13 @@ template <typename IType, size_t ND>
 __global__ void copy_kernel(float const alpha,
                             float const beta,
                             size_t const max_index,
-                            array<FastDiv<IType>, ND> const dims,
+                            array<h2::FastDiv<IType>, ND> const dims,
                             array<IType, ND> const src_strides,
                             array<IType, ND> const tgt_strides,
                             float const* src_data,
                             float* tgt_data)
 {
-    using UInt = UType<IType>;
+    using UInt = h2::UType<IType>;
     UInt const num_thds = blockDim.x * gridDim.x;
 
     for (UInt entry1d = threadIdx.x + blockIdx.x * blockDim.x;
@@ -196,7 +73,7 @@ void launch_kernel(float const& alpha,
                    hipStream_t stream)
 {
     using int_type = uint32_t;
-    using FastDivT = FastDiv<int_type>;
+    using FastDivT = h2::FastDiv<int_type>;
     array<int_type, ND> src_strides, tgt_strides;
     array<FastDivT, ND> dims;
     for (size_t i = ND; i > 0; --i)

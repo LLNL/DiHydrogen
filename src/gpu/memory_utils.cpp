@@ -13,7 +13,7 @@
 #include <cuda_runtime.h>
 #elif H2_HAS_ROCM
 #include <hip/hip_runtime.h>
-#include <hipcub/hipcub.hpp>
+#include <hipcub/util_allocator.hpp>
 #endif
 
 #include <cstdlib>
