@@ -9,6 +9,7 @@
 #define H2_INCLUDE_H2_GPU_ROCM_RUNTIME_HPP_INCLUDED
 
 #include <hip/hip_runtime.h>
+#include <sstream>
 
 #define H2_CHECK_HIP(CMD)                                                      \
     do                                                                         \
