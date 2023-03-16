@@ -132,7 +132,7 @@ struct TestFunctorWithArgs
 using DTypes = TL<derived_one, derived_two, derived_three>;
 using DTypesNoD3 = TL<derived_one, derived_two>;
 
-TEST_CASE("Switch dispatcher", "[h2][utils][multimethods]")
+TEST_CASE("Switch dispatcher", "[utilities][multimethods]")
 {
     derived_one d1;
     derived_two d2;
