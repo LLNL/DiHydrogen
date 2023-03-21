@@ -188,7 +188,7 @@ public:
         mprime_ = static_cast<UInt>(((bigone << N) * ((bigone << ell) - d) / d)
                                     + one);
         sh1_ = (ell < 1 ? ell : 1);
-        sh2_ = (ell = 0 ? 0 : ell - 1);
+        sh2_ = (ell == 0 ? 0 : ell - 1);
     }
 
     // This lets it masquerade as a dim if needed

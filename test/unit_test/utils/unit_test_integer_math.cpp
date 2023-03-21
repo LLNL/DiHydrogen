@@ -25,6 +25,8 @@ TEMPLATE_TEST_CASE("ceillog2", "[math][utilities]", uint32_t, uint64_t)
     CHECK(ceillog2(static_cast<UInt>(0)) == 0);
     CHECK(ceillog2(std::numeric_limits<UInt>::max()) == bits);
 
+    CHECK(ceillog2(static_cast<UInt>(1)) == 0);
+
     for (auto i = decltype(bits){1}; i < bits; ++i)
     {
         if (i > 1)
@@ -98,11 +100,14 @@ TEMPLATE_TEST_CASE("FastDiv", "[math][utilities]", uint32_t, uint64_t)
     using UInt = TestType;
     using FDiv = FastDiv<UInt>;
 
-    UInt const divisor = 17;
+    UInt const divisor = GENERATE(1,2,3,10,12,17,21,35,50,51,99,100,101);
+    INFO("Divisor = " << divisor);
+
     FDiv divmod = FDiv{divisor};
     UInt q, r;
     for (UInt num = 0; num < 100; ++num)
     {
+        INFO("Numerator = " << num);
         CHECK_NOTHROW(divmod.divmod(num, q, r));
         CHECK(q == num / divisor);
         CHECK(r == num % divisor);
