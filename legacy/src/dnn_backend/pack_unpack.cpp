@@ -48,19 +48,17 @@ namespace
 bool do_pack_unpack() noexcept
 {
     static bool const val = []() {
+#if H2_HAS_ROCM
+        bool tf = true;
+#else
+        bool tf = false;
+#endif
         char const* env = std::getenv("H2_DISTCONV_FORCE_PACKED");
         if (env)
-        {
-            bool const tf = (env && std::strlen(env) && env[0] != '0');
-            H2_GPU_INFO("Doing pack/unpack: {}", tf);
-            return tf;
-        }
-#if H2_HAS_ROCM
-        return true;
-#else
-        return false;
-#endif
+            tf = (env && std::strlen(env) && env[0] != '0');
         // Any nonempty string matching "[^0].*" is truthy.
+        H2_GPU_INFO("Doing pack/unpack: {}", tf);
+        return tf;
     } ();
 
     return val;
