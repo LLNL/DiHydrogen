@@ -25,6 +25,8 @@
 #define H2_HAS_GPU
 #endif
 
+#cmakedefine01 H2_HAS_MPI
+
 // Features detected at configure time
 #define H2_PRETTY_FUNCTION @H2_PRETTY_FUNCTION@
 #define H2_RESTRICT @H2_RESTRICT@

@@ -315,6 +315,12 @@ if (MPI_FOUND AND H2_HAS_ROCM)
   endif ()
 endif ()
 
+if (MPI_CXX_FOUND)
+  set(H2_HAS_MPI TRUE)
+else ()
+  set(H2_HAS_MPI FALSE)
+endif ()
+
 # Decide where to put generated include files.
 set(CMAKE_GENERATED_INCLUDE_DIRECTORY
   "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
@@ -363,7 +369,8 @@ target_link_libraries(H2Core PRIVATE
 target_link_libraries(H2Core PUBLIC
   spdlog::spdlog
   ${H2_CUDA_LIBS}
-  ${H2_ROCM_LIBS})
+  ${H2_ROCM_LIBS}
+  $<$<BOOL:H2_HAS_MPI>:MPI::MPI_CXX>)
 
 install(TARGETS H2Core
   EXPORT DiHydrogenTargets
@@ -377,7 +384,6 @@ add_subdirectory(test)
 
 # Setup clang format
 if (TARGET clang-format)
-#  add_clang_format_to_targets(TARGETS H2Core H2Meta)
   add_clang_format_to_all_targets(TARGETS H2Core H2Meta)
 endif ()
 

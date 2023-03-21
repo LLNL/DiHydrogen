@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
+#include "h2_config.hpp"
+
 #include "h2/utils/Logger.hpp"
 #include "logger_internals.hpp"
 
@@ -17,7 +19,7 @@
 #include <sstream>
 #include <iostream>
 
-#if __has_include(<mpi.h>)
+#if H2_HAS_MPI
 #define H2_LOGGER_HAS_MPI
 #include <mpi.h>
 #endif
