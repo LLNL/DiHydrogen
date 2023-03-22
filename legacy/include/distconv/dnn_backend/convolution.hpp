@@ -2151,9 +2151,9 @@ protected:
                         << util::get_name(m_fwd_boundary_algos(i, side));
                 }
             });
-
-            cache_algos(m_fwd_algo_cache);
         }
+
+        cache_algos(m_fwd_algo_cache);
     }
 
     void setup_algorithms_bwd_data(void* input,
@@ -3185,7 +3185,7 @@ protected:
         }
     }
 
-    bool check_cache_and_restore_algos(AlgoCache cache){
+    bool check_cache_and_restore_algos(const AlgoCache& cache){
         int num_samples = backend::get_tensor_num_samples(m_input_d);
 
         auto cached_algos = cache.find(num_samples);
@@ -3202,7 +3202,7 @@ protected:
         return false;
     }
 
-    void cache_algos(AlgoCache cache){
+    void cache_algos(AlgoCache& cache){
         int num_samples = backend::get_tensor_num_samples(m_input_d);
         cache[num_samples] = AlgoTuple(m_fwd_algo,
                                        m_bwd_data_algo,
