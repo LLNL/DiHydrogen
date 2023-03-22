@@ -2461,12 +2461,12 @@ protected:
                 "stationary-x setup algos backward-filter");
             m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
                 m_bwd_filter_find_algo,
-                &m_input_d,
+                dnn_lib::read_proxy(m_input_d).desc(),
                 input,
-                &m_d_output_gathered_d,
+                dnn_lib::read_proxy(m_d_output_gathered_d).desc(),
                 m_d_output_gathered_t.get_buffer(),
-                &m_conv_bwd_filter_d,
-                &m_d_filter_d,
+                m_conv_bwd_filter_d,
+                m_d_filter_d,
                 filter,
                 ws_size);
             release_tmp_tensor_buffer(m_d_output_gathered_t);
@@ -2481,12 +2481,12 @@ protected:
                 "stationary-y setup algos backward-filter");
             m_bwd_filter_algo =
                 m_be.get_bwd_filter_algorithm(m_bwd_filter_find_algo,
-                                              &m_input_gathered_d,
+                                              dnn_lib::read_proxy(m_input_gathered_d).desc(),
                                               m_input_gathered_t.get_buffer(),
-                                              &m_d_output_d,
+                                              dnn_lib::read_proxy(m_d_output_d).desc(),
                                               output,
-                                              &m_conv_bwd_filter_d,
-                                              &m_d_filter_d,
+                                              m_conv_bwd_filter_d,
+                                              m_d_filter_d,
                                               filter,
                                               ws_size);
             release_tmp_tensor_buffer(m_input_gathered_t);
@@ -2502,12 +2502,12 @@ protected:
                 "stationary-w setup algos backward-filter");
             m_bwd_filter_algo = m_be.get_bwd_filter_algorithm(
                 m_bwd_filter_find_algo,
-                &m_input_gathered_d,
+                dnn_lib::read_proxy(m_input_gathered_d).desc(),
                 m_input_gathered_t.get_buffer(),
-                &m_d_output_gathered_d,
+                dnn_lib::read_proxy(m_d_output_gathered_d).desc(),
                 m_d_output_gathered_t.get_buffer(),
-                &m_conv_bwd_filter_d,
-                &m_d_filter_d,
+                m_conv_bwd_filter_d,
+                m_d_filter_d,
                 filter,
                 ws_size);
             release_tmp_tensor_buffer(m_input_gathered_t);
