@@ -57,7 +57,7 @@ bool do_pack_unpack() noexcept
         if (env)
             tf = (env && std::strlen(env) && env[0] != '0');
         // Any nonempty string matching "[^0].*" is truthy.
-        H2_GPU_INFO("Doing pack/unpack: {}", tf);
+        H2_GPU_DEBUG("Doing pack/unpack: {}", tf);
         return tf;
     } ();
 
