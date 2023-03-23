@@ -13,16 +13,16 @@ constexpr size_t CONVOLUTION_WORKSPACE_SIZE = 1 << 30;
 #endif // CUDNN_MAJOR < 8
 
 cudnnConvolutionFwdAlgo_t BackendCUDNN::get_fwd_algorithm(
-    const std::string &name,
-    const cudnnTensorDescriptor_t *input_desc,
+    std::string name,
+    const cudnnTensorDescriptor_t input_desc,
     const void *input,
-    const cudnnFilterDescriptor_t *filter_desc,
+    const cudnnFilterDescriptor_t filter_desc,
     const void *filter,
-    const cudnnConvolutionDescriptor_t *conv_desc,
-    const cudnnTensorDescriptor_t *output_desc,
+    const cudnnConvolutionDescriptor_t conv_desc,
+    const cudnnTensorDescriptor_t output_desc,
     void *output,
     size_t ws_size) {
-  std::string n = name;
+  std::string& n = name;
   if (name == "DEFAULT") {
     // Default selection
     n = "HEURISTIC";
@@ -36,18 +36,13 @@ cudnnConvolutionFwdAlgo_t BackendCUDNN::get_fwd_algorithm(
     if (p.second == n) return p.first;
   }
 
-  assert_always(input_desc);
-  assert_always(filter_desc);
-  assert_always(conv_desc);
-  assert_always(output_desc);
-
   if (n == "HEURISTIC") {
     return get_fwd_algorithm_by_heuristics(
-        *input_desc, *filter_desc, *conv_desc, *output_desc,
+        input_desc, filter_desc, conv_desc, output_desc,
         ws_size);
   } else if (n == "AUTOTUNE") {
     return autotune_fwd_algorithm(
-        *input_desc, input, *filter_desc, filter, *conv_desc, *output_desc,
+        input_desc, input, filter_desc, filter, conv_desc, output_desc,
         output, ws_size);
   }
 
@@ -199,16 +194,16 @@ cudnnConvolutionFwdAlgo_t BackendCUDNN::autotune_fwd_algorithm(
 }
 
 cudnnConvolutionBwdDataAlgo_t BackendCUDNN::get_bwd_data_algorithm(
-    const std::string &name,
-    const cudnnFilterDescriptor_t *filter_desc,
+    std::string name,
+    const cudnnFilterDescriptor_t filter_desc,
     const void *filter,
-    const cudnnTensorDescriptor_t *d_output_desc,
+    const cudnnTensorDescriptor_t d_output_desc,
     const void *d_output,
-    const cudnnConvolutionDescriptor_t *conv_desc,
-    const cudnnTensorDescriptor_t *d_input_desc,
+    const cudnnConvolutionDescriptor_t conv_desc,
+    const cudnnTensorDescriptor_t d_input_desc,
     void *d_input,
     size_t ws_size) {
-  std::string n = name;
+  std::string& n = name;
   if (name == "DEFAULT") {
     // Default selection
     n = "HEURISTIC";
@@ -222,19 +217,14 @@ cudnnConvolutionBwdDataAlgo_t BackendCUDNN::get_bwd_data_algorithm(
     if (p.second == n) return p.first;
   }
 
-  assert_always(filter_desc);
-  assert_always(d_output_desc);
-  assert_always(conv_desc);
-  assert_always(d_input_desc);
-
   if (n == "HEURISTIC") {
     return get_bwd_data_algorithm_by_heuristics(
-        *filter_desc, *d_output_desc, *conv_desc, *d_input_desc,
+        filter_desc, d_output_desc, conv_desc, d_input_desc,
         ws_size);
   } else if (n == "AUTOTUNE") {
     return autotune_bwd_data_algorithm(
-        *filter_desc, filter, *d_output_desc, d_output, *conv_desc,
-        *d_input_desc, d_input, ws_size);
+        filter_desc, filter, d_output_desc, d_output, conv_desc,
+        d_input_desc, d_input, ws_size);
   }
 
   util::MPIRootPrintStreamError()
@@ -361,16 +351,16 @@ cudnnConvolutionBwdDataAlgo_t BackendCUDNN::autotune_bwd_data_algorithm(
 }
 
 cudnnConvolutionBwdFilterAlgo_t BackendCUDNN::get_bwd_filter_algorithm(
-    const std::string &name,
-    const cudnnTensorDescriptor_t *input_desc,
+    std::string name,
+    const cudnnTensorDescriptor_t input_desc,
     const void *input,
-    const cudnnTensorDescriptor_t *d_output_desc,
+    const cudnnTensorDescriptor_t d_output_desc,
     const void *d_output,
-    const cudnnConvolutionDescriptor_t *conv_desc,
-    const cudnnFilterDescriptor_t *d_filter_desc,
+    const cudnnConvolutionDescriptor_t conv_desc,
+    const cudnnFilterDescriptor_t d_filter_desc,
     void *d_filter,
     size_t ws_size) {
-  std::string n = name;
+  std::string& n = name;
   if (name == "DEFAULT") {
     // Default selection
     n = "HEURISTIC";
@@ -391,12 +381,12 @@ cudnnConvolutionBwdFilterAlgo_t BackendCUDNN::get_bwd_filter_algorithm(
 
   if (n == "HEURISTIC") {
     return get_bwd_filter_algorithm_by_heuristics(
-        *input_desc, *d_output_desc, *conv_desc, *d_filter_desc,
+        input_desc, d_output_desc, conv_desc, d_filter_desc,
         ws_size);
   } else if (n == "AUTOTUNE") {
     return autotune_bwd_filter_algorithm(
-        *input_desc, input, *d_output_desc, d_output, *conv_desc,
-        *d_filter_desc, d_filter, ws_size);
+        input_desc, input, d_output_desc, d_output, conv_desc,
+        d_filter_desc, d_filter, ws_size);
   }
 
   util::MPIRootPrintStreamError()

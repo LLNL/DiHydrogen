@@ -6,5 +6,6 @@
 ################################################################################
 
 target_sources(SeqCatchTests PRIVATE
+  unit_test_integer_math.cpp
   unit_test_logging.cpp
   )

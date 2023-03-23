@@ -4,6 +4,8 @@
 
 #include <distconv_config.hpp>
 
+#include "pack_unpack.hpp"
+
 #if H2_HAS_CUDA
 #include "backend_cudnn.hpp"
 namespace distconv

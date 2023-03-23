@@ -62,7 +62,8 @@ target_link_libraries(distconv PUBLIC
   ${H2_CUDA_LIBS}
   ${H2_ROCM_LIBS}
   ${Aluminum_LIBRARIES}
-  MPI::MPI_CXX)
+  MPI::MPI_CXX
+  $<TARGET_NAME_IF_EXISTS:OpenMP::OpenMP_CXX>)
 
 get_target_property(DISTCONV_MPI_CXX_INCL_DIRS
   MPI::MPI_CXX INTERFACE_INCLUDE_DIRECTORIES)

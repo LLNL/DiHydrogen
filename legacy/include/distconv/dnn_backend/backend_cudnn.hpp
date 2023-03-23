@@ -47,8 +47,8 @@ using PoolingMode_t = cudnnPoolingMode_t;
 using TensorDescriptor_t = cudnnTensorDescriptor_t;
 using Handle_t = cudnnHandle_t;
 using Stream_t = cudaStream_t;
-
 using Event_t = cudaEvent_t;
+
 inline Event_t make_event()
 {
     cudaEvent_t event;
@@ -91,6 +91,13 @@ inline Handle_t make_handle()
 inline void destroy_handle(cudnnHandle_t handle)
 {
     DISTCONV_CHECK_CUDNN(cudnnDestroy(handle));
+}
+
+inline Stream_t get_stream(cudnnHandle_t handle)
+{
+    Stream_t stream;
+    DISTCONV_CHECK_CUDNN(cudnnGetStream(handle, &stream));
+    return stream;
 }
 
 inline void set_stream(cudnnHandle_t handle, Stream_t stream)
@@ -662,10 +669,10 @@ inline void activation_forward(cudnnHandle_t handle,
                                cudnnActivationDescriptor_t const& desc,
                                T const& alpha,
                                cudnnTensorDescriptor_t const& in_desc,
-                               T const* in_data,
+                               void const* in_data,
                                T const& beta,
                                cudnnTensorDescriptor_t const& out_desc,
-                               T* out_data)
+                               void* out_data)
 {
     DISTCONV_CHECK_CUDNN(cudnnActivationForward(
         handle, desc, &alpha, in_desc, in_data, &beta, out_desc, out_data));
@@ -676,14 +683,14 @@ inline void activation_backward(cudnnHandle_t handle,
                                 cudnnActivationDescriptor_t const& desc,
                                 T const& alpha,
                                 cudnnTensorDescriptor_t const& out_desc,
-                                T const* out_data,
+                                void const* out_data,
                                 cudnnTensorDescriptor_t const& d_out_desc,
-                                T const* d_out_data,
+                                void const* d_out_data,
                                 cudnnTensorDescriptor_t const& in_desc,
-                                T const* in_data,
+                                void const* in_data,
                                 T const& beta,
                                 cudnnTensorDescriptor_t const& d_in_desc,
-                                T* d_in_data)
+                                void* d_in_data)
 {
     DISTCONV_CHECK_CUDNN(cudnnActivationBackward(handle,
                                                  desc,
@@ -885,35 +892,35 @@ public:
     }
 
     cudnnConvolutionFwdAlgo_t
-    get_fwd_algorithm(const std::string& name,
-                      const cudnnTensorDescriptor_t* input_desc,
+    get_fwd_algorithm(std::string name,
+                      cudnnTensorDescriptor_t input_desc,
                       const void* input,
-                      const cudnnFilterDescriptor_t* filter_desc,
+                      cudnnFilterDescriptor_t filter_desc,
                       const void* filter,
-                      const cudnnConvolutionDescriptor_t* conv_desc,
-                      const cudnnTensorDescriptor_t* output_desc,
+                      cudnnConvolutionDescriptor_t conv_desc,
+                      cudnnTensorDescriptor_t output_desc,
                       void* output,
                       size_t ws_size);
 
     cudnnConvolutionBwdDataAlgo_t
-    get_bwd_data_algorithm(const std::string& name,
-                           const cudnnFilterDescriptor_t* filter_desc,
+    get_bwd_data_algorithm(std::string name,
+                           cudnnFilterDescriptor_t filter_desc,
                            const void* filter,
-                           const cudnnTensorDescriptor_t* d_output_desc,
+                           cudnnTensorDescriptor_t d_output_desc,
                            const void* d_output,
-                           const cudnnConvolutionDescriptor_t* conv_desc,
-                           const cudnnTensorDescriptor_t* d_input_desc,
+                           cudnnConvolutionDescriptor_t conv_desc,
+                           cudnnTensorDescriptor_t d_input_desc,
                            void* d_input,
                            size_t ws_size);
 
     cudnnConvolutionBwdFilterAlgo_t
-    get_bwd_filter_algorithm(const std::string& name,
-                             const cudnnTensorDescriptor_t* input_desc,
+    get_bwd_filter_algorithm(std::string name,
+                             cudnnTensorDescriptor_t input_desc,
                              const void* input,
-                             const cudnnTensorDescriptor_t* d_output_desc,
+                             cudnnTensorDescriptor_t d_output_desc,
                              const void* d_output,
-                             const cudnnConvolutionDescriptor_t* conv_desc,
-                             const cudnnFilterDescriptor_t* d_filter_desc,
+                             cudnnConvolutionDescriptor_t conv_desc,
+                             cudnnFilterDescriptor_t d_filter_desc,
                              void* d_filter,
                              size_t ws_size);
 

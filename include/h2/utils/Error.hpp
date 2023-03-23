@@ -44,7 +44,7 @@
  *                `false`.
  *  @param ... The arguments to pass to the exception.
  */
-#define H2_ASSERT_MSG(cond, excptn, ...)                                       \
+#define H2_ASSERT(cond, excptn, ...)                                           \
     if (!(cond))                                                               \
         throw excptn(__VA_ARGS__);
 

@@ -93,6 +93,13 @@ inline void set_stream(miopenHandle_t handle, Stream_t stream)
     DISTCONV_CHECK_MIOPEN(miopenSetStream(handle, stream));
 }
 
+inline Stream_t get_stream(miopenHandle_t handle)
+{
+    Stream_t stream;
+    DISTCONV_CHECK_MIOPEN(miopenGetStream(handle, &stream));
+    return stream;
+}
+
 inline miopenTensorDescriptor_t make_tensor_descriptor()
 {
     miopenTensorDescriptor_t desc;
@@ -717,10 +724,10 @@ inline void activation_forward(miopenHandle_t handle,
                                miopenActivationDescriptor_t const& desc,
                                T const& alpha,
                                miopenTensorDescriptor_t const& in_desc,
-                               T const* in_data,
+                               void const* in_data,
                                T const& beta,
                                miopenTensorDescriptor_t const& out_desc,
-                               T* out_data)
+                               void* out_data)
 {
     DISTCONV_CHECK_MIOPEN(miopenActivationForward(
         handle, desc, &alpha, in_desc, in_data, &beta, out_desc, out_data));
@@ -731,14 +738,14 @@ inline void activation_backward(miopenHandle_t handle,
                                 miopenActivationDescriptor_t const& desc,
                                 T const& alpha,
                                 miopenTensorDescriptor_t const& out_desc,
-                                T const* out_data,
+                                void const* out_data,
                                 miopenTensorDescriptor_t const& d_out_desc,
-                                T const* d_out_data,
+                                void const* d_out_data,
                                 miopenTensorDescriptor_t const& in_desc,
-                                T const* in_data,
+                                void const* in_data,
                                 T const& beta,
                                 miopenTensorDescriptor_t const& d_in_desc,
-                                T* d_in_data)
+                                void* d_in_data)
 {
     DISTCONV_CHECK_MIOPEN(miopenActivationBackward(handle,
                                                    desc,
@@ -938,35 +945,35 @@ public:
     }
 
     miopenConvFwdAlgorithm_t
-    get_fwd_algorithm(std::string const& name,
-                      miopenTensorDescriptor_t const* input_desc,
+    get_fwd_algorithm(std::string name,
+                      miopenTensorDescriptor_t input_desc,
                       void const* input,
-                      miopenTensorDescriptor_t const* filter_desc,
+                      miopenTensorDescriptor_t filter_desc,
                       void const* filter,
-                      miopenConvolutionDescriptor_t const* conv_desc,
-                      miopenTensorDescriptor_t const* output_desc,
+                      miopenConvolutionDescriptor_t conv_desc,
+                      miopenTensorDescriptor_t output_desc,
                       void* output,
                       size_t ws_size);
 
     miopenConvBwdDataAlgorithm_t
-    get_bwd_data_algorithm(std::string const& name,
-                           miopenTensorDescriptor_t const* filter_desc,
+    get_bwd_data_algorithm(std::string name,
+                           miopenTensorDescriptor_t filter_desc,
                            void const* filter,
-                           miopenTensorDescriptor_t const* d_output_desc,
+                           miopenTensorDescriptor_t d_output_desc,
                            void const* d_output,
-                           miopenConvolutionDescriptor_t const* conv_desc,
-                           miopenTensorDescriptor_t const* d_input_desc,
+                           miopenConvolutionDescriptor_t conv_desc,
+                           miopenTensorDescriptor_t d_input_desc,
                            void* d_input,
                            size_t ws_size);
 
     miopenConvBwdWeightsAlgorithm_t
-    get_bwd_filter_algorithm(std::string const& name,
-                             miopenTensorDescriptor_t const* input_desc,
+    get_bwd_filter_algorithm(std::string name,
+                             miopenTensorDescriptor_t input_desc,
                              void const* input,
-                             miopenTensorDescriptor_t const* d_output_desc,
+                             miopenTensorDescriptor_t d_output_desc,
                              void const* d_output,
-                             miopenConvolutionDescriptor_t const* conv_desc,
-                             miopenTensorDescriptor_t const* d_filter_desc,
+                             miopenConvolutionDescriptor_t conv_desc,
+                             miopenTensorDescriptor_t d_filter_desc,
                              void* d_filter,
                              size_t ws_size);
 
