@@ -81,6 +81,9 @@ option(H2_DEVELOPER_BUILD
 option(H2_ENABLE_CODE_COVERAGE
   "Enable code coverage instrumentation. Requires compiler support."
   OFF)
+option(H2_CI_BUILD
+  "Enable extra code coverage options for CI build."
+  OFF)
 
 # This is exposed as an option in case Catch2 isn't available or
 # whatever.

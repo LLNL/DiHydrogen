@@ -142,8 +142,15 @@ if (NOT (H2_HAVE_LLVM_COVERAGE_TOOLS OR H2_HAVE_GCOV_COVERAGE_TOOLS))
     "the GCOV coverage tools, gcov, lcov, and genhtml.")
 endif ()
 
-set(LLVM_COVERAGE_FLAGS
+if(H2_CI_BUILD)
+  message(STATUS
+    "Setting CI coverage flags")
+  set(LLVM_COVERAGE_FLAGS
+    "--coverage" "-fprofile-arcs" "-ftest-coverage" "-g" "-O0")
+else ()
+  set(LLVM_COVERAGE_FLAGS
   "-fprofile-instr-generate" "-fcoverage-mapping")
+endif ()
 
 set(GCOV_COVERAGE_FLAGS
    "--coverage" "-fprofile-arcs" "-ftest-coverage")
