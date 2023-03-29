@@ -313,6 +313,7 @@ if (MPI_FOUND AND H2_HAS_ROCM)
 endif ()
 
 if (MPI_CXX_FOUND)
+  message(STATUS "H2 HAS MPI_CXX")
   set(H2_HAS_MPI TRUE)
 else ()
   set(H2_HAS_MPI FALSE)
@@ -367,7 +368,7 @@ target_link_libraries(H2Core PUBLIC
   spdlog::spdlog
   ${H2_CUDA_LIBS}
   ${H2_ROCM_LIBS}
-  $<$<BOOL:H2_HAS_MPI>:MPI::MPI_CXX>)
+  $<$<BOOL:${H2_HAS_MPI}>:MPI::MPI_CXX>)
 
 install(TARGETS H2Core
   EXPORT DiHydrogenTargets
