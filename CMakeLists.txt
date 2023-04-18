@@ -216,7 +216,9 @@ if (H2_ENABLE_ROCM)
   endif ()
 
   # These should be part of a bundled ROCm release.
-  find_package(MIOpen CONFIG REQUIRED)
+  if (H2_ENABLE_DISTCONV_LEGACY)
+    find_package(MIOpen CONFIG REQUIRED)
+  endif ()
   find_package(hipcub CONFIG REQUIRED)
   find_package(rocm_smi CONFIG REQUIRED)
 
@@ -225,7 +227,7 @@ if (H2_ENABLE_ROCM)
   set(H2_ROCM_LIBS
     hip::host
     hip::hipcub
-    MIOpen
+    $<TARGET_NAME_IF_EXISTS:MIOpen>
     rocm_smi64
     ${Roctracer_LIBRARIES}
     ${HSA_LIBRARY})
