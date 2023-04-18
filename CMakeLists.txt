@@ -200,13 +200,33 @@ set(H2_HAS_SPDLOG TRUE)
 
 # This is a placeholder.
 if (H2_ENABLE_ROCM)
+  # Our ROCm installs generally have a common prefix. It's not clear
+  # that this is a global truth, but it's global enough for me.
+  if (NOT H2_ROCM_PATH)
+    if (ROCM_PATH)
+      set(H2_ROCM_PATH ${ROCM_PATH})
+    elseif (DEFINED ENV{ROCM_PATH})
+      set(H2_ROCM_PATH $ENV{ROCM_PATH})
+    elseif (HIP_ROOT_DIR)
+      get_filename_component(H2_ROCM_PATH ${HIP_ROOT_DIR} DIRECTORY)
+    endif ()
+  endif ()
+  if (IS_DIRECTORY "${H2_ROCM_PATH}")
+    message(STATUS "Using H2_ROCM_PATH=${H2_ROCM_PATH}")
+    list(PREPEND CMAKE_PREFIX_PATH "${H2_ROCM_PATH}")
+  else ()
+    message(WARNING
+      "Cannot determine ROCM_PATH. "
+      "ROCm packages will be searched by default search method.")
+  endif ()
+
   find_package(hip CONFIG REQUIRED) # This must be first.
 
   # This is used to compile .cu files as HIP files.
   enable_language(HIP)
 
   find_library(HSA_LIBRARY hsa-runtime64
-    HINTS ${ROCM_PATH}/hsa $ENV{ROCM_PATH}/hsa
+    HINTS ${H2_ROCM_PATH}/hsa ${ROCM_PATH}/hsa $ENV{ROCM_PATH}/hsa
     PATH_SUFFIXES lib lib64
     DOC "HSA runtime library"
     NO_DEFAULT_PATH)
