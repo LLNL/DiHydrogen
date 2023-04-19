@@ -1,0 +1,43 @@
+##############################################################################
+# Copyright (c) 2022, Lawrence Livermore National Security, LLC and RADIUSS
+# project contributors. See the COPYRIGHT file for details.
+#
+# SPDX-License-Identifier: (MIT)
+##############################################################################
+
+# With GitLab CI, included files cannot be empty.
+variables:
+  INCLUDED_FILE_CANNOT_BE_EMPTY: "True"
+
+## Template for extra jobs defined by the project.
+#<job-name (usually spec or description)>:
+#  variables:
+#    SPEC: "<spack spec without package name>"
+#  extends: .build_and_test_on_ruby
+
+.load_modules:
+  extends: [.custom_build_and_test, .on_lassen]
+  before_script:
+    - module load cmake/3.23.1
+
+# clang_12_0_1_gcc_8_3_1_cuda_10_1_243:
+#   script:
+#     - echo "Will not be used but job expects a script section"
+#   when: never
+
+# clang_12_0_1_gcc_8_3_1_cuda_11_2_0:
+#   script:
+#     - echo "Will not be used but job expects a script section"
+#   when: never
+
+# clang_14_0_5_gcc_8_3_1_cuda_11_7_0:
+#   allow_failure: true
+
+# xl_2022_08_19_gcc_8_3_1_cuda_11_2_0:
+#   allow_failure: true
+
+# xl_2022_08_19_gcc_8_3_1_cuda_11_7_0:
+#   allow_failure: true
+
+# gcc_8_3_1_cuda_11_7_0:
+#   allow_failure: true

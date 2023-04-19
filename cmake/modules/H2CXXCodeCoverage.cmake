@@ -153,7 +153,7 @@ else ()
 endif ()
 
 set(GCOV_COVERAGE_FLAGS
-   "--coverage" "-fprofile-arcs" "-ftest-coverage")
+   "--coverage" "-fprofile-arcs" "-ftest-coverage" "-g" "-O0")
 
 # We want to use the LLVM coverage flags if compiler is clang and LLVM
 # coverage tools.

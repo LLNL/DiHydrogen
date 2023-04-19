@@ -1,0 +1,43 @@
+##############################################################################
+# Copyright (c) 2022, Lawrence Livermore National Security, LLC and RADIUSS
+# project contributors. See the COPYRIGHT file for details.
+#
+# SPDX-License-Identifier: (MIT)
+##############################################################################
+
+# With GitLab CI, included files cannot be empty.
+variables:
+  INCLUDED_FILE_CANNOT_BE_EMPTY: "True"
+
+## Template for extra jobs defined by the project.
+#<job-name (usually spec or description)>:
+#  variables:
+#    SPEC: "<spack spec without package name>"
+#  extends: [.build_and_test_on_ruby]
+
+#gcc_10_3_1:
+#  variables:
+#    SPEC: "+developer +coverage +ci %gcc@10.3.1"
+#  extends: [.build_and_test_on_corona]
+
+rocmcc_5_4_1_hip:
+  variables:
+    ON_CORONA: "ON"
+    GCOVR: "/usr/workspace/brain/katie/h2_ci_env_corona/bin/gcovr"
+  after_script:
+    - find -name '*.gcno' -exec /opt/rocm-5.4.1/llvm/bin/llvm-cov gcov -b -c -f -r -s
+      ${CI_PROJECT_DIR} {} \;
+    - ${GCOVR} -g -k --cobertura-pretty --exclude-unreachable-branches --print-summary
+      -o corona-coverage.xml
+  coverage: /^\s*lines:\s*\d+.\d+\%/
+  artifacts:
+    when: always
+    paths:
+      - ${CI_PROJECT_DIR}/corona-coverage.xml
+    name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
+    expire_in: 2 days
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: ${CI_PROJECT_DIR}/corona-coverage.xml
+  extends: [.build_and_test_on_corona]

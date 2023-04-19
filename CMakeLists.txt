@@ -6,6 +6,8 @@
 ################################################################################
 
 cmake_minimum_required(VERSION 3.21.0)
+cmake_policy(VERSION 3.21.0)
+set(CMAKE_POLICY_DEFAULT_CMP0074 NEW)
 
 project(DiHydrogen
   VERSION 0.3.0
@@ -198,7 +200,7 @@ if (H2_ENABLE_CUDA)
   endif ()
 endif (H2_ENABLE_CUDA)
 
-find_package(spdlog REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
 set(H2_HAS_SPDLOG TRUE)
 
 # This is a placeholder.

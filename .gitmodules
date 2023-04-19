@@ -1,0 +1,6 @@
+[submodule "scripts/uberenv"]
+	path = scripts/uberenv
+	url = git@github.com:LLNL/uberenv.git
+[submodule "scripts/radiuss-spack-configs"]
+	path = scripts/radiuss-spack-configs
+	url = git@github.com:graham63/radiuss-spack-configs.git
