@@ -65,14 +65,14 @@ corona-build-and-test:
 #   needs: [tioga-up-check]
 #   extends: [.build-and-test]
 
-#  LASSEN
-# lassen-up-check:
-#   variables:
-#     CI_MACHINE: "lassen"
-#   extends: [.machine-check]
+# LASSEN
+lassen-up-check:
+  variables:
+    CI_MACHINE: "lassen"
+  extends: [.machine-check]
 
-# lassen-build-and-test:
-#   variables:
-#     CI_MACHINE: "lassen"
-#   needs: [lassen-up-check]
-#   extends: [.build-and-test]
+lassen-build-and-test:
+  variables:
+    CI_MACHINE: "lassen"
+  needs: [lassen-up-check]
+  extends: [.build-and-test]

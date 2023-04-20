@@ -42,7 +42,7 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     variant(
         "distconv",
         default=False,
-        description="Support distributed convolutions: spatial, channel, " "filter.",
+        description="Support distributed convolutions: spatial, channel, filter.",
     )
     variant("nvshmem", default=False, description="Builds with support for NVSHMEM")
     variant("openmp", default=False, description="Enable CPU acceleration with OpenMP threads.")
@@ -52,7 +52,6 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     conflicts("~cuda", when="+nvshmem")
 
     depends_on("mpi")
-    # FIXME: If version isn't specified it pulls catch2@3.0.1
     depends_on("catch2@2.9.2", type="test")
     depends_on("catch2@2.9.2", when="+developer")
 
@@ -73,17 +72,16 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
 
     # variants +rocm and amdgpu_targets are not automatically passed to
     # dependencies, so do it manually.
-   # FIXME: Error building aluminum
-   # for val in ROCmPackage.amdgpu_targets:
-   #     depends_on("aluminum amdgpu_target=%s" % val, when="amdgpu_target=%s" % val)
+    for val in ROCmPackage.amdgpu_targets:
+        depends_on("aluminum amdgpu_target=%s" % val, when="+al +rocm amdgpu_target=%s" % val)
 
     depends_on("roctracer-dev", when="+rocm +distconv")
 
-    depends_on("cudnn", when="+cuda")
+    depends_on("cudnn", when="+cuda +distconv")
     depends_on("cub", when="^cuda@:10")
 
     #FIXME: does this work?
-    depends_on("lcov", when="+coverage")
+    depends_on("lcov", when="%gcc +coverage")
 
     # Distconv builds require cuda or rocm
     conflicts("+distconv", when="~cuda ~rocm")
@@ -267,9 +265,12 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
             entries.append(cmake_cache_path("Catch2_ROOT", spec["catch2"].prefix))
             entries.append(cmake_cache_option("H2_DEVELOPER_BUILD", True))
 
-        if "+coverage" in spec:
+        if "%gcc +coverage" in spec:
             entries.append(cmake_cache_path("lcov_ROOT", spec["lcov"].prefix))
             entries.append(cmake_cache_path("genhtml_ROOT", spec["lcov"].prefix))
+
+        if "+cuda" in spec and "+distconv" in spec:
+            entries.append(cmake_cache_path("cuDNN_ROOT", spec["cudnn"].prefix))
 
         return entries
 

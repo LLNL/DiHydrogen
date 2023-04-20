@@ -6,8 +6,6 @@
 ################################################################################
 
 variables:
-  #LLNL_LSF_SCHEDULER_PARAMETERS: "-q pbatch -nnodes 1 -W 10"
-  #ENV: /usr/workspace/brain/katie/h2_ci_env_lassen/bin
   GITHUB_PROJECT_NAME: "DiHydrogen"
   GITHUB_PROJECT_ORG: "LLNL"
   # Use an LLNL service user to run CI. This prevents from running pipelines as
@@ -32,10 +30,6 @@ stages:
   - machine-checks
   - build-and-test
 
-# FIXME Put this in the right spot
-#before_script:
-#    - module load cmake/3.23.1
-
 # Template for jobs triggering a build-and-test sub-pipelines:
 .build-and-test:
   stage: build-and-test
@@ -57,36 +51,3 @@ include:
     #file: 'preliminary-ignore-draft-pr.yml'
   # pipelines subscribed by the project
   - local: .gitlab/subscribed-pipelines.yml
-
-  # script:
-  #   - source /usr/share/lmod/lmod/init/$(basename ${SHELL})
-  #   - module load cmake/3.23.1 gcc/8.3.1 python/3.8.2
-  #   - export PATH=/usr/workspace/brain/tom/lassen/ninja/bin:/usr/workspace/brain/lassen/llvm/bin:$PATH
-  #   - export CMAKE_PREFIX_PATH=/usr/workspace/brain/lassen/catch2:/usr/workspace/brain/lassen/spdlog:${CMAKE_PREFIX_PATH}
-  #   - mkdir -p build-lassen
-  #   - ctest --build-and-test . build-lassen --build-generator Ninja
-  #     --build-options
-  #     -DCMAKE_CXX_COMPILER=$(which clang++)
-  #     -DCMAKE_BUILD_TYPE=RelWithDebInfo
-  #     -DH2_DEVELOPER_BUILD=ON
-  #     -DH2_ENABLE_CODE_COVERAGE=ON
-  #     -DH2_CI_BUILD=ON
-  #     --test-command
-  #     ctest --output-junit lassen-ctest.xml
-  #   - find -name '*.gcno' -exec llvm-cov gcov -b -c -f -r -s ${CI_PROJECT_DIR} {} \;
-  #   - ${ENV}/gcovr -g -k --cobertura-pretty --exclude-unreachable-branches --print-summary
-  #     -o lassen-coverage.xml
-  # coverage: /^\s*lines:\s*\d+.\d+\%/
-  # artifacts:
-  #   when: always
-  #   paths:
-  #     - build-lassen/lassen-ctest.xml
-  #     - build-lassen/Testing/Temporary/*.log
-  #     - ${CI_PROJECT_DIR}/lassen-coverage.xml
-  #   name: ${CI_JOB_NAME}-${CI_COMMIT_REF_NAME}-${CI_COMMIT_SHA}
-  #   expire_in: 2 days
-  #   reports:
-  #     junit: build-lassen/lassen-ctest.xml
-  #     coverage_report:
-  #       coverage_format: cobertura
-  #       path: ${CI_PROJECT_DIR}/lassen-coverage.xml

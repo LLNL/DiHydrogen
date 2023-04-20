@@ -6,7 +6,9 @@
 ################################################################################
 
 find_package(CUDAToolkit 11.0.0 REQUIRED)
-find_package(cuDNN REQUIRED)
+if (H2_ENABLE_DISTCONV_LEGACY)
+  find_package(cuDNN REQUIRED)
+endif ()
 
 if (NOT TARGET h2::cuda_toolkit)
   add_library(h2::cuda_toolkit INTERFACE IMPORTED)
@@ -27,7 +29,7 @@ target_include_directories(
 target_link_libraries(
   h2::cuda_toolkit
   INTERFACE
-  cuda::cudnn
+  $<TARGET_NAME_IF_EXISTS:cuda::cudnn>
   CUDA::nvToolsExt
   CUDA::nvml
   CUDA::cuda_driver

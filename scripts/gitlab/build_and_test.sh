@@ -28,21 +28,20 @@ job_unique_id=${CI_JOB_ID:-""}
 
 prefix=""
 
-# FIXME: Why does this error: stale file handle and cannot find pkgconfig without the dev/shm stuff?
-# if [[ -d /dev/shm ]]
-# then
-#     prefix="/dev/shm/${hostname}"
-#     if [[ -z ${job_unique_id} ]]; then
-#       job_unique_id=manual_job_$(date +%s)
-#       while [[ -d ${prefix}-${job_unique_id} ]] ; do
-#           sleep 1
-#           job_unique_id=manual_job_$(date +%s)
-#       done
-#     fi
+if [[ -d /dev/shm ]]
+then
+    prefix="/dev/shm/${hostname}"
+    if [[ -z ${job_unique_id} ]]; then
+        job_unique_id=manual_job_$(date +%s)
+        while [[ -d ${prefix}-${job_unique_id} ]] ; do
+            sleep 1
+            job_unique_id=manual_job_$(date +%s)
+        done
+    fi
 
-#     prefix="${prefix}-${job_unique_id}"
-#     mkdir -p ${prefix}
-# fi
+    prefix="${prefix}-${job_unique_id}"
+    mkdir -p ${prefix}
+fi
 
 # Dependencies
 date
@@ -63,18 +62,18 @@ then
 
     prefix_opt=""
 
-    # if [[ -d /dev/shm ]]
-    # then
-    #     prefix_opt="--prefix=${prefix}"
+    if [[ -d /dev/shm ]]
+    then
+        prefix_opt="--prefix=${prefix}"
 
-    #     # We force Spack to put all generated files (cache and configuration of
-    #     # all sorts) in a unique location so that there can be no collision
-    #     # with existing or concurrent Spack.
-    #     spack_user_cache="${prefix}/spack-user-cache"
-    #     export SPACK_DISABLE_LOCAL_CONFIG=""
-    #     export SPACK_USER_CACHE_PATH="${spack_user_cache}"
-    #     mkdir -p ${spack_user_cache}
-    # fi
+        # We force Spack to put all generated files (cache and configuration of
+        # all sorts) in a unique location so that there can be no collision
+        # with existing or concurrent Spack.
+        spack_user_cache="${prefix}/spack-user-cache"
+        export SPACK_DISABLE_LOCAL_CONFIG=""
+        export SPACK_USER_CACHE_PATH="${spack_user_cache}"
+        mkdir -p ${spack_user_cache}
+    fi
 
     ./scripts/uberenv/uberenv.py --spec="${spec}" ${prefix_opt}
 
@@ -113,21 +112,20 @@ fi
 hostconfig=$(basename ${hostconfig_path})
 
 # Build Directory
-# if [[ -z ${build_root} ]]
-# then
-#     if [[ -d /dev/shm ]]
-#     then
-#         build_root="${prefix}"
-#     else
-#         build_root="$(pwd)"
-#     fi
-# else
-#     build_root="${build_root}"
-# fi
+if [[ -z ${build_root} ]]
+then
+    if [[ -d /dev/shm ]]
+    then
+        build_root="${prefix}"
+    else
+        build_root="$(pwd)"
+    fi
+else
+    build_root="${build_root}"
+fi
 
 build_root="$(pwd)"
 build_dir="${build_root}/build_${hostconfig//.cmake/}"
-export BUILD_DIR=${build_dir}
 install_dir="${build_root}/install_${hostconfig//.cmake/}"
 
 cmake_exe=`grep 'CMake executable' ${hostconfig_path} | cut -d ':' -f 2 | xargs`
@@ -146,7 +144,7 @@ then
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Building DiHydrogen"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-# FIXME: customize this
+
     # Map CPU core allocations
     declare -A core_counts=(["lassen"]=40 ["corona"]=32 ["tioga"]=32 ["pascal"]=36 ["catalyst"]=24)
 
@@ -193,8 +191,9 @@ then
     cd ${build_dir}
 
     # Run tests
+    ctest_exe=$(dirname ${cmake_exe})/ctest
     date
-    ctest --output-on-failure --output-junit ${project_dir}/junit.xml |& tee tests_output.txt
+    ${ctest_exe} --output-on-failure --output-junit ${project_dir}/${hostname}_junit.xml |& tee tests_output.txt
     date
 
     no_test_str="No tests were found!!!"
