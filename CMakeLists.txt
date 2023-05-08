@@ -203,6 +203,8 @@ if (H2_ENABLE_CUDA)
   endif ()
 endif (H2_ENABLE_CUDA)
 
+find_package(Hydrogen 1.5.0 CONFIG REQUIRED)
+
 find_package(spdlog CONFIG REQUIRED)
 set(H2_HAS_SPDLOG TRUE)
 
@@ -423,6 +425,7 @@ target_link_libraries(H2Core PRIVATE
   $<BUILD_INTERFACE:$<TARGET_NAME_IF_EXISTS:h2_coverage_flags>>)
 target_link_libraries(H2Core PUBLIC
   spdlog::spdlog
+  ${HYDROGEN_LIBRARIES}
   ${H2_CUDA_LIBS}
   ${H2_ROCM_LIBS}
   $<$<BOOL:${H2_HAS_MPI}>:MPI::MPI_CXX>)
