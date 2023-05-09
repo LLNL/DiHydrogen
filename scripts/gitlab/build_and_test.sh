@@ -25,6 +25,7 @@ build_root=${BUILD_ROOT:-""}
 hostconfig=${HOST_CONFIG:-""}
 spec=${SPEC:-""}
 job_unique_id=${CI_JOB_ID:-""}
+spack_upstream=${UPSTREAM:-""}
 
 prefix=""
 
@@ -75,7 +76,13 @@ then
         mkdir -p ${spack_user_cache}
     fi
 
-    ./scripts/uberenv/uberenv.py --spec="${spec}" ${prefix_opt}
+    upstream_opt=""
+    if [[ -n "${spack_upstream}" && -d ${spack_upstream} ]]
+    then
+        upstream_opt="--upstream=${spack_upstream}"
+    fi
+
+    ./scripts/uberenv/uberenv.py --reuse="True" --spec="${spec}" ${upstream_opt} ${prefix_opt}
 
 fi
   echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"

@@ -11,7 +11,7 @@ variables:
   # Use an LLNL service user to run CI. This prevents from running pipelines as
   # an actual user.
   #FIXME: lbannusr says unauthorized
-  LLNL_SERVICE_USER: ""
+  LLNL_SERVICE_USER: "lbannusr"
   # Use a service user workspace. Solves permission issues, stores everything
   # at the same location whoever triggers a pipeline.
   #  CUSTOM_CI_BUILDS_DIR: ""

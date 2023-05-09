@@ -6,6 +6,7 @@
 import os
 
 from spack.package import *
+from spack.pkg.builtin.camp import hip_repair_cache
 
 
 class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
@@ -48,6 +49,8 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     variant("openmp", default=False, description="Enable CPU acceleration with OpenMP threads.")
     variant("rocm", default=False, description="Enable ROCm/HIP language features.")
     variant("shared", default=True, description="Enables the build of shared libraries")
+    #FIXME: Am I supposed to tell al to build this somehow?
+    variant("nccl", default=False, description="Enables the build of shared libraries")
 
     conflicts("~cuda", when="+nvshmem")
 
@@ -64,11 +67,13 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     # Add Aluminum variants
     depends_on("aluminum +cuda +nccl +cuda_rma", when="+al +cuda")
     depends_on("aluminum +rocm +rccl", when="+al +rocm")
-    depends_on("aluminum +ht", when="+al +distconv")
+    depends_on("aluminum +nccl", when="+al +distconv +cuda")
+    depends_on("aluminum +rccl", when="+al +distconv +rocm")
 
     for arch in CudaPackage.cuda_arch_values:
         depends_on("aluminum cuda_arch=%s" % arch, when="+al +cuda cuda_arch=%s" % arch)
         depends_on("nvshmem cuda_arch=%s" % arch, when="+nvshmem +cuda cuda_arch=%s" % arch)
+        depends_on("nccl cuda_arch=%s" % arch, when="+al +cuda cuda_arch=%s" % arch)
 
     # variants +rocm and amdgpu_targets are not automatically passed to
     # dependencies, so do it manually.
@@ -82,6 +87,7 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
 
     #FIXME: does this work?
     depends_on("lcov", when="%gcc +coverage")
+    depends_on("py-gcovr", when="%gcc +coverage")
 
     # Distconv builds require cuda or rocm
     conflicts("+distconv", when="~cuda ~rocm")
@@ -118,6 +124,7 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
 
         args = [
             "-DCMAKE_CXX_STANDARD=17",
+            "-DCMAKE_CXX_FLAGS=-std=c++17",
             "-DCMAKE_INSTALL_MESSAGE:STRING=LAZY",
             "-DBUILD_SHARED_LIBS:BOOL=%s" % ("+shared" in spec),
             "-DH2_ENABLE_ALUMINUM=%s" % ("+al" in spec),
@@ -146,7 +153,7 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
             if spec.satisfies("^cuda@11.0:"):
                 args.append("-DCMAKE_CUDA_STANDARD=17")
             else:
-                args.append("-DCMAKE_CUDA_STANDARD=14")
+                args.append("-DCMAKE_CUDA_STANDARD=17")
             archs = spec.variants["cuda_arch"].value
             if archs != "none":
                 arch_str = ";".join(archs)
@@ -202,10 +209,13 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
 
         return args
 
-# FIXME These are probably terrible lol
     def initconfig_compiler_entries(self):
         spec = self.spec
         entries = super(Dihydrogen, self).initconfig_compiler_entries()
+
+        #FIXME: Should this work?
+        #if "+distconv" in spec:
+        #    entries.append(cmake_cache_string("CMAKE_CXX_STANDARD", "17"))
 
         return entries
 
@@ -226,7 +236,7 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
 
         if "+rocm" in spec:
             entries.append(cmake_cache_option("H2_ENABLE_ROCM", True))
-            #hip_repair_cache(entries, spec)
+            hip_repair_cache(entries, spec)
             archs = self.spec.variants["amdgpu_target"].value
             if archs != "none":
                 arch_str = ",".join(archs)
@@ -235,6 +245,8 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
                 entries.append(cmake_cache_string("AMDGPU_TARGETS",
                                                   "{0}".format(arch_str)))
             entries.append(cmake_cache_path("HIP_ROOT_DIR", spec["hip"].prefix))
+            entries.append(cmake_cache_path("rocm_ROOT", spec["rocm"].prefix))
+            entries.append(cmake_cache_path("hipify-clang_ROOT", spec["rocm"].prefix))
         else:
             entries.append(cmake_cache_option("H2_ENABLE_ROCM", False))
 
@@ -268,9 +280,13 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
         if "%gcc +coverage" in spec:
             entries.append(cmake_cache_path("lcov_ROOT", spec["lcov"].prefix))
             entries.append(cmake_cache_path("genhtml_ROOT", spec["lcov"].prefix))
+            entries.append(cmake_cache_path("py-gcovr_ROOT", spec["py-gcovr"].prefix))
 
         if "+cuda" in spec and "+distconv" in spec:
             entries.append(cmake_cache_path("cuDNN_ROOT", spec["cudnn"].prefix))
+
+        if "+al" in spec and "+cuda" in spec:
+            entries.append(cmake_cache_path("NCCL_ROOT", spec["nccl"].prefix))
 
         return entries
 

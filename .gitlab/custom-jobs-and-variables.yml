@@ -12,6 +12,9 @@ variables:
 # so that we are sure to retrieve it and avoid collisions.
   ALLOC_NAME: ${CI_PROJECT_NAME}_ci_${CI_PIPELINE_ID}
 
+# Path to upstream spack installation
+  UPSTREAM: "/p/vast1/lbann/h2_ci_spack/spack/opt/spack"
+
 # Ruby
 # Arguments for top level allocation
 #  RUBY_BUILD_AND_TEST_SHARED_ALLOC: "--partition=pdebug --time=10 --nodes=1 --cpus-per-task=36"
@@ -24,30 +27,40 @@ variables:
 
 # Corona
 # Arguments for top level allocation
-  CORONA_BUILD_AND_TEST_SHARED_ALLOC: "--time-limit=15m --nodes=1"
+  CORONA_BUILD_AND_TEST_SHARED_ALLOC: "--time-limit=60m --nodes=1"
 # Arguments for job level allocation
-  CORONA_BUILD_AND_TEST_JOB_ALLOC: "--time-limit=10m --nodes=1"
+  CORONA_BUILD_AND_TEST_JOB_ALLOC: "--time-limit=50m --nodes=1"
 # Project specific variants for corona
-  PROJECT_CORONA_VARIANTS: "+developer +coverage +ci ~al"
+  PROJECT_CORONA_VARIANTS: "+developer +coverage +ci"
 # Project specific deps for corona
   PROJECT_CORONA_DEPS: ""
 
 # Tioga
 # Arguments for top level allocation
-# TIOGA_BUILD_AND_TEST_SHARED_ALLOC: "--time-limit=15m --nodes=1"
+  TIOGA_BUILD_AND_TEST_SHARED_ALLOC: "--time-limit=15m --nodes=1"
 # Arguments for job level allocation
-# TIOGA_BUILD_AND_TEST_JOB_ALLOC: "--time-limit=10m --nodes=1"
+  TIOGA_BUILD_AND_TEST_JOB_ALLOC: "--time-limit=10m --nodes=1"
 # Project specific variants for tioga
-# PROJECT_TIOGA_VARIANTS: ""
+  PROJECT_TIOGA_VARIANTS: "+developer +coverage +ci"
 # Project specific deps for tioga
-# PROJECT_TIOGA_DEPS: ""
+  PROJECT_TIOGA_DEPS: ""
+
+# Pascal
+# Arguments for top level allocation
+  PASCAL_BUILD_AND_TEST_SHARED_ALLOC: "--time-limit=35m --nodes=1"
+# Arguments for job level allocation
+  PASCAL_BUILD_AND_TEST_JOB_ALLOC: "--time-limit=30m --nodes=1"
+# Project specific variants for pascal
+  PROJECT_PASCAL_VARIANTS: "+developer +coverage +ci"
+# Project specific deps for pascal
+  PROJECT_PASCAL_DEPS: ""
 
 # Lassen and Butte use a different job scheduler (spectrum lsf) that does not
 # allow pre-allocation the same way slurm does.
 # Arguments for job level allocation
   LASSEN_BUILD_AND_TEST_JOB_ALLOC: "1 -W 30"
 # Project specific variants for lassen
-  PROJECT_LASSEN_VARIANTS: "+developer +coverage +ci ~al"
+  PROJECT_LASSEN_VARIANTS: "+developer +coverage +ci"
 # Project specific deps for lassen
   PROJECT_LASSEN_DEPS: ""
 

@@ -24,7 +24,7 @@ add_executable(VersionTestExe VersionTest.cpp)
 target_link_libraries(VersionTestExe PRIVATE ${H2_LIBRARIES})
 set_target_properties(VersionTestExe
   PROPERTIES
-  CXX_STANDARD 14
+  CXX_STANDARD 17
   CXX_EXTENSIONS OFF
   CXX_STANDARD_REQUIRED ON)
 
