@@ -245,8 +245,6 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
                 entries.append(cmake_cache_string("AMDGPU_TARGETS",
                                                   "{0}".format(arch_str)))
             entries.append(cmake_cache_path("HIP_ROOT_DIR", spec["hip"].prefix))
-            entries.append(cmake_cache_path("rocm_ROOT", spec["rocm"].prefix))
-            entries.append(cmake_cache_path("hipify-clang_ROOT", spec["rocm"].prefix))
         else:
             entries.append(cmake_cache_option("H2_ENABLE_ROCM", False))
 
