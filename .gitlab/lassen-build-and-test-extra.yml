@@ -50,7 +50,7 @@ clang_14_0_5_gcc_8_3_1_cuda_11_7_0:
 clang_15_0_6_cuda_11_8_0:
   variables:
     ON_LASSEN: "ON"
-    SPEC: "${PROJECT_LASSEN_VARIANTS} +cuda %clang@15.0.6.gcc.8.3.1 ^cuda@11.8.0+allow-unsupported-compilers ${PROJECT_LASSEN_DEPS}"
+    SPEC: "${PROJECT_LASSEN_VARIANTS} cuda_arch=70 +cuda %clang@15.0.6.gcc.8.3.1 ^cuda@11.8.0+allow-unsupported-compilers ${PROJECT_LASSEN_DEPS}"
     MODULE_LIST: "cuda/11.8.0"
     GCOVR: "/usr/workspace/brain/katie/h2_ci_env_lassen/bin/gcovr"
     LLVM_COV: "/usr/tce/packages/clang/clang-15.0.6/bin/llvm-cov"
