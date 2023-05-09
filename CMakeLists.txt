@@ -105,6 +105,11 @@ set(MPI_ASSUME_NO_BUILTIN_MPI ON
   CACHE BOOL
   "Force compiler interrogation for MPI")
 
+string(TOUPPER "${CMAKE_BUILD_TYPE}" H2_BUILD_TYPE_UPPER)
+if (H2_BUILD_TYPE_UPPER MATCHES "DEBUG")
+  set(H2_DEBUG ON)
+endif ()
+
 include(GNUInstallDirs)
 include(H2CMakeUtils)
 include(H2CXXFeatureDetection)

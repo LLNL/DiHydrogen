@@ -12,10 +12,14 @@
  * This defines the public API for local (non-distributed) tensors.
  */
 
+#include <h2_config.hpp>
+
 #include <array>
 #include <cstdint>
 
 #include <El.hpp>
+
+#include "h2/utils/Error.hpp"
 
 namespace h2
 {
@@ -92,9 +96,8 @@ struct FixedSizeTuple {
   const T* const_data() const noexcept { return data_.data(); }
 
   /** Return the value of the tuple at the i'th index. */
-  constexpr T operator[](NDimType i) const noexcept {
-    // TODO: Bounds check when debugging.
-    // h2_assert (Error.hpp)
+  constexpr T operator[](NDimType i) const H2_NOEXCEPT_EXCEPT_DEBUG {
+    H2_ASSERT_DEBUG(i < size_, "Tuple index too large");
     return data_[i];
   }
 
