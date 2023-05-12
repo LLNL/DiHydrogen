@@ -34,11 +34,11 @@
 #define H2_PRETTY_FUNCTION @H2_PRETTY_FUNCTION@
 #define H2_RESTRICT @H2_RESTRICT@
 
-// For functions that may throw when debugging.
+// Disable noexcept when debugging, as debug asserts may throw.
 #ifdef H2_DEBUG
-#define H2_NOEXCEPT_EXCEPT_DEBUG
+#define H2_NOEXCEPT
 #else
-#define H2_NOEXCEPT_EXCEPT_DEBUG noexcept
+#define H2_NOEXCEPT noexcept
 #endif
 
 // C++ standard
