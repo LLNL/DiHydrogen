@@ -33,7 +33,8 @@ configure_file(
 add_subdirectory(include)
 add_subdirectory(src)
 add_subdirectory(tests)
-add_subdirectory(benchmarks)
+# FIXME TRB
+#add_subdirectory(benchmarks)
 
 install(
   TARGETS distconv

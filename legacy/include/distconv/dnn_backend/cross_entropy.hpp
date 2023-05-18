@@ -1,6 +1,7 @@
 #pragma once
 
 #include "distconv/dnn_backend/backend.hpp"
+#include "distconv/layers.hpp"
 #include "distconv/runtime_gpu.hpp"
 
 #include <Al.hpp>
@@ -11,21 +12,18 @@ namespace distconv
 {
 
 template <>
-class CrossEntropy<BackendDNNLib>
+class CrossEntropy<DNNBackend<GPUDNNBackend>>
 {
 public:
-    CrossEntropy(BackendDNNLib& backend, const bool use_labels = false)
-        : m_be(backend), m_use_labels(use_labels)
+    CrossEntropy(DNNBackend<GPUDNNBackend> const& backend,
+                 const bool use_labels = false)
+        : m_stream(backend.get_stream()), m_use_labels(use_labels)
+    {}
+    CrossEntropy(h2::gpu::DeviceStream stream, bool const use_labels = false)
+        : m_stream{stream}, m_use_labels{use_labels}
     {}
 
     ~CrossEntropy() = default;
-
-    CrossEntropy& operator=(const CrossEntropy& x)
-    {
-        assert_always(&m_be == &x.m_be);
-        assert_always(m_use_labels == x.m_use_labels);
-        return *this;
-    }
 
     template <typename Tensor>
     void setup(const Tensor& x_pred, const Tensor& x_truth, const Tensor& y)
@@ -72,8 +70,8 @@ public:
         if (m_num_procs_per_sample > 1)
         {
             auto sample_loc = x_pred.get_sub_locale_except_dim(-1);
-            m_al.reset(new Al::NCCLBackend::comm_type(sample_loc.get_comm(),
-                                                      m_be.get_stream()));
+            m_al = std::make_unique<Al::NCCLBackend::comm_type>(
+                sample_loc.get_comm(), m_stream);
         }
     }
 
@@ -87,11 +85,11 @@ public:
                  Tensor& dx_pred,
                  Tensor& dx_truth);
 
-protected:
-    BackendDNNLib& m_be;
-    const bool m_use_labels;
-    int m_num_procs_per_sample;
+private:
+    h2::gpu::DeviceStream m_stream;
     std::unique_ptr<Al::NCCLBackend::comm_type> m_al;
+    int m_num_procs_per_sample;
+    const bool m_use_labels;
 };
 
 } // namespace distconv

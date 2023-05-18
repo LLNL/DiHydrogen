@@ -1,5 +1,6 @@
 #pragma once
 
+#include "distconv/layers.hpp"
 #include "distconv/dnn_backend/backend.hpp"
 #include "distconv/runtime_gpu.hpp"
 
@@ -11,18 +12,16 @@ namespace distconv
 {
 
 template <>
-class MeanSquaredError<BackendDNNLib>
+class MeanSquaredError<DNNBackend<GPUDNNBackend>>
 {
 public:
-    MeanSquaredError(BackendDNNLib& backend) : m_be(backend) {}
+    MeanSquaredError(DNNBackend<GPUDNNBackend> const& backend)
+        : m_stream(backend.get_stream())
+    {}
+
+    MeanSquaredError(h2::gpu::DeviceStream stream) : m_stream{stream} {}
 
     ~MeanSquaredError() = default;
-
-    MeanSquaredError& operator=(const MeanSquaredError& x)
-    {
-        assert_always(&m_be == &x.m_be);
-        return *this;
-    }
 
     template <typename Tensor>
     void setup(const Tensor& x_pred, const Tensor& x_truth, const Tensor& y)
@@ -49,8 +48,8 @@ public:
         if (m_num_procs_per_sample > 1)
         {
             auto sample_loc = x_pred.get_sub_locale_except_dim(-1);
-            m_al.reset(new Al::NCCLBackend::comm_type(sample_loc.get_comm(),
-                                                      m_be.get_stream()));
+            m_al = std::make_unique<Al::NCCLBackend::comm_type>(
+                sample_loc.get_comm(), m_stream);
         }
     }
 
@@ -64,10 +63,10 @@ public:
                  Tensor& dx_pred,
                  Tensor& dx_truth);
 
-protected:
-    BackendDNNLib& m_be;
-    int m_num_procs_per_sample;
+private:
+    h2::gpu::DeviceStream m_stream;
     std::unique_ptr<Al::NCCLBackend::comm_type> m_al;
+    int m_num_procs_per_sample;
 };
 
 } // namespace distconv

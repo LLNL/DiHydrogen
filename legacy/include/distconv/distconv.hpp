@@ -671,10 +671,3 @@ inline int dump_local_tensor(
 }
 
 } // namespace distconv
-
-// Reference backend
-#include "distconv/ref/backend.hpp"
-
-#ifdef DISTCONV_HAS_CUDNN
-#include "distconv/dnn_backend/backend.hpp"
-#endif

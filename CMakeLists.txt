@@ -373,6 +373,9 @@ target_include_directories(
   $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
+target_compile_features(H2Core PUBLIC cxx_std_17)
+
+# FIXME: With HIP, this is still explicitly needed. :/
 if (NOT CMAKE_CXX_STANDARD)
   set_target_properties(H2Core
     PROPERTIES

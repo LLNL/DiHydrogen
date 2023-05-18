@@ -1,5 +1,6 @@
 #include "distconv/dnn_backend/backend.hpp"
 #include "distconv/distconv.hpp"
+#include "distconv/ref/backend.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/tensor_cuda.hpp"
@@ -149,12 +150,12 @@ int test_all<BackendDNNLib>(Data<BackendDNNLib>& d,
 {
     int pid;
     DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
-    auto handle = dnn_lib::make_handle();
+    auto handle = GPUDNNBackend::make_handle();
     BackendDNNLib be(comm, handle);
     test_forward<BackendDNNLib>(d, cfg, comm, be);
     test_backward<BackendDNNLib>(d, cfg, comm, be);
     be.wait();
-    dnn_lib::destroy_handle(handle);
+    GPUDNNBackend::destroy_handle(handle);
     return 0;
 }
 

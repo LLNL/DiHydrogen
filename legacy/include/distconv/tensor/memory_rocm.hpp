@@ -6,6 +6,8 @@
 ////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
+#include "h2/gpu/memory_utils.hpp"
+
 #include "distconv/tensor/memory.hpp"
 #include "distconv/tensor/runtime_rocm.hpp"
 #include "distconv/tensor/stream.hpp"

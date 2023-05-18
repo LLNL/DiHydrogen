@@ -1,50 +1,18 @@
 #pragma once
+#include "dnn_backend.hpp"
 #include <distconv_config.hpp>
 
-#ifndef H2_LEGACY_INCLUDE_DISTCONV_CUDNN_BACKEND_HPP_INCLUDED
-#error "Do not #include this file; just #include backend.hpp"
-#endif
-
-// Just need the typedefs for this file
-#if H2_HAS_CUDA
-#include <cudnn.h>
 namespace distconv
 {
-namespace cudnn
-{
-using TensorDescriptor_t = cudnnTensorDescriptor_t;
-using Handle_t = cudnnHandle_t;
-using DataType_t = cudnnDataType_t;
-}
-}
-#define H2_DNN_BACKEND_NS cudnn
-#elif H2_HAS_ROCM
-#include <miopen/miopen.h>
-namespace distconv
-{
-namespace miopen
-{
-using TensorDescriptor_t = miopenTensorDescriptor_t;
-using Handle_t = miopenHandle_t;
-using DataType_t = miopenDataType_t;
-}
-}
-#define H2_DNN_BACKEND_NS miopen
-#endif
 
-namespace distconv
-{
-namespace H2_DNN_BACKEND_NS
-{
-
-// This models a strided INPUT to a cuDNN operation. This object is
-// simple: on construction, we allocate a buffer and copy the strided
-// tensor into it. At destruction, we simply free the buffer (stack
-// unwinding is irrelevant).
+// This models a strided INPUT to a cuDNN/MIOpen operation. This
+// object is simple: on construction, we allocate a buffer and copy
+// the strided tensor into it. At destruction, we simply free the
+// buffer (stack unwinding is irrelevant).
 class PackedTensorReadProxy
 {
-    TensorDescriptor_t m_unpacked_desc = 0;
-    TensorDescriptor_t m_packed_desc = 0;
+    GPUDNNBackend::TensorDescriptor_t m_unpacked_desc = 0;
+    GPUDNNBackend::TensorDescriptor_t m_packed_desc = 0;
     void const* m_unpacked_data = nullptr;
     void* m_packed_data = nullptr;
 
@@ -60,7 +28,8 @@ public:
      *  @param[in] force If true, always proxy regardless of
      *                   the env var controls.
      */
-    PackedTensorReadProxy(TensorDescriptor_t unpacked_desc, bool force = false);
+    PackedTensorReadProxy(GPUDNNBackend::TensorDescriptor_t unpacked_desc,
+                          bool force = false);
 
     /** @brief Construct a full read proxy.
      *
@@ -76,8 +45,8 @@ public:
      *  @param[in] force If true, always proxy regardless of
      *                   the env var controls.
      */
-    PackedTensorReadProxy(Handle_t handle,
-                          TensorDescriptor_t unpacked_desc,
+    PackedTensorReadProxy(GPUDNNBackend::Handle_t handle,
+                          GPUDNNBackend::TensorDescriptor_t unpacked_desc,
                           void const* unpacked_data,
                           bool force = false);
     // This dtor can throw -- if the proxy code were "unrolled", this
@@ -88,16 +57,25 @@ public:
     ~PackedTensorReadProxy();
 
     // Direct access for those who know what they want
-    TensorDescriptor_t unpacked_desc() const noexcept { return m_unpacked_desc; }
-    TensorDescriptor_t packed_desc() const noexcept { return m_packed_desc; }
+    GPUDNNBackend::TensorDescriptor_t unpacked_desc() const noexcept
+    {
+        return m_unpacked_desc;
+    }
+    GPUDNNBackend::TensorDescriptor_t packed_desc() const noexcept
+    {
+        return m_packed_desc;
+    }
     void const* unpacked_data() const noexcept { return m_unpacked_data; }
     void const* packed_data() const noexcept { return m_packed_data; }
 
     // The "right" thing
-    TensorDescriptor_t desc() const noexcept { return packed_desc(); }
+    GPUDNNBackend::TensorDescriptor_t desc() const noexcept
+    {
+        return packed_desc();
+    }
     void const* ptr() const noexcept { return packed_data(); }
 
-};// class PackedTensorReadProxy
+}; // class PackedTensorReadProxy
 
 // This models a strided output tensor. We need to allocate a packable
 // buffer up front, then copy the values on destruction (as long as
@@ -123,13 +101,13 @@ public:
 // whenever possible.)
 class PackedTensorWriteProxy
 {
-    TensorDescriptor_t m_unpacked_desc = 0;
-    TensorDescriptor_t m_packed_desc = 0;
+    GPUDNNBackend::TensorDescriptor_t m_unpacked_desc = 0;
+    GPUDNNBackend::TensorDescriptor_t m_packed_desc = 0;
     void* m_unpacked_data = nullptr;
     void* m_packed_data = nullptr;
 
-    Handle_t m_handle;
-    DataType_t m_dt;
+    GPUDNNBackend::Handle_t m_handle;
+    GPUDNNBackend::DataType_t m_dt;
 
 public:
     /** @brief Construct a "descriptor-only" read proxy.
@@ -143,13 +121,13 @@ public:
      *  @param[in] force If true, always proxy regardless of
      *                   the env var controls.
      */
-    PackedTensorWriteProxy(TensorDescriptor_t unpacked_desc,
+    PackedTensorWriteProxy(GPUDNNBackend::TensorDescriptor_t unpacked_desc,
                            bool force = false);
     // Per the discussion above, this class will "copy on
     // construction" if beta!=0. If we switch to option 2 in the
     // future, we would need to add an alpha argument as well.
-    PackedTensorWriteProxy(Handle_t handle,
-                           TensorDescriptor_t unpacked_desc,
+    PackedTensorWriteProxy(GPUDNNBackend::Handle_t handle,
+                           GPUDNNBackend::TensorDescriptor_t unpacked_desc,
                            void* unpacked_data,
                            double beta = 0.,
                            bool force = false);
@@ -158,67 +136,81 @@ public:
     ~PackedTensorWriteProxy();
 
     // Direct access for those who know what they want
-    TensorDescriptor_t unpacked_desc() const noexcept { return m_unpacked_desc; }
-    TensorDescriptor_t packed_desc() const noexcept { return m_packed_desc; }
+    GPUDNNBackend::TensorDescriptor_t unpacked_desc() const noexcept
+    {
+        return m_unpacked_desc;
+    }
+    GPUDNNBackend::TensorDescriptor_t packed_desc() const noexcept
+    {
+        return m_packed_desc;
+    }
     void const* unpacked_data() const noexcept { return m_unpacked_data; }
     void* packed_data() const noexcept { return m_packed_data; }
 
     // The "right" thing
-    TensorDescriptor_t desc() const noexcept { return packed_desc(); }
+    GPUDNNBackend::TensorDescriptor_t desc() const noexcept
+    {
+        return packed_desc();
+    }
     void* ptr() const noexcept { return packed_data(); }
 
-};// class PackedTensorWriteProxy
+}; // class PackedTensorWriteProxy
 
-inline PackedTensorReadProxy read_proxy(TensorDescriptor_t desc)
+inline PackedTensorReadProxy read_proxy(GPUDNNBackend::TensorDescriptor_t desc)
 {
     return PackedTensorReadProxy{desc};
 }
 
-inline PackedTensorReadProxy
-read_proxy(Handle_t handle, TensorDescriptor_t desc, void const* data)
+inline PackedTensorReadProxy read_proxy(GPUDNNBackend::Handle_t handle,
+                                        GPUDNNBackend::TensorDescriptor_t desc,
+                                        void const* data)
 {
     return PackedTensorReadProxy{handle, desc, data};
 }
 
-inline PackedTensorWriteProxy write_proxy(TensorDescriptor_t desc)
+inline PackedTensorWriteProxy
+write_proxy(GPUDNNBackend::TensorDescriptor_t desc)
 {
     return PackedTensorWriteProxy{desc};
 }
 
-inline PackedTensorWriteProxy write_proxy(Handle_t handle,
-                                          TensorDescriptor_t desc,
-                                          void* data,
-                                          double beta = 0.)
+inline PackedTensorWriteProxy
+write_proxy(GPUDNNBackend::Handle_t handle,
+            GPUDNNBackend::TensorDescriptor_t desc,
+            void* data,
+            double beta = 0.)
 {
     return PackedTensorWriteProxy{handle, desc, data, beta};
 }
 
 // Force the proxies.
-inline PackedTensorReadProxy force_read_proxy(TensorDescriptor_t desc)
+inline PackedTensorReadProxy
+force_read_proxy(GPUDNNBackend::TensorDescriptor_t desc)
 {
     return PackedTensorReadProxy{desc, /*force=*/true};
 }
 
 inline PackedTensorReadProxy
-force_read_proxy(Handle_t handle, TensorDescriptor_t desc, void const* data)
+force_read_proxy(GPUDNNBackend::Handle_t handle,
+                 GPUDNNBackend::TensorDescriptor_t desc,
+                 void const* data)
 {
     return PackedTensorReadProxy{handle, desc, data, /*force=*/true};
 }
 
-inline PackedTensorWriteProxy force_write_proxy(TensorDescriptor_t desc)
+inline PackedTensorWriteProxy
+force_write_proxy(GPUDNNBackend::TensorDescriptor_t desc)
 {
     return PackedTensorWriteProxy{desc, /*force=*/true};
 }
 
-inline PackedTensorWriteProxy force_write_proxy(Handle_t handle,
-                                                TensorDescriptor_t desc,
-                                                void* data,
-                                                double beta = 0.)
+inline PackedTensorWriteProxy
+force_write_proxy(GPUDNNBackend::Handle_t handle,
+                  GPUDNNBackend::TensorDescriptor_t desc,
+                  void* data,
+                  double beta = 0.)
 {
     return PackedTensorWriteProxy{handle, desc, data, beta, /*force=*/true};
 }
 
-}// namespace H2_DNN_BACKEND_NS
-}// namespace distconv
-
-#undef H2_DNN_BACKEND_NS
+} // namespace distconv

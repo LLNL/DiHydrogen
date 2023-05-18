@@ -2,6 +2,7 @@
 
 #include "distconv/base.hpp"
 #include "distconv/vector.hpp"
+#include "distconv/ref/backend.hpp"
 #include "distconv/util/cxxopts.hpp"
 #include "distconv/tensor/tensor_base.hpp"
 #include <cstdlib>
