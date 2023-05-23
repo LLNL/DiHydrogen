@@ -1,11 +1,9 @@
-#include "./dnn_lib_utils.hpp"
 #include "distconv/dnn_backend/dnn_backend.hpp"
+
+#include "./dnn_lib_utils.hpp"
 #include "distconv/dnn_backend/dnn_backend_impl.hpp"
 #include "distconv/dnn_backend/pack_unpack.hpp"
 #include "h2/gpu/runtime.hpp"
-
-// #include <Al.hpp>
-// #include <mpi.h>
 
 #include <functional> // std::multiplies
 #include <memory>     // std::make_shared
@@ -47,7 +45,9 @@ namespace distconv
 {
 
 template <typename VendorBackendT>
-DNNBackend<VendorBackendT>::DNNBackend(MPI_Comm comm, Handle_t handle, Options opts)
+DNNBackend<VendorBackendT>::DNNBackend(MPI_Comm comm,
+                                       Handle_t handle,
+                                       Options opts)
     : m_opts{std::move(opts)},
       m_handle{handle},
       m_streams{8},
@@ -56,9 +56,9 @@ DNNBackend<VendorBackendT>::DNNBackend(MPI_Comm comm, Handle_t handle, Options o
 
 template <typename VendorBackendT>
 DNNBackend<VendorBackendT>::DNNBackend(MPI_Comm comm,
-                                   Handle_t handle,
-                                   Stream_t stream,
-                                   Options opts)
+                                       Handle_t handle,
+                                       Stream_t stream,
+                                       Options opts)
     : m_opts{std::move(opts)},
       m_handle{handle},
       m_streams{8, stream},
@@ -97,7 +97,8 @@ auto DNNBackend<VendorBackendT>::get_internal_comm(size_t idx) const
 }
 
 template <typename VendorBackendT>
-auto DNNBackend<VendorBackendT>::get_segmented_ar_comm(size_t idx) -> AlCommType*
+auto DNNBackend<VendorBackendT>::get_segmented_ar_comm(size_t idx)
+    -> AlCommType*
 {
     return m_comms.get_segmented_ar_comm(idx);
 }
@@ -118,20 +119,21 @@ auto DNNBackend<VendorBackendT>::get_chanfilt_filter_comm(size_t idx)
 
 template <typename VendorBackendT>
 void DNNBackend<VendorBackendT>::init_chanfilt_channel_comm(size_t seg,
-                                                          MPI_Comm comm)
+                                                            MPI_Comm comm)
 {
     return m_comms.init_chanfilt_channel_comm(seg, comm);
 }
 
 template <typename VendorBackendT>
 void DNNBackend<VendorBackendT>::init_chanfilt_filter_comm(size_t seg,
-                                                         MPI_Comm comm)
+                                                           MPI_Comm comm)
 {
     return m_comms.init_chanfilt_filter_comm(seg, comm);
 }
 
 template <typename VendorBackendT>
-void DNNBackend<VendorBackendT>::init_segmented_ar_comm(size_t seg, MPI_Comm comm)
+void DNNBackend<VendorBackendT>::init_segmented_ar_comm(size_t seg,
+                                                        MPI_Comm comm)
 {
     return m_comms.init_segmented_ar_comm(seg, comm);
 }
@@ -335,7 +337,7 @@ size_t DNNBackend<VendorBackendT>::get_conv_bwd_filter_workspace_size(
 
 template <typename VendorBackendT>
 auto DNNBackend<VendorBackendT>::get_fwd_algorithm(
-    std::string const& name,
+    std::string const& name_,
     TensorDescriptor_t const& input_desc,
     void const* input,
     FilterDescriptor_t const& filter_desc,
@@ -345,20 +347,36 @@ auto DNNBackend<VendorBackendT>::get_fwd_algorithm(
     void* output,
     size_t ws_size) const -> ConvFwdAlgo_t
 {
-    return GPUDNNBackend::get_fwd_algorithm(name,
-                                            read_proxy(input_desc).desc(),
-                                            input,
-                                            filter_desc,
-                                            filter,
-                                            conv_desc,
-                                            write_proxy(output_desc).desc(),
-                                            output,
-                                            ws_size);
+    std::string const name = (name_ == "DEFAULT" ? "HEURISTIC" : name_);
+    if (name == "HEURISTIC")
+    {
+        return GPUDNNBackend::get_fwd_algorithm_by_heuristics(
+            this->get_handle(),
+            input_desc,
+            filter_desc,
+            conv_desc,
+            output_desc,
+            ws_size);
+    }
+    else if (name == "AUTOTUNE")
+    {
+        return GPUDNNBackend::get_fwd_algorithm_by_autotune(this->get_handle(),
+                                                            input_desc,
+                                                            input,
+                                                            filter_desc,
+                                                            filter,
+                                                            conv_desc,
+                                                            output_desc,
+                                                            output,
+                                                            ws_size);
+    }
+    // Handles "DETERMINISTIC"
+    return GPUDNNBackend::get_fwd_algorithm_by_name(name);
 }
 
 template <typename VendorBackendT>
 auto DNNBackend<VendorBackendT>::get_bwd_data_algorithm(
-    std::string const& name,
+    std::string const& name_,
     FilterDescriptor_t const& filter_desc,
     void const* filter,
     TensorDescriptor_t const& d_output_desc,
@@ -368,21 +386,37 @@ auto DNNBackend<VendorBackendT>::get_bwd_data_algorithm(
     void* d_input,
     size_t ws_size) const -> ConvBwdDataAlgo_t
 {
-    return GPUDNNBackend::get_bwd_data_algorithm(
-        name,
-        filter_desc,
-        filter,
-        read_proxy(d_output_desc).desc(),
-        d_output,
-        conv_desc,
-        write_proxy(d_input_desc).desc(),
-        d_input,
-        ws_size);
+    std::string const name = (name_ == "DEFAULT" ? "HEURISTIC" : name_);
+    if (name == "HEURISTIC")
+    {
+        return GPUDNNBackend::get_bwd_data_algorithm_by_heuristics(
+            this->get_handle(),
+
+            filter_desc,
+            d_output_desc,
+            conv_desc,
+            d_input_desc,
+            ws_size);
+    }
+    else if (name == "AUTOTUNE")
+    {
+        return GPUDNNBackend::get_bwd_data_algorithm_by_autotune(
+            this->get_handle(),
+            filter_desc,
+            filter,
+            d_output_desc,
+            d_output,
+            conv_desc,
+            d_input_desc,
+            d_input,
+            ws_size);
+    }
+    return GPUDNNBackend::get_bwd_data_algorithm_by_name(name);
 }
 
 template <typename VendorBackendT>
 auto DNNBackend<VendorBackendT>::get_bwd_filter_algorithm(
-    std::string const& name,
+    std::string const& name_,
     TensorDescriptor_t const& input_desc,
     void const* input,
     TensorDescriptor_t const& d_output_desc,
@@ -392,16 +426,31 @@ auto DNNBackend<VendorBackendT>::get_bwd_filter_algorithm(
     void* d_filter,
     size_t ws_size) const -> ConvBwdFilterAlgo_t
 {
-    return GPUDNNBackend::get_bwd_filter_algorithm(
-        name,
-        read_proxy(input_desc).desc(),
-        input,
-        read_proxy(d_output_desc).desc(),
-        d_output,
-        conv_desc,
-        d_filter_desc,
-        d_filter,
-        ws_size);
+    std::string const name = (name_ == "DEFAULT" ? "HEURISTIC" : name_);
+    if (name == "HEURISTIC")
+    {
+        return GPUDNNBackend::get_bwd_filter_algorithm_by_heuristics(
+            this->get_handle(),
+            input_desc,
+            d_output_desc,
+            conv_desc,
+            d_filter_desc,
+            ws_size);
+    }
+    else if (name == "AUTOTUNE")
+    {
+        return GPUDNNBackend::get_bwd_filter_algorithm_by_autotune(
+            this->get_handle(),
+            input_desc,
+            input,
+            d_output_desc,
+            d_output,
+            conv_desc,
+            d_filter_desc,
+            d_filter,
+            ws_size);
+    }
+    return GPUDNNBackend::get_bwd_filter_algorithm_by_name(name);
 }
 
 template <typename VendorBackendT>
@@ -648,12 +697,13 @@ void DNNBackend<VendorBackendT>::apply_fwd_bias(
 }
 
 template <typename VendorBackendT>
-void DNNBackend<VendorBackendT>::apply_bwd_bias(double alpha,
-                                              TensorDescriptor_t const& dy_desc,
-                                              void const* dy_data,
-                                              double beta,
-                                              TensorDescriptor_t const& db_desc,
-                                              void* db_data)
+void DNNBackend<VendorBackendT>::apply_bwd_bias(
+    double alpha,
+    TensorDescriptor_t const& dy_desc,
+    void const* dy_data,
+    double beta,
+    TensorDescriptor_t const& db_desc,
+    void* db_data)
 {
     auto const handle = this->get_handle();
 
@@ -845,7 +895,8 @@ distconv::util::get_miopen_strides(int const num_samples,
     size_t const num_spatial_dims = spatial_dims.size();
     assert_always(num_spatial_dims == 2 || num_spatial_dims == 3);
 
-    return get_fully_packed_strides(get_miopen_dims(num_samples, num_channels, spatial_dims));
+    return get_fully_packed_strides(
+        get_miopen_dims(num_samples, num_channels, spatial_dims));
 }
 
 std::string distconv::util::get_name(miopenConvFwdAlgorithm_t const& algo)

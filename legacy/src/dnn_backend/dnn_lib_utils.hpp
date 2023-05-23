@@ -64,4 +64,26 @@ inline std::vector<int> get_fully_packed_strides(std::vector<int> const& dims)
     return strides;
 }
 
+inline size_t datatype_size(GPUDNNBackend::DataType_t dt)
+{
+#if H2_HAS_CUDA
+    switch (dt)
+    {
+    case CUDNN_DATA_FLOAT: return sizeof(float);
+    case CUDNN_DATA_DOUBLE: return sizeof(double);
+    case CUDNN_DATA_HALF: return sizeof(short);
+    default:
+        throw std::runtime_error("Only float, double, and half are supported.");
+    }
+#elif H2_HAS_ROCM
+    switch (dt)
+    {
+    case miopenHalf: return sizeof(short);
+    case miopenFloat: return sizeof(float);
+    default: throw std::runtime_error("Only float and half are supported.");
+    }
+#endif
+    return 1UL;
+}
+
 } // namespace distconv

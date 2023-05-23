@@ -1,5 +1,6 @@
 #include "distconv/util/util_miopen.hpp"
 #include "distconv/util/util_rocm.hpp"
+#include "h2/gpu/memory_utils.hpp"
 
 // NOTE: #include this AFTER the macro definitons of
 // DISTCONV_ASSERT_PTR and DISTCONV_ASSERT_DEBUG.
@@ -35,9 +36,100 @@ namespace distconv
 {
 namespace
 {
+static float const one = 1.f;
+static float const zero = 0.f;
 
-// FIXME (trb 07/25/2022): Need to setup "DEFAULT" and "DETERMINISTIC"
-// for each of these.
+class AlphaBetaScaleHelper
+{
+public:
+    AlphaBetaScaleHelper(GPUDNNBackend::Handle_t handle_,
+                         float alpha,
+                         float beta,
+                         GPUDNNBackend::TensorDescriptor_t desc,
+                         void* ptr)
+        : handle{handle_},
+          real_alpha{alpha},
+          real_beta{beta},
+          desc{desc},
+          real_ptr{ptr},
+          internal_ptr{nullptr}
+    {
+        if (alpha != 1.f || beta != 0.f)
+        {
+            auto const stream = GPUDNNBackend::get_stream(handle);
+            GPUDNNBackend::DataType_t dt;
+            std::vector<int> dims, strides;
+            GPUDNNBackend::get_tensor_descriptor(desc, dt, dims, strides);
+            auto const dt_size = datatype_size(dt);
+            auto const mem_extent = dims.front() * strides.front() * dt_size;
+            H2_CHECK_HIP(h2::gpu::default_cub_allocator().DeviceAllocate(
+                &internal_ptr, mem_extent, stream));
+        }
+    }
+    ~AlphaBetaScaleHelper()
+    {
+        try
+        {
+            if (internal_ptr)
+            {
+                // I see really no reason this shouldn't also suffer
+                // from "beta-must-be-zero"-itis, so let's scale and
+                // combine the output in the "A" and "B" parameters
+                // (API doc:
+                // https://rocmsoftwareplatform.github.io/MIOpen/doc/html/tensor.html#miopenoptensor),
+                // and then just pass beta=0. Hopefully this will
+                // work... (i.e., the docs give zero useful usage
+                // information, so basically we're going to wing it
+                // with our fingers crossed.)
+                DISTCONV_CHECK_MIOPEN(
+                    miopenOpTensor(handle,
+                                   miopenTensorOpAdd,
+                                   &real_alpha,
+                                   desc,
+                                   internal_ptr, // output of op(x; a=1,b=0)
+                                   &real_beta,
+                                   desc,
+                                   real_ptr, // original output buffer
+                                   &zero,
+                                   desc,
+                                   real_ptr));
+                H2_CHECK_HIP(
+                    h2::gpu::default_cub_allocator().DeviceFree(internal_ptr));
+            }
+        }
+        catch (...)
+        {
+            std::cerr << "Dealloc failure." << std::endl;
+            std::terminate();
+        }
+    }
+    void* ptr() { return internal_ptr ? internal_ptr : real_ptr; }
+    operator void*() { return this->ptr(); }
+
+private:
+    GPUDNNBackend::Handle_t handle;
+    float real_alpha;
+    float real_beta;
+    GPUDNNBackend::TensorDescriptor_t desc;
+    void* real_ptr;
+    void* internal_ptr;
+};
+
+AlphaBetaScaleHelper handle_alpha_beta(GPUDNNBackend::Handle_t handle,
+                                       void const* alpha,
+                                       void const* beta,
+                                       GPUDNNBackend::TensorDescriptor_t desc,
+                                       void* data)
+{
+    return AlphaBetaScaleHelper{handle,
+                                *static_cast<float const*>(alpha),
+                                *static_cast<float const*>(beta),
+                                desc,
+                                data};
+}
+
+// FIXME (trb 05/22/2023): Slightly modified copy-pasta from old cuDNN
+// stuff -- lots of duplication. Should be cleaned up in the future.
 struct MIOpenConvolutionFwdAlgorithms
 {
     using map_type =
@@ -73,6 +165,7 @@ MIOpenConvolutionFwdAlgorithms::map_type const
         {miopenConvolutionFwdAlgoFFT, "FFT"},
         {miopenConvolutionFwdAlgoWinograd, "WINOGRAD"},
         {miopenConvolutionFwdAlgoImplicitGEMM, "IMPLICIT_GEMM"},
+        {miopenConvolutionFwdAlgoImplicitGEMM, "DETERMINISTIC"},
 };
 
 struct MIOpenConvolutionBwdDataAlgorithms
@@ -111,6 +204,7 @@ MIOpenConvolutionBwdDataAlgorithms::map_type const
         {miopenConvolutionBwdDataAlgoWinograd, "WINOGRAD"},
         {miopenTransposeBwdDataAlgoGEMM, "TRANSPOSE GEMM - DEPRECATED"},
         {miopenConvolutionBwdDataAlgoImplicitGEMM, "IMPLICIT_GEMM"},
+        {miopenConvolutionBwdDataAlgoImplicitGEMM, "DETERMINISTIC"},
 };
 
 struct MIOpenConvolutionBwdWeightsAlgorithms
@@ -147,6 +241,7 @@ MIOpenConvolutionBwdWeightsAlgorithms::map_type const
         {miopenConvolutionBwdWeightsAlgoDirect, "DIRECT"},
         {miopenConvolutionBwdWeightsAlgoWinograd, "WINOGRAD"},
         {miopenConvolutionBwdWeightsAlgoImplicitGEMM, "IMPLICIT_GEMM"},
+        {miopenConvolutionBwdWeightsAlgoImplicitGEMM, "DETERMINISTIC"},
 };
 
 } // namespace
@@ -214,8 +309,10 @@ void GPUDNNBackend::activation_forward(Handle_t handle,
                                        TensorDescriptor_t const& out_desc,
                                        void* out_data)
 {
+    auto output_helper =
+        handle_alpha_beta(handle, alpha, beta, out_desc, out_data);
     DISTCONV_CHECK_MIOPEN(miopenActivationForward(
-        handle, desc, alpha, in_desc, in_data, beta, out_desc, out_data));
+        handle, desc, &one, in_desc, in_data, &zero, out_desc, output_helper));
 }
 
 void GPUDNNBackend::activation_backward(Handle_t handle,
@@ -231,18 +328,20 @@ void GPUDNNBackend::activation_backward(Handle_t handle,
                                         TensorDescriptor_t const& d_in_desc,
                                         void* d_in_data)
 {
+    auto output_helper =
+        handle_alpha_beta(handle, alpha, beta, d_in_desc, d_in_data);
     DISTCONV_CHECK_MIOPEN(miopenActivationBackward(handle,
                                                    desc,
-                                                   alpha,
+                                                   &one,
                                                    out_desc,
                                                    out_data,
                                                    d_out_desc,
                                                    d_out_data,
                                                    in_desc,
                                                    in_data,
-                                                   beta,
+                                                   &zero,
                                                    d_in_desc,
-                                                   d_in_data));
+                                                   output_helper));
 }
 
 // Convolution interface
@@ -319,17 +418,19 @@ void GPUDNNBackend::convolution_forward(
     TensorDescriptor_t const& out_desc,
     void* out_data)
 {
+    auto output_helper =
+        handle_alpha_beta(handle, alpha, beta, out_desc, out_data);
     DISTCONV_CHECK_MIOPEN(miopenConvolutionForward(handle,
-                                                   alpha,
+                                                   &one,
                                                    in_desc,
                                                    in_data,
                                                    filter_desc,
                                                    filter_data,
                                                    conv_desc,
                                                    conv_algo,
-                                                   beta,
+                                                   &zero,
                                                    out_desc,
-                                                   out_data,
+                                                   output_helper,
                                                    work_data,
                                                    work_data_size));
 }
@@ -349,17 +450,19 @@ void GPUDNNBackend::convolution_bwd_data(
     TensorDescriptor_t const& dx_desc,
     void* dx_data)
 {
+    auto output_helper =
+        handle_alpha_beta(handle, alpha, beta, dx_desc, dx_data);
     DISTCONV_CHECK_MIOPEN(miopenConvolutionBackwardData(handle,
-                                                        alpha,
+                                                        &one,
                                                         dy_desc,
                                                         dy_data,
                                                         filter_desc,
                                                         filter_data,
                                                         conv_desc,
                                                         conv_algo,
-                                                        beta,
+                                                        &zero,
                                                         dx_desc,
-                                                        dx_data,
+                                                        output_helper,
                                                         work_data,
                                                         work_data_size));
 }
@@ -379,17 +482,19 @@ void GPUDNNBackend::convolution_bwd_filter(
     FilterDescriptor_t const& dw_desc,
     void* dw_data)
 {
+    auto output_helper =
+        handle_alpha_beta(handle, alpha, beta, dw_desc, dw_data);
     DISTCONV_CHECK_MIOPEN(miopenConvolutionBackwardWeights(handle,
-                                                           alpha,
+                                                           &one,
                                                            dy_desc,
                                                            dy_data,
                                                            in_desc,
                                                            in_data,
                                                            conv_desc,
                                                            conv_algo,
-                                                           beta,
+                                                           &zero,
                                                            dw_desc,
-                                                           dw_data,
+                                                           output_helper,
                                                            work_data,
                                                            work_data_size));
 }
@@ -435,6 +540,7 @@ void GPUDNNBackend::apply_fwd_bias(Handle_t handle,
                                    TensorDescriptor_t const& y_desc,
                                    void* const y)
 {
+    // FIXME: Does this also need to handle alpha!=1, beta!=0??
     DISTCONV_CHECK_MIOPEN(miopenConvolutionForwardBias(
         handle, alpha, bias_desc, bias, beta, y_desc, y));
 }
@@ -447,51 +553,286 @@ void GPUDNNBackend::apply_bwd_bias(Handle_t handle,
                                    TensorDescriptor_t const& db_desc,
                                    void* const db_data)
 {
+    // FIXME: Does this also need to handle alpha!=1, beta!=0??
     DISTCONV_CHECK_MIOPEN(miopenConvolutionBackwardBias(
         handle, alpha, dy_desc, dy_data, beta, db_desc, db_data));
 }
 
-auto GPUDNNBackend::get_fwd_algorithm(std::string const& name,
-                                      TensorDescriptor_t input_desc,
-                                      void const* input,
-                                      TensorDescriptor_t filter_desc,
-                                      void const* filter,
-                                      ConvolutionDescriptor_t conv_desc,
-                                      TensorDescriptor_t output_desc,
-                                      void* output,
-                                      size_t ws_size) -> ConvFwdAlgo_t
+auto GPUDNNBackend::get_fwd_algorithm_by_name(std::string const& name)
+    -> ConvFwdAlgo_t
 {
-    DISTCONV_ASSERT_PTR(nullptr);
+    return MIOpenConvolutionFwdAlgorithms::get_algo(name);
+}
+
+// MIOpen supports "Find" mode and "Immediate" mode. The "Find" mode
+// REQUIRES that miopenFindConvolution* be called FOR EACH (distinct)
+// convolution that will be run. "Immediate" mode uses "solutions" via
+// an API that isn't easily mapped to this interface, but is closer to
+// the heuristic approach that, e.g., cuDNN supports. So we just error
+// out here.
+auto GPUDNNBackend::get_fwd_algorithm_by_heuristics(
+    Handle_t handle,
+    TensorDescriptor_t input_desc,
+    TensorDescriptor_t filter_desc,
+    ConvolutionDescriptor_t conv_desc,
+    TensorDescriptor_t output_desc,
+    size_t ws_size) -> ConvFwdAlgo_t
+{
+    throw std::runtime_error(
+        "Distconv-MIOpen does not support heuristic algorithm selection.");
     return static_cast<ConvFwdAlgo_t>(0);
 }
 
-auto GPUDNNBackend::get_bwd_data_algorithm(std::string const& name,
-                                           TensorDescriptor_t filter_desc,
-                                           void const* filter,
-                                           TensorDescriptor_t d_output_desc,
-                                           void const* d_output,
-                                           ConvolutionDescriptor_t conv_desc,
-                                           TensorDescriptor_t d_input_desc,
-                                           void* d_input,
-                                           size_t ws_size) -> ConvBwdDataAlgo_t
+auto GPUDNNBackend::get_fwd_algorithm_by_autotune(
+    Handle_t handle,
+    TensorDescriptor_t input_desc,
+    void const* input,
+    TensorDescriptor_t filter_desc,
+    void const* filter,
+    ConvolutionDescriptor_t conv_desc,
+    TensorDescriptor_t output_desc,
+    void* output,
+    size_t ws_size) -> ConvFwdAlgo_t
 {
-    DISTCONV_ASSERT_PTR(nullptr);
+    constexpr size_t ntrials = 1;
+    constexpr size_t nskips = 0;
+    constexpr size_t nalgos = 5;
+
+    ws_size = 1 << 30;
+    auto const stream = get_stream(handle);
+    void* ws;
+    H2_CHECK_HIP(
+        h2::gpu::default_cub_allocator().DeviceAllocate(&ws, ws_size, stream));
+
+    std::array<miopenConvAlgoPerf_t, nalgos> perf_results;
+    miopenConvAlgoPerf_t best_result; // "best" == "fastest"
+    int tested_algo_count = 0;
+    for (size_t t = 0UL; t < ntrials + nskips; ++t)
+    {
+        DISTCONV_CHECK_MIOPEN(
+            miopenFindConvolutionForwardAlgorithm(handle,
+                                                  input_desc,
+                                                  input,
+                                                  filter_desc,
+                                                  filter,
+                                                  conv_desc,
+                                                  output_desc,
+                                                  output,
+                                                  nalgos,
+                                                  &tested_algo_count,
+                                                  perf_results.data(),
+                                                  ws,
+                                                  ws_size,
+                                                  /*exhaustive_search=*/1));
+        if (t == nskips)
+            best_result = perf_results[0];
+
+        if (t > nskips)
+        {
+            if (perf_results[0].time < best_result.time)
+                best_result = perf_results[0];
+
+            // This is only needed if MPIPrintStreamDebug() is actually
+            // going to do anything...
+            std::ostringstream oss;
+            oss << "Forward autotune tested algorithms: ";
+            for (int i = 0; i < tested_algo_count; ++i)
+            {
+                auto const& res = perf_results[i];
+                oss << "("
+                    << MIOpenConvolutionFwdAlgorithms::get_name(res.fwd_algo)
+                    << ", " << res.time << " ms"
+                    << ", " << res.memory / 1000 / 1000 << " KB"
+                    << ") ";
+            }
+            util::MPIPrintStreamDebug() << oss.str();
+        }
+    }
+    H2_CHECK_HIP(h2::gpu::default_cub_allocator().DeviceFree(ws));
+
+    auto const best_algo = best_result.fwd_algo;
+    util::MPIPrintStreamDebug()
+        << "Autotune best algorithm: "
+        << MIOpenConvolutionFwdAlgorithms::get_name(best_algo);
+    return best_algo;
+}
+
+auto GPUDNNBackend::get_bwd_data_algorithm_by_name(std::string const& name)
+    -> ConvBwdDataAlgo_t
+{
+    return MIOpenConvolutionBwdDataAlgorithms::get_algo(name);
+}
+
+auto GPUDNNBackend::get_bwd_data_algorithm_by_heuristics(
+    Handle_t handle,
+    TensorDescriptor_t filter_desc,
+    TensorDescriptor_t d_output_desc,
+    ConvolutionDescriptor_t conv_desc,
+    TensorDescriptor_t d_input_desc,
+    size_t ws_size) -> ConvBwdDataAlgo_t
+{
+    throw std::runtime_error(
+        "Distconv-MIOpen does not support heuristic algorithm selection.");
     return static_cast<ConvBwdDataAlgo_t>(0);
 }
 
-auto GPUDNNBackend::get_bwd_filter_algorithm(std::string const& name,
-                                             TensorDescriptor_t input_desc,
-                                             void const* input,
-                                             TensorDescriptor_t d_output_desc,
-                                             void const* d_output,
-                                             ConvolutionDescriptor_t conv_desc,
-                                             TensorDescriptor_t d_filter_desc,
-                                             void* d_filter,
-                                             size_t ws_size)
+auto GPUDNNBackend::get_bwd_data_algorithm_by_autotune(
+    Handle_t handle,
+    TensorDescriptor_t filter_desc,
+    void const* filter,
+    TensorDescriptor_t d_output_desc,
+    void const* d_output,
+    ConvolutionDescriptor_t conv_desc,
+    TensorDescriptor_t d_input_desc,
+    void* d_input,
+    size_t ws_size) -> ConvBwdDataAlgo_t
+{
+    constexpr size_t ntrials = 1;
+    constexpr size_t nskips = 0;
+    constexpr size_t nalgos = 5;
+
+    ws_size = 1 << 30;
+    auto const stream = get_stream(handle);
+    void* ws;
+    H2_CHECK_HIP(
+        h2::gpu::default_cub_allocator().DeviceAllocate(&ws, ws_size, stream));
+
+    std::array<miopenConvAlgoPerf_t, nalgos> perf_results;
+    miopenConvAlgoPerf_t best_result;
+    int tested_algo_count = 0;
+    for (int t = 0; t < ntrials + nskips; ++t)
+    {
+        DISTCONV_CHECK_MIOPEN(
+            miopenFindConvolutionBackwardDataAlgorithm(handle,
+                                                       d_output_desc,
+                                                       d_output,
+                                                       filter_desc,
+                                                       filter,
+                                                       conv_desc,
+                                                       d_input_desc,
+                                                       d_input,
+                                                       nalgos,
+                                                       &tested_algo_count,
+                                                       perf_results.data(),
+                                                       ws,
+                                                       ws_size,
+                                                       /*exhaustiveSearch=*/1));
+
+        if (t == nskips)
+            best_result = perf_results[0];
+
+        if (t > nskips)
+        {
+            std::ostringstream oss;
+            oss << "Backward data autotune tested algorithms: ";
+            for (int i = 0; i < tested_algo_count; ++i)
+            {
+                auto const& res = perf_results[i];
+
+                oss << "("
+                    << MIOpenConvolutionBwdDataAlgorithms::get_name(
+                           res.bwd_data_algo)
+                    << ", " << res.time << " ms"
+                    << ", " << res.memory / 1000 / 1000 << " MB"
+                    << ") ";
+            }
+            util::MPIPrintStreamDebug() << oss.str();
+        }
+    }
+    auto const best_algo = best_result.bwd_data_algo;
+    util::MPIPrintStreamDebug()
+        << "Autotune best algorithm: "
+        << MIOpenConvolutionBwdDataAlgorithms::get_name(best_algo);
+    return best_algo;
+}
+
+auto GPUDNNBackend::get_bwd_filter_algorithm_by_name(std::string const& name)
     -> ConvBwdFilterAlgo_t
 {
-    DISTCONV_ASSERT_PTR(nullptr);
+    return MIOpenConvolutionBwdWeightsAlgorithms::get_algo(name);
+}
+
+auto GPUDNNBackend::get_bwd_filter_algorithm_by_heuristics(
+    Handle_t handle,
+    TensorDescriptor_t input_desc,
+    TensorDescriptor_t d_output_desc,
+    ConvolutionDescriptor_t conv_desc,
+    TensorDescriptor_t d_filter_desc,
+    size_t ws_size) -> ConvBwdFilterAlgo_t
+{
+    throw std::runtime_error(
+        "Distconv-MIOpen does not support heuristic algorithm selection.");
     return static_cast<ConvBwdFilterAlgo_t>(0);
+}
+
+auto GPUDNNBackend::get_bwd_filter_algorithm_by_autotune(
+    Handle_t handle,
+    TensorDescriptor_t input_desc,
+    void const* input,
+    TensorDescriptor_t d_output_desc,
+    void const* d_output,
+    ConvolutionDescriptor_t conv_desc,
+    TensorDescriptor_t d_filter_desc,
+    void* d_filter,
+    size_t ws_size) -> ConvBwdFilterAlgo_t
+{
+    constexpr size_t ntrials = 1;
+    constexpr size_t nskips = 0;
+    constexpr size_t nalgos = 5;
+
+    ws_size = 1 << 30;
+    auto const stream = get_stream(handle);
+    void* ws;
+    H2_CHECK_HIP(
+        h2::gpu::default_cub_allocator().DeviceAllocate(&ws, ws_size, stream));
+
+    std::array<miopenConvAlgoPerf_t, nalgos> perf_results;
+    miopenConvAlgoPerf_t best_result;
+    int tested_algo_count = 0;
+    for (int t = 0; t < ntrials + nskips; ++t)
+    {
+        DISTCONV_CHECK_MIOPEN(miopenFindConvolutionBackwardWeightsAlgorithm(
+            handle,
+            d_output_desc,
+            d_output,
+            input_desc,
+            input,
+            conv_desc,
+            d_filter_desc,
+            d_filter,
+            nalgos,
+            &tested_algo_count,
+            perf_results.data(),
+            ws,
+            ws_size,
+            /*exhaustiveSearch=*/1));
+
+        if (t == nskips)
+            best_result = perf_results[0];
+
+        if (t > nskips)
+        {
+            std::ostringstream oss;
+            oss << "Backward data autotune tested algorithms: ";
+            for (int i = 0; i < tested_algo_count; ++i)
+            {
+                auto const& res = perf_results[i];
+
+                oss << "("
+                    << MIOpenConvolutionBwdWeightsAlgorithms::get_name(
+                           res.bwd_weights_algo)
+                    << ", " << res.time << " ms"
+                    << ", " << res.memory / 1000 / 1000 << " MB"
+                    << ") ";
+            }
+            util::MPIPrintStreamDebug() << oss.str();
+        }
+    }
+    auto const best_algo = best_result.bwd_weights_algo;
+    util::MPIPrintStreamDebug()
+        << "Autotune best algorithm: "
+        << MIOpenConvolutionBwdWeightsAlgorithms::get_name(best_algo);
+    return best_algo;
 }
 
 // Handle interface
@@ -659,6 +1000,9 @@ void GPUDNNBackend::pooling_forward(Handle_t handle,
                                     void* out_data,
                                     bool training)
 {
+    auto output_helper =
+        handle_alpha_beta(handle, alpha, beta, out_desc, out_data);
+
     // Set up the index type first.
     DISTCONV_CHECK_MIOPEN(miopenSetPoolingIndexType(desc, get_index_type()));
     // Then get the workspace size.
@@ -666,12 +1010,12 @@ void GPUDNNBackend::pooling_forward(Handle_t handle,
                                : std::make_pair((void*) nullptr, (size_t) 0UL));
     DISTCONV_CHECK_MIOPEN(miopenPoolingForward(handle,
                                                desc,
-                                               alpha,
+                                               &one,
                                                in_desc,
                                                in_data,
-                                               beta,
+                                               &zero,
                                                out_desc,
-                                               out_data,
+                                               output_helper,
                                                /*do_backward=*/training,
                                                workspace.first,
                                                workspace.second));
@@ -690,21 +1034,22 @@ void GPUDNNBackend::pooling_backward(Handle_t handle,
                                      TensorDescriptor_t const& d_in_desc,
                                      void* d_in_data)
 {
-    // FIXME
+    auto output_helper =
+        handle_alpha_beta(handle, alpha, beta, d_in_desc, d_in_data);
     void* workspace = get_workspace(desc);
     assert_always((bool) workspace);
     DISTCONV_CHECK_MIOPEN(miopenPoolingBackward(handle,
                                                 desc,
-                                                alpha,
+                                                &one,
                                                 out_desc,
                                                 out_data,
                                                 d_out_desc,
                                                 d_out_data,
                                                 in_desc,
                                                 in_data,
-                                                beta,
+                                                &zero,
                                                 d_in_desc,
-                                                d_in_data,
+                                                output_helper,
                                                 workspace));
     clear_workspace(desc);
 }

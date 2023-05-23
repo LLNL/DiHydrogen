@@ -8,7 +8,6 @@
 #pragma once
 
 #include "distconv_config.hpp"
-
 #include "h2/gpu/runtime.hpp"
 
 #ifdef DISTCONV_HAS_P2P
@@ -380,37 +379,64 @@ public:
                                TensorDescriptor_t const& db_desc,
                                void* db_data);
 
-    static ConvFwdAlgo_t get_fwd_algorithm(std::string const& name,
-                                           TensorDescriptor_t input_desc,
-                                           void const* input,
-                                           FilterDescriptor_t filter_desc,
-                                           void const* filter,
-                                           ConvolutionDescriptor_t conv_desc,
-                                           TensorDescriptor_t output_desc,
-                                           void* output,
-                                           size_t ws_size);
+    static ConvFwdAlgo_t get_fwd_algorithm_by_name(std::string const& name);
+    static ConvFwdAlgo_t
+    get_fwd_algorithm_by_heuristics(Handle_t handle,
+                                    TensorDescriptor_t input_desc,
+                                    FilterDescriptor_t filter_desc,
+                                    ConvolutionDescriptor_t conv_desc,
+                                    TensorDescriptor_t output_desc,
+                                    size_t ws_size);
+    static ConvFwdAlgo_t
+    get_fwd_algorithm_by_autotune(Handle_t handle,
+                                  TensorDescriptor_t input_desc,
+                                  void const* input,
+                                  FilterDescriptor_t filter_desc,
+                                  void const* filters,
+                                  ConvolutionDescriptor_t conv_desc,
+                                  TensorDescriptor_t output_desc,
+                                  void* output,
+                                  size_t ws_size);
 
     static ConvBwdDataAlgo_t
-    get_bwd_data_algorithm(std::string const& name,
-                           FilterDescriptor_t filter_desc,
-                           void const* filter,
-                           TensorDescriptor_t d_output_desc,
-                           void const* d_output,
-                           ConvolutionDescriptor_t conv_desc,
-                           TensorDescriptor_t d_input_desc,
-                           void* d_input,
-                           size_t ws_size);
+    get_bwd_data_algorithm_by_name(std::string const& name);
+    static ConvBwdDataAlgo_t
+    get_bwd_data_algorithm_by_heuristics(Handle_t handle,
+                                         FilterDescriptor_t filter_desc,
+                                         TensorDescriptor_t d_output_desc,
+                                         ConvolutionDescriptor_t conv_desc,
+                                         TensorDescriptor_t d_input_desc,
+                                         size_t ws_size);
+    static ConvBwdDataAlgo_t
+    get_bwd_data_algorithm_by_autotune(Handle_t handle,
+                                       FilterDescriptor_t filter_desc,
+                                       void const* filter,
+                                       TensorDescriptor_t d_output_desc,
+                                       void const* d_output,
+                                       ConvolutionDescriptor_t conv_desc,
+                                       TensorDescriptor_t d_input_desc,
+                                       void* d_input,
+                                       size_t ws_size);
 
     static ConvBwdFilterAlgo_t
-    get_bwd_filter_algorithm(std::string const& name,
-                             TensorDescriptor_t input_desc,
-                             void const* input,
-                             TensorDescriptor_t d_output_desc,
-                             void const* d_output,
-                             ConvolutionDescriptor_t conv_desc,
-                             FilterDescriptor_t d_filter_desc,
-                             void* d_filter,
-                             size_t ws_size);
+    get_bwd_filter_algorithm_by_name(std::string const& name);
+    static ConvBwdFilterAlgo_t
+    get_bwd_filter_algorithm_by_heuristics(Handle_t handle,
+                                           TensorDescriptor_t input_desc,
+                                           TensorDescriptor_t d_output_desc,
+                                           ConvolutionDescriptor_t conv_desc,
+                                           FilterDescriptor_t d_filter_desc,
+                                           size_t ws_size);
+    static ConvBwdFilterAlgo_t
+    get_bwd_filter_algorithm_by_autotune(Handle_t handle,
+                                         TensorDescriptor_t input_desc,
+                                         void const* input,
+                                         TensorDescriptor_t d_output_desc,
+                                         void const* d_output,
+                                         ConvolutionDescriptor_t conv_desc,
+                                         FilterDescriptor_t d_filter_desc,
+                                         void* d_filter,
+                                         size_t ws_size);
 
     /// @}
     /** @name Handle interface */
@@ -607,10 +633,11 @@ public:
     using InternalCommType = CommunicatorManager::AlInternalCommType;
 
 public:
-
     DNNBackend(MPI_Comm comm, Handle_t handle, Options opts = Options{});
-    DNNBackend(MPI_Comm comm, Handle_t handle, Stream_t stream,
-             Options opts = Options{});
+    DNNBackend(MPI_Comm comm,
+               Handle_t handle,
+               Stream_t stream,
+               Options opts = Options{});
 
     virtual std::string get_name() const;
 
@@ -641,7 +668,8 @@ public:
 
     /** @brief HACK to help LBANN
      *
-     *  @warning DO NOT USE THIS FUNCTION. It is a hack to avoid changes to LBANN in a certain PR.
+     *  @warning DO NOT USE THIS FUNCTION. It is a hack to avoid changes to
+     * LBANN in a certain PR.
      *  @todo REMOVE THIS FUNCTION.
      */
     std::shared_ptr<AlCommType> get_al_mpi_cuda_comm() const
@@ -652,8 +680,7 @@ public:
 
     size_t get_num_internal_comms() const noexcept;
 
-    std::shared_ptr<InternalCommType>
-    get_internal_comm(size_t idx) const;
+    std::shared_ptr<InternalCommType> get_internal_comm(size_t idx) const;
 
     AlCommType* get_segmented_ar_comm(size_t idx);
     AlCommType* get_chanfilt_channel_comm(size_t idx);
