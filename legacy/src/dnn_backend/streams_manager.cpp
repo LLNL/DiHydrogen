@@ -1,7 +1,6 @@
-#include "distconv_config.hpp"
-
 #include "distconv/dnn_backend/dnn_backend.hpp"
 #include "distconv/util/util_gpu.hpp"
+#include "distconv_config.hpp"
 
 namespace distconv
 {
@@ -26,10 +25,10 @@ StreamsManager::~StreamsManager() noexcept
     // FIXME trb: Should track whether to destroy or not.
     // h2::gpu::destroy(m_stream);
     auto const num_streams = m_internal_streams.size();
-    for (size_t i = 0; i < num_streams; ++i)
-        h2::gpu::destroy(m_internal_streams[i]);
-    for (size_t i = 0; i < num_streams; ++i)
-        h2::gpu::destroy(m_internal_streams[i]);
+    for (auto const s : m_priority_streams)
+        h2::gpu::destroy(s);
+    for (auto const s : m_internal_streams)
+        h2::gpu::destroy(s);
 }
 
 size_t StreamsManager::num_streams() const noexcept
