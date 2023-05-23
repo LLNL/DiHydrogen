@@ -1,5 +1,6 @@
 #include "distconv/util/util_cuda.hpp"
 #include "distconv/util/util_cudnn.hpp"
+#include "h2/gpu/memory_utils.hpp"
 
 // NOTE: #include this AFTER the macro definitons of
 // DISTCONV_ASSERT_PTR and DISTCONV_ASSERT_DEBUG.
@@ -21,6 +22,34 @@ namespace
 {
 
 constexpr int nb_dims_requested = 100;
+
+template <typename AlgoType, typename PerfType>
+AlgoType find_best_algorithm(std::vector<PerfType> const& perf_results)
+{
+    std::map<AlgoType, float> time_map;
+    for (const auto& res : perf_results)
+    {
+        assert_always(res.status == CUDNN_STATUS_SUCCESS);
+        if (time_map.find(res.algo) == time_map.end())
+        {
+            time_map[res.algo] = 0;
+        }
+        time_map[res.algo] += res.time;
+    }
+    AlgoType best_algo = time_map.begin()->first;
+    float min_time = std::numeric_limits<float>::max();
+    for (const auto& x : time_map)
+    {
+        AlgoType algo = x.first;
+        float time = x.second;
+        if (time < min_time)
+        {
+            min_time = time;
+            best_algo = algo;
+        }
+    }
+    return best_algo;
+}
 
 } // namespace
 
@@ -337,47 +366,490 @@ void GPUDNNBackend::apply_bwd_bias(Handle_t handle,
         handle, alpha, dy_desc, dy_data, beta, db_desc, db_data));
 }
 
-auto GPUDNNBackend::get_fwd_algorithm(std::string const& name,
-                                      TensorDescriptor_t input_desc,
-                                      void const* input,
-                                      FilterDescriptor_t filter_desc,
-                                      void const* filter,
-                                      ConvolutionDescriptor_t conv_desc,
-                                      TensorDescriptor_t output_desc,
-                                      void* output,
-                                      size_t ws_size) -> ConvFwdAlgo_t
+auto GPUDNNBackend::get_fwd_algorithm_by_name(std::string const& name)
+    -> ConvFwdAlgo_t
 {
-    DISTCONV_ASSERT_PTR(false);
-    return static_cast<ConvFwdAlgo_t>(0);
+    return util::CUDNNConvolutionFwdAlgorithms::get_algo(name);
 }
 
-auto GPUDNNBackend::get_bwd_data_algorithm(std::string const& name,
-                                           FilterDescriptor_t filter_desc,
-                                           void const* filter,
-                                           TensorDescriptor_t d_output_desc,
-                                           void const* d_output,
-                                           ConvolutionDescriptor_t conv_desc,
-                                           TensorDescriptor_t d_input_desc,
-                                           void* d_input,
-                                           size_t ws_size) -> ConvBwdDataAlgo_t
+auto GPUDNNBackend::get_fwd_algorithm_by_heuristics(
+    Handle_t handle,
+    TensorDescriptor_t input_desc,
+    FilterDescriptor_t filter_desc,
+    ConvolutionDescriptor_t conv_desc,
+    TensorDescriptor_t output_desc,
+    size_t ws_size) -> ConvFwdAlgo_t
 {
-    DISTCONV_ASSERT_PTR(false);
-    return static_cast<ConvBwdDataAlgo_t>(0);
+#if CUDNN_MAJOR < 8
+    cudnnConvolutionFwdAlgo_t algo;
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionForwardAlgorithm(
+        handle,
+        input_desc,
+        filter_desc,
+        conv_desc,
+        output_desc,
+        CUDNN_CONVOLUTION_FWD_SPECIFY_WORKSPACE_LIMIT,
+        ws_size ? ws_size : CONVOLUTION_WORKSPACE_SIZE,
+        &algo));
+    return algo;
+#else  // CUDNN_MAJOR < 8
+    int algo_count;
+    DISTCONV_CHECK_CUDNN(
+        cudnnGetConvolutionForwardAlgorithmMaxCount(handle, &algo_count));
+    cudnnConvolutionFwdAlgoPerf_t* perf_results =
+        new cudnnConvolutionFwdAlgoPerf_t[algo_count];
+    int tested_algo_count = 0;
+    DISTCONV_CHECK_CUDNN(
+        cudnnGetConvolutionForwardAlgorithm_v7(handle,
+                                               input_desc,
+                                               filter_desc,
+                                               conv_desc,
+                                               output_desc,
+                                               algo_count,
+                                               &tested_algo_count,
+                                               perf_results));
+    cudnnConvolutionFwdAlgo_t algo;
+    for (int i = 0; i < tested_algo_count; i++)
+    {
+        if (perf_results[i].memory <= ws_size)
+        {
+            algo = perf_results[i].algo;
+            delete[] perf_results;
+            return algo;
+        }
+    }
+    util::MPIPrintStreamError() << "No forward algorithm found for CUDNN";
+    std::abort();
+#endif // CUDNN_MAJOR < 8
 }
 
-auto GPUDNNBackend::get_bwd_filter_algorithm(std::string const& name,
-                                             TensorDescriptor_t input_desc,
-                                             void const* input,
-                                             TensorDescriptor_t d_output_desc,
-                                             void const* d_output,
-                                             ConvolutionDescriptor_t conv_desc,
-                                             FilterDescriptor_t d_filter_desc,
-                                             void* d_filter,
-                                             size_t ws_size)
+auto GPUDNNBackend::get_fwd_algorithm_by_autotune(
+    Handle_t handle,
+    TensorDescriptor_t input_desc,
+    void const* input,
+    FilterDescriptor_t filter_desc,
+    void const* filter,
+    ConvolutionDescriptor_t conv_desc,
+    TensorDescriptor_t output_desc,
+    void* output,
+    size_t ws_size) -> ConvFwdAlgo_t
+{
+    constexpr int trial_count = 5;
+    constexpr int skip = 5;
+    int algo_count;
+    DISTCONV_CHECK_CUDNN(
+        cudnnGetConvolutionForwardAlgorithmMaxCount(handle, &algo_count));
+    cudnnConvolutionFwdAlgoPerf_t* perf_results =
+        new cudnnConvolutionFwdAlgoPerf_t[algo_count];
+    std::vector<cudnnConvolutionFwdAlgoPerf_t> perf_results_all;
+    int tested_algo_count = 0;
+    void* ws = nullptr;
+    if (ws_size)
+    {
+        auto const stream = get_stream(handle);
+        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceAllocate(
+            &ws, ws_size, stream));
+    }
+    for (int t = 0; t < trial_count + skip; ++t)
+    {
+        if (ws_size)
+        {
+            DISTCONV_CHECK_CUDNN(
+                cudnnFindConvolutionForwardAlgorithmEx(handle,
+                                                       input_desc,
+                                                       input,
+                                                       filter_desc,
+                                                       filter,
+                                                       conv_desc,
+                                                       output_desc,
+                                                       output,
+                                                       algo_count,
+                                                       &tested_algo_count,
+                                                       perf_results,
+                                                       ws,
+                                                       ws_size));
+        }
+        else
+        {
+            DISTCONV_CHECK_CUDNN(
+                cudnnFindConvolutionForwardAlgorithm(handle,
+                                                     input_desc,
+                                                     filter_desc,
+                                                     conv_desc,
+                                                     output_desc,
+                                                     algo_count,
+                                                     &tested_algo_count,
+                                                     perf_results));
+        }
+        if (t > skip)
+        {
+            std::ostringstream ss;
+            ss << "Forward autotune tested algorithms: ";
+            for (int i = 0; i < tested_algo_count; ++i)
+            {
+                const auto& res = perf_results[i];
+                ss << "("
+                   << util::CUDNNConvolutionFwdAlgorithms::get_name(res.algo)
+                   << ", ";
+                if (res.status == CUDNN_STATUS_SUCCESS)
+                {
+                    ss << res.time << " ms"
+                       << ", " << res.memory / 1000 / 1000 << " KB";
+                }
+                else if (res.status == CUDNN_STATUS_ALLOC_FAILED)
+                {
+                    ss << "INSUFFICIENT MEMORY, " << res.memory / 1000 / 1000
+                       << " MB required";
+                }
+                else
+                {
+                    ss << "INTERNAL ERROR";
+                }
+                ss << ") ";
+                if (res.status == CUDNN_STATUS_SUCCESS)
+                {
+                    perf_results_all.push_back(res);
+                }
+            }
+            util::MPIPrintStreamDebug() << ss.str();
+        }
+    }
+    delete[] perf_results;
+    if (ws_size)
+        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(ws));
+    auto const best_algo =
+        find_best_algorithm<cudnnConvolutionFwdAlgo_t,
+                            cudnnConvolutionFwdAlgoPerf_t>(perf_results_all);
+    util::MPIPrintStreamDebug()
+        << "Autotune best algorithm: "
+        << util::CUDNNConvolutionFwdAlgorithms::get_name(best_algo);
+    return best_algo;
+}
+
+auto GPUDNNBackend::get_bwd_data_algorithm_by_name(std::string const& name)
+    -> ConvBwdDataAlgo_t
+{
+    return util::CUDNNConvolutionBwdDataAlgorithms::get_algo(name);
+}
+
+auto GPUDNNBackend::get_bwd_data_algorithm_by_heuristics(
+    Handle_t handle,
+    FilterDescriptor_t filter_desc,
+    TensorDescriptor_t d_output_desc,
+    ConvolutionDescriptor_t conv_desc,
+    TensorDescriptor_t d_input_desc,
+    size_t ws_size) -> ConvBwdDataAlgo_t
+{
+#if CUDNN_MAJOR < 8
+    cudnnConvolutionBwdDataAlgo_t algo;
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardDataAlgorithm(
+        handle,
+        filter_desc,
+        d_output_desc,
+        conv_desc,
+        d_input_desc,
+        CUDNN_CONVOLUTION_BWD_DATA_SPECIFY_WORKSPACE_LIMIT,
+        ws_size ? ws_size : CONVOLUTION_WORKSPACE_SIZE,
+        &algo));
+    return algo;
+#else  // CUDNN_MAJOR < 8
+    int algo_count;
+    DISTCONV_CHECK_CUDNN(
+        cudnnGetConvolutionBackwardDataAlgorithmMaxCount(handle, &algo_count));
+    cudnnConvolutionBwdDataAlgoPerf_t* perf_results =
+        new cudnnConvolutionBwdDataAlgoPerf_t[algo_count];
+    int tested_algo_count = 0;
+    DISTCONV_CHECK_CUDNN(
+        cudnnGetConvolutionBackwardDataAlgorithm_v7(handle,
+                                                    filter_desc,
+                                                    d_output_desc,
+                                                    conv_desc,
+                                                    d_input_desc,
+                                                    algo_count,
+                                                    &tested_algo_count,
+                                                    perf_results));
+    cudnnConvolutionBwdDataAlgo_t algo;
+    for (int i = 0; i < tested_algo_count; i++)
+    {
+        if (perf_results[i].memory <= ws_size)
+        {
+            algo = perf_results[i].algo;
+            delete[] perf_results;
+            return algo;
+        }
+    }
+    util::MPIPrintStreamError() << "No backward data algorithm found for CUDNN";
+    std::abort();
+#endif // CUDNN_MAJOR < 8
+}
+
+auto GPUDNNBackend::get_bwd_data_algorithm_by_autotune(
+    Handle_t handle,
+    FilterDescriptor_t filter_desc,
+    void const* filter,
+    TensorDescriptor_t d_output_desc,
+    void const* d_output,
+    ConvolutionDescriptor_t conv_desc,
+    TensorDescriptor_t d_input_desc,
+    void* d_input,
+    size_t ws_size) -> ConvBwdDataAlgo_t
+{
+    constexpr int trial_count = 3;
+    constexpr int skip = 1;
+    int algo_count;
+    DISTCONV_CHECK_CUDNN(
+        cudnnGetConvolutionBackwardDataAlgorithmMaxCount(handle, &algo_count));
+    cudnnConvolutionBwdDataAlgoPerf_t* perf_results =
+        new cudnnConvolutionBwdDataAlgoPerf_t[algo_count];
+    std::vector<cudnnConvolutionBwdDataAlgoPerf_t> perf_results_all;
+    int tested_algo_count = 0;
+    void* ws = nullptr;
+    if (ws_size)
+    {
+        auto const stream = get_stream(handle);
+        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceAllocate(
+            &ws, ws_size, stream));
+    }
+    for (int t = 0; t < trial_count + skip; ++t)
+    {
+        if (ws_size)
+        {
+            DISTCONV_CHECK_CUDNN(
+                cudnnFindConvolutionBackwardDataAlgorithmEx(handle,
+                                                            filter_desc,
+                                                            filter,
+                                                            d_output_desc,
+                                                            d_output,
+                                                            conv_desc,
+                                                            d_input_desc,
+                                                            d_input,
+                                                            algo_count,
+                                                            &tested_algo_count,
+                                                            perf_results,
+                                                            ws,
+                                                            ws_size));
+        }
+        else
+        {
+            DISTCONV_CHECK_CUDNN(
+                cudnnFindConvolutionBackwardDataAlgorithm(handle,
+                                                          filter_desc,
+                                                          d_output_desc,
+                                                          conv_desc,
+                                                          d_input_desc,
+                                                          algo_count,
+                                                          &tested_algo_count,
+                                                          perf_results));
+        }
+        if (t > skip)
+        {
+            std::ostringstream ss;
+            ss << "Backward data autotune tested algorithms: ";
+            for (int i = 0; i < tested_algo_count; ++i)
+            {
+                const auto& res = perf_results[i];
+                ss << "("
+                   << util::CUDNNConvolutionBwdDataAlgorithms::get_name(
+                          res.algo)
+                   << ", ";
+                if (res.status == CUDNN_STATUS_SUCCESS)
+                {
+                    ss << res.time << " ms"
+                       << ", " << res.memory / 1000 / 1000 << " MB";
+                }
+                else if (res.status == CUDNN_STATUS_ALLOC_FAILED)
+                {
+                    ss << "INSUFFICIENT MEMORY, " << res.memory / 1000 / 1000
+                       << " MB required";
+                }
+                else
+                {
+                    ss << "INTERNAL ERROR";
+                }
+                ss << ") ";
+                if (res.status == CUDNN_STATUS_SUCCESS)
+                {
+                    perf_results_all.push_back(res);
+                }
+            }
+            util::MPIPrintStreamDebug() << ss.str();
+        }
+    }
+    delete[] perf_results;
+    if (ws_size)
+        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(ws));
+    auto const best_algo =
+        find_best_algorithm<cudnnConvolutionBwdDataAlgo_t,
+                            cudnnConvolutionBwdDataAlgoPerf_t>(
+            perf_results_all);
+    util::MPIPrintStreamDebug()
+        << "Autotune best algorithm: "
+        << util::CUDNNConvolutionBwdDataAlgorithms::get_name(best_algo);
+    return best_algo;
+}
+
+auto GPUDNNBackend::get_bwd_filter_algorithm_by_name(std::string const& name)
     -> ConvBwdFilterAlgo_t
 {
-    DISTCONV_ASSERT_PTR(false);
-    return static_cast<ConvBwdFilterAlgo_t>(0);
+    return util::CUDNNConvolutionBwdFilterAlgorithms::get_algo(name);
+}
+
+auto GPUDNNBackend::get_bwd_filter_algorithm_by_heuristics(
+    Handle_t handle,
+    TensorDescriptor_t input_desc,
+    TensorDescriptor_t d_output_desc,
+    ConvolutionDescriptor_t conv_desc,
+    FilterDescriptor_t d_filter_desc,
+    size_t ws_size) -> ConvBwdFilterAlgo_t
+{
+#if CUDNN_MAJOR < 8
+    cudnnConvolutionBwdFilterAlgo_t algo;
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterAlgorithm(
+        handle,
+        input_desc,
+        d_output_desc,
+        conv_desc,
+        d_filter_desc,
+        CUDNN_CONVOLUTION_BWD_FILTER_SPECIFY_WORKSPACE_LIMIT,
+        ws_size ? ws_size : CONVOLUTION_WORKSPACE_SIZE,
+        &algo));
+    return algo;
+#else  // CUDNN_MAJOR < 8
+    int algo_count;
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(
+        handle, &algo_count));
+    cudnnConvolutionBwdFilterAlgoPerf_t* perf_results =
+        new cudnnConvolutionBwdFilterAlgoPerf_t[algo_count];
+    int tested_algo_count = 0;
+    DISTCONV_CHECK_CUDNN(
+        cudnnGetConvolutionBackwardFilterAlgorithm_v7(handle,
+                                                      input_desc,
+                                                      d_output_desc,
+                                                      conv_desc,
+                                                      d_filter_desc,
+                                                      algo_count,
+                                                      &tested_algo_count,
+                                                      perf_results));
+    cudnnConvolutionBwdFilterAlgo_t algo;
+    for (int i = 0; i < tested_algo_count; i++)
+    {
+        if (perf_results[i].memory <= ws_size)
+        {
+            algo = perf_results[i].algo;
+            delete[] perf_results;
+            return algo;
+        }
+    }
+    util::MPIPrintStreamError()
+        << "No backward filter algorithm found for CUDNN";
+    std::abort();
+#endif // CUDNN_MAJOR < 8
+}
+
+auto GPUDNNBackend::get_bwd_filter_algorithm_by_autotune(
+    Handle_t handle,
+    TensorDescriptor_t input_desc,
+    void const* input,
+    TensorDescriptor_t d_output_desc,
+    void const* d_output,
+    ConvolutionDescriptor_t conv_desc,
+    FilterDescriptor_t d_filter_desc,
+    void* d_filter,
+    size_t ws_size) -> ConvBwdFilterAlgo_t
+{
+    constexpr int trial_count = 3;
+    constexpr int skip = 1;
+    int algo_count;
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionBackwardFilterAlgorithmMaxCount(
+        handle, &algo_count));
+    cudnnConvolutionBwdFilterAlgoPerf_t* perf_results =
+        new cudnnConvolutionBwdFilterAlgoPerf_t[algo_count];
+    std::vector<cudnnConvolutionBwdFilterAlgoPerf_t> perf_results_all;
+    int tested_algo_count = 0;
+    void* ws = nullptr;
+    if (ws_size)
+    {
+        auto const stream = get_stream(handle);
+        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceAllocate(
+            &ws, ws_size, stream));
+    }
+    for (int t = 0; t < trial_count + skip; ++t)
+    {
+        if (ws_size)
+        {
+            DISTCONV_CHECK_CUDNN(cudnnFindConvolutionBackwardFilterAlgorithmEx(
+                handle,
+                input_desc,
+                input,
+                d_output_desc,
+                d_output,
+                conv_desc,
+                d_filter_desc,
+                d_filter,
+                algo_count,
+                &tested_algo_count,
+                perf_results,
+                ws,
+                ws_size));
+        }
+        else
+        {
+            DISTCONV_CHECK_CUDNN(
+                cudnnFindConvolutionBackwardFilterAlgorithm(handle,
+                                                            input_desc,
+                                                            d_output_desc,
+                                                            conv_desc,
+                                                            d_filter_desc,
+                                                            algo_count,
+                                                            &tested_algo_count,
+                                                            perf_results));
+        }
+        if (t > skip)
+        {
+            std::ostringstream ss;
+            ss << "Backward filter autotune tested algorithms: ";
+            for (int i = 0; i < tested_algo_count; ++i)
+            {
+                const auto& res = perf_results[i];
+
+                ss << "("
+                   << util::CUDNNConvolutionBwdFilterAlgorithms::get_name(
+                          res.algo)
+                   << ", ";
+                if (res.status == CUDNN_STATUS_SUCCESS)
+                {
+                    ss << res.time << " ms"
+                       << ", " << res.memory / 1000 / 1000 << " MB";
+                }
+                else if (res.status == CUDNN_STATUS_ALLOC_FAILED)
+                {
+                    ss << "INSUFFICIENT MEMORY, " << res.memory / 1000 / 1000
+                       << " MB required";
+                }
+                else
+                {
+                    ss << "INTERNAL ERROR";
+                }
+                ss << ") ";
+                if (res.status == CUDNN_STATUS_SUCCESS)
+                {
+                    perf_results_all.push_back(res);
+                }
+            }
+            util::MPIPrintStreamDebug() << ss.str();
+        }
+    }
+    delete[] perf_results;
+    if (ws_size)
+        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(ws));
+    auto const best_algo =
+        find_best_algorithm<cudnnConvolutionBwdFilterAlgo_t,
+                            cudnnConvolutionBwdFilterAlgoPerf_t>(
+            perf_results_all);
+    util::MPIPrintStreamDebug()
+        << "Autotune best algorithm: "
+        << util::CUDNNConvolutionBwdFilterAlgorithms::get_name(best_algo);
+    return best_algo;
 }
 
 // Handle interface
@@ -554,11 +1026,7 @@ void GPUDNNBackend::set_filter_descriptor(FilterDescriptor_t const& desc,
                                           int const* dims)
 {
     DISTCONV_CHECK_CUDNN(
-        cudnnSetFilterNdDescriptor(desc,
-                                   dt,
-                                   CUDNN_TENSOR_NCHW,
-                                   ndims,
-                                   dims));
+        cudnnSetFilterNdDescriptor(desc, dt, CUDNN_TENSOR_NCHW, ndims, dims));
 }
 
 void GPUDNNBackend::set_filter_descriptor(FilterDescriptor_t const& desc,
@@ -678,11 +1146,12 @@ void GPUDNNBackend::get_tensor_descriptor(TensorDescriptor_t const& desc,
 
     dims.resize(rank);
     strides.resize(rank);
-    DISTCONV_CHECK_CUDNN(
-        cudnnGetTensorNdDescriptor(desc, rank, &dt, &rank, dims.data(), strides.data()));
+    DISTCONV_CHECK_CUDNN(cudnnGetTensorNdDescriptor(
+        desc, rank, &dt, &rank, dims.data(), strides.data()));
 }
 
-auto GPUDNNBackend::get_tensor_datatype(TensorDescriptor_t const& desc) -> DataType_t
+auto GPUDNNBackend::get_tensor_datatype(TensorDescriptor_t const& desc)
+    -> DataType_t
 {
     DataType_t dt;
     int rank;
