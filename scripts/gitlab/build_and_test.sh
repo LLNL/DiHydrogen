@@ -1,11 +1,5 @@
 #!/usr/bin/env bash
 
-# Initialize modules for users not using bash as a default shell
-if test -e /usr/share/lmod/lmod/init/bash
-then
-  . /usr/share/lmod/lmod/init/bash
-fi
-
 ################################################################################
 ## Copyright 2019-2023 Lawrence Livermore National Security, LLC and other
 ## DiHydrogen Project Developers. See the top-level LICENSE file for details.
@@ -13,13 +7,23 @@ fi
 ## SPDX-License-Identifier: Apache-2.0
 ################################################################################
 
+# Initialize modules for users not using bash as a default shell
+if test -e /usr/share/lmod/lmod/init/bash
+then
+  . /usr/share/lmod/lmod/init/bash
+fi
+
 set -o errexit
 set -o nounset
 
 option=${1:-""}
 hostname="$(hostname)"
-truehostname=${hostname//[0-9]/}
-project_dir="$(pwd)"
+cluster=${hostname//[0-9]/}
+project_dir="$(git rev-parse --show-toplevel)"
+if [[ $? -eq 1 ]]
+then
+    project_dir="$(pwd)"
+fi
 
 build_root=${BUILD_ROOT:-""}
 hostconfig=${HOST_CONFIG:-""}
@@ -28,6 +32,13 @@ job_unique_id=${CI_JOB_ID:-""}
 spack_upstream=${UPSTREAM:-""}
 
 prefix=""
+
+# The ${project_dir}/.uberenv_config.json file has paths relative to
+# the toplevel, and things break if uberenv isn't invoked there. This
+# seems easier than trying to shim something into that file. Even if
+# taking a path through this script that avoids uberenv, the rest of
+# it likely has some subtle dependence on this anyway.
+cd ${project_dir}
 
 if [[ -d /dev/shm ]]
 then
@@ -49,6 +60,7 @@ date
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo "~~~~~ Build and test started"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
 if [[ "${option}" != "--build-only" && "${option}" != "--test-only" ]]
 then
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -82,12 +94,21 @@ then
         upstream_opt="--upstream=${spack_upstream}"
     fi
 
-    ./scripts/uberenv/uberenv.py --reuse="True" --spec="${spec}" ${upstream_opt} ${prefix_opt}
+    spack_file="${project_dir}/scripts/spack/environments/${cluster}/spack.yaml"
+    env_file_opt=""
+    if [[ -e "${spack_file}" ]]
+    then
+        env_file_opt="--spack-env-file=${spack_file}"
+    fi
+
+    ${project_dir}/scripts/uberenv/uberenv.py \
+                  --spec="${spec}" ${env_file_opt} ${upstream_opt} ${prefix_opt}
 
 fi
-  echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-  echo "~~~~~ Dependencies Built"
-  echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+echo "~~~~~ Dependencies Built"
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 date
 
 # Host config file
@@ -113,7 +134,7 @@ then
     fi
 else
     # Using provided host-config file.
-    hostconfig_path="${project_dir}/host-configs/${hostconfig}"
+    hostconfig_path="${project_dir}/${hostconfig}"
 fi
 
 hostconfig=$(basename ${hostconfig_path})
@@ -164,11 +185,19 @@ then
 
     date
 
+    generator="Unix Makefiles"
+    if command -v ninja > /dev/null;
+    then
+        generator="Ninja"
+    fi
+    echo "Using ${generator} generator."
+
     $cmake_exe \
-      -C ${hostconfig_path} \
-      -DCMAKE_INSTALL_PREFIX=${install_dir} \
-      ${project_dir}
-    if ! $cmake_exe --build . -j ${core_counts[$truehostname]}
+        -G "${generator}" \
+        -C ${hostconfig_path} \
+        -DCMAKE_INSTALL_PREFIX=${install_dir} \
+        ${project_dir}
+    if ! $cmake_exe --build . -j ${core_counts[$cluster]}
     then
         echo "ERROR: compilation failed, building with verbose output..."
         $cmake_exe --build . --verbose -j 1
@@ -180,6 +209,7 @@ then
     echo "~~~~~ DiHydrogen Built"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     date
+
 fi
 
 # Test
@@ -200,7 +230,10 @@ then
     # Run tests
     ctest_exe=$(dirname ${cmake_exe})/ctest
     date
-    ${ctest_exe} --output-on-failure --output-junit ${project_dir}/${hostname}_junit.xml |& tee tests_output.txt
+    ${ctest_exe} \
+        --output-on-failure \
+        --output-junit \
+        ${project_dir}/${hostname}_junit.xml |& tee tests_output.txt
     date
 
     no_test_str="No tests were found!!!"
