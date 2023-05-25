@@ -25,8 +25,6 @@ struct FixedSizeTuplePadding {
   SizeType size_;  /**< Number of valid elements. */
   T pad_value_;  /**< Value to set unspecified valid elements to. */
 
-  constexpr FixedSizeTuplePadding(SizeType size) :
-    size_(size), pad_value_{} {}
   constexpr FixedSizeTuplePadding(SizeType size, T pad_value) :
     size_(size), pad_value_(pad_value) {}
 };
@@ -133,6 +131,22 @@ struct FixedSizeTuple {
       }
     }
     return true;
+  }
+
+  /**
+   * Compare two tuples for inequality.
+   */
+  template <typename U, typename OtherSizeType, OtherSizeType M>
+  constexpr bool operator!=(const FixedSizeTuple<U, OtherSizeType, M>& other) const H2_NOEXCEPT {
+    if (size_ != other.size_) {
+      return true;
+    }
+    for (SizeType i = 0; i < size_; ++i) {
+      if (data_[i] != other.data_[i]) {
+        return true;
+      }
+    }
+    return false;
   }
 };
 

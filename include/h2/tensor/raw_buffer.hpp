@@ -48,11 +48,22 @@ public:
 
   RawBuffer() : buffer(nullptr), buffer_size(0) {}
   RawBuffer(std::size_t size) : buffer(nullptr), buffer_size(size) {
-    buffer = internal::Allocator<T, Dev>::allocate(size);
+    ensure();
   }
   ~RawBuffer() {
+    release();
+  }
+
+  void ensure() {
+    if (!buffer) {
+      buffer = internal::Allocator<T, Dev>::allocate(buffer_size);
+    }
+  }
+
+  void release() {
     if (buffer) {
       internal::Allocator<T, Dev>::deallocate(buffer);
+      buffer = nullptr;
     }
   }
 

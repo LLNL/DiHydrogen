@@ -27,7 +27,13 @@ public:
 
   using value_type = T;
 
-  /** Construct a tensor with the given shape and dimension types. */
+  /**
+   * Construct a tensor with the given shape and dimension types.
+   *
+   * The tensor may be constructed lazily, in which case memory will
+   * not be allocated until necessary. The `ensure` and `release`
+   * methods may also be used to manually control this.
+   */
   BaseTensor(ShapeTuple shape_, DimensionTypeTuple dim_types_) :
     tensor_shape(shape_),
     tensor_dim_types(dim_types_),
@@ -89,13 +95,25 @@ public:
   /** Return the type of device this tensor is on. */
   virtual Device get_device() const H2_NOEXCEPT = 0;
 
-  /** Clear the tensor and reset it to empty. */
+  /**
+   * Clear the tensor and reset it to empty.
+   *
+   * If this is a view, this is equivalent to `unview`.
+   */
   virtual void empty() = 0;
 
-  /** Resize the tensor to a new shape, keeping dimension types the same. */
+  /**
+   * Resize the tensor to a new shape, keeping dimension types the same.
+   *
+   * It is an error to call this on a view.
+   */
   virtual void resize(ShapeTuple new_shape) = 0;
 
-  /** Resize the tensor to a new shape, also changing dimension types. */
+  /**
+   * Resize the tensor to a new shape, also changing dimension types.
+   *
+   * It is an error to call this on a view.
+   */
   virtual void resize(ShapeTuple new_shape, DimensionTypeTuple new_dim_types) = 0;
 
   /** Return a raw pointer to the underlying storage. */
@@ -104,15 +122,28 @@ public:
   /** Return a raw constant pointer to the underlying storage. */
   virtual const T* const_data() const = 0;
 
+  /** Ensure memory is backing this tensor, allocating if necessary. */
+  virtual void ensure() = 0;
+
   /**
-   * Make this tensor contiguous, if it is not already.
+   * Release memory associated with this tensor.
    *
-   * This may reallocate the tensor's memory.
-   *
-   * @warning If the tensor is not contiguous, this may invalidate all
-   * views.
+   * Note that if there are views, memory may not be deallocated
+   * immediately.
    */
-  //virtual void contiguous() = 0;
+  virtual void release() = 0;
+
+  /**
+   * Return a contiguous version of this tensor.
+   *
+   * If the tensor is contiguous, a view of the original tensor is
+   * returned. Otherwise, a new tensor is allocated.
+   *
+   * If this tensor is a view, the returned tensor will be distinct
+   * from the viewed tensor. Any views of this tensor will still be
+   * viewing the original tensor, not the contiguous tensor.
+   */
+  virtual BaseTensor<T>* contiguous() = 0;
 
   /**
    * Return a view of this tensor.
@@ -126,8 +157,9 @@ public:
    * However, changes to metadata (e.g., shape, stride, etc.) do not
    * propagate to views. It is up to the caller to ensure views remain
    * consistent. Certain operations that would require changes to the
-   * underlying memory (`resize`, `contiguous`, `empty`, etc.) are not
-   * permitted on views and will throw an exception.
+   * underlying memory (e.g., `resize`) are not permitted on views and
+   * will throw an exception. Other operations have special semantics
+   * when the tensor is a view (e.g., `contiguous`, `empty`).
    */
   virtual BaseTensor<T>* view() = 0;
 
@@ -138,6 +170,15 @@ public:
    * must be of contiguous subsets of the tensor (i.e., no strides).
    */
   virtual BaseTensor<T>* view(CoordTuple coords) = 0;
+
+  /**
+   * If this tensor is a view, stop viewing.
+   *
+   * The tensor will have empty dimensions after this.
+   *
+   * It is an error to call this if the tensor is not a view.
+   */
+  virtual void unview() = 0;
 
   /** Convenience wrapper for view(coords). */
   virtual BaseTensor<T>* operator()(CoordTuple coords) {

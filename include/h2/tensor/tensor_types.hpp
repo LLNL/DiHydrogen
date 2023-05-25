@@ -97,7 +97,6 @@ using StrideTuple = NDimTuple<DataIndexType>;
 struct DimensionRange {
   DimType start;  /**< Start of a range. */
   DimType end;  /**< End of a range. */
-
   constexpr DimensionRange() : start(0), end(0) {}
   constexpr DimensionRange(DimType i) : start(i), end(i+1) {}
   constexpr DimensionRange(DimType start_, DimType end_) : start(start_), end(end_) {}
@@ -106,6 +105,8 @@ struct DimensionRange {
     return start == other.start && end == other.end;
   }
 };
+
+using DRng = DimensionRange;  // Alias to save you some typing.
 
 /**
  * Tuple of dimension ranges.
@@ -168,7 +169,8 @@ constexpr inline ShapeTuple get_range_shape(CoordTuple coords, ShapeTuple shape)
 template <typename T, typename SizeType, SizeType N>
 constexpr inline FixedSizeTuple<T, SizeType, N> filter_by_trivial(
   CoordTuple coords, FixedSizeTuple<T, SizeType, N> tuple) H2_NOEXCEPT {
-  FixedSizeTuple<T, SizeType, N> new_tuple(FixedSizeTuplePadding<T, SizeType>(tuple.size()));
+  FixedSizeTuple<T, SizeType, N> new_tuple(
+    FixedSizeTuplePadding<T, SizeType>(tuple.size(), T{}));
   SizeType j = 0;
   for (SizeType i = 0; i < tuple.size(); ++i) {
     if (i >= coords.size() || !is_coord_trivial(coords[i])) {
