@@ -5,11 +5,9 @@
 ## SPDX-License-Identifier: Apache-2.0
 ################################################################################
 
-# First add this directory's sources. CPP files aren't exported, so
-# these are PRIVATE.
-target_sources(H2Core PRIVATE Version.cpp)
-
-# Subdirectories
-add_subdirectory(gpu)
-add_subdirectory(utils)
-add_subdirectory(tensor)
+target_sources(StaticTest
+  PRIVATE
+  fixed_size_tuple.cpp
+  tensor_types.cpp
+  strided_memory.cpp
+)

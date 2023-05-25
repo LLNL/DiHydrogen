@@ -36,14 +36,18 @@ constexpr inline StrideTuple get_contiguous_strides(ShapeTuple shape) {
 /**
  * Return true if the given strides are contiguous.
  */
-constexpr inline bool are_strides_contiguous(StrideTuple strides) {
+constexpr inline bool are_strides_contiguous(
+  ShapeTuple shape,
+  StrideTuple strides) {
+  H2_ASSERT_DEBUG(shape.size() == strides.size(),
+                  "Shape and strides must be the same size");
   // Ensure the strides follow the prefix-product.
   typename StrideTuple::type prod = 1;
-  for (typename StrideTuple::size_type i = 0; i < strides.size() - 1; ++i) {
-    if (strides[i] != prod) {
+  for (typename ShapeTuple::size_type i = 1; i < shape.size(); ++i) {
+    if (prod != strides[i-1]) {
       return false;
     }
-    prod *= strides[i];
+    prod *= shape[i];
   }
   return true;
 }

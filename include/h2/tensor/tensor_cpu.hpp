@@ -54,18 +54,18 @@ public:
   }
 
   bool is_contiguous() const H2_NOEXCEPT override {
-    return are_strides_contiguous(tensor_memory.strides());
+    return are_strides_contiguous(this->tensor_shape, tensor_memory.strides());
   }
 
   Device get_device() const H2_NOEXCEPT override { return device; }
 
   void empty() override {
-    if (this->is_view()) {
-      throw H2Exception("Cannot empty a view");
-    }
     tensor_memory = StridedMemory<T, Device::CPU>();
     this->tensor_shape = ShapeTuple();
     this->tensor_dim_types = DimensionTypeTuple();
+    if (this->is_view()) {
+      this->tensor_view_type = ViewType::None;
+    }
   }
 
   void resize(ShapeTuple new_shape) override {
@@ -100,6 +100,21 @@ public:
     return tensor_memory.const_data();
   }
 
+  void ensure() override {
+    // TODO
+  }
+
+  void release() override {
+    // TODO
+  }
+
+  Tensor<T, Device::CPU>* contiguous() override {
+    if (is_contiguous()) {
+      return view();
+    }
+    throw H2Exception("contiguous() not implemented");
+  }
+
   Tensor<T, Device::CPU>* view() override {
     return view(CoordTuple(TuplePad<CoordTuple>(this->tensor_shape.size(), ALL)));
   }
@@ -111,6 +126,11 @@ public:
       get_range_shape(coords, this->tensor_shape),
       filter_by_trivial(coords, this->tensor_dim_types),
       coords);
+  }
+
+  void unview() override {
+    H2_ASSERT_DEBUG(this->is_view(), "Must be a view to unview");
+    empty();  // Emptying a view is equivalent to unviewing.
   }
 
   const Tensor<T, Device::CPU>* const_view() const override {
