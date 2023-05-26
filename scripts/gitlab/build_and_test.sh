@@ -8,9 +8,10 @@
 ################################################################################
 
 # Initialize modules for users not using bash as a default shell
-if test -e /usr/share/lmod/lmod/init/bash
+modules_home=${MODULESHOME:-"/usr/share/lmod/lmod"}
+if test -e ${modules_home}/init/bash
 then
-  . /usr/share/lmod/lmod/init/bash
+  . ${modules_home}/init/bash
 fi
 
 set -o errexit
@@ -25,13 +26,26 @@ then
     project_dir="$(pwd)"
 fi
 
+spec=${SPEC:-""}
+modules=${MODULES:-""}
+# NOTE: No modules will be explicitly unloaded or purged. Obviously,
+# loading a new compiler will trigger the auto-unload of the existing
+# compiler module (and all the other side-effects wrt mpi, etc), but
+# no explicit action is taken by this script.
+
 build_root=${BUILD_ROOT:-""}
 hostconfig=${HOST_CONFIG:-""}
-spec=${SPEC:-""}
 job_unique_id=${CI_JOB_ID:-""}
 spack_upstream=${UPSTREAM:-""}
 
 prefix=""
+
+# Setup the module environment
+if [[ -n "${modules}" ]]
+then
+    echo "Loading modules: \"${modules}\""
+    module load ${modules}
+fi
 
 # The ${project_dir}/.uberenv_config.json file has paths relative to
 # the toplevel, and things break if uberenv isn't invoked there. This

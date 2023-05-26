@@ -1,0 +1,25 @@
+################################################################################
+## Copyright 2019-2022 Lawrence Livermore National Security, LLC and other
+## DiHydrogen Project Developers. See the top-level LICENSE file for details.
+##
+## SPDX-License-Identifier: Apache-2.0
+################################################################################
+
+.build-and-test:
+  variables:
+    LLNL_SERVICE_USER: lbannusr
+    GIT_SUBMODULE_STRATEGY: recursive
+    GIT_DEPTH: 5
+  script:
+    - printenv > ${CI_PROJECT_DIR}/ci_environment.log
+    - ${CI_PROJECT_DIR}/scripts/gitlab/build_and_test.sh
+  artifacts:
+    when: always
+    paths:
+      - "${CI_PROJECT_DIR}/*_junit.xml"
+      - "${CI_PROJECT_DIR}/*.cmake"
+      - "${CI_PROJECT_DIR}/spack*.txt"
+      - "${CI_PROJECT_DIR}/ci_environment.log"
+      - "${CI_PROJECT_DIR}/${CI_JOB_ID}/*"
+    reports:
+      junit: "${CI_PROJECT_DIR}/*_junit.xml"

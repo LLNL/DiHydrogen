@@ -10,6 +10,19 @@ spack:
     unify: true
   compilers:
   - compiler:
+      spec: clang@=13.0.1-gcc-8.3.1
+      paths:
+        cc: /usr/tce/packages/clang/clang-13.0.1-gcc-8.3.1/bin/clang
+        cxx: /usr/tce/packages/clang/clang-13.0.1-gcc-8.3.1/bin/clang++
+        f77: /usr/tce/packages/gcc/gcc-8.3.1/bin/gfortran
+        fc: /usr/tce/packages/gcc/gcc-8.3.1/bin/gfortran
+      flags: {}
+      operating_system: rhel7
+      target: ppc64le
+      modules: []
+      environment: {}
+      extra_rpaths: []
+  - compiler:
       spec: gcc@=8.3.1
       paths:
         cc: /usr/tce/packages/gcc/gcc-8.3.1/bin/gcc
@@ -142,6 +155,12 @@ spack:
       externals:
       - spec: pkg-config@0.27.1
         prefix: /usr
+    spectrum-mpi:
+      externals:
+      - spec: spectrum-mpi@10.3.1.03rtm0%gcc@=8.3.1
+        prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-gcc-8.3.1
+      - spec: spectrum-mpi@10.3.1.03rtm0%clang@=13.0.1-gcc-8.3.1
+        prefix: /usr/tce/packages/spectrum-mpi/spectrum-mpi-rolling-release-clang-13.0.1-gcc-8.3.1
     subversion:
       externals:
       - spec: subversion@1.7.14
