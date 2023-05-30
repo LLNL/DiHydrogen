@@ -108,14 +108,14 @@ then
         upstream_opt="--upstream=${spack_upstream}"
     fi
 
-    spack_file="${project_dir}/scripts/spack/environments/${cluster}/spack.yaml"
+    spack_file="${project_dir}/.gitlab/spack/environments/${cluster}/spack.yaml"
     env_file_opt=""
     if [[ -e "${spack_file}" ]]
     then
         env_file_opt="--spack-env-file=${spack_file}"
     fi
 
-    ${project_dir}/scripts/uberenv/uberenv.py \
+    ${project_dir}/.gitlab/uberenv/uberenv.py \
                   --spec="${spec}" ${env_file_opt} ${upstream_opt} ${prefix_opt}
 
 fi

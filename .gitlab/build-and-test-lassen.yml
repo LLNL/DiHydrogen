@@ -31,13 +31,13 @@ gcc-8-3-1-cuda-12-0-0:
 
 clang-13-0-1-gcc-8-3-1-cuda-11-8-0:
   variables:
-    SPEC: "clang@13.0.1-gcc-8.3.1 +developer +cuda cuda_arch=70 ^cuda@11.8.0"
+    SPEC: "%clang@13.0.1-gcc-8.3.1 +developer +cuda cuda_arch=70 ^cuda@11.8.0"
     MODULES: "clang/13.0.1-gcc-8.3.1 spectrum-mpi/rolling-release cuda/11.8.0"
   extends: .build-and-test-on-lassen
 
 clang-13-0-1-gcc-8-3-1-cuda-12-0-0:
   variables:
-    SPEC: "clang@13.0.1-gcc-8.3.1 +developer +cuda cuda_arch=70 ^cuda@12.0.0"
+    SPEC: "%clang@13.0.1-gcc-8.3.1 +developer +cuda cuda_arch=70 ^cuda@12.0.0"
     MODULES: "clang/13.0.1-gcc-8.3.1 spectrum-mpi/rolling-release cuda/12.0.0"
   extends: .build-and-test-on-lassen
 

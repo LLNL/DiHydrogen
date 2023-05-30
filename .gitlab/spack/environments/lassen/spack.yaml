@@ -63,11 +63,11 @@ spack:
     cuda:
       buildable: false
       externals:
-      - spec: cuda@12.0.76
+      - spec: cuda@12.0.0
         prefix: /usr/tce/packages/cuda/cuda-12.0.0
-      - spec: cuda@11.8.89
+      - spec: cuda@11.8.0
         prefix: /usr/tce/packages/cuda/cuda-11.8.0
-      - spec: cuda@11.7.64
+      - spec: cuda@11.7.0
         prefix: /usr/tce/packages/cuda/cuda-11.7.0
     cudnn:
       externals:

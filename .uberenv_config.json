@@ -5,8 +5,8 @@
     "package_source_dir" : "../..",
     "spack_url": "https://github.com/spack/spack.git",
     "spack_activate" : {},
-    "spack_configs_path": "scripts/spack/environments",
-    "spack_packages_path": "scripts/spack/packages",
+    "spack_configs_path": ".gitlab/spack/environments",
+    "spack_packages_path": ".gitlab/spack/packages",
     "spack_concretizer": "clingo",
     "spack_setup_clingo": true
 }

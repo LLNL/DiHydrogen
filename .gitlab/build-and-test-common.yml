@@ -12,7 +12,7 @@
     GIT_DEPTH: 5
   script:
     - printenv > ${CI_PROJECT_DIR}/ci_environment.log
-    - ${CI_PROJECT_DIR}/scripts/gitlab/build_and_test.sh
+    - ${CI_PROJECT_DIR}/.gitlab/build-and-test.sh
   artifacts:
     when: always
     paths:
