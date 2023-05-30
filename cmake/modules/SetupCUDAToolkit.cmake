@@ -26,10 +26,13 @@ target_include_directories(
   INTERFACE
   "${CUDA_INCLUDE_DIRS}")
 
+if (cuDNN_FOUND)
+  target_link_libraries(h2::cuda_toolkit INTERFACE cuda::cudnn)
+endif ()
+
 target_link_libraries(
   h2::cuda_toolkit
   INTERFACE
-  $<TARGET_NAME_IF_EXISTS:cuda::cudnn>
   CUDA::nvToolsExt
   CUDA::nvml
   CUDA::cuda_driver

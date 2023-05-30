@@ -7,7 +7,6 @@
 
 cmake_minimum_required(VERSION 3.21.0)
 cmake_policy(VERSION 3.21.0)
-set(CMAKE_POLICY_DEFAULT_CMP0074 NEW)
 
 project(DiHydrogen
   VERSION 0.3.0
@@ -378,15 +377,29 @@ target_include_directories(
   $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
-target_compile_features(H2Core PUBLIC cxx_std_17)
-
-# FIXME: With HIP, this is still explicitly needed. :/
 if (NOT CMAKE_CXX_STANDARD)
+  target_compile_features(H2Core PUBLIC cxx_std_17)
   set_target_properties(H2Core
     PROPERTIES
     CXX_STANDARD 17
     CXX_EXTENSIONS OFF
     CXX_STANDARD_REQUIRED ON)
+endif ()
+
+if (H2_HAS_CUDA)
+  target_compile_features(H2Core PUBLIC cuda_std_17)
+  set_target_properties(H2Core
+    PROPERTIES
+    CUDA_STANDARD 17
+    CUDA_STANDARD_REQUIRED ON)
+endif ()
+
+if (H2_HAS_ROCM)
+  target_compile_features(H2Core PUBLIC hip_std_17)
+  set_target_properties(H2Core
+    PROPERTIES
+    HIP_STANDARD 17
+    HIP_STANDARD_REQUIRED ON)
 endif ()
 
 # Compiler flags are not transitive in the install environment; we
