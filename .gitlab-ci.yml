@@ -20,14 +20,14 @@ lassen testing:
     strategy: depend
     include: .gitlab/build-and-test-lassen.yml
 
-# pascal testing:
-#   stage: run-all-clusters
-#   trigger:
-#     strategy: depend
-#     include: .gitlab/build-and-test-pascal.yml
+pascal testing:
+  stage: run-all-clusters
+  trigger:
+    strategy: depend
+    include: .gitlab/build-and-test-pascal.yml
 
-# tioga testing:
-#   stage: run-all-clusters
-#   trigger:
-#     strategy: depend
-#     include: .gitlab/build-and-test-tioga.yml
+tioga testing:
+  stage: run-all-clusters
+  trigger:
+    strategy: depend
+    include: .gitlab/build-and-test-tioga.yml

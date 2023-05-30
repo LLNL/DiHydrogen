@@ -1,0 +1,211 @@
+# This is a Spack Environment file.
+#
+# It describes a set of packages to be installed, along with
+# configuration settings.
+spack:
+  # add package specs to the `specs` list
+  specs: []
+  view: true
+  concretizer:
+    unify: true
+  compilers:
+  # - compiler:
+  #     spec: cce@=amd-5.5.0
+  #     paths:
+  #       cc: cc
+  #       cxx: CC
+  #       f77: ftn
+  #       fc: ftn
+  #     flags: {}
+  #     operating_system: rhel8
+  #     target: x86_64
+  #     modules: [PrgEnv-amd/8.3.3, amd/5.5.0]
+  #     environment: {}
+  #     extra_rpaths: []
+  - compiler:
+      spec: rocmcc@=5.5.0
+      paths:
+        cc: /opt/rocm-5.5.0/bin/amdclang
+        cxx: /opt/rocm-5.5.0/bin/amdclang++
+        f77: /opt/rocm-5.5.0/bin/amdflang
+        fc: /opt/rocm-5.5.0/bin/amdflang
+      flags: {}
+      operating_system: rhel8
+      target: x86_64
+      modules: []
+      environment: {}
+      extra_rpaths: []
+  - compiler:
+      spec: rocmcc@=5.4.3
+      paths:
+        cc: /opt/rocm-5.4.3/bin/amdclang
+        cxx: /opt/rocm-5.4.3/bin/amdclang++
+        f77: /opt/rocm-5.4.3/bin/amdflang
+        fc: /opt/rocm-5.4.3/bin/amdflang
+      flags: {}
+      operating_system: rhel8
+      target: x86_64
+      modules: []
+      environment: {}
+      extra_rpaths: []
+  packages:
+    autoconf:
+      externals:
+      - spec: autoconf@2.69
+        prefix: /usr
+    automake:
+      externals:
+      - spec: automake@1.16.1
+        prefix: /usr
+    binutils:
+      externals:
+      - spec: binutils@2.30.117
+        prefix: /usr
+    bison:
+      externals:
+      - spec: bison@3.0.4
+        prefix: /usr
+    ccache:
+      externals:
+      - spec: ccache@3.7.7
+        prefix: /usr
+    cmake:
+      externals:
+      - spec: cmake@3.20.2
+        prefix: /usr
+      - spec: cmake@3.24.2
+        prefix: /usr/tce
+    coreutils:
+      externals:
+      - spec: coreutils@8.30
+        prefix: /usr
+    curl:
+      externals:
+      - spec: curl@7.61.1+gssapi+ldap+nghttp2
+        prefix: /usr
+    cvs:
+      externals:
+      - spec: cvs@1.11.23
+        prefix: /usr
+    diffutils:
+      externals:
+      - spec: diffutils@3.6
+        prefix: /usr
+    doxygen:
+      externals:
+      - spec: doxygen@1.8.14+graphviz~mscgen
+        prefix: /usr
+    findutils:
+      externals:
+      - spec: findutils@4.6.0
+        prefix: /usr
+    flex:
+      externals:
+      - spec: flex@2.6.1+lex
+        prefix: /usr
+    gawk:
+      externals:
+      - spec: gawk@4.2.1
+        prefix: /usr
+    git:
+      externals:
+      - spec: git@2.31.1+tcltk
+        prefix: /usr
+      - spec: git@2.29.1+tcltk
+        prefix: /usr/tce
+    git-lfs:
+      externals:
+      - spec: git-lfs@2.11.0
+        prefix: /usr/tce
+    gmake:
+      externals:
+      - spec: gmake@4.2.1
+        prefix: /usr
+    groff:
+      externals:
+      - spec: groff@1.22.3
+        prefix: /usr
+    hip:
+      externals:
+      - spec: hip@5.4.3
+        prefix: /opt/rocm-5.4.3
+      - spec: hip@5.5.0
+        prefix: /opt/rocm-5.5.0
+    hipcub:
+      externals:
+      - spec: hip@5.4.3
+        prefix: /opt/rocm-5.4.3
+      - spec: hip@5.5.0
+        prefix: /opt/rocm-5.5.0
+    hsa-rocr-dev:
+      externals:
+      - spec: hsa-rocr-dev@5.4.3
+        prefix: /opt/rocm-5.4.3
+      - spec: hsa-rocr-dev@5.5.0
+        prefix: /opt/rocm-5.5.0
+    hwloc:
+      externals:
+      - spec: hwloc@2.9.0
+        prefix: /usr
+    libtool:
+      externals:
+      - spec: libtool@2.4.6
+        prefix: /usr
+    llvm-amdgpu:
+      externals:
+      - spec: llvm-amdgpu@5.4.3
+        prefix: /opt/rocm-5.4.3/llvm
+      - spec: llvm-amdgpu@5.5.0
+        prefix: /opt/rocm-5.5.0/llvm
+    m4:
+      externals:
+      - spec: m4@1.4.18
+        prefix: /usr
+    miopen-hip:
+      externals:
+      - spec: miopen-hip@5.4.3
+        prefix: /opt/rocm-5.4.3
+      - spec: miopen-hip@5.5.0
+        prefix: /opt/rocm-5.5.0
+    mpich:
+      externals:
+      - spec: mpich@3.4a2~hydra device=ch4 netmod=ofi
+        modules:
+        - cray-mpich
+    openssh:
+      externals:
+      - spec: openssh@8.0p1
+        prefix: /usr
+    openssl:
+      externals:
+      - spec: openssl@1.1.1k
+        prefix: /usr
+    pkgconf:
+      externals:
+      - spec: pkgconf@1.4.2
+        prefix: /usr
+    rccl:
+      externals:
+      - spec: rccl@5.4.3
+        prefix: /opt/rocm-5.4.3
+      - spec: rccl@5.5.0
+        prefix: /opt/rocm-5.5.0
+    subversion:
+      externals:
+      - spec: subversion@1.10.2
+        prefix: /usr
+    swig:
+      externals:
+      - spec: swig@3.0.12
+        prefix: /usr
+    tar:
+      externals:
+      - spec: tar@1.30
+        prefix: /usr
+    texinfo:
+      externals:
+      - spec: texinfo@6.5
+        prefix: /usr
+    all:
+      providers:
+        mpi: [mpich]
