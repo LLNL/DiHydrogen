@@ -51,48 +51,33 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
         default=True,
         description="Enables the build of shared libraries")
 
-    # Meta-variant to change some default options
+    # Some features of developer interest
+
+    variant(
+        "developer",
+        default=False,
+        description="Enable extra warnings and force tests to be enabled.")
+
     variant(
         "ci",
         default=False,
         description="Use default options for CI builds")
 
-    # When CI is running, we want to default to using code coverage
-    # flags, as long as we have compiler support for it. When CI is
-    # not running, a user might still want to opt into code coverage.
-    with when("+ci"):
-        variant(
-            "coverage",
-            default=True,
-            description="Decorate build with code coverage instrumentation options",
-            when="%gcc")
-        variant(
-            "coverage",
-            default=True,
-            description="Decorate build with code coverage instrumentation options",
-            when="%clang")
-        variant(
-            "developer",
-            default=True,
-            description="Enable extra warnings and force tests to be enabled.",
-        )
-
-    with when("~ci"):
-        variant(
-            "coverage",
-            default=False,
-            description="Decorate build with code coverage instrumentation options",
-            when="%gcc")
-        variant(
-            "coverage",
-            default=False,
-            description="Decorate build with code coverage instrumentation options",
-            when="%clang")
-        variant(
-            "developer",
-            default=False,
-            description="Enable extra warnings and force tests to be enabled.",
-        )
+    variant(
+        "coverage",
+        default=False,
+        description="Decorate build with code coverage instrumentation options",
+        when="%gcc")
+    variant(
+        "coverage",
+        default=False,
+        description="Decorate build with code coverage instrumentation options",
+        when="%clang")
+    variant(
+        "coverage",
+        default=False,
+        description="Decorate build with code coverage instrumentation options",
+        when="%rocmcc")
 
     # Package conflicts and requirements
 
@@ -175,9 +160,11 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
         depends_on("miopen-hip", when="+rocm")
         depends_on("roctracer-dev", when="+rocm")
 
-    with when("+coverage"):
-        depends_on("lcov", when="%gcc")
-        depends_on("py-gcovr", when="%gcc +ci")
+    with when("+ci+coverage"):
+        depends_on("lcov", type=("build", "run"))
+        depends_on("py-gcovr", type=("build", "run"))
+        # Technically it's not used in the build, but CMake sets up a
+        # target, so it needs to be found.
 
     @property
     def libs(self):
@@ -205,14 +192,29 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
         spec = self.spec
         entries = super(Dihydrogen, self).std_initconfig_entries()
 
+        # It's a "STRING", not a "PATH". :/
+        entries = [ x for x in entries if "CMAKE_PREFIX_PATH" not in x ]
+
         cmake_prefix_path = os.environ["CMAKE_PREFIX_PATH"].replace(':',';')
         entries.append(cmake_cache_string("CMAKE_PREFIX_PATH", cmake_prefix_path))
+        if "PYTHONPATH" in os.environ:
+            entries.append("# PYTHONPATH={0}".format(os.environ["PYTHONPATH"]))
 
         return entries
 
     def initconfig_compiler_entries(self):
         spec = self.spec
         entries = super(Dihydrogen, self).initconfig_compiler_entries()
+
+        # Ugh. We don't need their generator. We don't specify a
+        # generator for DiHydrogen BECAUSE IT DOESN'T (shouldn't)
+        # MATTER in the sense that it should not impact the
+        # correctness of a build. Moreover, encoding it in the cache
+        # file is a terrible life choice because it makes assumptions
+        # about how the cache file will be consumed, which creates a
+        # headache for consumers outside those assumptions (an old
+        # adage about what happens when one assumes comes to mind).
+        entries = [ x for x in entries if "CMAKE_GENERATOR" not in x and "CMAKE_MAKE_PROGRAM" not in x ]
 
         # FIXME: Enforce this better in the actual CMake.
         entries.append(cmake_cache_string("CMAKE_CXX_STANDARD", "17"))
@@ -275,7 +277,7 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
 
     def initconfig_package_entries(self):
         spec = self.spec
-        entries = []
+        entries = super(Dihydrogen, self).initconfig_package_entries()
 
         entries.append(cmake_cache_option("H2_DEVELOPER_BUILD", "+developer" in spec))
         entries.append(cmake_cache_option("H2_ENABLE_TESTS", "+developer" in spec))
@@ -287,11 +289,11 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
 
         entries.append(cmake_cache_path("spdlog_ROOT", spec["spdlog"].prefix))
 
-        if "%gcc +coverage" in spec:
+        if "+coverage" in spec:
             entries.append(cmake_cache_path("lcov_ROOT", spec["lcov"].prefix))
             entries.append(cmake_cache_path("genhtml_ROOT", spec["lcov"].prefix))
             if "+ci" in spec:
-                entries.append(cmake_cache_path("py-gcovr_ROOT", spec["py-gcovr"].prefix))
+                entries.append(cmake_cache_path("gcovr_ROOT", spec["py-gcovr"].prefix))
 
         # DistConv options
         entries.append(cmake_cache_option("H2_ENABLE_ALUMINUM", "+distconv" in spec))

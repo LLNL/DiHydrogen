@@ -33,15 +33,10 @@ if (H2_EXTRA_CXX_FLAGS)
     PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${H2_EXTRA_CXX_FLAGS}>)
 endif ()
 
-if (H2_CODE_COVERAGE)
-  add_code_coverage(VersionTestExe coverage)
-  target_link_libraries(VersionTestExe PRIVATE h2_coverage_flags)
-endif ()
-
-add_test(NAME "[==[Testing the Version String.]==]"
+add_test(NAME [==[Testing the Version String.]==]
   COMMAND $<TARGET_FILE:VersionTestExe>
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties("[==[Testing the Version String.]==]" PROPERTIES
+set_tests_properties([==[Testing the Version String.]==] PROPERTIES
   PASS_REGULAR_EXPRESSION "${PROJECT_VERSION}")
 
 #

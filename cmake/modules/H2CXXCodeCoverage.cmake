@@ -1,5 +1,5 @@
 ################################################################################
-## Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+## Copyright 2019-2023 Lawrence Livermore National Security, LLC and other
 ## DiHydrogen Project Developers. See the top-level LICENSE file for details.
 ##
 ## SPDX-License-Identifier: Apache-2.0
@@ -34,133 +34,237 @@ if (NOT ((CMAKE_CXX_COMPILER_ID MATCHES GNU) OR
       (CMAKE_CXX_COMPILER_ID MATCHES "(Apple)?[Cc]lang")))
   message(FATAL_ERROR
     "Coverage tools only supported for GCC and Clang compilers.\n"
-    "Compiler detected as: ${CMAKE_CXX_COMPILER_ID}\n"
+    "Compiler Path: ${CMAKE_CXX_COMPILER}\n"
+    "Compiler ID: ${CMAKE_CXX_COMPILER_ID}\n"
     "If this compiler supports coverage, please open an issue.")
 endif ()
 
-#
 # Look for coverage tools.
 #
+# If we are doing a CI build, we need to prefer GCOV-compatible tools
+# (gcovr->cobertura format). Otherwise, prefer the toolchain
+# associated with the compiler.
+#
+# For GCOV tools, we should look for "gcov" if using GCC or "llvm-cov"
+# if using an LLVM-based compiler. For LLVM-based coverage, we need
+# "llvm-profdata".
+#
+# gcc workflow with GCC:
+#   > g++ -O0 --coverage foo.cpp -o foo
+#   > ./foo
+#   > gcov -m -r -s ${PWD} foo.cpp
+#
+# gcc workflow with llvm:
+#   > clang++ -O0 --coverage foo.cpp -o foo
+#   > ./foo
+#   > llvm-cov gcov -m -r -s ${PWD} foo.cpp
+#
+# llvm workflow:
+#   > clang++ -O0 -fprofile-instr-generate -fcoverage-mapping foo.cpp -o foo
+#   > LLVM_PROFILE_FILE=foo.profraw ./foo
+#   > llvm-profdata merge -sparse foo.profraw -o foo.profdata
+#   > llvm-cov report ./foo --instr-profile=foo.profdata
+#
+# To generate HTML reports, GCC tools will prefer "lcov"+"genhtml",
+# whereas LLVM-based tooling will use "llvm-cov show".
+#
+# In order to simplify the logic here, we only support GCC+GCC
+# tooling, LLVM+LLVM-GCC tooling, LLVM+LLVM tooling.
 
 # Coverage tools are often bundled with the compiler; this might help
 # search for things.
 get_filename_component(COMPILER_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
 get_filename_component(COMPILER_PREFIX "${COMPILER_BIN_DIR}" DIRECTORY)
 
-# Use the (far superior) LLVM tools if using the (far superior) LLVM
-# compilers (or the Apple versions of them).
+# On LC systems, using the "-magic" compilers might mean the compiler
+# is actually a wrapper that is located separately from its associated
+# tooling. Fortunately, the "real" compilers (and their tools) are at
+# the same prefix with all the "-magic" stripped out...
 #
-# If, for whatever reason, these are not found, the LLVM compilers can
-# still use the GCOV tools.
-if (CMAKE_CXX_COMPILER_ID MATCHES "(Apple)?[Cc]lang")
-  find_program(LLVM_COV_PROGRAM llvm-cov
+# A common test for LC-ness is checking for the "SYS_TYPE" environment
+# variable, so let's do that and call it good.
+if (DEFINED ENV{SYS_TYPE})
+  string(REPLACE "-magic" "" COMPILER_BIN_DIR "${COMPILER_BIN_DIR}")
+endif ()
+
+# On AMD systems with ROCm, we probably want the "llvm-amdgpu" tools,
+# which we encode in the HIP compiler. So let's search that, too.
+if (CMAKE_HIP_COMPILER AND (CMAKE_HIP_COMPILER_ID MATCHES "[Cc]lang"))
+  get_filename_component(EXTRA_COMPILER_BIN_DIR
+    "${CMAKE_HIP_COMPILER}"
+    DIRECTORY)
+  get_filename_component(EXTRA_COMPILER_PREFIX
+    "${EXTRA_COMPILER_BIN_DIR}"
+    DIRECTORY)
+else ()
+  set(EXTRA_COMPILER_BIN_DIR "${COMPILER_BIN_DIR}")
+  set(EXTRA_COMPILER_PREFIX "${COMPILER_PREFIX}")
+endif ()
+
+# First, look for the appropriate coverage tools
+if (CMAKE_CXX_COMPILER_ID MATCHES GNU)
+  # First search with the compiler...
+  find_program(GCOV_PROGRAM gcov
     HINTS ${COMPILER_BIN_DIR}
-    DOC "The llvm-cov program."
+    DOC "The gcov coverage tool."
     NO_DEFAULT_PATH)
+  # Then default paths.
+  find_program(GCOV_PROGRAM gcov)
+
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang")
+
+  find_program(LLVM_PROFDATA_PROGRAM llvm-profdata
+    HINTS ${COMPILER_BIN_DIR} ${EXTRA_COMPILER_BIN_DIR}
+    DOC "The llvm-profdata program."
+    NO_DEFAULT_PATH)
+  find_program(LLVM_PROFDATA_PROGRAM llvm-profdata)
+
   find_program(LLVM_COV_PROGRAM llvm-cov
-    HINTS ${LLVM_DIR} $ENV{LLVM_DIR}
-    PATH_SUFFIXES bin
+    HINTS ${COMPILER_BIN_DIR} ${EXTRA_COMPILER_BIN_DIR}
     DOC "The llvm-cov program."
     NO_DEFAULT_PATH)
   find_program(LLVM_COV_PROGRAM llvm-cov)
 
-  find_program(LLVM_PROFDATA_PROGRAM llvm-profdata
-    HINTS ${COMPILER_BIN_DIR}
-    DOC "The llvm-profdata program."
-    NO_DEFAULT_PATH)
-  find_program(LLVM_PROFDATA_PROGRAM llvm-profdata
-    HINTS ${LLVM_DIR} $ENV{LLVM_DIR}
-    PATH_SUFFIXES bin
-    DOC "The llvm-profdata program."
-    NO_DEFAULT_PATH)
-  find_program(LLVM_PROFDATA_PROGRAM llvm-profdata)
+  if (H2_CI_BUILD)
+
+    # NOTE: We need a single exe to pass to lcov. So we make one.
+    file(WRITE "${CMAKE_BINARY_DIR}/coverage/tmp/llvm-gcov.sh"
+      "#! /bin/bash
+${LLVM_COV_PROGRAM} gcov $@")
+    file(COPY "${CMAKE_BINARY_DIR}/coverage/tmp/llvm-gcov.sh"
+      DESTINATION "${CMAKE_BINARY_DIR}"
+      FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
+    file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/coverage/tmp")
+    set(GCOV_PROGRAM "${CMAKE_BINARY_DIR}/llvm-gcov.sh")
+
+  endif (H2_CI_BUILD)
 endif ()
 
-if (LLVM_COV_PROGRAM AND LLVM_PROFDATA_PROGRAM)
-  set(H2_HAVE_LLVM_COVERAGE_TOOLS TRUE)
+if (GCOV_PROGRAM)
+  find_program(LCOV_PROGRAM lcov)
 
+  if (LCOV_PROGRAM)
+    get_filename_component(LCOV_BIN_DIR "${LCOV_PROGRAM}" DIRECTORY)
+    find_program(GENHTML_PROGRAM genhtml
+      HINTS ${LCOV_BIN_DIR}
+      NO_DEFAULT_PATH)
+  endif ()
+  find_program(GENHTML_PROGRAM genhtml)
+
+  if (H2_CI_BUILD)
+    find_program(GCOVR_PROGRAM gcovr)
+    if (NOT GCOVR_PROGRAM)
+      message(STATUS "Could not find gcovr.")
+    endif ()
+  endif ()
+
+  if (GCOV_PROGRAM AND LCOV_PROGRAM AND GENHTML_PROGRAM)
+    set(H2_HAVE_GCOV_COVERAGE_TOOLS ON)
+    set(H2_COVERAGE_FLAGS
+      "--coverage" "-fprofile-arcs" "-ftest-coverage" "-O0")
+    message(STATUS "Found gcov: ${GCOV_PROGRAM}")
+    message(STATUS "Found lcov: ${LCOV_PROGRAM}")
+    message(STATUS "Found genhtml: ${GENHTML_PROGRAM}")
+    if (GCOVR_PROGRAM)
+      message(STATUS "Found gcovr: ${GCOVR_PROGRAM}")
+    endif ()
+    message(STATUS "Using GCOV coverage tools.")
+  endif ()
+endif ()
+
+# In this case, you are using LLVM toolchains and EITHER
+# H2_CI_BUILD=OFF OR you have failed to find lcov/genhtml. In the
+# latter case, We can still generate HTML reports, they just won't
+# integrate with the GitLab CI stuff (gcovr).
+if (LLVM_COV_PROGRAM AND LLVM_PROFDATA_PROGRAM
+    AND NOT H2_HAVE_GCOV_COVERAGE_TOOLS)
+  set(H2_HAVE_LLVM_COVERAGE_TOOLS TRUE)
+  set(H2_COVERAGE_FLAGS
+    "-fprofile-instr-generate" "-fcoverage-mapping" "-O0")
   message(STATUS "Found llvm-cov: ${LLVM_COV_PROGRAM}")
   message(STATUS "Found llvm-profdata: ${LLVM_PROFDATA_PROGRAM}")
   message(STATUS "Using LLVM coverage tools.")
 endif ()
 
-if (NOT H2_HAVE_LLVM_COVERAGE_TOOLS)
-  if (CMAKE_CXX_COMPILER_ID MATCHES "(Apple)?[Cc]lang")
-    set(GCOV_EXE_NAME "llvm-cov")
-  else ()
-    set(GCOV_EXE_NAME "gcov")
-  endif ()
-
-  find_program(GCOV_PROGRAM ${GCOV_EXE_NAME}
-    HINTS ${COMPILER_BIN_DIR}
-    DOC "The gcov coverage tool."
-    NO_DEFAULT_PATH)
-  find_program(GCOV_PROGRAM ${GCOV_EXE_NAME}
-    HINTS ${GCOV_DIR} $ENV{GCOV_DIR}
-    DOC "The gcov coverage tool."
-    NO_DEFAULT_PATH)
-  find_program(GCOV_PROGRAM ${GCOV_EXE_NAME})
-
-  find_program(LCOV_PROGRAM lcov
-    HINTS ${LCOV_DIR} $ENV{LCOV_DIR}
-    DOC "The lcov coverage tool."
-    NO_DEFAULT_PATH)
-  find_program(LCOV_PROGRAM lcov)
-
-  find_program(GENHTML_PROGRAM genhtml
-    HINTS ${GENHTML_DIR} $ENV{GENHTML_DIR}
-    DOC "The genhtml tool."
-    NO_DEFAULT_PATH)
-  find_program(GENHTML_PROGRAM genhtml)
-
-  if (GCOV_PROGRAM AND LCOV_PROGRAM AND GENHTML_PROGRAM)
-    set(H2_HAVE_GCOV_COVERAGE_TOOLS ON)
-    message(STATUS "Found gcov: ${GCOV_PROGRAM}")
-    message(STATUS "Found lcov: ${LCOV_PROGRAM}")
-    message(STATUS "Found genhtml: ${GENHTML_PROGRAM}")
-    message(STATUS "Using GCOV coverage tools.")
-
-    if (CMAKE_CXX_COMPILER_ID MATCHES "(Apple)?[Cc]lang")
-      # Admittedly, this is a bit pathological. This would imply that
-      # "llvm-cov" is found but "llvm-profdata" isn't found.
-      file(WRITE "${CMAKE_BINARY_DIR}/coverage/tmp/llvm-gcov.sh"
-        "#! /bin/bash
-exec ${GCOV_PROGRAM} gcov $@")
-      file(COPY "${CMAKE_BINARY_DIR}/coverage/tmp/llvm-gcov.sh"
-        DESTINATION "${CMAKE_BINARY_DIR}/coverage/"
-        FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
-      file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/coverage/tmp")
-      set(GCOV_PROGRAM "${CMAKE_BINARY_DIR}/coverage/llvm-gcov.sh")
-    endif ()
-  endif ()
-endif ()
-
-if (NOT (H2_HAVE_LLVM_COVERAGE_TOOLS OR H2_HAVE_GCOV_COVERAGE_TOOLS))
+if (NOT H2_HAVE_LLVM_COVERAGE_TOOLS AND NOT H2_HAVE_GCOV_COVERAGE_TOOLS)
   message(FATAL_ERROR
-    "No suitable coverage tools were found."
-    "Please install the LLVM coverage tools, llvm-cov and llvm-profdata, or\n"
-    "the GCOV coverage tools, gcov, lcov, and genhtml.")
+    "No suitable coverage tools were found.\n"
+    "For GCC-based tools, it may be useful to set:\n"
+    "  GCOV_ROOT, LCOV_ROOT, GENHTML_ROOT\n"
+    "For LLVM-based tools, it may be useful to set:\n"
+    "  LLVM-COV_ROOT, LLVM-PROFDATA_ROOT")
 endif ()
 
-if(H2_CI_BUILD)
-  message(STATUS
-    "Setting CI coverage flags")
-  set(LLVM_COVERAGE_FLAGS
-    "--coverage" "-fprofile-arcs" "-ftest-coverage" "-g" "-O0")
-else ()
-  set(LLVM_COVERAGE_FLAGS
-  "-fprofile-instr-generate" "-fcoverage-mapping")
-endif ()
+if (H2_HAVE_GCOV_COVERAGE_TOOLS)
+  set(COVERAGE_FLAGS ${GCOV_COVERAGE_FLAGS})
 
-set(GCOV_COVERAGE_FLAGS
-   "--coverage" "-fprofile-arcs" "-ftest-coverage" "-g" "-O0")
+  macro(add_code_coverage EXE_TARGET MASTER_TARGET)
+    set(_INFO_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${EXE_TARGET}/info")
+    set(_HTML_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${EXE_TARGET}/html")
 
-# We want to use the LLVM coverage flags if compiler is clang and LLVM
-# coverage tools.
-unset(COVERAGE_FLAGS)
-if (H2_HAVE_LLVM_COVERAGE_TOOLS AND
-    (CMAKE_CXX_COMPILER_ID MATCHES "(Apple)?[Cc]lang"))
-  set(COVERAGE_FLAGS ${LLVM_COVERAGE_FLAGS})
+    add_custom_target(
+      ${EXE_TARGET}-gen-lcov
+      # Reset lcov state
+      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --directory ${CMAKE_BINARY_DIR} --zerocounters
+      # Fix files with no called functions
+      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --directory ${CMAKE_BINARY_DIR} --capture --initial --output-file ${_INFO_OUT_DIR}/${EXE_TARGET}.base
+      # Run exe and dump coverage data
+      COMMAND $<TARGET_FILE:${EXE_TARGET}> &> /dev/null
+      # Gather coverage data
+      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --capture --directory ${CMAKE_BINARY_DIR} --output-file ${_INFO_OUT_DIR}/${EXE_TARGET}.info
+      # Add everything together
+      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -a ${_INFO_OUT_DIR}/${EXE_TARGET}.base -a ${_INFO_OUT_DIR}/${EXE_TARGET}.info --output-file ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.tmp
+      # Remove compiler stuff
+      # COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -r ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.tmp "*v1/*" "${COMPILER_PREFIX}/*" "${EXTRA_COMPILER_PREFIX}/*" -o ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.final
+      # Extract this project stuff
+      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -e ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.tmp "${CMAKE_SOURCE_DIR}/*" "${CMAKE_BINARY_DIR}/*" -o ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.final
+      BYPRODUCTS ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.final
+      DEPENDS ${EXE_TARGET}
+      COMMENT "Generating coverage data for ${EXE_TARGET}."
+      VERBATIM)
+
+    # There's a data race if these don't all depend on one another.
+    foreach (tgt IN LISTS ALL_GEN_LCOV_TGTS)
+      add_dependencies(${EXE_TARGET}-gen-lcov ${tgt})
+    endforeach ()
+    list(APPEND ALL_GEN_LCOV_TGTS ${EXE_TARGET}-gen-lcov)
+
+    add_custom_target(
+      ${EXE_TARGET}-gen-coverage-html
+      COMMAND ${GENHTML_PROGRAM} ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.final --output-directory ${_HTML_OUT_DIR}
+      COMMENT "Generating HTML for ${EXE_TARGET} coverage report."
+      BYPRODUCTS ${_HTML_OUT_DIR}/index.html
+      VERBATIM)
+    add_dependencies(${EXE_TARGET}-gen-coverage-html ${EXE_TARGET}-gen-lcov)
+
+    add_custom_target(
+      ${EXE_TARGET}-coverage
+      COMMAND ${CMAKE_COMMAND} -E echo "Open ${_HTML_OUT_DIR}/index.html in a web browser to view report."
+      COMMENT "Generated coverage report for ${EXE_TARGET}.")
+    add_dependencies(${EXE_TARGET}-coverage ${EXE_TARGET}-gen-coverage-html)
+
+    add_dependencies(${MASTER_TARGET} ${EXE_TARGET}-coverage)
+
+    if (GCOVR_PROGRAM)
+      add_custom_target(
+        ${EXE_TARGET}-gcovr
+        COMMAND ${GCOVR_PROGRAM} --cobertura-pretty --exclude-unreachable-branches --print-summary -o ${CMAKE_BINARY_DIR}/${EXE_TARGET}-gcovr.xml --gcov-executable "${GCOV_PROGRAM} -b -c -f -r -s ${CMAKE_SOURCE_DIR}"
+        COMMENT "Generating Cobertura report for ${EXE_TARGET} with gcovr."
+        BYPRODUCTS ${CMAKE_BINARY_DIR}/${EXE_TARGET}-gcovr.xml
+        VERBATIM)
+      # This comes *after* gen-coverage-html
+      add_dependencies(${EXE_TARGET}-gcovr ${EXE_TARGET}-gen-coverage-html)
+      # But is still driven by the coverage target
+      add_dependencies(${EXE_TARGET}-coverage ${EXE_TARGET}-gcovr)
+    endif ()
+  endmacro()
+
+  # g++ --coverage -ftest-coverage -fprofile-arcs file.cpp
+  # ./a.out
+  # lcov --capture --directory . --output-file file.info
+  # genhtml file.info --output-directory out
+
+elseif (H2_HAVE_LLVM_COVERAGE_TOOLS)
 
   macro(add_code_coverage EXE_TARGET MASTER_TARGET)
     set(_PROF_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${EXE_TARGET}/prof")
@@ -203,61 +307,13 @@ if (H2_HAVE_LLVM_COVERAGE_TOOLS AND
   # HTML report:
   #  llvm-cov show a.out -instr-profile=test.profdata -show-line-counts-or-regions -output-dir=test_html -format="html"
   #  open test_html/index.html
-
-elseif (H2_HAVE_GCOV_COVERAGE_TOOLS)
-
-  set(COVERAGE_FLAGS ${GCOV_COVERAGE_FLAGS})
-
-  macro(add_code_coverage EXE_TARGET MASTER_TARGET)
-    set(_INFO_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${EXE_TARGET}/info")
-    set(_HTML_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${EXE_TARGET}/html")
-
-    add_custom_target(
-      ${EXE_TARGET}-gen-lcov
-      # Reset lcov state
-      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --directory ${CMAKE_BINARY_DIR} --zerocounters
-      # Fix files with no called functions
-      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --directory ${CMAKE_BINARY_DIR} --base-directory ${CMAKE_BINARY_DIR} --capture --initial --output-file ${_INFO_OUT_DIR}/${EXE_TARGET}.base
-      # Run exe and dump coverage data
-      COMMAND $<TARGET_FILE:${EXE_TARGET}> &> /dev/null
-      # Gather coverage data
-      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --capture --directory ${CMAKE_BINARY_DIR} --output-file ${_INFO_OUT_DIR}/${EXE_TARGET}.info
-      # Add everything together
-      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -a ${_INFO_OUT_DIR}/${EXE_TARGET}.base -a ${_INFO_OUT_DIR}/${EXE_TARGET}.info --output-file ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.tmp
-      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -r ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.tmp "*v1/*" "${COMPILER_PREFIX}/*" -o ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.final
-      BYPRODUCTS ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.final
-      DEPENDS ${EXE_TARGET}
-      COMMENT "Generating coverage data for ${EXE_TARGET}."
-      VERBATIM)
-
-    add_custom_target(
-      ${EXE_TARGET}-gen-coverage-html
-      COMMAND ${GENHTML_PROGRAM} ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.final --output-directory ${_HTML_OUT_DIR}
-      DEPENDS ${EXE_TARGET}-gen-lcov
-      COMMENT "Generating HTML for ${EXE_TARGET} coverage report."
-      BYPRODUCTS ${_HTML_OUT_DIR}/index.html
-      VERBATIM)
-
-    add_custom_target(
-      ${EXE_TARGET}-coverage
-      COMMAND ${CMAKE_COMMAND} -E echo "Open ${_HTML_OUT_DIR}/index.html in a web browser to view report."
-      DEPENDS ${EXE_TARGET}-gen-coverage-html
-      COMMENT "Generated coverage report for ${EXE_TARGET}.")
-
-    add_dependencies(${MASTER_TARGET} ${EXE_TARGET}-coverage)
-
-  endmacro()
-
-  # g++ --coverage -ftest-coverage -fprofile-arcs file.cpp
-  # ./a.out
-  # lcov --capture --directory . --output-file file.info
-  # genhtml file.info --output-directory out
 endif ()
 
 add_library(h2_coverage_flags INTERFACE)
 target_compile_options(h2_coverage_flags INTERFACE
-  $<$<COMPILE_LANGUAGE:CXX>:${COVERAGE_FLAGS}>)
-target_link_options(h2_coverage_flags INTERFACE ${COVERAGE_FLAGS})
+  $<$<COMPILE_LANGUAGE:CXX>:${H2_COVERAGE_FLAGS}>
+  $<$<COMPILE_LANGUAGE:HIP>:${H2_COVERAGE_FLAGS}>)
+target_link_options(h2_coverage_flags INTERFACE ${H2_COVERAGE_FLAGS})
 
 add_custom_target(clean-coverage
   COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/coverage

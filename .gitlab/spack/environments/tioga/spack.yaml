@@ -158,6 +158,14 @@ spack:
       externals:
       - spec: libtool@2.4.6
         prefix: /usr
+    libxml2:
+      externals:
+      - spec: libxml2@2.9.7
+        prefix: /usr
+    libxslt:
+      externals:
+      - spec: libxslt@1.1.32
+        prefix: /usr
     llvm-amdgpu:
       externals:
       - spec: llvm-amdgpu@5.4.3
@@ -191,6 +199,14 @@ spack:
       externals:
       - spec: pkgconf@1.4.2
         prefix: /usr
+    python:
+      externals:
+      - spec: python@3.10.8+bz2+crypt+ctypes+dbm+lzma+nis+pyexpat+pythoncmd+readline+sqlite3+ssl+tix+tkinter+uuid+zlib
+        prefix: /usr/tce/packages/python/python-3.10.8
+      - spec: python@3.9.13+bz2+crypt+ctypes+dbm+lzma+nis+pyexpat+pythoncmd+readline+sqlite3+ssl+tix+tkinter+uuid+zlib
+        prefix: /opt/cray/pe/python/3.9.13.1
+      - spec: python@3.9.12+bz2+crypt+ctypes+dbm+lzma+nis+pyexpat+pythoncmd+readline+sqlite3+ssl+tix+tkinter+uuid+zlib
+        prefix: /usr/tce/packages/python/python-3.9.12
     rccl:
       externals:
       - spec: rccl@5.4.3

@@ -88,7 +88,6 @@ then
     fi
 
     prefix_opt=""
-
     if [[ -d /dev/shm ]]
     then
         prefix_opt="--prefix=${prefix}"
@@ -114,6 +113,8 @@ then
     then
         env_file_opt="--spack-env-file=${spack_file}"
     fi
+
+    echo "${project_dir}/.gitlab/uberenv/uberenv.py --spec=\"${spec}\" ${env_file_opt} ${upstream_opt} ${prefix_opt}"
 
     ${project_dir}/.gitlab/uberenv/uberenv.py \
                   --spec="${spec}" ${env_file_opt} ${upstream_opt} ${prefix_opt}
@@ -154,7 +155,7 @@ fi
 hostconfig=$(basename ${hostconfig_path})
 
 # Build Directory
-if [[ -z ${build_root} ]]
+if [[ -z "${build_root}" ]]
 then
     if [[ -d /dev/shm ]]
     then
@@ -266,6 +267,46 @@ then
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     date
 
+    if [[ "${SPEC}" == *coverage* ]]
+    then
+
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        echo "~~~~~ Generating code coverage reports"
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+
+        if [[ "${SPEC}" == *+ci* ]]
+        then
+            # This is an absolutely absurd hack that is necessary
+            # because Spack is problematic.
+            if [[ -n "${prefix}" ]]
+            then
+                source ${prefix}/spack/share/spack/setup-env.sh
+                spack env activate -d ${prefix}/spack_env
+
+                # This is beyond obnoxious
+                gcovr_prefix=$(dirname $(dirname $(command -v gcovr)))
+                python_path=$(ls --color=no -1 -d ${gcovr_prefix}/lib/python*/site-packages)
+                echo "python_path=${python_path}"
+                PYTHONPATH=${python_path}:${PYTHONPATH} $cmake_exe --build . -t coverage
+                if [[ -e SeqCatchTests-gcovr.xml ]]
+                then
+                    cp SeqCatchTests-gcovr.xml ${project_dir}
+                fi
+            fi
+            # FIXME: Figure out what will happen if "${prefix}" is
+            # empty. I think it just becomes "${project_dir}/spack in
+            # that case.
+        else
+            # No gcovr, no need to hack the PYTHONPATH out.
+            $cmake_exe --build . -t coverage
+        fi
+
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        echo "~~~~~ Generated code coverage reports"
+        echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+        date
+    fi
 fi
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"

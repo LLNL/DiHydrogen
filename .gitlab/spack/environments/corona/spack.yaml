@@ -11,7 +11,9 @@
 # configuration settings.
 spack:
   # add package specs to the `specs` list
-  specs: []
+  specs:
+  - dihydrogen@develop%rocmcc@5.5.0+ci+developer+rocm amdgpu_target=gfx906 ^hip@5.5.0
+    ^hsa-rocr-dev@5.5.0 ^llvm-amdgpu@5.5.0
   view: true
   concretizer:
     unify: true
@@ -72,6 +74,10 @@ spack:
       externals:
       - spec: bison@3.0.4
         prefix: /usr
+    bzip2:
+      externals:
+      - spec: bzip2@1.0.6
+        prefix: /usr
     ccache:
       externals:
       - spec: ccache@3.7.7
@@ -102,6 +108,10 @@ spack:
       externals:
       - spec: doxygen@1.8.14+graphviz~mscgen
         prefix: /usr
+    expat:
+      externals:
+      - spec: expat@2.2.5
+        prefix: /usr
     findutils:
       externals:
       - spec: findutils@4.6.0
@@ -113,6 +123,10 @@ spack:
     gawk:
       externals:
       - spec: gawk@4.2.1
+        prefix: /usr
+    gettext:
+      externals:
+      - spec: gettext@0.19.8.1
         prefix: /usr
     git:
       externals:
@@ -159,9 +173,21 @@ spack:
       externals:
       - spec: hwloc@2.9.0
         prefix: /usr
+    libffi:
+      externals:
+      - spec: libffi@3.1
+        prefix: /usr
     libtool:
       externals:
       - spec: libtool@2.4.6
+        prefix: /usr
+    libxml2:
+      externals:
+      - spec: libxml2@2.9.7
+        prefix: /usr
+    libxslt:
+      externals:
+      - spec: libxslt@1.1.32
         prefix: /usr
     llvm-amdgpu:
       buildable: false
@@ -185,8 +211,11 @@ spack:
       externals:
       - spec: mvapich2@2.3.7~cuda~debug+regcache+wrapperrpath ch3_rank_bits=32 fabrics=mrail
           file_systems=lustre,nfs,ufs process_managers=hydra threads=multiple
-        prefix:
-          /usr/tce/packages/mvapich2/mvapich2-2.3.6-gcc-10.3.1-magic
+        prefix: /usr/tce/packages/mvapich2/mvapich2-2.3.6-gcc-10.3.1-magic
+    ncurses:
+      externals:
+      - spec: ncurses@6.1.20180224+termlib abi=6
+        prefix: /usr
     ninja:
       externals:
       - spec: ninja@1.11.0
@@ -213,6 +242,12 @@ spack:
       externals:
       - spec: pkgconf@1.4.2
         prefix: /usr
+    python:
+      externals:
+      - spec: python@3.10.8+bz2+crypt+ctypes+dbm+lzma+nis+pyexpat+pythoncmd+readline+sqlite3+ssl+tix+tkinter+uuid+zlib
+        prefix: /usr/tce/packages/python/python-3.10.8
+      - spec: python@3.9.12+bz2+crypt+ctypes+dbm+lzma+nis+pyexpat+pythoncmd+readline+sqlite3+ssl+tix+tkinter+uuid+zlib
+        prefix: /usr/tce/packages/python/python-3.9.12
     rccl:
       externals:
       - spec: rccl@5.4.3
@@ -237,4 +272,8 @@ spack:
     texinfo:
       externals:
       - spec: texinfo@6.5
+        prefix: /usr
+    xz:
+      externals:
+      - spec: xz@5.2.4
         prefix: /usr

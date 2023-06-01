@@ -13,22 +13,30 @@ include:
 
 # Note: We load gcc/10.3.1-magic to get the right MPI but it's not
 # (directly) used.
+#
+# Note: There are issues with /usr/tce/bin/python3 (the default) and
+# build systems (in particular, it's not clear that all the
+# includes/libs are setup properly under the "/usr/tce" prefix). So I
+# load a module to get a real prefix. This only matters when
+# "+ci+coverage".
 rocm-5-4-3:
   variables:
     SPEC: "%rocmcc@5.4.3 +developer +rocm amdgpu_target=gfx906 ^hip@5.4.3 ^llvm-amdgpu@5.4.3 ^hsa-rocr-dev@5.4.3"
-    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.4.3 ninja/1.11.0"
-  extends: .build-and-test-on-corona
+    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.4.3 ninja/1.11.0 python"
+  extends: [.build-and-test-on-corona, .build-and-test]
 
 rocm-5-5-0:
   variables:
     SPEC: "%rocmcc@5.5.0 +developer +rocm amdgpu_target=gfx906 ^hip@5.5.0 ^llvm-amdgpu@5.5.0 ^hsa-rocr-dev@5.5.0"
-    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.5.0 ninja/1.11.0"
-  extends: .build-and-test-on-corona
+    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.5.0 ninja/1.11.0 python"
+  extends: [.build-and-test-on-corona, .build-and-test]
+
+rocm-5-5-0-coverage:
+  variables:
+    SPEC: "%rocmcc@5.5.0 +developer +ci +coverage +rocm amdgpu_target=gfx906 ^hip@5.5.0 ^llvm-amdgpu@5.5.0 ^hsa-rocr-dev@5.5.0"
+    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.5.0 ninja/1.11.0 python"
+  extends: [.build-and-test-on-corona, .build-and-test-coverage]
 
 .build-and-test-on-corona:
   stage: build
-  variables:
-    LLNL_SLURM_SCHEDULER_PARAMETERS: "-N1 -t 10"
-    LLNL_FLUX_SCHEDULER_PARAMETERS: "-N1 -t 10"
   tags: [corona, batch]
-  extends: .build-and-test
