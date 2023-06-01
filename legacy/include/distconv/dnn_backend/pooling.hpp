@@ -231,7 +231,6 @@ public:
             input.get_const_base_ptr()
             - input.get_local_offset(IndexVector(m_halo_bwd_recv), true);
 
-        // Proxies!
         m_be.pooling_forward(m_pooling_d,
                              alpha,
                              m_input_d,

@@ -120,7 +120,7 @@ public:
     using AlInternalCommType = typename Al::NCCLBackend::comm_type;
 
 public:
-    CommunicatorManager(MPI_Comm comm, StreamsManager const& gpu_stuff);
+    CommunicatorManager(MPI_Comm comm, StreamsManager const& stream_mgr);
     ~CommunicatorManager() = default;
     CommunicatorManager(CommunicatorManager const&) = delete;
     CommunicatorManager& operator=(CommunicatorManager const&) = delete;
@@ -176,7 +176,7 @@ private:
     // Segmented communicators for channel/filter communication.
     // Communicators for ranks within a single channel/filter domain with the
     // same channel indices on the filter tensor.
-    using CommMap = std::unordered_map<size_t, Al::NCCLBackend::comm_type>;
+    using CommMap = std::unordered_map<size_t, AlInternalCommType>;
     CommMap m_segmented_ar_comms;
     CommMap m_chanfilt_channel_comms;
     // Same filter indices on the filter tensor.
