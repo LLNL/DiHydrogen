@@ -189,7 +189,7 @@ then
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
     # Map CPU core allocations
-    declare -A core_counts=(["lassen"]=40 ["corona"]=32 ["tioga"]=32 ["pascal"]=36 ["catalyst"]=24)
+    declare -A core_counts=(["lassen"]=40 ["corona"]=32 ["tioga"]=32 ["pascal"]=36 ["quartz"]=36 ["ruby"]=56)
 
     # If building, then delete everything first
     # NOTE: 'cmake --build . -j core_counts' attempts to reduce individual build resources.

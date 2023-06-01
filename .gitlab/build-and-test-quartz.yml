@@ -1,0 +1,28 @@
+################################################################################
+## Copyright 2019-2023 Lawrence Livermore National Security, LLC and other
+## DiHydrogen Project Developers. See the top-level LICENSE file for details.
+##
+## SPDX-License-Identifier: Apache-2.0
+################################################################################
+
+stages:
+  - build
+
+include:
+  local: "/.gitlab/build-and-test-common.yml"
+
+gcc-10-3-1:
+  variables:
+    SPEC: "%gcc@10.3.1 +developer"
+    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 ninja/1.11.1"
+  extends: [.build-and-test-on-quartz, .build-and-test]
+
+gcc-10-3-1-coverage:
+  variables:
+    SPEC: "%gcc@10.3.1 +developer +ci +coverage"
+    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 ninja/1.11.1 python"
+  extends: [.build-and-test-on-quartz, .build-and-test-coverage]
+
+.build-and-test-on-quartz:
+  stage: build
+  tags: [quartz, batch]
