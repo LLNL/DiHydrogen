@@ -10,8 +10,6 @@
 # It describes a set of packages to be installed, along with
 # configuration settings.
 spack:
-  # add package specs to the `specs` list
-  specs: []
   view: true
   concretizer:
     unify: true
@@ -198,8 +196,6 @@ spack:
         prefix: /usr
     python:
       externals:
-      - spec: python@3.10.8+bz2+crypt+ctypes+dbm+lzma+nis+pyexpat+pythoncmd+readline+sqlite3+ssl+tix+tkinter+uuid+zlib
-        prefix: /usr/tce/packages/python/python-3.10.8
       - spec: python@3.9.12+bz2+crypt+ctypes+dbm+lzma+nis+pyexpat+pythoncmd+readline+sqlite3+ssl+tix+tkinter+uuid+zlib
         prefix: /usr/tce/packages/python/python-3.9.12
     swig:

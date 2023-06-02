@@ -395,7 +395,12 @@ if (H2_HAS_CUDA)
 endif ()
 
 if (H2_HAS_ROCM)
-  target_compile_features(H2Core PUBLIC hip_std_17)
+  if (CMAKE_HIP_COMPILER_VERSION VERSION_GREATER_EQUAL "5.5.0")
+    target_compile_features(H2Core PUBLIC hip_std_17)
+  else ()
+    target_compile_options(H2Core PUBLIC
+      $<$<COMPILE_LANGUAGE:HIP>:-std=c++17>)
+  endif ()
   set_target_properties(H2Core
     PROPERTIES
     HIP_STANDARD 17

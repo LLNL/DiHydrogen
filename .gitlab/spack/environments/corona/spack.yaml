@@ -10,10 +10,6 @@
 # It describes a set of packages to be installed, along with
 # configuration settings.
 spack:
-  # add package specs to the `specs` list
-  specs:
-  - dihydrogen@develop%rocmcc@5.5.0+ci+developer+rocm amdgpu_target=gfx906 ^hip@5.5.0
-    ^hsa-rocr-dev@5.5.0 ^llvm-amdgpu@5.5.0
   view: true
   concretizer:
     unify: true
