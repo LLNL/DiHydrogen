@@ -79,15 +79,12 @@ public:
         {
             if (internal_ptr)
             {
-                // I see really no reason this shouldn't also suffer
-                // from "beta-must-be-zero"-itis, so let's scale and
-                // combine the output in the "A" and "B" parameters
-                // (API doc:
-                // https://rocmsoftwareplatform.github.io/MIOpen/doc/html/tensor.html#miopenoptensor),
-                // and then just pass beta=0. Hopefully this will
-                // work... (i.e., the docs give zero useful usage
-                // information, so basically we're going to wing it
-                // with our fingers crossed.)
+                // Here's the API doc, because this one's weird:
+                // https://rocmsoftwareplatform.github.io/MIOpen/doc/html/tensor.html#miopenoptensor.
+                // Following hipDNN, we combine first using the op,
+                // then overwrite (beta=0.f). Note: the best
+                // alpha/beta "documentation" is currently the MIOpen
+                // release notes.
                 DISTCONV_CHECK_MIOPEN(
                     miopenOpTensor(handle,
                                    miopenTensorOpAdd,
