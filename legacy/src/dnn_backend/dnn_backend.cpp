@@ -57,8 +57,8 @@ DNNBackend<VendorBackendT>::DNNBackend(MPI_Comm comm,
                                        Options opts)
     : m_opts{std::move(opts)},
       m_handle{handle},
-      m_streams{8},
-      m_comms{comm, m_streams}
+      m_stream_mgr{8},
+      m_comms{comm, m_stream_mgr}
 {}
 
 template <typename VendorBackendT>
@@ -68,8 +68,8 @@ DNNBackend<VendorBackendT>::DNNBackend(MPI_Comm comm,
                                        Options opts)
     : m_opts{std::move(opts)},
       m_handle{handle},
-      m_streams{8, stream},
-      m_comms{comm, m_streams}
+      m_stream_mgr{8, stream},
+      m_comms{comm, m_stream_mgr}
 {}
 
 template <typename VendorBackendT>
@@ -154,14 +154,14 @@ auto DNNBackend<VendorBackendT>::get_handle() const noexcept -> Handle_t
 template <typename VendorBackendT>
 auto DNNBackend<VendorBackendT>::get_stream() const noexcept -> Stream_t
 {
-    return m_streams.stream();
+    return m_stream_mgr.stream();
 }
 
 template <typename VendorBackendT>
 auto DNNBackend<VendorBackendT>::get_internal_priority_stream(size_t idx) const
     -> Stream_t
 {
-    return m_streams.priority_stream(idx);
+    return m_stream_mgr.priority_stream(idx);
 }
 
 template <typename VendorBackendT>

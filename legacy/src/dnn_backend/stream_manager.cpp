@@ -12,11 +12,11 @@
 namespace distconv
 {
 
-StreamsManager::StreamsManager(size_t num_streams)
-    : StreamsManager(num_streams, h2::gpu::make_stream())
+StreamManager::StreamManager(size_t num_streams)
+    : StreamManager(num_streams, h2::gpu::make_stream())
 {}
 
-StreamsManager::StreamsManager(size_t num_streams, h2::gpu::DeviceStream stream)
+StreamManager::StreamManager(size_t num_streams, h2::gpu::DeviceStream stream)
     : m_stream{stream}
 {
     m_internal_streams.reserve(num_streams);
@@ -27,7 +27,7 @@ StreamsManager::StreamsManager(size_t num_streams, h2::gpu::DeviceStream stream)
         m_priority_streams.push_back(util::create_priority_stream());
 }
 
-StreamsManager::~StreamsManager() noexcept
+StreamManager::~StreamManager() noexcept
 {
     // FIXME trb: Should track whether to destroy or not.
     // h2::gpu::destroy(m_stream);
@@ -38,23 +38,23 @@ StreamsManager::~StreamsManager() noexcept
         h2::gpu::destroy(s);
 }
 
-size_t StreamsManager::num_streams() const noexcept
+size_t StreamManager::num_streams() const noexcept
 {
     return m_internal_streams.size();
 }
 
-h2::gpu::DeviceStream StreamsManager::stream() const noexcept
+h2::gpu::DeviceStream StreamManager::stream() const noexcept
 {
     return m_stream;
 }
 
-h2::gpu::DeviceStream StreamsManager::internal_stream(size_t idx) const
+h2::gpu::DeviceStream StreamManager::internal_stream(size_t idx) const
 {
     // I don't have a better exception to throw right now...
     return m_internal_streams.at(idx);
 }
 
-h2::gpu::DeviceStream StreamsManager::priority_stream(size_t idx) const
+h2::gpu::DeviceStream StreamManager::priority_stream(size_t idx) const
 {
     return m_priority_streams.at(idx);
 }

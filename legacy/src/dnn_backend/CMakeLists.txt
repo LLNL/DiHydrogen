@@ -3,7 +3,7 @@ h2_set_full_path(THIS_DIR_SOURCES
   dnn_backend.cpp
   options.cpp
   pack_unpack.cpp
-  streams_manager.cpp
+  stream_manager.cpp
 )
 
 h2_set_full_path(THIS_DIR_CU_SOURCES

@@ -57,7 +57,7 @@ struct Options
 }; // struct Options
 
 // Manage the collection of streams.
-class StreamsManager
+class StreamManager
 {
 public:
     /** @brief Construct StreamsManager
@@ -68,7 +68,7 @@ public:
      *             to use. This should be greater than the number of
      *             boundary planes.
      */
-    StreamsManager(size_t num_internal_streams);
+    StreamManager(size_t num_internal_streams);
     /** @brief Construct StreamsManager with a specific main stream.
      *  @details This will allocate two collections of
      *           `num_internal_streams`, one of which will be
@@ -80,10 +80,10 @@ public:
      *  @param[in] main_stream The stream to use as the main stream.
      *             This object will manage the stream henceforth.
      */
-    StreamsManager(size_t num_internal_streams,
+    StreamManager(size_t num_internal_streams,
                    h2::gpu::DeviceStream main_stream);
 
-    ~StreamsManager() noexcept;
+    ~StreamManager() noexcept;
 
     /** @brief Get the number of available streams. */
     size_t num_streams() const noexcept;
@@ -120,7 +120,7 @@ public:
     using AlInternalCommType = typename Al::NCCLBackend::comm_type;
 
 public:
-    CommunicatorManager(MPI_Comm comm, StreamsManager const& stream_mgr);
+    CommunicatorManager(MPI_Comm comm, StreamManager const& stream_mgr);
     ~CommunicatorManager() = default;
     CommunicatorManager(CommunicatorManager const&) = delete;
     CommunicatorManager& operator=(CommunicatorManager const&) = delete;
@@ -951,7 +951,7 @@ public:
 private:
     Handle_t m_handle;
     Options m_opts;
-    StreamsManager m_streams;
+    StreamManager m_stream_mgr;
     CommunicatorManager m_comms;
 }; // class DNNBackend
 

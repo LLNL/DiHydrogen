@@ -25,18 +25,18 @@ namespace distconv
 {
 
 CommunicatorManager::CommunicatorManager(MPI_Comm comm,
-                                         StreamsManager const& gpu_stuff)
+                                         StreamManager const& stream_mgr)
 #ifdef DISTCONV_HAS_P2P
     : m_p2p(comm)
 #endif // DISTCONV_HAS_P2P
 {
     MPI_Comm_dup(comm, &m_comm);
 
-    auto const num_comms = gpu_stuff.num_streams();
+    auto const num_comms = stream_mgr.num_streams();
     m_internal_comms.reserve(num_comms);
     for (size_t i = 0; i < num_comms; ++i)
     {
-        auto const stream = gpu_stuff.priority_stream(i);
+        auto const stream = stream_mgr.priority_stream(i);
         m_internal_comms.emplace_back(
             std::make_shared<AlInternalCommType>(m_comm, stream));
     }
