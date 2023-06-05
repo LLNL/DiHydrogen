@@ -277,24 +277,6 @@ public:
                                   m_d_input_d,
                                   d_input_ptr);
         }
-#if 0
-        {
-      cudaDeviceSynchronize();
-      MPI_Barrier(MPI_COMM_WORLD);
-      auto m = d_input.get_data();
-      auto p = static_cast<DataType*>(malloc(m.get_size()));
-      m.copyout(p);
-      auto rank = d_input.get_locale().get_rank();
-      std::stringstream file_path;
-      file_path << "pool_local_" << rank << ".txt";
-      std::ofstream out_file;
-      out_file.open(file_path.str(), std::ios::out | std::ios::trunc);
-      for (int i = 0; i < m.get_size() / sizeof(DataType); ++i) {
-        out_file << p[i] << std::endl;
-      }
-      out_file.close();
-        }
-#endif
         exchange_halo_reverse(d_input, m_halo_xch_d_input);
 
         return 0;
