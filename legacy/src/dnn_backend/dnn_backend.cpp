@@ -73,12 +73,6 @@ DNNBackend<VendorBackendT>::DNNBackend(MPI_Comm comm,
 {}
 
 template <typename VendorBackendT>
-std::string DNNBackend<VendorBackendT>::get_name() const
-{
-    return std::string("DNNBackend<") + VendorBackendT::get_name() + ">";
-}
-
-template <typename VendorBackendT>
 auto DNNBackend<VendorBackendT>::get_comm() const noexcept -> MPI_Comm
 {
     return m_comms.get_comm();

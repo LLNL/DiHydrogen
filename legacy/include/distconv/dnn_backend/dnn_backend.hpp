@@ -442,8 +442,6 @@ public:
     /** @name Handle interface */
     /// @{
 
-    static std::string get_name();
-
     static Handle_t make_handle();
 
     static void destroy_handle(Handle_t handle);
@@ -638,8 +636,6 @@ public:
                Handle_t handle,
                Stream_t stream,
                Options opts = Options{});
-
-    virtual std::string get_name() const;
 
     /** @name Option queries. */
     ///@{

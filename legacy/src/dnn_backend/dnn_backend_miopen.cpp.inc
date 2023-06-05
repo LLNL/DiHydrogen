@@ -844,11 +844,6 @@ auto GPUDNNBackend::get_bwd_filter_algorithm_by_autotune(
 
 // Handle interface
 
-std::string GPUDNNBackend::get_name()
-{
-    return "MIOpenBackend";
-}
-
 auto GPUDNNBackend::make_handle() -> Handle_t
 {
     Handle_t handle;

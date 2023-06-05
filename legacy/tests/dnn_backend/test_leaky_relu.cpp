@@ -103,8 +103,8 @@ int test_forward(Data<Backend> &d,
   MPI_Comm_rank(comm, &pid);
 
   util::MPIRootPrintStreamInfo()
-      << "Executing test_forward with "
-      << be.get_name();
+      << "Executing test_forward with backend \""
+      << cfg.backend << "\"";
 
   LeakyReLU<Backend> leaky_relu(be);
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
@@ -125,8 +125,8 @@ int test_backward(Data<Backend> &d,
   MPI_Comm_rank(comm, &pid);
 
   util::MPIRootPrintStreamInfo()
-      << "Executing test_backward with "
-      << be.get_name();
+      << "Executing test_backward with backend \""
+      << cfg.backend << "\"";
 
   LeakyReLU<Backend> leaky_relu(be);
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
