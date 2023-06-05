@@ -12,7 +12,7 @@ corona testing:
   stage: run-all-clusters
   trigger:
     strategy: depend
-    include: .gitlab/build-and-test-corona.yml
+    include: '.gitlab/build-and-test-corona.yml'
     forward:
       pipeline_variables: true
 
@@ -20,7 +20,7 @@ lassen testing:
   stage: run-all-clusters
   trigger:
     strategy: depend
-    include: .gitlab/build-and-test-lassen.yml
+    include: '.gitlab/build-and-test-lassen.yml'
     forward:
       pipeline_variables: true
 
@@ -44,6 +44,6 @@ tioga testing:
   stage: run-all-clusters
   trigger:
     strategy: depend
-    include: .gitlab/build-and-test-tioga.yml
+    include: '.gitlab/build-and-test-tioga.yml'
     forward:
       pipeline_variables: true
