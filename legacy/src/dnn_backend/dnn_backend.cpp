@@ -51,13 +51,24 @@
 namespace distconv
 {
 
+namespace
+{
+size_t getenv_num_streams(size_t default_nstreams = 8)
+{
+    size_t nstreams = default_nstreams;
+    if (char const* env = std::getenv("H2_DISTCONV_NUM_INTERNAL_STREAMS"))
+        nstreams = std::stoul(env);
+    return std::max(nstreams, static_cast<size_t>(0UL));
+}
+}// namespace
+
 template <typename VendorBackendT>
 DNNBackend<VendorBackendT>::DNNBackend(MPI_Comm comm,
                                        Handle_t handle,
                                        Options opts)
     : m_opts{std::move(opts)},
       m_handle{handle},
-      m_stream_mgr{8},
+      m_stream_mgr{getenv_num_streams(/*default_nstreams=*/8UL)},
       m_comms{comm, m_stream_mgr}
 {}
 
@@ -68,7 +79,7 @@ DNNBackend<VendorBackendT>::DNNBackend(MPI_Comm comm,
                                        Options opts)
     : m_opts{std::move(opts)},
       m_handle{handle},
-      m_stream_mgr{8, stream},
+      m_stream_mgr{getenv_num_streams(/*default_nstreams=*/8UL), stream},
       m_comms{comm, m_stream_mgr}
 {}
 
