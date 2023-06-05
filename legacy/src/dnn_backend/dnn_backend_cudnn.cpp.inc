@@ -994,22 +994,6 @@ void GPUDNNBackend::pooling_backward(Handle_t handle,
 
 // Tensor interface
 
-// template <typename Tensor>
-// void GPUDNNBackend::setup_filter_descriptor(FilterDescriptor_t& desc,
-//                                     Tensor const& tensor)
-// {
-//     // Lifted out of convolution.hpp; modified to not use data members.
-//     DataType_t dt = util::get_cudnn_type<typename Tensor::data_type>();
-//     const int_vector shape =
-//         tensor.get_local_real_shape().template get_vector<int>();
-//     DISTCONV_CHECK_CUDNN(
-//         cudnnSetFilterNdDescriptor(desc,
-//                                    dt,
-//                                    CUDNN_TENSOR_NCHW,
-//                                    shape.size(),
-//                                    util::reverse(shape).data()));
-// }
-
 auto GPUDNNBackend::make_filter_descriptor() -> FilterDescriptor_t
 {
     FilterDescriptor_t desc;
