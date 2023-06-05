@@ -1,6 +1,3 @@
-h2_set_full_path(THIS_DIR_SOURCES
-  util.cpp
-)
 if (H2_HAS_CUDA)
   h2_append_full_path(THIS_DIR_SOURCES util_cuda.cpp)
 elseif (H2_HAS_ROCM)
