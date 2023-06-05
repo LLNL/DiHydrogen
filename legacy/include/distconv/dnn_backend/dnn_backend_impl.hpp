@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include "dnn_backend.hpp"
+#include "distconv/dnn_backend/dnn_backend.hpp"
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/util/util_gpu_dnn.hpp"
 
@@ -23,8 +23,7 @@ void GPUDNNBackend::setup_filter_descriptor(FilterDescriptor_t& desc,
 {
     auto const dt = util::get_dnnlib_type<typename Tensor::data_type>();
     auto const shape = tensor.get_local_real_shape().template get_vector<int>();
-    set_filter_descriptor(
-        desc, dt, shape.size(), util::reverse(shape).data());
+    set_filter_descriptor(desc, dt, shape.size(), util::reverse(shape).data());
 }
 
 template <typename Tensor, typename ShapeType>

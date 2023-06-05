@@ -5,9 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
+#include "distconv_config.hpp"
+
 #include "distconv/dnn_backend/dnn_backend.hpp"
 #include "distconv/util/util_gpu.hpp"
-#include "distconv_config.hpp"
 
 namespace distconv
 {

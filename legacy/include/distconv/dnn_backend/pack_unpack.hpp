@@ -1,6 +1,7 @@
 #pragma once
-#include "dnn_backend.hpp"
 #include <distconv_config.hpp>
+
+#include "distconv/dnn_backend/dnn_backend.hpp"
 
 namespace distconv
 {

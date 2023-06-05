@@ -1,5 +1,5 @@
-#include "distconv/dnn_backend/batchnorm.hpp"
 #include "distconv/distconv.hpp"
+#include "distconv/dnn_backend/batchnorm.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
 #include "distconv/util/util_gpu.hpp"
@@ -158,12 +158,10 @@ void channel_sums_and_sqsums_opt(int num_samples,
     if (spatial_size % 4 == 0
         && ((spatial_real_size - spatial_size) / 2) % 4 == 0)
     {
-        using DataTypeV =
-            typename util::GetVectorType<DataType, 4>::type;
+        using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
         spatial_size /= 4;
         spatial_real_size /= 4;
-        auto num_blocks_per_channel =
-            util::ceil(spatial_size, block_work_size);
+        auto num_blocks_per_channel = util::ceil(spatial_size, block_work_size);
         dim3 grid_dim(num_blocks_per_channel, num_channels);
         channel_sums_and_sqsums_opt_kernel<ND, DataType, block_size, DataTypeV>
             <<<grid_dim, block_dim, 0, stream>>>(
@@ -178,8 +176,7 @@ void channel_sums_and_sqsums_opt(int num_samples,
     else
     {
         using DataTypeV = DataType;
-        auto num_blocks_per_channel =
-            util::ceil(spatial_size, block_work_size);
+        auto num_blocks_per_channel = util::ceil(spatial_size, block_work_size);
         dim3 grid_dim(num_blocks_per_channel, num_channels);
         channel_sums_and_sqsums_opt_kernel<ND, DataType, block_size, DataType>
             <<<grid_dim, block_dim, 0, stream>>>(input.get_const_base_ptr(),
@@ -254,11 +251,11 @@ void channel_sums_and_sqsums(int num_samples,
 
 template <typename Tensor>
 void channel_sums_and_sqsums(int num_dims,
-                                                  int num_samples,
-                                                  const Tensor& input,
-                                                  Tensor& sums,
-                                                  Tensor& sqsums,
-                                                  h2::gpu::DeviceStream stream)
+                             int num_samples,
+                             const Tensor& input,
+                             Tensor& sums,
+                             Tensor& sqsums,
+                             h2::gpu::DeviceStream stream)
 {
     switch (num_dims)
     {
@@ -274,7 +271,7 @@ void channel_sums_and_sqsums(int num_dims,
 }
 
 #define INSTANTIATE_CHANNEL_SUMS_AND_SQSUMS(TYPE)                              \
-    template void channel_sums_and_sqsums<Tensor<TYPE>>(  \
+    template void channel_sums_and_sqsums<Tensor<TYPE>>(                       \
         int num_dims,                                                          \
         int num_samples,                                                       \
         const Tensor<TYPE>& input,                                             \
@@ -318,14 +315,13 @@ struct sums_to_statistics_functor
 } // namespace
 
 template <typename TensorType>
-void sums_to_statistics(
-    index_t num_per_sum,
-    typename TensorType::data_type decay,
-    TensorType& global_mean,
-    TensorType& global_var,
-    TensorType& running_mean,
-    TensorType& running_var,
-    h2::gpu::DeviceStream stream)
+void sums_to_statistics(index_t num_per_sum,
+                        typename TensorType::data_type decay,
+                        TensorType& global_mean,
+                        TensorType& global_var,
+                        TensorType& running_mean,
+                        TensorType& running_var,
+                        h2::gpu::DeviceStream stream)
 {
     using DataType = typename TensorType::data_type;
     if (num_per_sum > 0)
@@ -350,7 +346,7 @@ void sums_to_statistics(
 }
 
 #define INSTANTIATE_SUMS_TO_STATISTICS(TYPE)                                   \
-    template void sums_to_statistics<Tensor<TYPE>>(       \
+    template void sums_to_statistics<Tensor<TYPE>>(                            \
         index_t num_per_sum,                                                   \
         TYPE decay,                                                            \
         Tensor<TYPE> & global_mean,                                            \
@@ -483,11 +479,9 @@ void batch_normalization_opt(int num_samples,
     if (channel_size % 4 == 0)
     {
         channel_size /= 4;
-        auto num_blocks_per_channel =
-            util::ceil(channel_size, block_work_size);
+        auto num_blocks_per_channel = util::ceil(channel_size, block_work_size);
         dim3 grid_dim(num_blocks_per_channel, num_channels, num_samples);
-        using DataTypeV =
-            typename util::GetVectorType<DataType, 4>::type;
+        using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
         batch_normalization_opt_kernel<ND, DataType, DataTypeV>
             <<<grid_dim, block_dim, 0, stream>>>(
                 reinterpret_cast<const DataTypeV*>(input.get_const_buffer()),
@@ -502,8 +496,7 @@ void batch_normalization_opt(int num_samples,
     }
     else
     {
-        auto num_blocks_per_channel =
-            util::ceil(channel_size, block_work_size);
+        auto num_blocks_per_channel = util::ceil(channel_size, block_work_size);
         dim3 grid_dim(num_blocks_per_channel, num_channels, num_samples);
         batch_normalization_opt_kernel<ND, DataType, DataType>
             <<<grid_dim, block_dim, 0, stream>>>(input.get_const_buffer(),
@@ -535,8 +528,7 @@ void batch_normalization(int num_samples,
     {
         if (std::getenv("DISTCONV_DISABLE_BN_OPT"))
         {
-            util::MPIRootPrintStreamInfo()
-                << "Disable BN optimization";
+            util::MPIRootPrintStreamInfo() << "Disable BN optimization";
         }
         else
         {
@@ -583,47 +575,46 @@ void batch_normalization(int num_samples,
 } // namespace
 
 template <typename TensorType>
-void batch_normalization(
-    int num_dims,
-    int num_samples,
-    const TensorType& input,
-    const TensorType& mean,
-    const TensorType& var,
-    const TensorType& scale,
-    const TensorType& bias,
-    TensorType& output,
-    typename TensorType::data_type epsilon,
-    h2::gpu::DeviceStream stream)
+void batch_normalization(int num_dims,
+                         int num_samples,
+                         const TensorType& input,
+                         const TensorType& mean,
+                         const TensorType& var,
+                         const TensorType& scale,
+                         const TensorType& bias,
+                         TensorType& output,
+                         typename TensorType::data_type epsilon,
+                         h2::gpu::DeviceStream stream)
 {
     switch (num_dims)
     {
     case 4:
         batch_normalization<4, TensorType>(num_samples,
-                                             input,
-                                             mean,
-                                             var,
-                                             scale,
-                                             bias,
-                                             output,
-                                             epsilon,
-                                             stream);
+                                           input,
+                                           mean,
+                                           var,
+                                           scale,
+                                           bias,
+                                           output,
+                                           epsilon,
+                                           stream);
         break;
     case 5:
         batch_normalization<5, TensorType>(num_samples,
-                                             input,
-                                             mean,
-                                             var,
-                                             scale,
-                                             bias,
-                                             output,
-                                             epsilon,
-                                             stream);
+                                           input,
+                                           mean,
+                                           var,
+                                           scale,
+                                           bias,
+                                           output,
+                                           epsilon,
+                                           stream);
         break;
     }
 }
 
 #define INSTANTIATE_BATCH_NORMALIZATION(TYPE)                                  \
-    template void batch_normalization<Tensor<TYPE>>(      \
+    template void batch_normalization<Tensor<TYPE>>(                           \
         int num_dims,                                                          \
         int num_samples,                                                       \
         const Tensor<TYPE>& input,                                             \
@@ -795,8 +786,7 @@ void forward_all(const Tensor& input,
     {
         spatial_size /= 4;
         spatial_real_size /= 4;
-        using DataTypeV =
-            typename util::GetVectorType<DataType, 4>::type;
+        using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
         forward_all_kernel<ND, DataType, DataType2, DataTypeV, block_size>
             <<<grid_dim, block_dim, 0, stream>>>(
                 reinterpret_cast<const DataTypeV*>(input.get_const_base_ptr()),
@@ -837,20 +827,19 @@ void forward_all(const Tensor& input,
 } // namespace
 
 template <typename Tensor>
-void forward_all(
-    int num_dims,
-    const Tensor& input,
-    Tensor& mean,
-    Tensor& var,
-    Tensor& running_mean,
-    Tensor& running_var,
-    Tensor& scale,
-    Tensor& bias,
-    Tensor& output,
-    typename Tensor::data_type decay,
-    typename Tensor::data_type epsilon,
-    h2::gpu::DeviceStream stream,
-    AllreduceNVSHMEM<typename Tensor::data_type>& ar)
+void forward_all(int num_dims,
+                 const Tensor& input,
+                 Tensor& mean,
+                 Tensor& var,
+                 Tensor& running_mean,
+                 Tensor& running_var,
+                 Tensor& scale,
+                 Tensor& bias,
+                 Tensor& output,
+                 typename Tensor::data_type decay,
+                 typename Tensor::data_type epsilon,
+                 h2::gpu::DeviceStream stream,
+                 AllreduceNVSHMEM<typename Tensor::data_type>& ar)
 {
     switch (num_dims)
     {
@@ -886,20 +875,19 @@ void forward_all(
 }
 
 #define INSTANTIATE_FORWARD(TYPE)                                              \
-    template void forward_all<Tensor<TYPE>>(              \
-        int num_dims,                                                          \
-        const Tensor<TYPE>& input,                                             \
-        Tensor<TYPE>& mean,                                                    \
-        Tensor<TYPE>& var,                                                     \
-        Tensor<TYPE>& running_mean,                                            \
-        Tensor<TYPE>& running_var,                                             \
-        Tensor<TYPE>& scale,                                                   \
-        Tensor<TYPE>& bias,                                                    \
-        Tensor<TYPE>& output,                                                  \
-        TYPE decay,                                                            \
-        TYPE epsilon,                                                          \
-        h2::gpu::DeviceStream stream,                                          \
-        AllreduceNVSHMEM<TYPE>& ar);
+    template void forward_all<Tensor<TYPE>>(int num_dims,                      \
+                                            const Tensor<TYPE>& input,         \
+                                            Tensor<TYPE>& mean,                \
+                                            Tensor<TYPE>& var,                 \
+                                            Tensor<TYPE>& running_mean,        \
+                                            Tensor<TYPE>& running_var,         \
+                                            Tensor<TYPE>& scale,               \
+                                            Tensor<TYPE>& bias,                \
+                                            Tensor<TYPE>& output,              \
+                                            TYPE decay,                        \
+                                            TYPE epsilon,                      \
+                                            h2::gpu::DeviceStream stream,      \
+                                            AllreduceNVSHMEM<TYPE>& ar);
 INSTANTIATE_FORWARD(float)
 INSTANTIATE_FORWARD(double)
 #undef INSTANTIATE_FORWARD
@@ -1096,13 +1084,11 @@ void backprop1_opt(int num_samples,
         && ((i_spatial_real_size - spatial_size) / 2) % 4 == 0
         && ((o_spatial_real_size - spatial_size) / 2) % 4 == 0)
     {
-        using DataTypeV =
-            typename util::GetVectorType<DataType, 4>::type;
+        using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
         spatial_size /= 4;
         i_spatial_real_size /= 4;
         o_spatial_real_size /= 4;
-        auto num_blocks_per_channel =
-            util::ceil(spatial_size, block_work_size);
+        auto num_blocks_per_channel = util::ceil(spatial_size, block_work_size);
         dim3 grid_dim(num_blocks_per_channel, num_channels);
         backprop1_opt_kernel<ND, DataType, block_size, DataTypeV>
             <<<grid_dim, block_dim, 0, stream>>>(
@@ -1126,8 +1112,7 @@ void backprop1_opt(int num_samples,
     else
     {
         using DataTypeV = DataType;
-        auto num_blocks_per_channel =
-            util::ceil(spatial_size, block_work_size);
+        auto num_blocks_per_channel = util::ceil(spatial_size, block_work_size);
         dim3 grid_dim(num_blocks_per_channel, num_channels);
         backprop1_opt_kernel<ND, DataType, block_size, DataTypeV>
             <<<grid_dim, block_dim, 0, stream>>>(input.get_const_base_ptr(),
@@ -1182,7 +1167,7 @@ void backprop1(int num_samples,
     }
 
     std::vector<IndexVector> overlaps = {input.get_overlap(),
-                                                   d_output.get_overlap()};
+                                         d_output.get_overlap()};
     bool opt_eligible = true;
     for (auto overlap : overlaps)
     {
@@ -1248,67 +1233,66 @@ void backprop1(int num_samples,
 
 template <typename TensorType>
 void backprop1(int num_dims,
-                                    int num_samples,
-                                    const TensorType& input,
-                                    const TensorType& d_output,
-                                    const TensorType& mean,
-                                    const TensorType& var,
-                                    const TensorType& scale,
-                                    TensorType& scale_gradient,
-                                    TensorType& bias_gradient,
-                                    TensorType& mean_gradient,
-                                    TensorType& var_gradient,
-                                    typename TensorType::data_type epsilon,
-                                    h2::gpu::DeviceStream stream)
+               int num_samples,
+               const TensorType& input,
+               const TensorType& d_output,
+               const TensorType& mean,
+               const TensorType& var,
+               const TensorType& scale,
+               TensorType& scale_gradient,
+               TensorType& bias_gradient,
+               TensorType& mean_gradient,
+               TensorType& var_gradient,
+               typename TensorType::data_type epsilon,
+               h2::gpu::DeviceStream stream)
 {
     switch (num_dims)
     {
     case 4:
         backprop1<4, TensorType>(num_samples,
-                                   input,
-                                   d_output,
-                                   mean,
-                                   var,
-                                   scale,
-                                   scale_gradient,
-                                   bias_gradient,
-                                   mean_gradient,
-                                   var_gradient,
-                                   epsilon,
-                                   stream);
+                                 input,
+                                 d_output,
+                                 mean,
+                                 var,
+                                 scale,
+                                 scale_gradient,
+                                 bias_gradient,
+                                 mean_gradient,
+                                 var_gradient,
+                                 epsilon,
+                                 stream);
         break;
     case 5:
         backprop1<5, TensorType>(num_samples,
-                                   input,
-                                   d_output,
-                                   mean,
-                                   var,
-                                   scale,
-                                   scale_gradient,
-                                   bias_gradient,
-                                   mean_gradient,
-                                   var_gradient,
-                                   epsilon,
-                                   stream);
+                                 input,
+                                 d_output,
+                                 mean,
+                                 var,
+                                 scale,
+                                 scale_gradient,
+                                 bias_gradient,
+                                 mean_gradient,
+                                 var_gradient,
+                                 epsilon,
+                                 stream);
         break;
     }
 }
 
 #define INSTANTIATE_BACKPROP1(TYPE)                                            \
-    template void backprop1<Tensor<TYPE>>(                \
-        int num_dims,                                                          \
-        int num_samples,                                                       \
-        const Tensor<TYPE>& input,                                             \
-        const Tensor<TYPE>& d_output,                                          \
-        const Tensor<TYPE>& mean,                                              \
-        const Tensor<TYPE>& var,                                               \
-        const Tensor<TYPE>& scale,                                             \
-        Tensor<TYPE>& scale_gradient,                                          \
-        Tensor<TYPE>& bias_gradient,                                           \
-        Tensor<TYPE>& mean_gradient,                                           \
-        Tensor<TYPE>& var_gradient,                                            \
-        TYPE epsilon,                                                          \
-        h2::gpu::DeviceStream stream);
+    template void backprop1<Tensor<TYPE>>(int num_dims,                        \
+                                          int num_samples,                     \
+                                          const Tensor<TYPE>& input,           \
+                                          const Tensor<TYPE>& d_output,        \
+                                          const Tensor<TYPE>& mean,            \
+                                          const Tensor<TYPE>& var,             \
+                                          const Tensor<TYPE>& scale,           \
+                                          Tensor<TYPE>& scale_gradient,        \
+                                          Tensor<TYPE>& bias_gradient,         \
+                                          Tensor<TYPE>& mean_gradient,         \
+                                          Tensor<TYPE>& var_gradient,          \
+                                          TYPE epsilon,                        \
+                                          h2::gpu::DeviceStream stream);
 INSTANTIATE_BACKPROP1(float)
 INSTANTIATE_BACKPROP1(double)
 #undef INSTANTIATE_BACKPROP1
@@ -1455,11 +1439,9 @@ void backprop2_opt(index_t num_samples,
     if (channel_size % 4 == 0)
     {
         channel_size /= 4;
-        auto num_blocks_per_channel =
-            util::ceil(channel_size, block_work_size);
+        auto num_blocks_per_channel = util::ceil(channel_size, block_work_size);
         dim3 grid_dim(num_blocks_per_channel, num_channels, num_samples);
-        using DataTypeV =
-            typename util::GetVectorType<DataType, 4>::type;
+        using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
         backprop2_opt_kernel<ND, DataType, DataTypeV>
             <<<grid_dim, block_dim, 0, stream>>>(
                 reinterpret_cast<const DataTypeV*>(input.get_const_buffer()),
@@ -1477,8 +1459,7 @@ void backprop2_opt(index_t num_samples,
     }
     else
     {
-        auto num_blocks_per_channel =
-            util::ceil(channel_size, block_work_size);
+        auto num_blocks_per_channel = util::ceil(channel_size, block_work_size);
         dim3 grid_dim(num_blocks_per_channel, num_channels, num_samples);
         backprop2_opt_kernel<ND, DataType, DataType>
             <<<grid_dim, block_dim, 0, stream>>>(
@@ -1518,8 +1499,7 @@ void backprop2(index_t num_samples,
     {
         if (std::getenv("DISTCONV_DISABLE_BN_OPT"))
         {
-            util::MPIRootPrintStreamInfo()
-                << "Disable BN optimization";
+            util::MPIRootPrintStreamInfo() << "Disable BN optimization";
         }
         else
         {
@@ -1574,67 +1554,66 @@ void backprop2(index_t num_samples,
 
 template <typename TensorType>
 void backprop2(int num_dims,
-                                    index_t num_samples,
-                                    index_t num_per_sum,
-                                    const TensorType& input,
-                                    const TensorType& d_output,
-                                    const TensorType& mean,
-                                    const TensorType& var,
-                                    const TensorType& scale,
-                                    const TensorType& mean_gradient,
-                                    const TensorType& var_gradient,
-                                    TensorType& d_input,
-                                    typename TensorType::data_type epsilon,
-                                    h2::gpu::DeviceStream stream)
+               index_t num_samples,
+               index_t num_per_sum,
+               const TensorType& input,
+               const TensorType& d_output,
+               const TensorType& mean,
+               const TensorType& var,
+               const TensorType& scale,
+               const TensorType& mean_gradient,
+               const TensorType& var_gradient,
+               TensorType& d_input,
+               typename TensorType::data_type epsilon,
+               h2::gpu::DeviceStream stream)
 {
     switch (num_dims)
     {
     case 4:
         backprop2<4, TensorType>(num_samples,
-                                   num_per_sum,
-                                   input,
-                                   d_output,
-                                   mean,
-                                   var,
-                                   scale,
-                                   mean_gradient,
-                                   var_gradient,
-                                   d_input,
-                                   epsilon,
-                                   stream);
+                                 num_per_sum,
+                                 input,
+                                 d_output,
+                                 mean,
+                                 var,
+                                 scale,
+                                 mean_gradient,
+                                 var_gradient,
+                                 d_input,
+                                 epsilon,
+                                 stream);
         break;
     case 5:
         backprop2<5, TensorType>(num_samples,
-                                   num_per_sum,
-                                   input,
-                                   d_output,
-                                   mean,
-                                   var,
-                                   scale,
-                                   mean_gradient,
-                                   var_gradient,
-                                   d_input,
-                                   epsilon,
-                                   stream);
+                                 num_per_sum,
+                                 input,
+                                 d_output,
+                                 mean,
+                                 var,
+                                 scale,
+                                 mean_gradient,
+                                 var_gradient,
+                                 d_input,
+                                 epsilon,
+                                 stream);
         break;
     }
 }
 
 #define INSTANTIATE_BACKPROP2(TYPE)                                            \
-    template void backprop2<Tensor<TYPE>>(                \
-        int num_dims,                                                          \
-        index_t num_samples,                                                   \
-        index_t num_per_sum,                                                   \
-        const Tensor<TYPE>& input,                                             \
-        const Tensor<TYPE>& d_output,                                          \
-        const Tensor<TYPE>& mean,                                              \
-        const Tensor<TYPE>& var,                                               \
-        const Tensor<TYPE>& scale,                                             \
-        const Tensor<TYPE>& mean_gradient,                                     \
-        const Tensor<TYPE>& var_gradient,                                      \
-        Tensor<TYPE>& d_input,                                                 \
-        TYPE epsilon,                                                          \
-        h2::gpu::DeviceStream stream);
+    template void backprop2<Tensor<TYPE>>(int num_dims,                        \
+                                          index_t num_samples,                 \
+                                          index_t num_per_sum,                 \
+                                          const Tensor<TYPE>& input,           \
+                                          const Tensor<TYPE>& d_output,        \
+                                          const Tensor<TYPE>& mean,            \
+                                          const Tensor<TYPE>& var,             \
+                                          const Tensor<TYPE>& scale,           \
+                                          const Tensor<TYPE>& mean_gradient,   \
+                                          const Tensor<TYPE>& var_gradient,    \
+                                          Tensor<TYPE>& d_input,               \
+                                          TYPE epsilon,                        \
+                                          h2::gpu::DeviceStream stream);
 INSTANTIATE_BACKPROP2(float)
 INSTANTIATE_BACKPROP2(double)
 #undef INSTANTIATE_BACKPROP2

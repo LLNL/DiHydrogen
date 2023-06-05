@@ -131,7 +131,7 @@ public:
     {
         return *this;
     }
-    PrintStream<false>& operator<<(std::ostream& (*/*endl*/)(std::ostream&) )
+    PrintStream<false>& operator<<(std::ostream& (* /*endl*/)(std::ostream&) )
     {
         return *this;
     }

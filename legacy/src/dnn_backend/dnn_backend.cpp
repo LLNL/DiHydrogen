@@ -7,7 +7,6 @@
 
 #include "distconv/dnn_backend/dnn_backend.hpp"
 
-#include "./dnn_lib_utils.hpp"
 #include "distconv/dnn_backend/dnn_backend_impl.hpp"
 #include "distconv/dnn_backend/pack_unpack.hpp"
 #include "h2/gpu/runtime.hpp"
@@ -21,6 +20,8 @@
 #include <string>     // std::string
 #include <utility>    // std::move
 #include <vector>     // std::vector
+
+#include "./dnn_lib_utils.hpp"
 
 #define DISTCONV_ASSERT_PTR(ptr)                                               \
     do                                                                         \
@@ -60,7 +61,7 @@ size_t getenv_num_streams(size_t default_nstreams = 8)
         nstreams = std::stoul(env);
     return std::max(nstreams, static_cast<size_t>(0UL));
 }
-}// namespace
+} // namespace
 
 template <typename VendorBackendT>
 DNNBackend<VendorBackendT>::DNNBackend(MPI_Comm comm,

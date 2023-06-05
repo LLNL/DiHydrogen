@@ -1,10 +1,10 @@
 #include "distconv/dnn_backend/pack_unpack.hpp"
 
-#include "./dnn_lib_utils.hpp"
-
 #include "distconv/util/util.hpp"
 #include "h2/gpu/logger.hpp"
 #include "h2/gpu/memory_utils.hpp"
+
+#include "./dnn_lib_utils.hpp"
 
 // NOTE: This file has explicit dependency on cuDNN/MIOpen.
 #if H2_HAS_CUDA

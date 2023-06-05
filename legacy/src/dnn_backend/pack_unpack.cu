@@ -109,14 +109,7 @@ void launch_kernel(float const& alpha,
                   dim3(blk_size),
                   0,
                   stream>>>(
-                      alpha,
-                      beta,
-                      N,
-                      dims,
-                      src_strides,
-                      tgt_strides,
-                      src_data,
-                      tgt_data);
+        alpha, beta, N, dims, src_strides, tgt_strides, src_data, tgt_data);
 #endif
 }
 

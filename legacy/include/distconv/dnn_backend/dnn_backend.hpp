@@ -8,6 +8,7 @@
 #pragma once
 
 #include "distconv_config.hpp"
+
 #include "h2/gpu/runtime.hpp"
 
 #ifdef DISTCONV_HAS_P2P
@@ -81,7 +82,7 @@ public:
      *             This object will manage the stream henceforth.
      */
     StreamManager(size_t num_internal_streams,
-                   h2::gpu::DeviceStream main_stream);
+                  h2::gpu::DeviceStream main_stream);
 
     ~StreamManager() noexcept;
 
@@ -133,7 +134,10 @@ public:
     MPI_Comm get_comm() const noexcept;
     AlCommType& get_al_nccl_comm();
 #ifdef DISTCONV_HAS_P2P
-    p2p::P2P& get_p2p() { return m_p2p; }
+    p2p::P2P& get_p2p()
+    {
+        return m_p2p;
+    }
 #endif // DISTCONV_HAS_P2P
 
     ///@}
@@ -659,7 +663,10 @@ public:
     AlCommType& get_al_comm();
     AlCommType& get_al_nccl_comm() { return get_al_comm(); }
 #ifdef DISTCONV_HAS_P2P
-    p2p::P2P& get_p2p() { return m_comms.get_p2p(); }
+    p2p::P2P& get_p2p()
+    {
+        return m_comms.get_p2p();
+    }
 #endif // DISTCONV_HAS_P2P
 
     /** @brief HACK to help LBANN

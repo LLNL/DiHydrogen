@@ -33,40 +33,26 @@ auto make_halo_exchange(
 {
     using AlBackend = Al::NCCLBackend;
     using Allocator = tensor::CUDAAllocator; // may differ from AllocT.
-    using HaloExchange = tensor:: HaloExchange<DataT, Allocator, AlBackend>;
-    using HaloExchangeMPI = tensor::HaloExchangeMPI<DataT,
-                                                    Allocator,
-                                                    AlBackend>;
-    using HaloExchangeAL = tensor::HaloExchangeAL<DataT,
-                                                  Allocator,
-                                                  AlBackend>;
+    using HaloExchange = tensor::HaloExchange<DataT, Allocator, AlBackend>;
+    using HaloExchangeMPI =
+        tensor::HaloExchangeMPI<DataT, Allocator, AlBackend>;
+    using HaloExchangeAL = tensor::HaloExchangeAL<DataT, Allocator, AlBackend>;
 #ifdef DISTCONV_HAS_P2P
-    using HaloExchangeP2P = tensor::HaloExchangeP2P<DataT,
-                                                    Allocator,
-                                                    AlBackend>;
+    using HaloExchangeP2P =
+        tensor::HaloExchangeP2P<DataT, Allocator, AlBackend>;
     using HaloExchangeHybrid =
-        tensor::HaloExchangeHybrid<DataT,
-                                   Allocator,
-                                   AlBackend>;
+        tensor::HaloExchangeHybrid<DataT, Allocator, AlBackend>;
 #endif // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
     using HaloExchangeNVSHMEM =
-        tensor::HaloExchangeNVSHMEM<DataT,
-                                    Allocator,
-                                    AlBackend>;
+        tensor::HaloExchangeNVSHMEM<DataT, Allocator, AlBackend>;
     using HaloExchangeNVSHMEMDirect =
-        tensor::HaloExchangeNVSHMEMDirect<DataT,
-                                          Allocator,
-                                          AlBackend>;
+        tensor::HaloExchangeNVSHMEMDirect<DataT, Allocator, AlBackend>;
     using HaloExchangeNVSHMEMFusedNotify =
-        tensor::HaloExchangeNVSHMEMFusedNotify<DataT,
-                                               Allocator,
-                                               AlBackend>;
+        tensor::HaloExchangeNVSHMEMFusedNotify<DataT, Allocator, AlBackend>;
 #ifdef DISTCONV_HAS_CUDA_GRAPH
     using HaloExchangeNVSHMEMGraph =
-        tensor::HaloExchangeNVSHMEMGraph<DataT,
-                                         Allocator,
-                                         AlBackend>;
+        tensor::HaloExchangeNVSHMEMGraph<DataT, Allocator, AlBackend>;
 #endif // DISTCONV_HAS_CUDA_GRAPH
 #endif // DISTCONV_HAS_NVSHMEM
 

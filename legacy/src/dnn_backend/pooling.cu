@@ -104,10 +104,11 @@ namespace distconv
 {
 
 template <typename DataType>
-void Pooling<DNNBackend<GPUDNNBackend>, DataType>::bp_accumulate_sum(Tensor<DataType>& tensor,
-                                          IndexVector const& dst,
-                                          IndexVector const& src,
-                                          tensor::Shape const& shape)
+void Pooling<DNNBackend<GPUDNNBackend>, DataType>::bp_accumulate_sum(
+    Tensor<DataType>& tensor,
+    IndexVector const& dst,
+    IndexVector const& src,
+    tensor::Shape const& shape)
 {
     switch (m_num_dims)
     {
@@ -119,10 +120,10 @@ void Pooling<DNNBackend<GPUDNNBackend>, DataType>::bp_accumulate_sum(Tensor<Data
 
 #define INSTANTIATE_BP_ACCUMULATE_SUM(TYPE)                                    \
     template void Pooling<DNNBackend<GPUDNNBackend>, TYPE>::bp_accumulate_sum( \
-        Tensor<TYPE>& tensor,                                           \
-                                                   const IndexVector& dst,     \
-                                                   const IndexVector& src,     \
-                                                   const tensor::Shape& shape)
+        Tensor<TYPE>& tensor,                                                  \
+        const IndexVector& dst,                                                \
+        const IndexVector& src,                                                \
+        const tensor::Shape& shape)
 INSTANTIATE_BP_ACCUMULATE_SUM(float);
 INSTANTIATE_BP_ACCUMULATE_SUM(double);
 #undef INSTANTIATE_BP_ACCUMULATE_SUM

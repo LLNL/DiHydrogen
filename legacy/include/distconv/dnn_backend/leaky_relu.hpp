@@ -1,7 +1,7 @@
 #pragma once
 
-#include "distconv/layers.hpp"
 #include "distconv/dnn_backend/backend.hpp"
+#include "distconv/layers.hpp"
 #include "distconv/runtime_gpu.hpp"
 
 namespace distconv
@@ -28,7 +28,8 @@ template <>
 class LeakyReLU<DNNBackend<GPUDNNBackend>>
 {
 public:
-    LeakyReLU(DNNBackend<GPUDNNBackend> const& be) : m_stream(be.get_stream()) {}
+    LeakyReLU(DNNBackend<GPUDNNBackend> const& be) : m_stream(be.get_stream())
+    {}
     LeakyReLU(h2::gpu::DeviceStream stream) : m_stream(stream) {}
 
     ~LeakyReLU() = default;

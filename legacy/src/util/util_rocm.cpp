@@ -181,12 +181,12 @@ void sync_stream(hipStream_t const s1, hipStream_t const s2)
 
 namespace
 {
-std::pair<int,int> get_stream_priority_bounds()
+std::pair<int, int> get_stream_priority_bounds()
 {
     int least_priority, greatest_priority;
     DISTCONV_CHECK_HIP(
         hipDeviceGetStreamPriorityRange(&least_priority, &greatest_priority));
-    return { least_priority, greatest_priority };
+    return {least_priority, greatest_priority};
 }
 } // namespace
 

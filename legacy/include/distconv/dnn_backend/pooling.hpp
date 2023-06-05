@@ -1,9 +1,9 @@
 #pragma once
 
 #include "distconv/distconv.hpp"
-#include "distconv/layers.hpp"
 #include "distconv/dnn_backend/dnn_backend.hpp"
 #include "distconv/dnn_backend/pack_unpack.hpp"
+#include "distconv/layers.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/halo_exchange_cuda.hpp"
 #include "distconv/tensor/halo_exchange_cuda_al.hpp"
@@ -183,8 +183,7 @@ public:
         util::MPIPrintStreamDebug() << "pooling d_input desc: " << m_d_input_d;
         GPUDNNBackend::setup_tensor_descriptor(m_d_output_d, d_output, false);
 
-        m_mode =
-            pooling::get_pooling_mode(mode, m_be.deterministic());
+        m_mode = pooling::get_pooling_mode(mode, m_be.deterministic());
 
         // When a dimension is split, halo region works as padding
         for (auto i = pads.begin(); i != pads.end(); i++)

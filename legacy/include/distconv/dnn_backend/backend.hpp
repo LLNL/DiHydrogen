@@ -15,7 +15,7 @@ using BackendDNNLib = DNNBackend<distconv::GPUDNNBackend>;
 namespace backend
 {
 using Options = ::distconv::Options;
-} // namespace Options
+} // namespace backend
 } // namespace distconv
 
 #if H2_HAS_CUDA

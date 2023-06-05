@@ -74,13 +74,15 @@ IncludeBlocks: Regroup
 IncludeCategories:
   - Regex:           '^<catch2/catch.hpp>'
     Priority:        -1                         # Always up front
-  - Regex:           '.*_config\.h(pp)?>|"'     # Configure headers
+  - Regex:           '^((<|").+_config)'        # Configure headers
     Priority:         1
-  - Regex:           '^(<|")h2/'                # Project headers
+  - Regex:           '^((<|")(h2|distconv)/)'   # Project headers
     Priority:         3
-  - Regex:           '<[[:alnum:]]+\.h(pp)?>'   # "Normal headers"
+  - Regex:           '^"[[:alnum:].]+\.h(pp)?"'   # Project headers
+    Priority:         3
+  - Regex:           '<[[:alnum:].]+\.h(pp)?>'  # "Normal headers"
     Priority:         4
-  - Regex:           '<[[:alnum:]_]+>'           # STL Headers last
+  - Regex:           '<[[:alnum:]_]+>'          # STL Headers last
     Priority:         5
 IncludeIsMainRegex: "(Test)?$"
 IndentCaseLabels: false

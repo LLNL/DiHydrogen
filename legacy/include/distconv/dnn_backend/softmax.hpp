@@ -1,7 +1,7 @@
 #pragma once
 
-#include "distconv/layers.hpp"
 #include "distconv/dnn_backend/backend.hpp"
+#include "distconv/layers.hpp"
 #include "distconv/runtime_gpu.hpp"
 
 #include <Al.hpp>

@@ -6,7 +6,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "distconv/dnn_backend/dnn_backend.hpp"
-
 #include "distconv/util/util_mpi.hpp" // MPIRootPrintStreamDebug
 
 namespace distconv
