@@ -114,9 +114,9 @@ public:
         }
 
         // TODO: asymmetric not supported
-        assert_always(util::is_all_elements_equal(windows));
-        assert_always(util::is_all_elements_equal(pads));
-        assert_always(util::is_all_elements_equal(strides));
+        assert_always(util::are_all_elements_equal(windows));
+        assert_always(util::are_all_elements_equal(pads));
+        assert_always(util::are_all_elements_equal(strides));
 
         // TODO: only stencil-like windows are supported
         for (int i = 0; i < m_num_spatial_dims; ++i)

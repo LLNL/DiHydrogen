@@ -274,7 +274,7 @@ inline T ceil(T x, T y)
 
 // Return whether all of the elements of `ary` is the same.
 template <typename T>
-inline bool is_all_elements_equal(const std::vector<T>& ary)
+inline bool are_all_elements_equal(const std::vector<T>& ary)
 {
     return std::equal(ary.begin() + 1, ary.end(), ary.begin());
 }
