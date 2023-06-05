@@ -367,7 +367,7 @@ __device__ inline float rsqrt(float x)
 }
 
 template <int ND, typename DataType>
-void __global__
+__global__ void
 batch_normalization_kernel(const DataType* __restrict__ input,
                            const DataType* __restrict__ global_mean,
                            const DataType* __restrict__ global_var,
@@ -418,7 +418,7 @@ batch_normalization_kernel(const DataType* __restrict__ input,
 }
 
 template <int ND, typename DataType, typename DataTypeV>
-void __global__
+__global__ void
 batch_normalization_opt_kernel(const DataTypeV* __restrict__ input,
                                const DataType* __restrict__ global_mean,
                                const DataType* __restrict__ global_var,
@@ -897,7 +897,7 @@ namespace
 {
 
 template <int ND, typename DataType, int BLOCK_SIZE>
-void __global__ backprop1_kernel(const DataType* __restrict__ input,
+__global__ void backprop1_kernel(const DataType* __restrict__ input,
                                  const DataType* __restrict__ d_output,
                                  const DataType* __restrict__ global_mean,
                                  const DataType* __restrict__ global_var,
@@ -980,7 +980,7 @@ void __global__ backprop1_kernel(const DataType* __restrict__ input,
 }
 
 template <int ND, typename DataType, int BLOCK_SIZE, typename DataTypeV>
-void __global__ backprop1_opt_kernel(const DataTypeV* __restrict__ input,
+__global__ void backprop1_opt_kernel(const DataTypeV* __restrict__ input,
                                      const DataTypeV* __restrict__ d_output,
                                      const DataType* __restrict__ global_mean,
                                      const DataType* __restrict__ global_var,
@@ -1301,7 +1301,7 @@ namespace
 {
 
 template <int ND, typename DataType>
-void __global__ backprop2_kernel(const DataType* __restrict__ input,
+__global__ void backprop2_kernel(const DataType* __restrict__ input,
                                  const DataType* __restrict__ d_output,
                                  const DataType* __restrict__ global_mean,
                                  const DataType* __restrict__ global_var,
@@ -1366,7 +1366,7 @@ void __global__ backprop2_kernel(const DataType* __restrict__ input,
 }
 
 template <int ND, typename DataType, typename DataTypeV>
-void __global__ backprop2_opt_kernel(const DataTypeV* __restrict__ input,
+__global__ void backprop2_opt_kernel(const DataTypeV* __restrict__ input,
                                      const DataTypeV* __restrict__ d_output,
                                      const DataType* __restrict__ global_mean,
                                      const DataType* __restrict__ global_var,
