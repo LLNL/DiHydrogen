@@ -1,6 +1,7 @@
 #pragma once
 
 #include "distconv/dnn_backend/backend.hpp"
+#include "distconv/layers.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/algorithms.hpp"
 #include "distconv/tensor/allreduce.hpp"
@@ -97,102 +98,75 @@ void backprop2(int num_dims,
 } // namespace batchnorm
 
 template <typename DataType>
-class BatchNormalization<BackendDNNLib, DataType>
+class BatchNormalization<DNNBackend<GPUDNNBackend>, DataType>
 {
 public:
-    BatchNormalization(BackendDNNLib& backend,
+    BatchNormalization(DNNBackend<GPUDNNBackend>& backend,
                        int num_dims,
                        DataType decay,
                        DataType epsilon,
                        bool global_stats,
                        BatchnormImpl impl = BatchnormImpl::MPI)
-        : m_be(backend),
+        : m_stream(backend.get_stream()),
           m_num_dims(num_dims),
+          m_num_current_samples(0),
           m_decay(decay),
           m_epsilon(epsilon),
-          m_global_stats(global_stats),
+          m_allreducer(nullptr),
           m_impl(impl),
-          m_allreducer(nullptr)
+          m_global_stats(global_stats)
     {
         if (m_impl == BatchnormImpl::MPI)
         {
-            m_allreducer =
-                util::make_unique<tensor::AllreduceMPICUDA<DataType>>(
-                    m_be.get_comm(), m_be.get_stream());
+            m_allreducer = std::make_unique<tensor::AllreduceMPICUDA<DataType>>(
+                backend.get_comm(), m_stream);
         }
         else if (m_impl == BatchnormImpl::AL_NCCL)
         {
-            m_allreducer = util::make_unique<tensor::AllreduceAlNCCL<DataType>>(
-                m_be.get_al_nccl_comm());
+            m_allreducer = std::make_unique<tensor::AllreduceAlNCCL<DataType>>(
+                backend.get_al_nccl_comm());
 #ifdef DISTCONV_HAS_NVSHMEM
         }
         else if (m_impl == BatchnormImpl::NVSHMEM_NATIVE)
         {
-            m_allreducer =
-                util::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
-                    m_be.get_stream(),
-                    tensor::AllreduceNVSHMEM<DataType>::NATIVE);
+            m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+                m_stream, tensor::AllreduceNVSHMEM<DataType>::NATIVE);
         }
         else if (m_impl == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_HOST)
         {
-            m_allreducer = util::make_unique<
-                tensor::AllreduceNVSHMEM<DataType>>(
-                m_be.get_stream(),
+            m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+                m_stream,
                 tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_HOST);
         }
         else if (m_impl == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING)
         {
-            m_allreducer =
-                util::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
-                    m_be.get_stream(),
-                    tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING);
+            m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+                m_stream,
+                tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING);
         }
         else if (m_impl == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_BUFFERED)
         {
-            m_allreducer =
-                util::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
-                    m_be.get_stream(),
-                    tensor::AllreduceNVSHMEM<
-                        DataType>::RECURSIVE_DOUBLING_BUFFERED);
+            m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+                m_stream,
+                tensor::AllreduceNVSHMEM<
+                    DataType>::RECURSIVE_DOUBLING_BUFFERED);
         }
         else if (m_impl == BatchnormImpl::NVSHMEM_RECURSIVE_DOUBLING_BLOCK)
         {
-            m_allreducer = util::make_unique<
-                tensor::AllreduceNVSHMEM<DataType>>(
-                m_be.get_stream(),
+            m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+                m_stream,
                 tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BLOCK);
         }
         else if (m_impl == BatchnormImpl::FUSED_NVSHMEM_RECURSIVE_DOUBLING)
         {
-            m_allreducer = util::make_unique<
-                tensor::AllreduceNVSHMEM<DataType>>(
-                m_be.get_stream(),
+            m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
+                m_stream,
                 tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BLOCK);
 #endif // DISTCONV_HAS_NVSHMEM
         }
     }
-#if 0
-  BatchNormalization(BackendDNNLib &backend,
-                     DataType decay, DataType epsilon,
-                     bool use_global_stats):
-      BatchNormalization(backend, decay, epsilon,
-                         tensor::Array<ND, bool>(true)) {
-  }
-#endif
-    ~BatchNormalization() {}
 
-    BatchNormalization
-    operator=(const BatchNormalization<BackendDNNLib, DataType>& x)
-    {
-        assert_always(&m_be == &x.m_be);
-        m_num_dims = x.m_num_dims;
-        m_decay = x.m_decay;
-        m_epsilon = x.m_epsilon;
-        m_num_current_samples = x.m_num_current_samples;
-        m_global_stats = x.m_global_stats;
-        m_impl = x.impl;
-        return *this;
-    }
+    ~BatchNormalization() = default;
 
     template <typename Tensor>
     int forward_stage1(const Tensor& input,
@@ -302,7 +276,7 @@ public:
                 output,
                 m_decay,
                 m_epsilon,
-                m_be.get_stream(),
+                m_stream,
                 *static_cast<tensor::AllreduceNVSHMEM<DataType>*>(
                     m_allreducer.get()));
         }
@@ -500,25 +474,21 @@ public:
         m_num_current_samples = n;
     }
 
-protected:
-    BackendDNNLib& m_be;
+private:
+    h2::gpu::DeviceStream m_stream;
     int m_num_dims;
+    int m_num_current_samples;
     DataType m_decay;
     DataType m_epsilon;
-    int m_num_current_samples = 0;
-    bool m_global_stats;
-    BatchnormImpl m_impl;
     std::unique_ptr<tensor::Allreduce<DataType>> m_allreducer;
+    BatchnormImpl m_impl;
+    bool m_global_stats;
 
     template <typename Tensor>
     void channel_sums_and_sqsums(const Tensor& input, Tensor& mean, Tensor& var)
     {
-        batchnorm::channel_sums_and_sqsums<Tensor>(m_num_dims,
-                                                   m_num_current_samples,
-                                                   input,
-                                                   mean,
-                                                   var,
-                                                   m_be.get_stream());
+        batchnorm::channel_sums_and_sqsums<Tensor>(
+            m_num_dims, m_num_current_samples, input, mean, var, m_stream);
     }
 
     template <typename Tensor>
@@ -534,7 +504,7 @@ protected:
                                               var,
                                               running_mean,
                                               running_var,
-                                              m_be.get_stream());
+                                              m_stream);
     }
 
     template <typename Tensor>
@@ -554,7 +524,7 @@ protected:
                                                bias,
                                                output,
                                                m_epsilon,
-                                               m_be.get_stream());
+                                               m_stream);
     }
 
     template <typename Tensor>
@@ -580,7 +550,7 @@ protected:
                                      mean_gradient,
                                      var_gradient,
                                      m_epsilon,
-                                     m_be.get_stream());
+                                     m_stream);
     }
 
     template <typename Tensor>
@@ -606,7 +576,7 @@ protected:
                                      var_gradient,
                                      d_input,
                                      m_epsilon,
-                                     m_be.get_stream());
+                                     m_stream);
     }
 };
 

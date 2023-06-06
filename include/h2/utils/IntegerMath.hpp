@@ -17,7 +17,8 @@
 // TODO: Move this elsewhere.
 #if defined H2_HAS_GPU
 
-#if (defined __HIP_DEVICE_COMPILE__ && __HIP_DEVICE_COMPILE__)
+#if (defined __CUDA_ARCH__ && __CUDA_ARCH__)                                   \
+    || (defined __HIP_DEVICE_COMPILE__ && __HIP_DEVICE_COMPILE__)
 #define H2_GPU_DEVICE_COMPILING 1
 #else
 #define H2_GPU_DEVICE_COMPILING 0

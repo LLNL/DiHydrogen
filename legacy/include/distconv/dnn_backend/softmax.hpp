@@ -1,6 +1,7 @@
 #pragma once
 
 #include "distconv/dnn_backend/backend.hpp"
+#include "distconv/layers.hpp"
 #include "distconv/runtime_gpu.hpp"
 
 #include <Al.hpp>
@@ -11,18 +12,16 @@ namespace distconv
 {
 
 template <>
-class Softmax<BackendDNNLib>
+class Softmax<DNNBackend<GPUDNNBackend>>
 {
 public:
-    Softmax(BackendDNNLib& backend) : m_be(backend) {}
+    Softmax(DNNBackend<GPUDNNBackend> const& backend)
+        : m_stream(backend.get_stream())
+    {}
+
+    Softmax(h2::gpu::DeviceStream stream) : m_stream{stream} {}
 
     ~Softmax() = default;
-
-    Softmax& operator=(const Softmax& x)
-    {
-        assert_always(&m_be == &x.m_be);
-        return *this;
-    }
 
     template <typename Tensor>
     void setup(const Tensor& input, SoftmaxMode mode)
@@ -33,8 +32,8 @@ public:
         if (m_num_procs_per_sample > 1)
         {
             auto sample_loc = input.get_sub_locale_except_dim(-1);
-            m_sample_al.reset(new Al::NCCLBackend::comm_type(
-                sample_loc.get_comm(), m_be.get_stream()));
+            m_sample_al = std::make_unique<Al::NCCLBackend::comm_type>(
+                sample_loc.get_comm(), m_stream);
         }
     }
 
@@ -44,8 +43,8 @@ public:
     template <typename Tensor>
     int backward(const Tensor& y, const Tensor& dy, Tensor& dx);
 
-protected:
-    BackendDNNLib& m_be;
+private:
+    h2::gpu::DeviceStream m_stream;
     SoftmaxMode m_mode;
     int m_num_procs_per_sample;
     std::unique_ptr<Al::NCCLBackend::comm_type> m_sample_al;
@@ -56,8 +55,8 @@ protected:
         if (m_num_procs_per_sample < 2)
             return;
 
-        auto op = max_or_sum ? Al::ReductionOperator::max
-                             : Al::ReductionOperator::sum;
+        auto const op = max_or_sum ? Al::ReductionOperator::max
+                                   : Al::ReductionOperator::sum;
         Al::Allreduce<Al::NCCLBackend, DataType>(
             sample_values, num_samples, op, *m_sample_al.get());
     }

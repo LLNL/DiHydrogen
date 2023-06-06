@@ -1,15 +1,13 @@
-#include "distconv/dnn_backend/backend.hpp"
 #include "distconv/distconv.hpp"
+#include "distconv/dnn_backend/backend.hpp"
+#include "distconv/ref/backend.hpp"
 #include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/tensor_cuda.hpp"
 #include "distconv/tensor/tensor_mpi.hpp"
 #include "distconv/util/util_gpu.hpp"
-#include "distconv/util/util_mpi.hpp"
-
 #include "distconv/util/util_gpu_dnn.hpp"
-
-#include "test_common.hpp"
+#include "distconv/util/util_mpi.hpp"
 
 #include <Al.hpp>
 
@@ -19,6 +17,8 @@
 #include <iostream>
 #include <numeric>
 #include <vector>
+
+#include "test_common.hpp"
 
 using namespace distconv;
 
@@ -102,8 +102,7 @@ int test_forward(Data<Backend> &d,
   MPI_Comm_rank(comm, &pid);
 
   util::MPIRootPrintStreamInfo()
-      << "Executing test_forward with "
-      << be.get_name();
+      << "Executing test_forward with backend \"" << cfg.backend << "\"";
 
   LeakyReLU<Backend> leaky_relu(be);
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
@@ -124,8 +123,7 @@ int test_backward(Data<Backend> &d,
   MPI_Comm_rank(comm, &pid);
 
   util::MPIRootPrintStreamInfo()
-      << "Executing test_backward with "
-      << be.get_name();
+      << "Executing test_backward with backend \"" << cfg.backend << "\"";
 
   LeakyReLU<Backend> leaky_relu(be);
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
@@ -149,12 +147,12 @@ int test_all<BackendDNNLib>(Data<BackendDNNLib>& d,
 {
     int pid;
     DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
-    auto handle = dnn_lib::make_handle();
+    auto handle = GPUDNNBackend::make_handle();
     BackendDNNLib be(comm, handle);
     test_forward<BackendDNNLib>(d, cfg, comm, be);
     test_backward<BackendDNNLib>(d, cfg, comm, be);
     be.wait();
-    dnn_lib::destroy_handle(handle);
+    GPUDNNBackend::destroy_handle(handle);
     return 0;
 }
 

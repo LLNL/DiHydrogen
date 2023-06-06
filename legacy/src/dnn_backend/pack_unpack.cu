@@ -1,6 +1,12 @@
 #include "h2/utils/IntegerMath.hpp"
 
+#if H2_HAS_ROCM
 #include <hip/hip_runtime.h>
+using Stream_t = hipStream_t;
+#elif H2_HAS_CUDA
+#include <cuda_runtime.h>
+using Stream_t = cudaStream_t;
+#endif
 
 namespace {
 
@@ -70,7 +76,7 @@ void launch_kernel(float const& alpha,
                    int const* tgt_strides_in,
                    float const* src_data,
                    float* tgt_data,
-                   hipStream_t stream)
+                   Stream_t stream)
 {
     using int_type = uint32_t;
     using FastDivT = h2::FastDiv<int_type>;
@@ -84,6 +90,7 @@ void launch_kernel(float const& alpha,
     size_t const N = get_size(dims);
     size_t const blk_size = 256; // 64;
 
+#if H2_HAS_ROCM
     hipLaunchKernelGGL(copy_kernel,
                        dim3((N + blk_size - 1) / blk_size),
                        dim3(blk_size),
@@ -97,13 +104,18 @@ void launch_kernel(float const& alpha,
                        tgt_strides,
                        src_data,
                        tgt_data);
+#elif H2_HAS_CUDA
+    copy_kernel<<<dim3((N + blk_size - 1) / blk_size),
+                  dim3(blk_size),
+                  0,
+                  stream>>>(
+        alpha, beta, N, dims, src_strides, tgt_strides, src_data, tgt_data);
+#endif
 }
 
 } // namespace
 
 namespace distconv
-{
-namespace miopen
 {
 
 // A copy with different strides
@@ -115,7 +127,7 @@ void do_gpu_tensor_repack(float const& alpha,
                           int const* tgt_strides,
                           float const* src_data,
                           float* tgt_data,
-                          hipStream_t stream)
+                          Stream_t stream)
 {
     switch (ndims)
     {
@@ -193,5 +205,4 @@ void do_gpu_tensor_repack(float const& alpha,
     }
 }
 
-} // namespace miopen
 } // namespace distconv

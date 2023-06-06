@@ -176,16 +176,25 @@ void sync_stream(hipStream_t const s1, hipStream_t const s2)
     DISTCONV_CHECK_HIP(hipStreamWaitEvent(s1, ev2, 0));
 }
 
-hipStream_t create_priority_stream()
+} // namespace util
+} // namespace distconv
+
+namespace
+{
+std::pair<int, int> get_stream_priority_bounds()
 {
     int least_priority, greatest_priority;
-    hipStream_t s;
     DISTCONV_CHECK_HIP(
         hipDeviceGetStreamPriorityRange(&least_priority, &greatest_priority));
+    return {least_priority, greatest_priority};
+}
+} // namespace
+
+hipStream_t distconv::util::create_priority_stream()
+{
+    static int const greatest_priority = get_stream_priority_bounds().second;
+    hipStream_t s;
     DISTCONV_CHECK_HIP(hipStreamCreateWithPriority(
         &s, hipStreamNonBlocking, greatest_priority));
     return s;
 }
-
-} // namespace util
-} // namespace distconv

@@ -12,6 +12,7 @@
 #include "distconv/tensor/stream_rocm.hpp"
 #include "distconv/util/util.hpp"
 #include "distconv/util/util_rocm.hpp"
+#include "h2/gpu/memory_utils.hpp"
 #ifdef DISTCONV_HAS_NVSHMEM
 #include "distconv/util/nvshmem.hpp"
 #endif

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "distconv/dnn_backend/backend.hpp"
+#include "distconv/layers.hpp"
 #include "distconv/runtime_gpu.hpp"
 
 namespace distconv
@@ -24,18 +25,14 @@ void backward(Tensor& input,
 } // namespace leaky_relu
 
 template <>
-class LeakyReLU<BackendDNNLib>
+class LeakyReLU<DNNBackend<GPUDNNBackend>>
 {
 public:
-    LeakyReLU(BackendDNNLib& backend) : m_be(backend) {}
+    LeakyReLU(DNNBackend<GPUDNNBackend> const& be) : m_stream(be.get_stream())
+    {}
+    LeakyReLU(h2::gpu::DeviceStream stream) : m_stream(stream) {}
 
     ~LeakyReLU() = default;
-
-    LeakyReLU operator=(const LeakyReLU& x)
-    {
-        assert_always(&m_be == &x.m_be);
-        return *this;
-    }
 
     // input should be const, but transform::Transform, which is used
     // in the implementation, is not polymorphic with respect to
@@ -52,7 +49,7 @@ public:
         {
             return 0;
         }
-        leaky_relu::forward(input, negative_slope, output, m_be.get_stream());
+        leaky_relu::forward(input, negative_slope, output, m_stream);
         return 0;
     }
 
@@ -69,12 +66,12 @@ public:
             return 0;
         }
         leaky_relu::backward(
-            input, d_output, negative_slope, d_input, m_be.get_stream());
+            input, d_output, negative_slope, d_input, m_stream);
         return 0;
     }
 
-protected:
-    BackendDNNLib& m_be;
+private:
+    h2::gpu::DeviceStream m_stream;
 };
 
 } // namespace distconv
