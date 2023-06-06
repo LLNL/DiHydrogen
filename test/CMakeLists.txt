@@ -7,9 +7,7 @@
 
 if (H2_ENABLE_TESTS)
   # Setup the Catch2 stuff.
-  if (NOT Catch2_FOUND)
-    find_package(Catch2 3.0.0 CONFIG QUIET REQUIRED)
-  endif ()
+  find_package(Catch2 3.0.0 CONFIG REQUIRED)
 
   message(STATUS "Found Catch2: ${Catch2_DIR}")
   message(STATUS "Catch2 Version: ${Catch2_VERSION}")
