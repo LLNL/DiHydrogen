@@ -1,16 +1,18 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2023 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "catch2/catch.hpp"
-#include <h2/utils/Logger.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
+
+#include "h2/utils/Logger.hpp"
 #include "../src/utils/logger_internals.hpp"
+
 #include <cstdlib>
 #include <iostream>
-
 
 TEST_CASE("Testing the internal functions used by the logging class",
           "[logging][utilities]")

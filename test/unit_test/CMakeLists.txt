@@ -1,5 +1,5 @@
 ################################################################################
-## Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+## Copyright 2019-2023 Lawrence Livermore National Security, LLC and other
 ## DiHydrogen Project Developers. See the top-level LICENSE file for details.
 ##
 ## SPDX-License-Identifier: Apache-2.0
@@ -48,15 +48,16 @@ set_tests_properties("[==[Testing the Version String.]==]" PROPERTIES
 # Add the sequential Catch2 driver.
 #
 
-add_executable(SeqCatchTests SequentialCatchMain.cpp)
+add_executable(SeqCatchTests)
 
 # Add Catch2 unit tests
 add_subdirectory(patterns/factory)
 add_subdirectory(patterns/multimethods)
 add_subdirectory(utils)
 
+# These tests use the default Catch2 main().
 target_link_libraries(SeqCatchTests
-  PRIVATE ${H2_LIBRARIES} Catch2::Catch2)
+  PRIVATE ${H2_LIBRARIES} Catch2::Catch2WithMain)
 set_target_properties(SeqCatchTests
   PROPERTIES
   CXX_STANDARD 17
