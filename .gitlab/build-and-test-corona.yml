@@ -38,7 +38,8 @@ rocm-5-5-0-distconv:
   extends: [.build-and-test-on-corona, .build-and-test]
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
-
+    - if: $CI_PIPELINE_SOURCE == "web" && $TEST_DISTCONV_BUILD == "1"
+    - if: $CI_COMMIT_BRANCH =~ /distconv/
 
 rocm-5-5-0-coverage:
   variables:
