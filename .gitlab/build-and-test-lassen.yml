@@ -31,10 +31,10 @@ gcc-8-3-1-cuda-12-0-0:
 
 # The NCCL spec used here is actually a bug in NCCL+GCC@8.3.1 that (of
 # course) is not "conflict"ed in Spack.
-gcc-8-3-1-cuda-12-0-0-distconv:
+gcc-8-3-1-cuda-11-8-0-distconv:
   variables:
-    SPEC: "%gcc@8.3.1 +developer +distconv +cuda cuda_arch=70 ^cuda@12.0.0 ^nccl@2.16.2-1"
-    MODULES: "gcc/8.3.1 spectrum-mpi/rolling-release cuda/12.0.0"
+    SPEC: "%gcc@8.3.1 +developer +distconv +cuda cuda_arch=70 ^cuda@11.8.0 ^nccl@2.16.2-1"
+    MODULES: "gcc/8.3.1 spectrum-mpi/rolling-release cuda/11.8.0"
   extends: .build-and-test-on-lassen
   rules:
     - if: $TEST_DISTCONV_BUILD == "1"
@@ -54,10 +54,10 @@ clang-13-0-1-gcc-8-3-1-cuda-12-0-0:
 # See above for rationale of the NCCL spec. I'm not sure if it's a
 # compiler or a toolchain issue, so I'm duplicating that spec here to
 # be safe.
-clang-13-0-1-gcc-8-3-1-cuda-12-0-0-distconv:
+clang-13-0-1-gcc-8-3-1-cuda-11-8-0-distconv:
   variables:
-    SPEC: "%clang@13.0.1-gcc-8.3.1 +developer +distconv +cuda cuda_arch=70 ^cuda@12.0.0 ^nccl@2.16.2-1"
-    MODULES: "clang/13.0.1-gcc-8.3.1 spectrum-mpi/rolling-release cuda/12.0.0"
+    SPEC: "%clang@13.0.1-gcc-8.3.1 +developer +distconv +cuda cuda_arch=70 ^cuda@11.8.0 ^nccl@2.16.2-1"
+    MODULES: "clang/13.0.1-gcc-8.3.1 spectrum-mpi/rolling-release cuda/11.8.0"
   extends: .build-and-test-on-lassen
   rules:
     - if: $TEST_DISTCONV_BUILD == "1"
