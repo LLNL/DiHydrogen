@@ -8,6 +8,17 @@
 stages:
   - run-all-clusters
 
+# The CI_PIPELINE_SOURCE variable in the cluster-specific pipelines is
+# always "parent_pipeline", so I cannot test this there. A "web"
+# sourced job can always set "TEST_DISTCONV_BUILD" manually to force
+# the "-distconv" jobs to run, so I don't need to handle that here.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" || $CI_COMMIT_BRANCH =~ /distconv/
+      variables:
+        TEST_DISTCONV_BUILD: "1"
+    - when: always
+
 corona testing:
   stage: run-all-clusters
   trigger:
