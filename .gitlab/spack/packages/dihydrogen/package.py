@@ -114,10 +114,8 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
         depends_on("aluminum@0.7.0:", when="@:0.0,0.2.1:")
 
         # Add Aluminum variants
-        depends_on("aluminum +cuda +nccl +cuda_rma", when="+cuda")
-        depends_on("aluminum +rocm +rccl", when="+rocm")
-        depends_on("aluminum +nccl", when="+distconv +cuda")
-        depends_on("aluminum +rccl", when="+distconv +rocm")
+        depends_on("aluminum +cuda +nccl", when="+distconv +cuda")
+        depends_on("aluminum +rocm +rccl", when="+distconv +rocm")
 
         # TODO: Debug linker errors when NVSHMEM is built with UCX
         depends_on("nvshmem +nccl~ucx", when="+nvshmem")
@@ -131,12 +129,19 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
 
         for arch in CudaPackage.cuda_arch_values:
             depends_on(
-                "aluminum cuda_arch={0}".format(arch),
+                "aluminum +cuda cuda_arch={0}".format(arch),
                 when="+cuda cuda_arch={0}".format(arch))
+
+            # This is a workaround for a bug in the Aluminum package,
+            # as it should be responsible for its own NCCL dependency.
+            # Rather than failing to concretize, we help it along.
+            depends_on(
+                "nccl cuda_arch={0}".format(arch),
+                when="+distconv +cuda cuda_arch={0}".format(arch))
 
             # NVSHMEM also needs arch forwarding
             depends_on(
-                "nvshmem cuda_arch={0}".format(arch),
+                "nvshmem +cuda cuda_arch={0}".format(arch),
                 when="+nvshmem +cuda cuda_arch={0}".format(arch))
 
         # Idenfity versions of cuda_arch that are too old from
@@ -192,13 +197,10 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
         spec = self.spec
         entries = super(Dihydrogen, self).std_initconfig_entries()
 
-        # It's a "STRING", not a "PATH". :/
+        # CMAKE_PREFIX_PATH, in CMake types, is a "STRING", not a "PATH". :/
         entries = [ x for x in entries if "CMAKE_PREFIX_PATH" not in x ]
-
         cmake_prefix_path = os.environ["CMAKE_PREFIX_PATH"].replace(':',';')
         entries.append(cmake_cache_string("CMAKE_PREFIX_PATH", cmake_prefix_path))
-        if "PYTHONPATH" in os.environ:
-            entries.append("# PYTHONPATH={0}".format(os.environ["PYTHONPATH"]))
 
         return entries
 
@@ -206,14 +208,16 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
         spec = self.spec
         entries = super(Dihydrogen, self).initconfig_compiler_entries()
 
-        # Ugh. We don't need their generator. We don't specify a
-        # generator for DiHydrogen BECAUSE IT DOESN'T (shouldn't)
-        # MATTER in the sense that it should not impact the
-        # correctness of a build. Moreover, encoding it in the cache
-        # file is a terrible life choice because it makes assumptions
-        # about how the cache file will be consumed, which creates a
-        # headache for consumers outside those assumptions (an old
-        # adage about what happens when one assumes comes to mind).
+        # We don't need this generator, we don't want this generator. We
+        # don't specify a generator for DiHydrogen BECAUSE IT DOESN'T
+        # (shouldn't) MATTER in the sense that it doesn't (shouldn't)
+        # impact the correctness of a build, and it should not be
+        # hard-coded into the CMake cache file (especially since
+        # "-G<something else>" doesn't override it). Moreover, to choose to
+        # encode it in the cache file is to make assumptions about how the
+        # cache file will be consumed, which creates a headache for
+        # consumers outside those assumptions (an old adage about what
+        # happens when one assumes comes to mind).
         entries = [ x for x in entries if "CMAKE_GENERATOR" not in x and "CMAKE_MAKE_PROGRAM" not in x ]
 
         # FIXME: Enforce this better in the actual CMake.
@@ -279,15 +283,24 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
         spec = self.spec
         entries = super(Dihydrogen, self).initconfig_package_entries()
 
+        # Basic H2 options
         entries.append(cmake_cache_option("H2_DEVELOPER_BUILD", "+developer" in spec))
         entries.append(cmake_cache_option("H2_ENABLE_TESTS", "+developer" in spec))
-        if "+developer" in spec:
-            entries.append(cmake_cache_path("Catch2_ROOT", spec["catch2"].prefix))
 
         entries.append(cmake_cache_option("H2_ENABLE_CODE_COVERAGE", "+coverage" in spec))
         entries.append(cmake_cache_option("H2_CI_BUILD", "+ci" in spec))
 
+        # DistConv options
+        entries.append(cmake_cache_option("H2_ENABLE_ALUMINUM", "+distconv" in spec))
+        entries.append(cmake_cache_option("H2_ENABLE_DISTCONV_LEGACY", "+distconv" in spec))
+        entries.append(cmake_cache_option("H2_ENABLE_OPENMP", "+distconv" in spec))
+
+        # Paths to stuff, just in case. CMAKE_PREFIX_PATH should catch
+        # all this, but this shouldn't hurt to have.
         entries.append(cmake_cache_path("spdlog_ROOT", spec["spdlog"].prefix))
+
+        if "+developer" in spec:
+            entries.append(cmake_cache_path("Catch2_ROOT", spec["catch2"].prefix))
 
         if "+coverage" in spec:
             entries.append(cmake_cache_path("lcov_ROOT", spec["lcov"].prefix))
@@ -295,10 +308,6 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
             if "+ci" in spec:
                 entries.append(cmake_cache_path("gcovr_ROOT", spec["py-gcovr"].prefix))
 
-        # DistConv options
-        entries.append(cmake_cache_option("H2_ENABLE_ALUMINUM", "+distconv" in spec))
-        entries.append(cmake_cache_option("H2_ENABLE_DISTCONV_LEGACY", "+distconv" in spec))
-        entries.append(cmake_cache_option("H2_ENABLE_OPENMP", "+distconv" in spec))
         if "+distconv" in spec:
             entries.append(cmake_cache_path("Aluminum_ROOT", spec["aluminum"].prefix))
             if "+cuda" in spec:
