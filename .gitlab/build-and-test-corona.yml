@@ -31,6 +31,15 @@ rocm-5-5-0:
     MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.5.0 ninja/1.11.0 python"
   extends: [.build-and-test-on-corona, .build-and-test]
 
+rocm-5-5-0-distconv:
+  variables:
+    SPEC: "%rocmcc@5.5.0 +developer +distconv +rocm amdgpu_target=gfx906 ^hip@5.5.0 ^llvm-amdgpu@5.5.0 ^hsa-rocr-dev@5.5.0"
+    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.5.0 ninja/1.11.0 python"
+  extends: [.build-and-test-on-corona, .build-and-test]
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+
 rocm-5-5-0-coverage:
   variables:
     SPEC: "%rocmcc@5.5.0 +developer +ci +coverage +rocm amdgpu_target=gfx906 ^hip@5.5.0 ^llvm-amdgpu@5.5.0 ^hsa-rocr-dev@5.5.0"
