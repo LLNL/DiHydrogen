@@ -1,0 +1,60 @@
+################################################################################
+## Copyright 2019-2023 Lawrence Livermore National Security, LLC and other
+## DiHydrogen Project Developers. See the top-level LICENSE file for details.
+##
+## SPDX-License-Identifier: Apache-2.0
+################################################################################
+
+stages:
+  - run-all-clusters
+
+# The CI_PIPELINE_SOURCE variable in the cluster-specific pipelines is
+# always "parent_pipeline", so I cannot test this there. A "web"
+# sourced job can always set "TEST_DISTCONV_BUILD" manually to force
+# the "-distconv" jobs to run, so I don't need to handle that here.
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule" || $CI_COMMIT_BRANCH =~ /distconv/
+      variables:
+        TEST_DISTCONV_BUILD: "1"
+    - when: always
+
+corona testing:
+  stage: run-all-clusters
+  trigger:
+    strategy: depend
+    include: '.gitlab/build-and-test-corona.yml'
+    forward:
+      pipeline_variables: true
+
+lassen testing:
+  stage: run-all-clusters
+  trigger:
+    strategy: depend
+    include: '.gitlab/build-and-test-lassen.yml'
+    forward:
+      pipeline_variables: true
+
+pascal testing:
+  stage: run-all-clusters
+  trigger:
+    strategy: depend
+    include: '/.gitlab/build-and-test-pascal.yml'
+    forward:
+      pipeline_variables: true
+
+quartz testing:
+  stage: run-all-clusters
+  trigger:
+    strategy: depend
+    include: '/.gitlab/build-and-test-quartz.yml'
+    forward:
+      pipeline_variables: true
+
+tioga testing:
+  stage: run-all-clusters
+  trigger:
+    strategy: depend
+    include: '.gitlab/build-and-test-tioga.yml'
+    forward:
+      pipeline_variables: true

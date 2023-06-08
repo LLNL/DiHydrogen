@@ -1,0 +1,49 @@
+################################################################################
+## Copyright 2019-2023 Lawrence Livermore National Security, LLC and other
+## DiHydrogen Project Developers. See the top-level LICENSE file for details.
+##
+## SPDX-License-Identifier: Apache-2.0
+################################################################################
+
+.build-and-test-base:
+  variables:
+    LLNL_SERVICE_USER: lbannusr
+    LLNL_SLURM_SCHEDULER_PARAMETERS: "-N1 -t 10"
+    LLNL_FLUX_SCHEDULER_PARAMETERS: "-N1 -t 10"
+    GIT_SUBMODULE_STRATEGY: recursive
+    GIT_DEPTH: 5
+  script:
+    - printenv > ${CI_PROJECT_DIR}/ci_environment.log
+    - ${CI_PROJECT_DIR}/.gitlab/build-and-test.sh
+
+.build-and-test:
+  artifacts:
+    when: always
+    paths:
+      - "${CI_PROJECT_DIR}/*_junit.xml"
+      - "${CI_PROJECT_DIR}/*.cmake"
+      - "${CI_PROJECT_DIR}/spack*.txt"
+      - "${CI_PROJECT_DIR}/ci_environment.log"
+      - "${CI_PROJECT_DIR}/${CI_JOB_ID}/*"
+    reports:
+      junit: "${CI_PROJECT_DIR}/*_junit.xml"
+  extends: .build-and-test-base
+
+.build-and-test-coverage:
+  artifacts:
+    when: always
+    paths:
+      - "${CI_PROJECT_DIR}/*-gcovr.xml"
+      - "${CI_PROJECT_DIR}/*_junit.xml"
+      - "${CI_PROJECT_DIR}/*.cmake"
+      - "${CI_PROJECT_DIR}/spack*.txt"
+      - "${CI_PROJECT_DIR}/ci_environment.log"
+      - "${CI_PROJECT_DIR}/build_*/coverage/"
+      - "${CI_PROJECT_DIR}/build_*/*-gcovr.xml"
+      - "${CI_PROJECT_DIR}/${CI_JOB_ID}/*"
+    reports:
+      junit: "${CI_PROJECT_DIR}/*_junit.xml"
+      coverage_report:
+        coverage_format: cobertura
+        path: "${CI_PROJECT_DIR}/SeqCatchTests-gcovr.xml"
+  extends: .build-and-test-base
