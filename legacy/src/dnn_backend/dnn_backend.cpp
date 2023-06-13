@@ -249,22 +249,47 @@ void DNNBackend<VendorBackendT>::activation_backward(
     auto const a = make_host_scalar(dt, alpha);
     auto const b = make_host_scalar(dt, beta);
 
-    auto y_proxy = force_read_proxy(handle, ydesc, y);
-    auto dy_proxy = force_read_proxy(handle, dydesc, dy);
-    auto x_proxy = force_read_proxy(handle, xdesc, x);
-    auto dx_proxy = force_write_proxy(handle, dxdesc, dx, beta);
-    GPUDNNBackend::activation_backward(handle,
-                                       act_desc,
-                                       a.get(),
-                                       y_proxy.desc(),
-                                       y_proxy.ptr(),
-                                       dy_proxy.desc(),
-                                       dy_proxy.ptr(),
-                                       x_proxy.desc(),
-                                       x_proxy.ptr(),
-                                       b.get(),
-                                       dx_proxy.desc(),
-                                       dx_proxy.ptr());
+    // Handle in-place.
+    //
+    // NOTE: This assumes that the "output" will be correct, as that's
+    // the value one is more likely to have flowing backward.
+    if (x == y)
+    {
+        auto y_proxy = force_read_proxy(handle, ydesc, y);
+        auto dy_proxy = force_read_proxy(handle, dydesc, dy);
+        auto dx_proxy = force_write_proxy(handle, dxdesc, dx, beta);
+        GPUDNNBackend::activation_backward(handle,
+                                           act_desc,
+                                           a.get(),
+                                           y_proxy.desc(),
+                                           y_proxy.ptr(),
+                                           dy_proxy.desc(),
+                                           dy_proxy.ptr(),
+                                           y_proxy.desc(),
+                                           y_proxy.ptr(),
+                                           b.get(),
+                                           dx_proxy.desc(),
+                                           dx_proxy.ptr());
+    }
+    else
+    {
+        auto y_proxy = force_read_proxy(handle, ydesc, y);
+        auto dy_proxy = force_read_proxy(handle, dydesc, dy);
+        auto x_proxy = force_read_proxy(handle, xdesc, x);
+        auto dx_proxy = force_write_proxy(handle, dxdesc, dx, beta);
+        GPUDNNBackend::activation_backward(handle,
+                                           act_desc,
+                                           a.get(),
+                                           y_proxy.desc(),
+                                           y_proxy.ptr(),
+                                           dy_proxy.desc(),
+                                           dy_proxy.ptr(),
+                                           x_proxy.desc(),
+                                           x_proxy.ptr(),
+                                           b.get(),
+                                           dx_proxy.desc(),
+                                           dx_proxy.ptr());
+    }
 
     GPUDNNBackend::set_stream(handle, this->get_stream());
 }
