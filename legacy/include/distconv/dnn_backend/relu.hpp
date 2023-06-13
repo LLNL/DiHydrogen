@@ -90,7 +90,7 @@ public:
                                  m_d_output_d,
                                  d_output.get_const_base_ptr(),
                                  m_input_d,
-                                 d_output.get_const_base_ptr(),
+                                 input.get_const_base_ptr(),
                                  beta,
                                  m_d_input_d,
                                  d_input.get_base_ptr());
