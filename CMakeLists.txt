@@ -58,6 +58,10 @@ if (H2_ENABLE_ROCM AND NOT H2_ENABLE_HIP_ROCM)
   set(H2_ENABLE_HIP_ROCM ON CACHE BOOL "Use HIP/ROCm backend." FORCE)
 endif ()
 
+option(H2_ENABLE_DACE
+  "Use the DaCe JIT compiler backend for DistConv convolutions in DiHydrogen."
+  OFF)
+
 # Sanity-check the arguments.
 if (H2_ENABLE_DISTCONV_LEGACY)
   # We need one of CUDA or ROCm
@@ -260,6 +264,11 @@ endif ()
 
 if (H2_HAS_CUDA OR H2_HAS_ROCM)
   set(H2_HAS_GPU TRUE)
+endif ()
+
+if (H2_ENABLE_DACE)
+  set(H2_HAS_DACE TRUE)
+  message(STATUS "Using DaCe JIT-capable backend")
 endif ()
 
 # DiHydrogen will use MPI-3 features extensively. Until proven
