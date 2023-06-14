@@ -51,7 +51,6 @@
 
 namespace distconv
 {
-
 namespace
 {
 size_t getenv_num_streams(size_t default_nstreams = 8)
@@ -82,6 +81,10 @@ DNNBackend<VendorBackendT>::DNNBackend(MPI_Comm comm,
       m_handle{handle},
       m_stream_mgr{getenv_num_streams(/*default_nstreams=*/8UL), stream},
       m_comms{comm, m_stream_mgr}
+{}
+
+template <typename VendorBackendT>
+DNNBackend<VendorBackendT>::~DNNBackend()
 {}
 
 template <typename VendorBackendT>

@@ -203,6 +203,7 @@ void GPUDNNBackend::copy_convolution_descriptor(
     int pads[arrayLengthRequested];
     int strides[arrayLengthRequested];
     int dilations[arrayLengthRequested];
+    int ngrps = 1;
     ConvolutionMode_t mode;
     DataType_t dt;
     DISTCONV_CHECK_CUDNN(cudnnGetConvolutionNdDescriptor(src,
@@ -213,8 +214,32 @@ void GPUDNNBackend::copy_convolution_descriptor(
                                                          dilations,
                                                          &mode,
                                                          &dt));
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionGroupCount(src, &ngrps));
     DISTCONV_CHECK_CUDNN(cudnnSetConvolutionNdDescriptor(
         dst, array_length, pads, strides, dilations, mode, dt));
+    DISTCONV_CHECK_CUDNN(cudnnSetConvolutionGroupCount(dst, ngrps));
+}
+
+void GPUDNNBackend::get_convolution_descriptor(
+                                           ConvolutionDescriptor_t const& conv_desc,
+                                           int array_len,
+                                           int* const pad,
+                                           int* const stride,
+                                           int* const dilation,
+                                           int& ngrps,
+                                           ConvolutionMode_t& mode,
+                                           DataType_t& data_type)
+{
+    int ndim;
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionNdDescriptor(conv_desc,
+                                                         array_len,
+                                                         &ndim,
+                                                         pad,
+                                                         stride,
+                                                         dilation,
+                                                         &mode,
+                                                         &data_type));
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionGroupCount(conv_desc, &ngrps));
 }
 
 void GPUDNNBackend::convolution_forward(
@@ -1006,6 +1031,17 @@ void GPUDNNBackend::destroy_filter_descriptor(FilterDescriptor_t const& desc)
     DISTCONV_CHECK_CUDNN(cudnnDestroyFilterDescriptor(desc));
 }
 
+void GPUDNNBackend::get_filter_descriptor(FilterDescriptor_t const& desc,
+                                          DataType_t& dt,
+                                          size_t ndims,
+                                          int* dims)
+{
+    int nbdims;
+    cudnnTensorFormat_t format;
+    DISTCONV_CHECK_CUDNN(cudnnGetFilterNdDescriptor(
+        desc, ndims, &dt, &format, &nbdims, dims));
+}
+
 void GPUDNNBackend::set_filter_descriptor(FilterDescriptor_t const& desc,
                                           DataType_t const& dt,
                                           size_t ndims,
@@ -1034,11 +1070,22 @@ void GPUDNNBackend::destroy_tensor_descriptor(TensorDescriptor_t const& desc)
     DISTCONV_CHECK_CUDNN(cudnnDestroyTensorDescriptor(desc));
 }
 
-void GPUDNNBackend::set_tensor_descriptor(TensorDescriptor_t const& desc,
-                                          DataType_t const& dt,
+void GPUDNNBackend::get_tensor_descriptor(TensorDescriptor_t const& desc,
+                                          DataType_t& dt,
                                           size_t ndims,
                                           int* dims,
                                           int* strides)
+{
+    int nbdims;
+    DISTCONV_CHECK_CUDNN(cudnnGetTensorNdDescriptor(
+        desc, ndims, &dt, &nbdims, dims, strides));
+}
+
+void GPUDNNBackend::set_tensor_descriptor(TensorDescriptor_t const& desc,
+                                          DataType_t const& dt,
+                                          size_t ndims,
+                                          int const* dims,
+                                          int const* strides)
 {
     DISTCONV_CHECK_CUDNN(
         cudnnSetTensorNdDescriptor(desc, dt, ndims, dims, strides));

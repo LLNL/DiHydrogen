@@ -38,7 +38,6 @@
 
 namespace distconv
 {
-
 // Forward declarations
 template <typename T>
 class Vector;
@@ -51,17 +50,23 @@ struct Options
     bool enable_profiling;
     float ws_capacity_factor;
 
+    // JIT compilation options
+    bool jit_verbose;
+    std::string jit_cache_path;
+
     Options(bool overlap_halo_exchange = false,
             bool deterministic = false,
             bool enable_profiling = false,
-            float ws_capacity_factor = 1.0);
+            float ws_capacity_factor = 1.0f,
+            bool jit_verbose = true,
+            const std::string& jit_cache_path = ".jitcache");
 }; // struct Options
 
 // Manage the collection of streams.
 class StreamManager
 {
 public:
-    /** @brief Construct StreamsManager
+    /** @brief Construct StreamManager
      *  @details For this version, a new stream (blocking) will be
      *           allocated to use as the "main stream". The second
      *           constructor will be used with this stream.
@@ -70,7 +75,7 @@ public:
      *             boundary planes.
      */
     StreamManager(size_t num_internal_streams);
-    /** @brief Construct StreamsManager with a specific main stream.
+    /** @brief Construct StreamManager with a specific main stream.
      *  @details This will allocate two collections of
      *           `num_internal_streams`, one of which will be
      *           nonblocking streams and the other will be priority
@@ -134,10 +139,7 @@ public:
     MPI_Comm get_comm() const noexcept;
     AlCommType& get_al_nccl_comm();
 #ifdef DISTCONV_HAS_P2P
-    p2p::P2P& get_p2p()
-    {
-        return m_p2p;
-    }
+    p2p::P2P& get_p2p() { return m_p2p; }
 #endif // DISTCONV_HAS_P2P
 
     ///@}
@@ -288,6 +290,16 @@ public:
     static ConvolutionDescriptor_t make_convolution_descriptor();
     static void
     destroy_convolution_descriptor(ConvolutionDescriptor_t const& desc);
+
+    static void
+    get_convolution_descriptor(ConvolutionDescriptor_t const& conv_desc,
+                               int array_len,
+                               int* const pad,
+                               int* const stride,
+                               int* const dilation,
+                               int& ngrps,
+                               ConvolutionMode_t& mode,
+                               DataType_t& data_type);
 
     static void set_convolution_group_count(ConvolutionDescriptor_t const& desc,
                                             int ngrps);
@@ -503,6 +515,11 @@ public:
 
     static void destroy_filter_descriptor(FilterDescriptor_t const& desc);
 
+    static void get_filter_descriptor(FilterDescriptor_t const& desc,
+                                      DataType_t& dt,
+                                      size_t ndims,
+                                      int* dims);
+
     static void set_filter_descriptor(FilterDescriptor_t const& desc,
                                       DataType_t const& dt,
                                       size_t ndims,
@@ -516,11 +533,17 @@ public:
 
     static void destroy_tensor_descriptor(TensorDescriptor_t const& desc);
 
-    static void set_tensor_descriptor(TensorDescriptor_t const& desc,
-                                      DataType_t const& dt,
+    static void get_tensor_descriptor(TensorDescriptor_t const& desc,
+                                      DataType_t& dt,
                                       size_t ndims,
                                       int* dims,
                                       int* strides);
+
+    static void set_tensor_descriptor(TensorDescriptor_t const& desc,
+                                      DataType_t const& dt,
+                                      size_t ndims,
+                                      int const* dims,
+                                      int const* strides);
 
     static void set_tensor_descriptor(TensorDescriptor_t const& desc,
                                       DataType_t const& dt,
@@ -640,6 +663,7 @@ public:
                Handle_t handle,
                Stream_t stream,
                Options opts = Options{});
+    virtual ~DNNBackend();
 
     /** @name Option queries. */
     ///@{
@@ -663,10 +687,7 @@ public:
     AlCommType& get_al_comm();
     AlCommType& get_al_nccl_comm() { return get_al_comm(); }
 #ifdef DISTCONV_HAS_P2P
-    p2p::P2P& get_p2p()
-    {
-        return m_comms.get_p2p();
-    }
+    p2p::P2P& get_p2p() { return m_comms.get_p2p(); }
 #endif // DISTCONV_HAS_P2P
 
     /** @brief HACK to help LBANN
@@ -951,7 +972,7 @@ public:
                                   Stream_t s) const;
     ///@}
 
-private:
+protected:
     Handle_t m_handle;
     Options m_opts;
     StreamManager m_stream_mgr;
