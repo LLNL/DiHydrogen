@@ -112,7 +112,7 @@ __global__ void bp_local(const DataType* __restrict__ x_pred,
 } // namespace
 
 template <typename Tensor>
-int MeanSquaredError<DNNBackend<GPUDNNBackend>>::forward(const Tensor& x_pred,
+int MeanSquaredError<BackendDNNLib>::forward(const Tensor& x_pred,
                                                          const Tensor& x_truth,
                                                          Tensor& y)
 {
@@ -170,7 +170,7 @@ int MeanSquaredError<DNNBackend<GPUDNNBackend>>::forward(const Tensor& x_pred,
 }
 
 template <typename Tensor>
-int MeanSquaredError<DNNBackend<GPUDNNBackend>>::backward(const Tensor& x_pred,
+int MeanSquaredError<BackendDNNLib>::backward(const Tensor& x_pred,
                                                           const Tensor& x_truth,
                                                           Tensor& dy,
                                                           Tensor& dx_pred,
@@ -225,12 +225,12 @@ int MeanSquaredError<DNNBackend<GPUDNNBackend>>::backward(const Tensor& x_pred,
 
 #define PROTO(T)                                                               \
     template int                                                               \
-    MeanSquaredError<DNNBackend<GPUDNNBackend>>::forward<TensorCUDA<T>>(       \
+    MeanSquaredError<BackendDNNLib>::forward<TensorCUDA<T>>(       \
         const TensorCUDA<T>& x_pred,                                           \
         const TensorCUDA<T>& x_truth,                                          \
         TensorCUDA<T>& y);                                                     \
     template int                                                               \
-    MeanSquaredError<DNNBackend<GPUDNNBackend>>::backward<TensorCUDA<T>>(      \
+    MeanSquaredError<BackendDNNLib>::backward<TensorCUDA<T>>(      \
         const TensorCUDA<T>& x_pred,                                           \
         const TensorCUDA<T>& x_truth,                                          \
         TensorCUDA<T>& dy,                                                     \

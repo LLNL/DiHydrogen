@@ -12,10 +12,10 @@ namespace distconv
 {
 
 template <>
-class Softmax<DNNBackend<GPUDNNBackend>>
+class Softmax<BackendDNNLib>
 {
 public:
-    Softmax(DNNBackend<GPUDNNBackend> const& backend)
+    Softmax(BackendDNNLib const& backend)
         : m_stream(backend.get_stream())
     {}
 

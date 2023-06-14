@@ -148,7 +148,7 @@ __global__ void bp_local(const DataType* __restrict__ x_pred,
 } // namespace
 
 template <typename Tensor>
-int CrossEntropy<DNNBackend<GPUDNNBackend>>::forward(const Tensor& x_pred,
+int CrossEntropy<BackendDNNLib>::forward(const Tensor& x_pred,
                                                      const Tensor& x_truth,
                                                      Tensor& y)
 {
@@ -207,7 +207,7 @@ int CrossEntropy<DNNBackend<GPUDNNBackend>>::forward(const Tensor& x_pred,
 }
 
 template <typename Tensor>
-int CrossEntropy<DNNBackend<GPUDNNBackend>>::backward(const Tensor& x_pred,
+int CrossEntropy<BackendDNNLib>::backward(const Tensor& x_pred,
                                                       const Tensor& x_truth,
                                                       Tensor& dy,
                                                       Tensor& dx_pred,
@@ -263,12 +263,12 @@ int CrossEntropy<DNNBackend<GPUDNNBackend>>::backward(const Tensor& x_pred,
 
 #define PROTO(T)                                                               \
     template int                                                               \
-    CrossEntropy<DNNBackend<GPUDNNBackend>>::forward<TensorCUDA<T>>(           \
+    CrossEntropy<BackendDNNLib>::forward<TensorCUDA<T>>(           \
         const TensorCUDA<T>& x_pred,                                           \
         const TensorCUDA<T>& x_truth,                                          \
         TensorCUDA<T>& y);                                                     \
     template int                                                               \
-    CrossEntropy<DNNBackend<GPUDNNBackend>>::backward<TensorCUDA<T>>(          \
+    CrossEntropy<BackendDNNLib>::backward<TensorCUDA<T>>(          \
         const TensorCUDA<T>& x_pred,                                           \
         const TensorCUDA<T>& x_truth,                                          \
         TensorCUDA<T>& dy,                                                     \

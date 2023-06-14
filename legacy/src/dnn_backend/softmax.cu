@@ -703,7 +703,7 @@ int bp_channel(const Tensor& y,
 } // namespace
 
 template <typename Tensor>
-int Softmax<DNNBackend<GPUDNNBackend>>::forward(const Tensor& x, Tensor& y)
+int Softmax<BackendDNNLib>::forward(const Tensor& x, Tensor& y)
 {
     using DataType = typename Tensor::data_type;
     util::MPIPrintStreamDebug() << "Softmax FP: " << x << ", " << y;
@@ -747,7 +747,7 @@ int Softmax<DNNBackend<GPUDNNBackend>>::forward(const Tensor& x, Tensor& y)
 }
 
 template <typename Tensor>
-int Softmax<DNNBackend<GPUDNNBackend>>::backward(const Tensor& y,
+int Softmax<BackendDNNLib>::backward(const Tensor& y,
                                                  const Tensor& dy,
                                                  Tensor& dx)
 {
@@ -785,9 +785,9 @@ int Softmax<DNNBackend<GPUDNNBackend>>::backward(const Tensor& y,
 }
 
 #define PROTO(T)                                                               \
-    template int Softmax<DNNBackend<GPUDNNBackend>>::forward<TensorCUDA<T>>(   \
+    template int Softmax<BackendDNNLib>::forward<TensorCUDA<T>>(   \
         const TensorCUDA<T>& x, TensorCUDA<T>& y);                             \
-    template int Softmax<DNNBackend<GPUDNNBackend>>::backward<TensorCUDA<T>>(  \
+    template int Softmax<BackendDNNLib>::backward<TensorCUDA<T>>(  \
         const TensorCUDA<T>& y, const TensorCUDA<T>& dy, TensorCUDA<T>& dx);
 PROTO(float)
 PROTO(double)

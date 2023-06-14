@@ -12,10 +12,10 @@ namespace distconv
 {
 
 template <>
-class MeanSquaredError<DNNBackend<GPUDNNBackend>>
+class MeanSquaredError<BackendDNNLib>
 {
 public:
-    MeanSquaredError(DNNBackend<GPUDNNBackend> const& backend)
+    MeanSquaredError(BackendDNNLib const& backend)
         : m_stream(backend.get_stream())
     {}
 
