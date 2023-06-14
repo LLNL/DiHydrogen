@@ -12,10 +12,10 @@ namespace distconv
 {
 
 template <>
-class CrossEntropy<DNNBackend<GPUDNNBackend>>
+class CrossEntropy<BackendDNNLib>
 {
 public:
-    CrossEntropy(DNNBackend<GPUDNNBackend> const& backend,
+    CrossEntropy(BackendDNNLib const& backend,
                  const bool use_labels = false)
         : m_stream(backend.get_stream()), m_use_labels(use_labels)
     {}

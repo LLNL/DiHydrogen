@@ -8,10 +8,10 @@ namespace distconv
 {
 
 template <>
-class ReLU<DNNBackend<GPUDNNBackend>>
+class ReLU<BackendDNNLib>
 {
 public:
-    ReLU(DNNBackend<GPUDNNBackend>& backend)
+    ReLU(BackendDNNLib& backend)
         : m_be(backend),
           m_activation_d{GPUDNNBackend::make_activation_descriptor()},
           m_input_d{GPUDNNBackend::make_tensor_descriptor()},
@@ -109,7 +109,7 @@ public:
     }
 
 private:
-    DNNBackend<GPUDNNBackend>& m_be;
+    BackendDNNLib& m_be;
     GPUDNNBackend::ActivationDescriptor_t m_activation_d;
     GPUDNNBackend::TensorDescriptor_t m_input_d;
     GPUDNNBackend::TensorDescriptor_t m_output_d;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "distconv/distconv.hpp"
+#include "distconv/dnn_backend/backend.hpp"
 #include "distconv/dnn_backend/dnn_backend.hpp"
 #include "distconv/dnn_backend/halo_exchange_factory.hpp"
 #include "distconv/layers.hpp"
@@ -16,16 +17,16 @@ namespace distconv
 {
 
 template <typename DataType>
-class Convolution<DNNBackend<GPUDNNBackend>, DataType>
+class Convolution<BackendDNNLib, DataType>
 {
     using LocaleMPI = tensor::LocaleMPI;
 
 public:
-    using BackendT = DNNBackend<GPUDNNBackend>;
+    using BackendT = BackendDNNLib;
     using TensorDescriptor_t = typename BackendT::TensorDescriptor_t;
 
 public:
-    Convolution(DNNBackend<GPUDNNBackend>& backend,
+    Convolution(BackendDNNLib& backend,
                 int num_dims,
                 HaloExchangeMethod method,
                 bool enable_overlap,
@@ -76,7 +77,7 @@ public:
         setup_profiling_events();
     }
 
-    Convolution(DNNBackend<GPUDNNBackend>& backend,
+    Convolution(BackendDNNLib& backend,
                 int num_dims,
                 HaloExchangeMethod method,
                 ChannelParallelismAlgorithm chanfilt_algo =
@@ -1170,7 +1171,7 @@ public:
     }
 
 protected:
-    DNNBackend<GPUDNNBackend>& m_be;
+    BackendDNNLib& m_be;
     const int m_num_dims;
     const int m_num_spatial_dims;
     bool m_skip_bp_data;

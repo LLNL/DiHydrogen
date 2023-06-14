@@ -1,6 +1,7 @@
 #pragma once
 
 #include "distconv/distconv.hpp"
+#include "distconv/dnn_backend/backend.hpp"
 #include "distconv/dnn_backend/dnn_backend.hpp"
 #include "distconv/dnn_backend/pack_unpack.hpp"
 #include "distconv/layers.hpp"
@@ -68,12 +69,12 @@ inline miopenPoolingMode_t get_pooling_mode(std::string const& name,
 } // namespace pooling
 
 template <typename DataType>
-class Pooling<DNNBackend<GPUDNNBackend>, DataType>
+class Pooling<BackendDNNLib, DataType>
 {
     using LocaleMPI = tensor::LocaleMPI;
 
 public:
-    Pooling(DNNBackend<GPUDNNBackend>& backend,
+    Pooling(BackendDNNLib& backend,
             int num_dims,
             HaloExchangeMethod method)
         : m_be(backend),
@@ -298,7 +299,7 @@ public:
     void wait() { m_be.wait(); }
 
 private:
-    DNNBackend<GPUDNNBackend>& m_be;
+    BackendDNNLib& m_be;
     const int m_num_dims;
     const int m_num_spatial_dims;
     IntVector m_halo_fwd_send;

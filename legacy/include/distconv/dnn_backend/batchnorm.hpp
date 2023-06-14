@@ -98,10 +98,10 @@ void backprop2(int num_dims,
 } // namespace batchnorm
 
 template <typename DataType>
-class BatchNormalization<DNNBackend<GPUDNNBackend>, DataType>
+class BatchNormalization<BackendDNNLib, DataType>
 {
 public:
-    BatchNormalization(DNNBackend<GPUDNNBackend>& backend,
+    BatchNormalization(BackendDNNLib& backend,
                        int num_dims,
                        DataType decay,
                        DataType epsilon,

@@ -25,10 +25,10 @@ void backward(Tensor& input,
 } // namespace leaky_relu
 
 template <>
-class LeakyReLU<DNNBackend<GPUDNNBackend>>
+class LeakyReLU<BackendDNNLib>
 {
 public:
-    LeakyReLU(DNNBackend<GPUDNNBackend> const& be) : m_stream(be.get_stream())
+    LeakyReLU(BackendDNNLib const& be) : m_stream(be.get_stream())
     {}
     LeakyReLU(h2::gpu::DeviceStream stream) : m_stream(stream) {}
 
