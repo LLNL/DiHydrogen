@@ -173,6 +173,8 @@ DaCeDNNBackend<VendorBackendT>::~DaCeDNNBackend()
     }
 }
 
+// API
+
 template <typename VendorBackendT>
 void DaCeDNNBackend<VendorBackendT>::convolution_forward(
     double alpha,
@@ -215,6 +217,94 @@ void DaCeDNNBackend<VendorBackendT>::convolution_forward(
                                                     y,
                                                     s);
 }
+
+template <typename VendorBackendT>
+void DaCeDNNBackend<VendorBackendT>::convolution_bwd_data(
+    double const alpha,
+    FilterDescriptor_t const& filter_desc,
+    void const* const filter_data,
+    TensorDescriptor_t const& dydesc,
+    void const* const dy,
+    ConvolutionDescriptor_t const& conv_desc,
+    ConvBwdDataAlgo_t const& conv_algo,
+    void* const workspace,
+    size_t const workspace_bytes,
+    double const beta,
+    TensorDescriptor_t const& dxdesc,
+    void* const dx,
+    Stream_t stream) const
+{
+    ConvDescriptor desc;
+    desc.type = BACKWARD_DATA;
+    if (descriptor_from_tensors(dxdesc, filter_desc, conv_desc, dydesc, desc))
+    {
+        // Try to invoke a JIT-compiled convolution
+        bool jit_compiled =
+            invoke(desc, dx, filter_data, dy, alpha, beta, workspace, stream);
+        if (jit_compiled)
+            return;
+    }
+
+    // Fallback to vendor backend
+    DNNBackend<VendorBackendT>::convolution_bwd_data(alpha,
+                                                     filter_desc,
+                                                     filter_data,
+                                                     dydesc,
+                                                     dy,
+                                                     conv_desc,
+                                                     conv_algo,
+                                                     workspace,
+                                                     workspace_bytes,
+                                                     beta,
+                                                     dxdesc,
+                                                     dx,
+                                                     stream);
+}
+
+template <typename VendorBackendT>
+void DaCeDNNBackend<VendorBackendT>::convolution_bwd_filter(
+    double const alpha,
+    TensorDescriptor_t const& xdesc,
+    void const* const x,
+    TensorDescriptor_t const& dydesc,
+    void const* const dy,
+    ConvolutionDescriptor_t const& conv_desc,
+    ConvBwdFilterAlgo_t const& conv_algo,
+    void* const workspace,
+    size_t const workspace_bytes,
+    double const beta,
+    FilterDescriptor_t const& dwdesc,
+    void* const dw,
+    Stream_t const stream) const
+{
+    ConvDescriptor desc;
+    desc.type = BACKWARD_FILTER;
+    if (descriptor_from_tensors(xdesc, dwdesc, conv_desc, dydesc, desc))
+    {
+        // Try to invoke a JIT-compiled convolution
+        bool jit_compiled =
+            invoke(desc, x, dw, dy, alpha, beta, workspace, stream);
+        if (jit_compiled)
+            return;
+    }
+
+    // Fallback to vendor backend
+    DNNBackend<VendorBackendT>::convolution_bwd_filter(alpha,
+                                                       xdesc,
+                                                       x,
+                                                       dydesc,
+                                                       dy,
+                                                       conv_desc,
+                                                       conv_algo,
+                                                       workspace,
+                                                       workspace_bytes,
+                                                       beta,
+                                                       dwdesc,
+                                                       dw,
+                                                       stream);
+}
+
+// Internal methods
 
 template <typename VendorBackendT>
 bool DaCeDNNBackend<VendorBackendT>::descriptor_from_tensors(
@@ -334,6 +424,9 @@ DaCeDNNBackend<VendorBackendT>::try_load(const std::string& hash,
 template <typename VendorBackendT>
 bool DaCeDNNBackend<VendorBackendT>::unload(dace_state library)
 {
+    if (!library.library) // No library loaded
+        return true;
+
     // Malformed library state
     if (!library.dtor || !library.handle)
     {

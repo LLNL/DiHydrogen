@@ -156,6 +156,11 @@ public:
                    Options opts = Options{});
     virtual ~DaCeDNNBackend();
 
+    // Use the other overloads from the base class
+    using DNNBackend<VendorBackendT>::convolution_forward;
+    using DNNBackend<VendorBackendT>::convolution_bwd_data;
+    using DNNBackend<VendorBackendT>::convolution_bwd_filter;
+
     void convolution_forward(double alpha,
                              TensorDescriptor_t const& xdesc,
                              void const* x,
@@ -169,6 +174,34 @@ public:
                              TensorDescriptor_t const& ydesc,
                              void* y,
                              Stream_t s) const override;
+
+    void convolution_bwd_data(double alpha,
+                              FilterDescriptor_t const& filter_desc,
+                              void const* filter_data,
+                              TensorDescriptor_t const& dy_desc,
+                              void const* dy_data,
+                              ConvolutionDescriptor_t const& conv_desc,
+                              ConvBwdDataAlgo_t const& conv_algo,
+                              void* workspace,
+                              size_t workspace_bytes,
+                              double beta,
+                              TensorDescriptor_t const& dx_desc,
+                              void* dx_data,
+                              Stream_t s) const override;
+
+    void convolution_bwd_filter(double alpha,
+                                TensorDescriptor_t const& in_desc,
+                                void const* in_data,
+                                TensorDescriptor_t const& dy_desc,
+                                void const* dy_data,
+                                ConvolutionDescriptor_t const& conv_desc,
+                                ConvBwdFilterAlgo_t const& conv_algo,
+                                void* workspace,
+                                size_t workspace_bytes,
+                                double beta,
+                                FilterDescriptor_t const& dw_desc,
+                                void* dw_data,
+                                Stream_t s) const override;
 
 protected:
     // JIT-compiled libraries
