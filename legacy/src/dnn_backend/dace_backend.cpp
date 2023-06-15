@@ -327,14 +327,13 @@ bool DaCeDNNBackend<VendorBackendT>::descriptor_from_tensors(
     int xshape[5] = {0}, xstrides[5] = {0}, wshape[5] = {0}, yshape[5] = {0},
         ystrides[5] = {0};
     ConvolutionMode_t unused_mode;
-    DataType_t unused_datatype; // TODO: Use
+    DataType_t datatype;
 
     VendorBackendT::get_tensor_descriptor(
-        xdesc, unused_datatype, ndims, xshape, xstrides);
-    VendorBackendT::get_filter_descriptor(
-        filter_desc, unused_datatype, ndims, wshape);
+        xdesc, datatype, ndims, xshape, xstrides);
+    VendorBackendT::get_filter_descriptor(filter_desc, datatype, ndims, wshape);
     VendorBackendT::get_tensor_descriptor(
-        ydesc, unused_datatype, ndims, yshape, ystrides);
+        ydesc, datatype, ndims, yshape, ystrides);
 
     // Set tuples according to arrays
     result.x_shape = s5d{xshape[0], xshape[1], xshape[2], xshape[3], xshape[4]};
@@ -352,7 +351,25 @@ bool DaCeDNNBackend<VendorBackendT>::descriptor_from_tensors(
                                                result.params.dilation,
                                                result.params.groups,
                                                unused_mode,
-                                               unused_datatype);
+                                               datatype);
+
+#if H2_HAS_ROCM
+    if (datatype != miopenFloat)
+#elif H2_HAS_CUDA
+    if (datatype != CUDNN_DATA_FLOAT)
+#else
+    if (false)
+#endif
+    {
+        // TODO(later): Add support for more data types
+        if (this->m_opts.jit_verbose)
+        {
+            util::MPIPrintStreamInfo() << "Unsupported data type in "
+                                       << "convolution: " << datatype;
+        }
+        return false;
+    }
+
     return true;
 }
 
