@@ -380,7 +380,20 @@ public:
             return -1;
 
         if (!skip_halo_exchange)
+        {
+            // Zero-clear the halo region of the input
+            for (int dim = 0; dim < m_num_spatial_dims; ++dim)
+            {
+                const auto& dist = input.get_distribution();
+                if (dist.is_distributed(dim) && dist.get_locale_shape()[dim] > 1
+                    && dist.get_overlap(dim) > 0)
+                {
+                    input.clear_halo(dim, m_be.get_stream());
+                }
+            }
+            
             forward_exchange_halo(input);
+        }
 
         const void* input_ptr =
             input.get_const_base_ptr()
