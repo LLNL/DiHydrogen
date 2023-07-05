@@ -304,6 +304,105 @@ void DaCeDNNBackend<VendorBackendT>::convolution_bwd_filter(
                                                        stream);
 }
 
+// Workspace methods
+
+template <typename VendorBackendT>
+size_t DaCeDNNBackend<VendorBackendT>::get_conv_forward_workspace_size(
+    TensorDescriptor_t const& in_desc,
+    FilterDescriptor_t const& filter_desc,
+    ConvolutionDescriptor_t const& conv_desc,
+    TensorDescriptor_t const& out_desc,
+    ConvFwdAlgo_t const& algo) const
+{
+    ConvDescriptor desc;
+    desc.type = FORWARD;
+    if (descriptor_from_tensors(
+            in_desc, filter_desc, conv_desc, out_desc, desc))
+    {
+        // Try to get workspace size from JIT-compiled library
+        dace_state library;
+        bool jit_compiled = load_library_or_fallback(desc, library);
+        if (jit_compiled) // Library found
+        {
+            if (library.get_ws_size)
+                return library.get_ws_size(library.handle);
+            if (library.dynbatch_get_ws_size)
+                return library.dynbatch_get_ws_size(library.handle,
+                                                    std::get<0>(desc.x_shape));
+            // No workspace requirements
+            return 0;
+        }
+    }
+
+    // Any other case - fallback to vendor backend
+    return DNNBackend<VendorBackendT>::get_conv_forward_workspace_size(
+        in_desc, filter_desc, conv_desc, out_desc, algo);
+}
+
+template <typename VendorBackendT>
+size_t DaCeDNNBackend<VendorBackendT>::get_conv_bwd_data_workspace_size(
+    FilterDescriptor_t const& filter_desc,
+    TensorDescriptor_t const& dy_desc,
+    ConvolutionDescriptor_t const& conv_desc,
+    TensorDescriptor_t const& dx_desc,
+    ConvBwdDataAlgo_t const& algo) const
+{
+    ConvDescriptor desc;
+    desc.type = BACKWARD_DATA;
+    if (descriptor_from_tensors(dx_desc, filter_desc, conv_desc, dy_desc, desc))
+    {
+        // Try to get workspace size from JIT-compiled library
+        dace_state library;
+        bool jit_compiled = load_library_or_fallback(desc, library);
+        if (jit_compiled) // Library found
+        {
+            if (library.get_ws_size)
+                return library.get_ws_size(library.handle);
+            if (library.dynbatch_get_ws_size)
+                return library.dynbatch_get_ws_size(library.handle,
+                                                    std::get<0>(desc.x_shape));
+            // No workspace requirements
+            return 0;
+        }
+    }
+
+    // Any other case - fallback to vendor backend
+    return DNNBackend<VendorBackendT>::get_conv_bwd_data_workspace_size(
+        filter_desc, dy_desc, conv_desc, dx_desc, algo);
+}
+
+template <typename VendorBackendT>
+size_t DaCeDNNBackend<VendorBackendT>::get_conv_bwd_filter_workspace_size(
+    TensorDescriptor_t const& in_desc,
+    TensorDescriptor_t const& dy_desc,
+    ConvolutionDescriptor_t const& conv_desc,
+    FilterDescriptor_t const& dw_desc,
+    ConvBwdFilterAlgo_t const& algo) const
+{
+    ConvDescriptor desc;
+    desc.type = BACKWARD_FILTER;
+    if (descriptor_from_tensors(in_desc, dw_desc, conv_desc, dy_desc, desc))
+    {
+        // Try to get workspace size from JIT-compiled library
+        dace_state library;
+        bool jit_compiled = load_library_or_fallback(desc, library);
+        if (jit_compiled) // Library found
+        {
+            if (library.get_ws_size)
+                return library.get_ws_size(library.handle);
+            if (library.dynbatch_get_ws_size)
+                return library.dynbatch_get_ws_size(library.handle,
+                                                    std::get<0>(desc.x_shape));
+            // No workspace requirements
+            return 0;
+        }
+    }
+
+    // Any other case - fallback to vendor backend
+    return DNNBackend<VendorBackendT>::get_conv_bwd_filter_workspace_size(
+        in_desc, dy_desc, conv_desc, dw_desc, algo);
+}
+
 // Internal methods
 
 template <typename VendorBackendT>
@@ -429,6 +528,33 @@ DaCeDNNBackend<VendorBackendT>::try_load(const std::string& hash,
         }
         result.setstream_func = setstreamfunc;
 
+        // Gets workspace size and sets external pointer
+        void* getwssize =
+            dlsym(handle, "__dace_get_external_memory_size_GPU_Global");
+        void* setws = dlsym(handle, "__dace_set_external_memory_GPU_Global");
+        if (getwssize)
+        { // In case of no workspace requirements, the functions will not exist
+            if (!setws)
+            {
+                util::MPIPrintStreamError()
+                    << "Get workspace size function found, but setting the "
+                    << "workspace was not.";
+                std::abort();
+            }
+            if (dynamic_minibatch_size)
+            {
+                result.dynbatch_get_ws_size =
+                    (dynbatch_getworkspacesize_t) getwssize;
+                result.dynbatch_set_workspace = (dynbatch_setworkspace_t) setws;
+            }
+            else
+            {
+                result.get_ws_size = (getworkspacesize_t) getwssize;
+                result.set_workspace = (setworkspace_t) setws;
+            }
+        }
+        result.setstream_func = setstreamfunc;
+
         void* func = dlsym(handle, funcname.str().c_str());
         if (dynamic_minibatch_size)
             result.dynbatch_func = (dynbatch_daceprogram_t) func;
@@ -467,6 +593,42 @@ bool DaCeDNNBackend<VendorBackendT>::invoke(const ConvDescriptor& desc,
                                             Stream_t stream) const
 {
     dace_state library;
+    this->load_library_or_fallback(desc, library);
+
+    // No library found - fall back to vendor implementation
+    if (!library.library)
+        return false;
+
+    // Set stream
+    library.setstream_func(library.handle, stream);
+
+    // Call library
+    if (!library.dynbatch_func)
+    {
+        // Set workspace pointer as necessary
+        if (library.set_workspace)
+            library.set_workspace(library.handle, workspace);
+
+        library.func(library.handle, w, x, y, alpha, beta);
+    }
+    else
+    {
+        int B = std::get<0>(desc.x_shape);
+
+        // Set workspace pointer as necessary
+        if (library.dynbatch_set_workspace)
+            library.dynbatch_set_workspace(library.handle, workspace, B);
+
+        library.dynbatch_func(library.handle, w, x, y, alpha, beta, B);
+    }
+
+    return true;
+}
+
+template <typename VendorBackendT>
+bool DaCeDNNBackend<VendorBackendT>::load_library_or_fallback(
+    const ConvDescriptor& desc, dace_state& library) const
+{
     auto iter = m_dace_libraries.find(desc);
 
     // First encounter of descriptor: need to try to find a JITted library
@@ -496,20 +658,8 @@ bool DaCeDNNBackend<VendorBackendT>::invoke(const ConvDescriptor& desc,
         library = iter->second;
     }
 
-    // No library found - fall back to vendor implementation
     if (!library.library)
         return false;
-
-    // Set stream
-    library.setstream_func(library.handle, stream);
-
-    // Call library
-    if (!library.dynbatch_func)
-        library.func(library.handle, w, x, y, alpha, beta);
-    else
-        library.dynbatch_func(
-            library.handle, w, x, y, alpha, beta, std::get<0>(desc.x_shape));
-
     return true;
 }
 

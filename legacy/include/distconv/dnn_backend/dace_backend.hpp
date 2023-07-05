@@ -95,7 +95,10 @@ typedef void (*daceprogram_t)(dacehandle_t handle,
                               void const*,
                               float alpha,
                               float beta);
-// A version of the above JIT-compiled convolution with runtime minibatch size
+typedef size_t (*getworkspacesize_t)(dacehandle_t handle);
+typedef void (*setworkspace_t)(dacehandle_t handle, void* workspace);
+
+// Versions of the above JIT-compiled functions with runtime minibatch size
 typedef void (*dynbatch_daceprogram_t)(dacehandle_t handle,
                                        void const*,
                                        void const*,
@@ -103,6 +106,10 @@ typedef void (*dynbatch_daceprogram_t)(dacehandle_t handle,
                                        float alpha,
                                        float beta,
                                        int B);
+typedef size_t (*dynbatch_getworkspacesize_t)(dacehandle_t handle, int B);
+typedef void (*dynbatch_setworkspace_t)(dacehandle_t handle,
+                                        void* workspace,
+                                        int B);
 
 /**
  * @brief An internal DaCe-compiled function's state; contains handles and
@@ -116,6 +123,10 @@ struct dace_state
     daceprogram_t func;
     dynbatch_daceprogram_t dynbatch_func;
     dace_exitfunc_t dtor;
+    getworkspacesize_t get_ws_size;
+    dynbatch_getworkspacesize_t dynbatch_get_ws_size;
+    setworkspace_t set_workspace;
+    dynbatch_setworkspace_t dynbatch_set_workspace;
 
     dace_state()
         : library(nullptr),
@@ -123,7 +134,11 @@ struct dace_state
           setstream_func(nullptr),
           func(nullptr),
           dynbatch_func(nullptr),
-          dtor(nullptr)
+          dtor(nullptr),
+          get_ws_size(nullptr),
+          dynbatch_get_ws_size(nullptr),
+          set_workspace(nullptr),
+          dynbatch_set_workspace(nullptr)
     {}
 };
 
@@ -203,6 +218,27 @@ public:
                                 void* dw_data,
                                 Stream_t s) const override;
 
+    size_t
+    get_conv_forward_workspace_size(TensorDescriptor_t const& in_desc,
+                                    FilterDescriptor_t const& filter_desc,
+                                    ConvolutionDescriptor_t const& conv_desc,
+                                    TensorDescriptor_t const& out_desc,
+                                    ConvFwdAlgo_t const& algo) const override;
+
+    size_t get_conv_bwd_data_workspace_size(
+        FilterDescriptor_t const& filter_desc,
+        TensorDescriptor_t const& dy_desc,
+        ConvolutionDescriptor_t const& conv_desc,
+        TensorDescriptor_t const& dx_desc,
+        ConvBwdDataAlgo_t const& algo) const override;
+
+    size_t get_conv_bwd_filter_workspace_size(
+        TensorDescriptor_t const& in_desc,
+        TensorDescriptor_t const& dy_Desc,
+        ConvolutionDescriptor_t const& conv_Desc,
+        FilterDescriptor_t const& dw_desc,
+        ConvBwdFilterAlgo_t const& algo) const override;
+
 protected:
     // JIT-compiled libraries
     mutable std::map<ConvDescriptor, dace_state> m_dace_libraries;
@@ -217,6 +253,9 @@ protected:
                         bool dynamic_minibatch_size) const;
 
     bool unload(dace_state library);
+
+    bool load_library_or_fallback(const ConvDescriptor& desc,
+                                  dace_state& library) const;
 
     bool invoke(const ConvDescriptor& desc,
                 void const*,
