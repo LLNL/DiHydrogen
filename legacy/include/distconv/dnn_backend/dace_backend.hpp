@@ -103,9 +103,9 @@ typedef void (*dynbatch_daceprogram_t)(dacehandle_t handle,
                                        void const*,
                                        void const*,
                                        void const*,
+                                       int B,
                                        float alpha,
-                                       float beta,
-                                       int B);
+                                       float beta);
 typedef size_t (*dynbatch_getworkspacesize_t)(dacehandle_t handle, int B);
 typedef void (*dynbatch_setworkspace_t)(dacehandle_t handle,
                                         void* workspace,

@@ -619,7 +619,7 @@ bool DaCeDNNBackend<VendorBackendT>::invoke(const ConvDescriptor& desc,
         if (library.dynbatch_set_workspace)
             library.dynbatch_set_workspace(library.handle, workspace, B);
 
-        library.dynbatch_func(library.handle, w, x, y, alpha, beta, B);
+        library.dynbatch_func(library.handle, w, x, y, B, alpha, beta);
     }
 
     return true;
