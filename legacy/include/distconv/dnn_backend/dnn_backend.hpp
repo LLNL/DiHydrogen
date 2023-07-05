@@ -58,7 +58,7 @@ struct Options
             bool deterministic = false,
             bool enable_profiling = false,
             float ws_capacity_factor = 1.0f,
-            bool jit_verbose = true,
+            bool jit_verbose = false,
             const std::string& jit_cache_path = ".jitcache");
 }; // struct Options
 
