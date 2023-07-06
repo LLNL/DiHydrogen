@@ -1111,7 +1111,11 @@ void GPUDNNBackend::set_tensor_descriptor(TensorDescriptor_t const& desc,
                                           int const* strides)
 {
     DISTCONV_CHECK_MIOPEN(
-        miopenSetTensorDescriptor(desc, dt, ndims, dims, strides));
+        miopenSetTensorDescriptor(desc,
+                                  dt,
+                                  ndims,
+                                  const_cast<int*>(dims),
+                                  const_cast<int*>(strides)));
 }
 
 void GPUDNNBackend::set_tensor_descriptor(TensorDescriptor_t const& desc,
@@ -1123,8 +1127,8 @@ void GPUDNNBackend::set_tensor_descriptor(TensorDescriptor_t const& desc,
     set_tensor_descriptor(desc,
                           dt,
                           dims.size(),
-                          const_cast<int*>(dims.data()),
-                          const_cast<int*>(strides.data()));
+                          dims.data(),
+                          strides.data());
 }
 
 auto GPUDNNBackend::make_filter_descriptor() -> TensorDescriptor_t
