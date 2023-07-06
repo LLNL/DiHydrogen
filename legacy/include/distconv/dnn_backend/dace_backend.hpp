@@ -29,9 +29,6 @@ struct ConvParams
     int strides[3];
     int dilation[3];
     int groups;
-
-    bool operator<(const ConvParams& other) const;
-    bool operator==(const ConvParams& other) const;
 };
 
 // 5D shape
@@ -79,8 +76,6 @@ struct ConvDescriptor
     }
 
     std::string hash(bool dynamic_minibatch_size = false) const;
-
-    bool operator<(const ConvDescriptor& other) const;
 };
 
 // Definition of dace types

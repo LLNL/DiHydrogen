@@ -70,72 +70,72 @@ std::string ConvDescriptor::hash(bool dynamic_minibatch_size) const
     return stream.str();
 }
 
-bool ConvParams::operator<(const ConvParams& other) const
+bool operator<(const ConvParams& a, const ConvParams& b)
 {
     for (int i = 0; i < 3; ++i)
     {
-        if (pads[i] < other.pads[i])
+        if (a.pads[i] < b.pads[i])
             return true;
-        if (pads[i] > other.pads[i])
+        if (a.pads[i] > b.pads[i])
             return false;
     }
     for (int i = 0; i < 3; ++i)
     {
-        if (strides[i] < other.strides[i])
+        if (a.strides[i] < b.strides[i])
             return true;
-        if (strides[i] > other.strides[i])
+        if (a.strides[i] > b.strides[i])
             return false;
     }
     for (int i = 0; i < 3; ++i)
     {
-        if (dilation[i] < other.dilation[i])
+        if (a.dilation[i] < b.dilation[i])
             return true;
-        if (dilation[i] > other.dilation[i])
+        if (a.dilation[i] > b.dilation[i])
             return false;
     }
-    return groups < other.groups;
+    return a.groups < b.groups;
 }
 
-bool ConvParams::operator==(const ConvParams& other) const
+bool operator==(const ConvParams& a, const ConvParams& b)
 {
     for (int i = 0; i < 3; ++i)
-        if (pads[i] != other.pads[i])
+        if (a.pads[i] != b.pads[i])
             return false;
     for (int i = 0; i < 3; ++i)
-        if (strides[i] != other.strides[i])
+        if (a.strides[i] != b.strides[i])
             return false;
     for (int i = 0; i < 3; ++i)
-        if (dilation[i] != other.dilation[i])
+        if (a.dilation[i] != b.dilation[i])
             return false;
-    return groups == other.groups;
+    return a.groups == b.groups;
 }
 
-bool ConvDescriptor::operator<(const ConvDescriptor& other) const
+bool operator<(const ConvDescriptor& a, const ConvDescriptor& b)
 {
-    if (type < other.type)
+    if (a.type < b.type)
         return true;
-    if (type == other.type)
+    if (a.type == b.type)
     {
-        if (params < other.params)
+        if (a.params < b.params)
             return true;
-        if (params == other.params)
+        if (a.params == b.params)
         {
-            if (x_shape < other.x_shape)
+            if (a.x_shape < b.x_shape)
                 return true;
-            if (x_shape == other.x_shape)
+            if (a.x_shape == b.x_shape)
             {
-                if (x_strides < other.x_strides)
+                if (a.x_strides < b.x_strides)
                     return true;
-                if (x_strides == other.x_strides)
+                if (a.x_strides == b.x_strides)
                 {
-                    if (w_shape < other.w_shape)
+                    if (a.w_shape < b.w_shape)
                         return true;
-                    if (w_shape == other.w_shape)
+                    if (a.w_shape == b.w_shape)
                     {
-                        if (y_shape < other.y_shape)
+                        if (a.y_shape < b.y_shape)
                             return true;
-                        if (y_shape == other.y_shape)
-                            return y_strides < other.y_strides;
+                        if (a.y_shape == b.y_shape)
+                            return a.y_strides < b.y_strides;
                     }
                 }
             }
