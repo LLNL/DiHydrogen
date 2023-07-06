@@ -26,6 +26,7 @@
 #endif
 
 #cmakedefine01 H2_HAS_MPI
+#cmakedefine01 H2_HAS_DACE
 
 // Features detected at configure time
 #define H2_PRETTY_FUNCTION @H2_PRETTY_FUNCTION@

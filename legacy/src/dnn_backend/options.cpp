@@ -10,15 +10,18 @@
 
 namespace distconv
 {
-
 Options::Options(bool overlap_halo_exchange_in,
                  bool deterministic_in,
                  bool enable_profiling_in,
-                 float ws_capacity_factor_in)
+                 float ws_capacity_factor_in,
+                 bool jit_verbose_in,
+                 const std::string& jit_cache_path_in)
     : overlap_halo_exchange{overlap_halo_exchange_in},
       m_deterministic{deterministic_in},
       enable_profiling{enable_profiling_in},
-      ws_capacity_factor{ws_capacity_factor_in}
+      ws_capacity_factor{ws_capacity_factor_in},
+      jit_verbose{jit_verbose_in},
+      jit_cache_path{jit_cache_path_in}
 {
     // FIXME (trb): This carries over the previous logic, which is
     // BAD. `DISTCONV_OVERLAP_HALO_EXCHANGE=0` is still "detected", so
@@ -51,6 +54,20 @@ Options::Options(bool overlap_halo_exchange_in,
                                         << "DISTCONV_WS_CAPACITY_FACTOR"
                                         << " detected";
         ws_capacity_factor = atof(std::getenv("DISTCONV_WS_CAPACITY_FACTOR"));
+    }
+    if (std::getenv("DISTCONV_JIT_VERBOSE"))
+    {
+        util::MPIRootPrintStreamDebug() << "Environment variable: "
+                                        << "DISTCONV_JIT_VERBOSE"
+                                        << " detected";
+        jit_verbose = true;
+    }
+    if (std::getenv("DISTCONV_JIT_CACHEPATH"))
+    {
+        util::MPIRootPrintStreamDebug() << "Environment variable: "
+                                        << "DISTCONV_JIT_CACHEPATH"
+                                        << " detected";
+        jit_cache_path = std::getenv("DISTCONV_JIT_CACHEPATH");
     }
 }
 

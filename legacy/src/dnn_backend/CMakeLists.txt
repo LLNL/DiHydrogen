@@ -6,6 +6,10 @@ h2_set_full_path(THIS_DIR_SOURCES
   stream_manager.cpp
 )
 
+if (H2_ENABLE_DACE)
+  h2_append_full_path(THIS_DIR_SOURCES dace_backend.cpp)
+endif()
+
 h2_set_full_path(THIS_DIR_CU_SOURCES
   batchnorm.cu
   cross_entropy.cu

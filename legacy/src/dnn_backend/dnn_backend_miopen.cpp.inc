@@ -405,6 +405,33 @@ void GPUDNNBackend::copy_convolution_descriptor(
         src, spatial_dims, &spatial_dims, pads, strides, dilations, &mode));
     DISTCONV_CHECK_MIOPEN(miopenInitConvolutionNdDescriptor(
         dst, spatial_dims, pads, strides, dilations, mode));
+
+    // miopenGetConvolutionGroupCount is not in the MIOpen API, so we're
+    // skipping copying groups
+    /*
+    int ngrps = 1;
+    DISTCONV_CHECK_MIOPEN(miopenGetConvolutionGroupCount(src, &ngrps));
+    DISTCONV_CHECK_MIOPEN(miopenSetConvolutionGroupCount(dst, ngrps));
+    */
+}
+
+void GPUDNNBackend::get_convolution_descriptor(
+                                           ConvolutionDescriptor_t const& conv_desc,
+                                           int array_len,
+                                           int* const pad,
+                                           int* const stride,
+                                           int* const dilation,
+                                           int& ngrps,
+                                           ConvolutionMode_t& mode,
+                                           DataType_t& /*data_type*/)
+{
+    int ndim;
+    DISTCONV_CHECK_MIOPEN(miopenGetConvolutionNdDescriptor(
+        conv_desc, array_len, &ndim, pad, stride, dilation, &mode));
+    // miopenGetConvolutionGroupCount is not in the MIOpen API, so we're
+    // ignoring groups for now.
+    //DISTCONV_CHECK_MIOPEN(miopenGetConvolutionGroupCount(conv_desc, &ngrps));
+    ngrps = 1;
 }
 
 void GPUDNNBackend::convolution_forward(
@@ -1067,11 +1094,21 @@ void GPUDNNBackend::destroy_tensor_descriptor(TensorDescriptor_t const& desc)
     DISTCONV_CHECK_MIOPEN(miopenDestroyTensorDescriptor(desc));
 }
 
-void GPUDNNBackend::set_tensor_descriptor(TensorDescriptor_t const& desc,
-                                          DataType_t const& dt,
+void GPUDNNBackend::get_tensor_descriptor(TensorDescriptor_t const& desc,
+                                          DataType_t& dt,
                                           size_t ndims,
                                           int* dims,
                                           int* strides)
+{
+    DISTCONV_CHECK_MIOPEN(
+        miopenGetTensorDescriptor(desc, &dt, dims, strides));
+}
+
+void GPUDNNBackend::set_tensor_descriptor(TensorDescriptor_t const& desc,
+                                          DataType_t const& dt,
+                                          size_t ndims,
+                                          int const* dims,
+                                          int const* strides)
 {
     DISTCONV_CHECK_MIOPEN(
         miopenSetTensorDescriptor(desc, dt, ndims, dims, strides));
@@ -1098,6 +1135,14 @@ auto GPUDNNBackend::make_filter_descriptor() -> TensorDescriptor_t
 void GPUDNNBackend::destroy_filter_descriptor(TensorDescriptor_t const& desc)
 {
     destroy_tensor_descriptor(desc);
+}
+
+void GPUDNNBackend::get_filter_descriptor(FilterDescriptor_t const& desc,
+                                          DataType_t& dt,
+                                          size_t ndims,
+                                          int* dims)
+{
+    get_tensor_descriptor(desc, dt, ndims, dims, nullptr);
 }
 
 void GPUDNNBackend::set_filter_descriptor(FilterDescriptor_t const& desc,
