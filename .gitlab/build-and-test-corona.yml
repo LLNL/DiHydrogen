@@ -19,30 +19,30 @@ include:
 # includes/libs are setup properly under the "/usr/tce" prefix). So I
 # load a module to get a real prefix. This only matters when
 # "+ci+coverage".
-rocm-5-4-3:
+rocm-5-5-1:
   variables:
-    SPEC: "%rocmcc@5.4.3 +developer +rocm amdgpu_target=gfx906 ^hip@5.4.3 ^llvm-amdgpu@5.4.3 ^hsa-rocr-dev@5.4.3"
-    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.4.3 ninja/1.11.0 python"
+    SPEC: "%rocmcc@5.5.1 +developer +rocm amdgpu_target=gfx906 ^hip@5.5.1 ^llvm-amdgpu@5.5.1 ^hsa-rocr-dev@5.5.1"
+    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.5.1 ninja/1.11.0 python"
   extends: [.build-and-test-on-corona, .build-and-test]
 
-rocm-5-5-0:
+rocm-5-6-0:
   variables:
-    SPEC: "%rocmcc@5.5.0 +developer +rocm amdgpu_target=gfx906 ^hip@5.5.0 ^llvm-amdgpu@5.5.0 ^hsa-rocr-dev@5.5.0"
-    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.5.0 ninja/1.11.0 python"
+    SPEC: "%rocmcc@5.6.0 +developer +rocm amdgpu_target=gfx906 ^hip@5.6.0 ^llvm-amdgpu@5.6.0 ^hsa-rocr-dev@5.6.0"
+    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.6.0 ninja/1.11.0 python"
   extends: [.build-and-test-on-corona, .build-and-test]
 
-rocm-5-5-0-distconv:
+rocm-5-6-0-distconv:
   variables:
-    SPEC: "%rocmcc@5.5.0 +developer +distconv +rocm amdgpu_target=gfx906 ^hip@5.5.0 ^llvm-amdgpu@5.5.0 ^hsa-rocr-dev@5.5.0"
-    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.5.0 ninja/1.11.0 python"
+    SPEC: "%rocmcc@5.6.0 +developer +distconv +rocm amdgpu_target=gfx906 ^hip@5.6.0 ^llvm-amdgpu@5.6.0 ^hsa-rocr-dev@5.6.0"
+    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.6.0 ninja/1.11.0 python"
   extends: [.build-and-test-on-corona, .build-and-test]
   rules:
     - if: $TEST_DISTCONV_BUILD == "1"
 
-rocm-5-5-0-coverage:
+rocm-5-6-0-coverage:
   variables:
-    SPEC: "%rocmcc@5.5.0 +developer +ci +coverage +rocm amdgpu_target=gfx906 ^hip@5.5.0 ^llvm-amdgpu@5.5.0 ^hsa-rocr-dev@5.5.0"
-    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.5.0 ninja/1.11.0 python"
+    SPEC: "%rocmcc@5.6.0 +developer +ci +coverage +rocm amdgpu_target=gfx906 ^hip@5.6.0 ^llvm-amdgpu@5.6.0 ^hsa-rocr-dev@5.6.0"
+    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/5.6.0 ninja/1.11.0 python"
   extends: [.build-and-test-on-corona, .build-and-test-coverage]
 
 .build-and-test-on-corona:

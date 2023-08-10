@@ -13,21 +13,21 @@ include:
 
 # Note: We load gcc/10.3.1-magic to get the right MPI but it's not
 # (directly) used.
-rocm-5-4-3:
+rocm-5-5-1:
   variables:
-    SPEC: "%rocmcc@5.4.3 +developer +rocm amdgpu_target=gfx90a ^hip@5.4.3 ^llvm-amdgpu@5.4.3 ^hsa-rocr-dev@5.4.3"
-    MODULES: "PrgEnv-amd amd/5.4.3"
+    SPEC: "%rocmcc@5.5.1 +developer +rocm amdgpu_target=gfx90a ^hip@5.5.1 ^llvm-amdgpu@5.5.1 ^hsa-rocr-dev@5.5.1"
+    MODULES: "PrgEnv-amd amd/5.5.1"
   extends: .build-and-test-on-tioga
 
-rocm-5-5-0:
+rocm-5-6-0:
   variables:
-    SPEC: "%rocmcc@5.5.0 +developer +rocm amdgpu_target=gfx90a ^hip@5.5.0 ^llvm-amdgpu@5.5.0 ^hsa-rocr-dev@5.5.0"
-    MODULES: "PrgEnv-amd amd/5.5.0"
+    SPEC: "%rocmcc@5.6.0 +developer +rocm amdgpu_target=gfx90a ^hip@5.6.0 ^llvm-amdgpu@5.6.0 ^hsa-rocr-dev@5.6.0"
+    MODULES: "PrgEnv-amd amd/5.6.0"
   extends: .build-and-test-on-tioga
 
-# cray-amd-5-5-0:
+# cray-amd-5-6-0:
 #   variables:
-#     SPEC: "%cce@amd-5.5.0 +developer +rocm amdgpu_target=gfx90a ^hip@5.5.0 ^llvm-amdgpu@5.5.0 ^hsa-rocr-dev@5.5.0"
+#     SPEC: "%cce@amd-5.6.0 +developer +rocm amdgpu_target=gfx90a ^hip@5.6.0 ^llvm-amdgpu@5.6.0 ^hsa-rocr-dev@5.6.0"
 #   extends: .build-and-test-on-tioga
 
 .build-and-test-on-tioga:

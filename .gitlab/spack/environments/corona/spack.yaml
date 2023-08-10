@@ -28,12 +28,12 @@ spack:
       environment: {}
       extra_rpaths: []
   - compiler:
-      spec: rocmcc@=5.4.3
+      spec: rocmcc@=5.5.1
       paths:
-        cc: /opt/rocm-5.4.3/bin/amdclang
-        cxx: /opt/rocm-5.4.3/bin/amdclang++
-        f77: /opt/rocm-5.4.3/bin/amdflang
-        fc: /opt/rocm-5.4.3/bin/amdflang
+        cc: /opt/rocm-5.5.1/bin/amdclang
+        cxx: /opt/rocm-5.5.1/bin/amdclang++
+        f77: /opt/rocm-5.5.1/bin/amdflang
+        fc: /opt/rocm-5.5.1/bin/amdflang
       flags: {}
       operating_system: rhel8
       target: x86_64
@@ -41,12 +41,12 @@ spack:
       environment: {}
       extra_rpaths: []
   - compiler:
-      spec: rocmcc@=5.5.0
+      spec: rocmcc@=5.6.0
       paths:
-        cc: /opt/rocm-5.5.0/bin/amdclang
-        cxx: /opt/rocm-5.5.0/bin/amdclang++
-        f77: /opt/rocm-5.5.0/bin/amdflang
-        fc: /opt/rocm-5.5.0/bin/amdflang
+        cc: /opt/rocm-5.6.0/bin/amdclang
+        cxx: /opt/rocm-5.6.0/bin/amdclang++
+        f77: /opt/rocm-5.6.0/bin/amdflang
+        fc: /opt/rocm-5.6.0/bin/amdflang
       flags: {}
       operating_system: rhel8
       target: x86_64
@@ -147,24 +147,24 @@ spack:
     hip:
       buildable: false
       externals:
-      - spec: hip@5.4.3
-        prefix: /opt/rocm-5.4.3/hip
-      - spec: hip@5.5.0
-        prefix: /opt/rocm-5.5.0/hip
+      - spec: hip@5.5.1
+        prefix: /opt/rocm-5.5.1/hip
+      - spec: hip@5.6.0
+        prefix: /opt/rocm-5.6.0/hip
     hipcub:
       buildable: false
       externals:
-      - spec: hipcub@5.4.3
-        prefix: /opt/rocm-5.4.3
-      - spec: hipcub@5.5.0
-        prefix: /opt/rocm-5.5.0
+      - spec: hipcub@5.5.1
+        prefix: /opt/rocm-5.5.1
+      - spec: hipcub@5.6.0
+        prefix: /opt/rocm-5.6.0
     hsa-rocr-dev:
       buildable: false
       externals:
-      - spec: hsa-rocr-dev@5.4.3
-        prefix: /opt/rocm-5.4.3
-      - spec: hsa-rocr-dev@5.5.0
-        prefix: /opt/rocm-5.5.0
+      - spec: hsa-rocr-dev@5.5.1
+        prefix: /opt/rocm-5.5.1
+      - spec: hsa-rocr-dev@5.6.0
+        prefix: /opt/rocm-5.6.0
     hwloc:
       externals:
       - spec: hwloc@2.9.0
@@ -188,10 +188,10 @@ spack:
     llvm-amdgpu:
       buildable: false
       externals:
-      - spec: llvm-amdgpu@5.4.3
-        prefix: /opt/rocm-5.4.3/llvm
-      - spec: llvm-amdgpu@5.5.0
-        prefix: /opt/rocm-5.5.0/llvm
+      - spec: llvm-amdgpu@5.5.1
+        prefix: /opt/rocm-5.5.1/llvm
+      - spec: llvm-amdgpu@5.6.0
+        prefix: /opt/rocm-5.6.0/llvm
     m4:
       externals:
       - spec: m4@1.4.18
@@ -199,10 +199,10 @@ spack:
     miopen-hip:
       buildable: false
       externals:
-      - spec: miopen-hip@5.4.3
-        prefix: /opt/rocm-5.4.3
-      - spec: miopen-hip@5.5.0
-        prefix: /opt/rocm-5.5.0
+      - spec: miopen-hip@5.5.1
+        prefix: /opt/rocm-5.5.1
+      - spec: miopen-hip@5.6.0
+        prefix: /opt/rocm-5.6.0
     mvapich2:
       externals:
       - spec: mvapich2@2.3.7~cuda~debug+regcache+wrapperrpath ch3_rank_bits=32 fabrics=mrail
@@ -246,17 +246,17 @@ spack:
         prefix: /usr/tce/packages/python/python-3.9.12
     rccl:
       externals:
-      - spec: rccl@5.4.3
-        prefix: /opt/rocm-5.4.3
-      - spec: rccl@5.5.0
-        prefix: /opt/rocm-5.5.0
+      - spec: rccl@5.5.1
+        prefix: /opt/rocm-5.5.1
+      - spec: rccl@5.6.0
+        prefix: /opt/rocm-5.6.0
     roctracer-dev:
       buildable: false
       externals:
-      - spec: roctracer-dev@5.4.3
-        prefix: /opt/rocm-5.4.3
-      - spec: roctracer-dev@5.5.0
-        prefix: /opt/rocm-5.5.0
+      - spec: roctracer-dev@5.5.1
+        prefix: /opt/rocm-5.5.1
+      - spec: roctracer-dev@5.6.0
+        prefix: /opt/rocm-5.6.0
     swig:
       externals:
       - spec: swig@3.0.12
