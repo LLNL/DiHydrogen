@@ -221,6 +221,26 @@ constexpr inline ShapeTuple get_range_shape(CoordTuple coords, ShapeTuple shape)
 }
 
 /**
+ * Return true if a coordinate range is contained within a given shape.
+ */
+constexpr inline bool is_shape_contained(CoordTuple coords,
+                                         ShapeTuple shape) H2_NOEXCEPT
+{
+  if (coords.size() > shape.size())
+  {
+    return false;
+  }
+  for (typename CoordTuple::size_type i = 0; i < coords.size(); ++i)
+  {
+    if (coords[i].start > shape[i] || coords[i].end > shape[i])
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
  * Return a new tuple that consists of the entries in the original at
  * indices where coords is not trivial.
  */
