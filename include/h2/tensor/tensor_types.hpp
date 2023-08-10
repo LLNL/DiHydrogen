@@ -9,6 +9,7 @@
 
 #include <array>
 #include <cstdint>
+#include <ostream>
 
 #include <El.hpp>
 
@@ -42,10 +43,60 @@ enum class DimensionType {
 
 using DT = DimensionType;  // Alias to save you some typing.
 
+/** Support printing DimensionType. */
+inline std::ostream& operator<<(std::ostream& os, const DimensionType& dim_type)
+{
+  switch (dim_type)
+  {
+  case DT::Any:
+    os << "Any";
+    break;
+  case DT::Sample:
+    os << "Sample";
+    break;
+  case DT::Channel:
+    os << "Channel";
+    break;
+  case DT::Filter:
+    os << "Filter";
+    break;
+  case DT::Spatial:
+    os << "Spatial";
+    break;
+  case DT::Sequence:
+    os << "Sequence";
+    break;
+  default:
+    os << "Unknown";
+    break;
+  }
+  return os;
+}
+
 /**
  * Compute device type (e.g., CPU, GPU).
  */
 using Device = El::Device;  // Leverage Hydrogen's device typing.
+
+/** Support printing Device. */
+inline std::ostream& operator<<(std::ostream& os, const Device& dev)
+{
+  switch (dev)
+  {
+  case Device::CPU:
+    os << "CPU";
+    break;
+#ifdef HYDROGEN_HAVE_GPU
+  case Device::GPU:
+    os << "GPU";
+    break;
+#endif
+  default:
+    os << "Unknown";
+    break;
+  }
+  return os;
+}
 
 /**
  * Integer type used for the number of dimensions.
@@ -107,6 +158,13 @@ struct DimensionRange {
 };
 
 using DRng = DimensionRange;  // Alias to save you some typing.
+
+/** Support printing DimensionRange. */
+inline std::ostream& operator<<(std::ostream& os, const DimensionRange& dr)
+{
+  os << "[" << dr.start << ", " << dr.end << ")";
+  return os;
+}
 
 /**
  * Tuple of dimension ranges.

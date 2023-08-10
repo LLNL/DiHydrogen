@@ -76,6 +76,9 @@ public:
 
   /** Return the number of elements in the tensor. */
   DataIndexType numel() const H2_NOEXCEPT {
+    if (tensor_shape.empty()) {
+      return 0;
+    }
     return product<DataIndexType>(tensor_shape);
   }
 
@@ -118,6 +121,9 @@ public:
 
   /** Return a raw pointer to the underlying storage. */
   virtual T* data() = 0;
+
+  /** Return a raw constant pointer to the underlying storage. */
+  virtual const T* data() const = 0;
 
   /** Return a raw constant pointer to the underlying storage. */
   virtual const T* const_data() const = 0;
@@ -180,10 +186,11 @@ public:
    */
   virtual void unview() = 0;
 
+  // Note: The operator() is abstract rather than defaulting to
+  // view(coords) because we need to covariant return type.
+
   /** Convenience wrapper for view(coords). */
-  virtual BaseTensor<T>* operator()(CoordTuple coords) {
-    return view(coords);
-  }
+  virtual BaseTensor<T>* operator()(CoordTuple coords) = 0;
 
   /** Return a constant view of this tensor. */
   virtual const BaseTensor<T>* const_view() const = 0;
@@ -192,9 +199,7 @@ public:
   virtual const BaseTensor<T>* const_view(CoordTuple coords) const = 0;
 
   /** Convenience wrapper for const_view(coords). */
-  virtual const BaseTensor<T>* operator()(CoordTuple coords) const {
-    return const_view(coords);
-  }
+  virtual const BaseTensor<T>* operator()(CoordTuple coords) const = 0;
 
   /**
    * Return the value at a particular coordinate.

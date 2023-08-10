@@ -96,6 +96,11 @@ public:
     return tensor_memory.data();
   }
 
+  const T* data() const override
+  {
+    return tensor_memory.const_data();
+  }
+
   const T* const_data() const override {
     return tensor_memory.const_data();
   }
@@ -128,6 +133,11 @@ public:
       coords);
   }
 
+  Tensor<T, Device::CPU>* operator()(CoordTuple coords) override
+  {
+    return view(coords);
+  }
+
   void unview() override {
     H2_ASSERT_DEBUG(this->is_view(), "Must be a view to unview");
     empty();  // Emptying a view is equivalent to unviewing.
@@ -144,6 +154,10 @@ public:
       get_range_shape(coords, this->tensor_shape),
       filter_by_trivial(coords, this->tensor_dim_types),
       coords);
+  }
+
+  const Tensor<T, Device::CPU>* operator()(CoordTuple coords) const override {
+    return const_view(coords);
   }
 
   T get(SingleCoordTuple coords) const override {
