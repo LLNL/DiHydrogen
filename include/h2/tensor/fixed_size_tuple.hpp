@@ -9,6 +9,7 @@
 
 #include <array>
 #include <type_traits>
+#include <ostream>
 
 #include "h2/utils/Error.hpp"
 
@@ -75,6 +76,9 @@ struct FixedSizeTuple {
 
   /** Return the number of valid elements in the tuple. */
   constexpr SizeType size() const H2_NOEXCEPT { return size_; }
+
+  /** Return true when there are no valid elements in the tuple. */
+  constexpr bool empty() const H2_NOEXCEPT { return size_ == 0; }
 
   /** Return a raw pointer to the tuple. */
   T* data() H2_NOEXCEPT { return data_.data(); }
@@ -150,10 +154,29 @@ struct FixedSizeTuple {
   }
 };
 
-/** Product reduction for a FixedSizeTuple. */
+/** Operator overload for printing tuples (when the type is printable). */
+template <typename T, typename SizeType, SizeType N>
+inline std::ostream& operator<<(std::ostream& os, const FixedSizeTuple<T, SizeType, N>& tuple) {
+  os << "{";
+  for (SizeType i = 0; i < tuple.size(); ++i) {
+    os << tuple[i];
+    // Note: tuple.size() must be >= 1 for us to be here.
+    if (i < tuple.size() - 1) {
+      os << ", ";
+    }
+  }
+  os << "}";
+  return os;
+}
+
+/**
+ * Product reduction for a FixedSizeTuple.
+ *
+ * If the tuple is empty, returns start (default 1).
+ */
 template <typename AccT, typename T, typename SizeType, SizeType N>
-constexpr AccT product(const FixedSizeTuple<T, SizeType, N>& tuple) H2_NOEXCEPT {
-  AccT r = AccT{1};
+constexpr AccT product(const FixedSizeTuple<T, SizeType, N>& tuple, const AccT start = AccT{1}) H2_NOEXCEPT {
+  AccT r = start;
   for (SizeType i = 0; i < tuple.size(); ++i) {
     r *= static_cast<AccT>(tuple[i]);
   }

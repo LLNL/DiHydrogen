@@ -49,6 +49,7 @@ add_executable(SeqCatchTests)
 add_subdirectory(patterns/factory)
 add_subdirectory(patterns/multimethods)
 add_subdirectory(utils)
+add_subdirectory(tensor)
 
 # These tests use the default Catch2 main().
 target_link_libraries(SeqCatchTests

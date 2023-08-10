@@ -12,6 +12,7 @@
  * Manages a raw memory buffer.
  */
 
+#include <ostream>
 #include <cstddef>
 
 #include "h2/tensor/tensor_types.hpp"
@@ -40,7 +41,7 @@ struct Allocator<T, Device::CPU> {
 }  // namespace internal
 
 /**
- * Manage a raw buffer of daaa on a device.
+ * Manage a raw buffer of data on a device.
  */
 template <typename T, Device Dev>
 class RawBuffer {
@@ -55,7 +56,7 @@ public:
   }
 
   void ensure() {
-    if (!buffer) {
+    if (buffer_size && !buffer) {
       buffer = internal::Allocator<T, Dev>::allocate(buffer_size);
     }
   }
@@ -88,6 +89,62 @@ private:
   std::size_t buffer_size;   /**< Number of elements in buffer. */
 };
 
+/** Support printing RawBuffer. */
+template <typename T, Device Dev>
+inline std::ostream& operator<<(std::ostream& os, const RawBuffer<T, Dev>& buf)
+{
+  // TODO: Print the type along with the device.
+  os << "RawBuffer<" << Dev << ">(" << buf.data() << ", " << buf.size() << ")";
+  return os;
+}
 
+namespace internal
+{
+
+template <typename T, Device Dev>
+struct DeviceBufferPrinter
+{
+  DeviceBufferPrinter(const T* buf_, std::size_t size_) : buf(buf_), size(size_) {}
+
+  void print(std::ostream& os)
+  {
+    os << "<" << Dev << " buffer of size " << size << ">";
+  }
+
+  const T* buf;
+  std::size_t size;
+};
+
+template <typename T>
+struct DeviceBufferPrinter<T, Device::CPU>
+{
+  DeviceBufferPrinter(const T* buf_, std::size_t size_) : buf(buf_), size(size_) {}
+
+  void print(std::ostream& os)
+  {
+    for (std::size_t i = 0; i < size; ++i)
+    {
+      os << buf[i];
+      if (i != size - 1)
+      {
+        os << ", ";
+      }
+    }
+  }
+
+  const T* buf;
+  std::size_t size;
+};
+
+}  // namespace internal
+
+/** Print the contents of a RawBuffer. */
+template <typename T, Device Dev>
+inline std::ostream& raw_buffer_contents(std::ostream& os,
+                                         const RawBuffer<T, Dev>& buf)
+{
+  internal::DeviceBufferPrinter<T, Dev>(buf.const_data(), buf.size()).print(os);
+  return os;
+}
 
 }  // namespace h2

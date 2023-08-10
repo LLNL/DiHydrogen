@@ -42,21 +42,26 @@ constexpr StrideTuple strides1;
 static_assert(are_strides_contiguous(shape1, strides1),
               "are_strides_contiguous is wrong");
 
-constexpr ShapeTuple shape2(2, 2);
-constexpr StrideTuple strides2(1, 2);
+constexpr ShapeTuple shape2(3);
+constexpr StrideTuple strides2(1);
 static_assert(are_strides_contiguous(shape2, strides2),
               "are_strides_contiguous is wrong");
 
-constexpr ShapeTuple shape3(2, 2, 2);
-constexpr StrideTuple strides3(1, 2, 4);
+constexpr ShapeTuple shape3(2, 2);
+constexpr StrideTuple strides3(1, 2);
 static_assert(are_strides_contiguous(shape3, strides3),
               "are_strides_contiguous is wrong");
 
-constexpr StrideTuple strides4(2, 2, 4);
-static_assert(!are_strides_contiguous(shape3, strides4),
+constexpr ShapeTuple shape4(2, 2, 2);
+constexpr StrideTuple strides4(1, 2, 4);
+static_assert(are_strides_contiguous(shape4, strides4),
               "are_strides_contiguous is wrong");
 
-constexpr StrideTuple strides5(1, 4, 4);
-static_assert(!are_strides_contiguous(shape3, strides5),
+constexpr StrideTuple strides5(2, 2, 4);
+static_assert(!are_strides_contiguous(shape4, strides5),
+              "are_strides_contiguous is wrong");
+
+constexpr StrideTuple strides6(1, 4, 4);
+static_assert(!are_strides_contiguous(shape4, strides6),
               "are_strides_contiguous is wrong");
 }
