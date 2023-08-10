@@ -109,6 +109,31 @@ static_assert(range_shape6[0] == 2,
               "get_range_shape index 0 is wrong");
 }
 
+namespace is_shape_contained_tests
+{
+constexpr ShapeTuple shape(3, 2, 1);
+
+constexpr CoordTuple coord1(ALL, ALL, ALL);
+static_assert(is_shape_contained(coord1, shape),
+              "is_shape_contained is wrong");
+
+constexpr CoordTuple coord2(DRng(0, 3), DRng(0, 2), DRng(0, 1));
+static_assert(is_shape_contained(coord2, shape),
+              "is_shape_contained is wrong");
+
+constexpr CoordTuple coord3(DRng(0, 4), ALL, ALL);
+static_assert(!is_shape_contained(coord3, shape),
+              "is_shape_contained is wrong");
+
+constexpr CoordTuple coord4(ALL, ALL, DRng(1, 2));
+static_assert(!is_shape_contained(coord4, shape),
+              "is_shape_contained is wrong");
+
+constexpr CoordTuple coord5(DRng(1, 3), ALL);
+static_assert(is_shape_contained(coord5, shape),
+              "is_shape_contained is wrong");
+}
+
 namespace filter_by_trivial_tests {
 constexpr ShapeTuple tuple(1, 2, 3);
 

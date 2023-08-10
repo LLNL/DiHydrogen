@@ -212,14 +212,14 @@ TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
   }
   SECTION("Constant views work")
   {
-    const TensorType* view = tensor.const_view();
+    TensorType* view = tensor.const_view();
     REQUIRE(view->shape() == ShapeTuple{4, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
     REQUIRE(view->ndim() == 2);
     REQUIRE(view->numel() == 4 * 6);
     REQUIRE(view->is_view());
-    REQUIRE(view->data() == tensor.data());
+    REQUIRE(view->const_data() == tensor.data());
     REQUIRE(view->is_contiguous());
   }
   SECTION("Viewing a subtensor works")
@@ -304,14 +304,20 @@ TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
     REQUIRE(view->is_empty());
     REQUIRE(view->data() == nullptr);
   }
+#ifdef H2_DEBUG
   SECTION("Unviewing a non-view fails")
   {
     REQUIRE_THROWS(tensor.unview());
   }
+#endif
   SECTION("Resizing a view fails")
   {
     TensorType* view = tensor.view();
     REQUIRE_THROWS(view->resize(ShapeTuple{2, 3}));
+  }
+  SECTION("Viewing an invalid range fails")
+  {
+    REQUIRE_THROWS(tensor.view({ALL, DRng(0, 7)}));
   }
 }
 

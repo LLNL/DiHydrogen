@@ -124,13 +124,19 @@ public:
     return view(CoordTuple(TuplePad<CoordTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  Tensor<T, Device::CPU>* view(CoordTuple coords) override {
-    return new Tensor<T, Device::CPU>(
-      ViewType::Mutable,
-      tensor_memory,
-      get_range_shape(coords, this->tensor_shape),
-      filter_by_trivial(coords, this->tensor_dim_types),
-      coords);
+  Tensor<T, Device::CPU>* view() const override
+  {
+    return view(CoordTuple(TuplePad<CoordTuple>(this->tensor_shape.size(), ALL)));
+  }
+
+  Tensor<T, Device::CPU>* view(CoordTuple coords) override
+  {
+    return make_view(coords, ViewType::Mutable);
+  }
+
+  Tensor<T, Device::CPU>* view(CoordTuple coords) const override
+  {
+    return make_view(coords, ViewType::Const);
   }
 
   Tensor<T, Device::CPU>* operator()(CoordTuple coords) override
@@ -143,20 +149,16 @@ public:
     empty();  // Emptying a view is equivalent to unviewing.
   }
 
-  const Tensor<T, Device::CPU>* const_view() const override {
+  Tensor<T, Device::CPU>* const_view() const override {
     return const_view(CoordTuple(TuplePad<CoordTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  const Tensor<T, Device::CPU>* const_view(CoordTuple coords) const override {
-    return new Tensor<T, Device::CPU>(
-      ViewType::Const,
-      tensor_memory,
-      get_range_shape(coords, this->tensor_shape),
-      filter_by_trivial(coords, this->tensor_dim_types),
-      coords);
+  Tensor<T, Device::CPU>* const_view(CoordTuple coords) const override
+  {
+    return make_view(coords, ViewType::Const);
   }
 
-  const Tensor<T, Device::CPU>* operator()(CoordTuple coords) const override {
+  Tensor<T, Device::CPU>* operator()(CoordTuple coords) const override {
     return const_view(coords);
   }
 
@@ -174,6 +176,21 @@ private:
     BaseTensor<T>(view_type_, shape_, dim_types_),
     tensor_memory(mem_, coords)
   {}
+
+  /** Helper for constructing views. */
+  Tensor<T, Device::CPU>* make_view(CoordTuple coords, ViewType view_type) const
+  {
+    if (!is_shape_contained(coords, this->tensor_shape))
+    {
+      throw H2Exception("Attempting to construct an out-of-range view");
+    }
+    return new Tensor<T, Device::CPU>(
+        view_type,
+        tensor_memory,
+        get_range_shape(coords, this->tensor_shape),
+        filter_by_trivial(coords, this->tensor_dim_types),
+        coords);
+  }
 };
 
 }  // namespace h2

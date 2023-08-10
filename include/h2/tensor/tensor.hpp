@@ -119,7 +119,11 @@ public:
    */
   virtual void resize(ShapeTuple new_shape, DimensionTypeTuple new_dim_types) = 0;
 
-  /** Return a raw pointer to the underlying storage. */
+  /**
+   * Return a raw pointer to the underlying storage.
+   *
+   * @note Remember to account for the strides when accessing this.
+   */
   virtual T* data() = 0;
 
   /** Return a raw constant pointer to the underlying storage. */
@@ -169,6 +173,9 @@ public:
    */
   virtual BaseTensor<T>* view() = 0;
 
+  /** Return a constant view of this tensor. */
+  virtual BaseTensor<T>* view() const = 0;
+
   /**
    * Return a view of a subtensor of this tensor.
    *
@@ -176,6 +183,11 @@ public:
    * must be of contiguous subsets of the tensor (i.e., no strides).
    */
   virtual BaseTensor<T>* view(CoordTuple coords) = 0;
+
+  /**
+   * Return a constant view of a subtensor of this tensor.
+   */
+  virtual BaseTensor<T>* view(CoordTuple coords) const = 0;
 
   /**
    * If this tensor is a view, stop viewing.
@@ -193,13 +205,13 @@ public:
   virtual BaseTensor<T>* operator()(CoordTuple coords) = 0;
 
   /** Return a constant view of this tensor. */
-  virtual const BaseTensor<T>* const_view() const = 0;
+  virtual BaseTensor<T>* const_view() const = 0;
 
   /** Return a constant view of a subtensor of this tensor. */
-  virtual const BaseTensor<T>* const_view(CoordTuple coords) const = 0;
+  virtual BaseTensor<T>* const_view(CoordTuple coords) const = 0;
 
   /** Convenience wrapper for const_view(coords). */
-  virtual const BaseTensor<T>* operator()(CoordTuple coords) const = 0;
+  virtual BaseTensor<T>* operator()(CoordTuple coords) const = 0;
 
   /**
    * Return the value at a particular coordinate.
