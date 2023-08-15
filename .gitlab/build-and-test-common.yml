@@ -8,8 +8,9 @@
 .build-and-test-base:
   variables:
     LLNL_SERVICE_USER: lbannusr
-    LLNL_SLURM_SCHEDULER_PARAMETERS: "-N1 -t 10"
-    LLNL_FLUX_SCHEDULER_PARAMETERS: "-N1 -t 10"
+    LLNL_SLURM_SCHEDULER_PARAMETERS: "-N1 -t 20"
+    LLNL_FLUX_SCHEDULER_PARAMETERS: "-N1 -t 20"
+    LLNL_LSF_SCHEDULER_PARAMETERS: "-q pbatch -nnodes 1 -W 20"
     GIT_SUBMODULE_STRATEGY: recursive
     GIT_DEPTH: 5
   script:

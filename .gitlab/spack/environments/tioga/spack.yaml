@@ -26,7 +26,7 @@ spack:
   #     flags: {}
   #     operating_system: rhel8
   #     target: x86_64
-  #     modules: [PrgEnv-amd/8.3.3, amd/5.6.0]
+  #     modules: [PrgEnv-amd/8.4.0, amd/5.6.0]
   #     environment: {}
   #     extra_rpaths: []
   - compiler:
@@ -39,7 +39,7 @@ spack:
       flags: {}
       operating_system: rhel8
       target: x86_64
-      modules: []
+      modules: [PrgEnv-amd/8.4.0, amd/5.6.0]
       environment: {}
       extra_rpaths: []
   - compiler:
@@ -52,7 +52,7 @@ spack:
       flags: {}
       operating_system: rhel8
       target: x86_64
-      modules: []
+      modules: [PrgEnv-amd/8.4.0, amd/5.5.1]
       environment: {}
       extra_rpaths: []
   packages:
@@ -86,6 +86,24 @@ spack:
       externals:
       - spec: coreutils@8.30
         prefix: /usr
+    cray-libsci:
+      buildable: false
+      externals:
+      - spec: cray-libsci@23.05.1.4 %rocmcc@5.5.1
+        modules: [PrgEnv-amd/8.4.0 amd5.5.1 cray-libsci/23.05.1.4]
+      - spec: cray-libsci@23.05.1.4 %rocmcc@5.6.0
+        modules: [PrgEnv-amd/8.4.0 amd5.6.0 cray-libsci/23.05.1.4]
+      - spec: cray-libsci@23.05.1.4 %rocmcc@5.5.1 +openmp
+        modules: [PrgEnv-amd/8.4.0 amd5.5.1 cray-libsci/23.05.1.4]
+      - spec: cray-libsci@23.05.1.4 %rocmcc@5.6.0 +openmp
+        modules: [PrgEnv-amd/8.4.0 amd5.6.0 cray-libsci/23.05.1.4]
+    cray-mpich:
+      buildable: false
+      externals:
+      - spec: cray-mpich@8.1.26 %rocmcc@5.5.1
+        modules: [PrgEnv-amd/8.4.0 amd5.5.1 cray-mpich/8.1.26]
+      - spec: cray-mpich@8.1.26 %rocmcc@5.6.0
+        modules: [PrgEnv-amd/8.4.0 amd5.6.0 cray-mpich/8.1.26]
     curl:
       externals:
       - spec: curl@7.61.1+gssapi+ldap+nghttp2
@@ -133,18 +151,21 @@ spack:
       - spec: groff@1.22.3
         prefix: /usr
     hip:
+      buildable: false
       externals:
       - spec: hip@5.5.1
         prefix: /opt/rocm-5.5.1
       - spec: hip@5.6.0
         prefix: /opt/rocm-5.6.0
     hipcub:
+      buildable: false
       externals:
-      - spec: hip@5.5.1
+      - spec: hipcub@5.5.1
         prefix: /opt/rocm-5.5.1
-      - spec: hip@5.6.0
+      - spec: hipcub@5.6.0
         prefix: /opt/rocm-5.6.0
     hsa-rocr-dev:
+      buildable: false
       externals:
       - spec: hsa-rocr-dev@5.5.1
         prefix: /opt/rocm-5.5.1
@@ -154,6 +175,10 @@ spack:
       externals:
       - spec: hwloc@2.9.0
         prefix: /usr
+    libfabric:
+      externals:
+      - spec: libfabric@2.0 fabrics=cxi,opx,psm2,psm3,shm,sockets,tcp,udp,usnic
+        prefix: /opt/cray/libfabric/2.0
     libtool:
       externals:
       - spec: libtool@2.4.6
@@ -177,16 +202,12 @@ spack:
       - spec: m4@1.4.18
         prefix: /usr
     miopen-hip:
+      buildable: false
       externals:
       - spec: miopen-hip@5.5.1
         prefix: /opt/rocm-5.5.1
       - spec: miopen-hip@5.6.0
         prefix: /opt/rocm-5.6.0
-    mpich:
-      externals:
-      - spec: mpich@3.4a2~hydra device=ch4 netmod=ofi
-        modules:
-        - cray-mpich
     openssh:
       externals:
       - spec: openssh@8.0p1
@@ -213,6 +234,12 @@ spack:
         prefix: /opt/rocm-5.5.1
       - spec: rccl@5.6.0
         prefix: /opt/rocm-5.6.0
+    roctracer-dev:
+      externals:
+      - spec: roctracer-dev@5.5.1
+        prefix: /opt/rocm-5.5.1
+      - spec: roctracer-dev@5.6.0
+        prefix: /opt/rocm-5.6.0
     subversion:
       externals:
       - spec: subversion@1.10.2
@@ -231,4 +258,6 @@ spack:
         prefix: /usr
     all:
       providers:
-        mpi: [mpich]
+        blas: [cray-libsci]
+        lapack: [cray-libsci]
+        mpi: [cray-mpich]

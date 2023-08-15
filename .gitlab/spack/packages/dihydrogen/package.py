@@ -24,7 +24,7 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     git = "https://github.com/LLNL/DiHydrogen.git"
     tags = ["ecp", "radiuss"]
 
-    maintainers("bvanessen")
+    maintainers("benson31", "bvanessen")
 
     version("develop", branch="develop")
     version("master", branch="master")
@@ -104,6 +104,17 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     depends_on("cuda@11.0:", when="+cuda")
     depends_on("spdlog", when="@:0.1,0.2:")
 
+    depends_on("hydrogen +al", when="@0.3.0:")
+    for arch in CudaPackage.cuda_arch_values:
+        depends_on(
+            "hydrogen +cuda cuda_arch={0}".format(arch),
+            when="+cuda cuda_arch={0}".format(arch))
+
+    for val in ROCmPackage.amdgpu_targets:
+        depends_on(
+            "hydrogen amdgpu_target={0}".format(val),
+            when="+rocm amdgpu_target={0}".format(val))
+
     with when("+distconv"):
         depends_on("mpi")
 
@@ -115,7 +126,7 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
 
         # Add Aluminum variants
         depends_on("aluminum +cuda +nccl", when="+distconv +cuda")
-        depends_on("aluminum +rocm +rccl", when="+distconv +rocm")
+        depends_on("aluminum +rocm +nccl", when="+distconv +rocm")
 
         # TODO: Debug linker errors when NVSHMEM is built with UCX
         depends_on("nvshmem +nccl~ucx", when="+nvshmem")
@@ -231,8 +242,13 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
                     "CMAKE_HIP_COMPILER",
                     os.path.join(spec["llvm-amdgpu"].prefix.bin, "clang++")))
 
-        if "platform=cray" in spec:
-            entries.append(cmake_cache_option("MPI_ASSUME_NO_BUILTIN_MPI", True))
+        # It's possible this should have a `if "platform=cray" in
+        # spec:` in front of it, but it's not clear to me when this is
+        # set. In particular, I don't actually see this blurb showing
+        # up on Tioga builds. Which is causing the obvious problem
+        # (namely, the one this was added to supposedly solve in the
+        # first place.
+        entries.append(cmake_cache_option("MPI_ASSUME_NO_BUILTIN_MPI", True))
 
         if spec.satisfies("%clang +distconv platform=darwin"):
             clang = self.compiler.cc
