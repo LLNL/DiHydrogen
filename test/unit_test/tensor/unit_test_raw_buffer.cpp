@@ -11,21 +11,10 @@
 #include <type_traits>
 
 #include "h2/tensor/raw_buffer.hpp"
-#include "h2/meta/TypeList.hpp"
+#include "utils.hpp"
 
 using namespace h2;
 
-using CPUDev_t = std::integral_constant<Device, Device::CPU>;
-#ifdef HYDROGEN_HAVE_GPU
-using GPUDev_t = std::integral_constant<Device, Device::GPU>;
-#endif
-using AllDevList = meta::TypeList <CPUDev_t
-#ifdef HYDROGEN_HAVE_GPU
-                                   , GPUDev_t
-#endif
-                                    >;
-
-using DataType = float;
 
 TEMPLATE_LIST_TEST_CASE("Raw buffers are sane", "[tensor][raw_buffer]", AllDevList) {
   using BufType = RawBuffer<DataType, TestType::value>;

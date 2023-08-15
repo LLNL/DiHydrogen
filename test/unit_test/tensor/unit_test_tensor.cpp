@@ -8,28 +8,11 @@
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
-#include <type_traits>
-
 #include "h2/tensor/tensor.hpp"
-#include "h2/meta/TypeList.hpp"
+#include "utils.hpp"
 
 using namespace h2;
 
-// Catch2's TEMPLATE_TEST_CASE does not support non-type template
-// parameters. We therefore turn them into types this way to simplify
-// things. These declarations are just to save typing.
-using CPUDev_t = std::integral_constant<Device, Device::CPU>;
-#ifdef HYDROGEN_HAVE_GPU
-using GPUDev_t = std::integral_constant<Device, Device::GPU>;
-#endif
-using AllDevList = meta::TypeList <CPUDev_t
-#ifdef HYDROGEN_HAVE_GPU
-                                   , GPUDev_t
-#endif
-                                    >;
-
-// Placeholder for now, the data type of the tensor.
-using DataType = float;
 
 TEMPLATE_LIST_TEST_CASE("Tensors can be created", "[tensor]", AllDevList) {
   using TensorType = Tensor<DataType, TestType::value>;
@@ -138,11 +121,11 @@ TEMPLATE_LIST_TEST_CASE("Resizing tensors works", "[tensor]", AllDevList) {
 }
 
 TEMPLATE_TEST_CASE("Writing to tensors works", "[tensor]", CPUDev_t) {
-  using TensorType = Tensor<DataIndexType, TestType::value>;
+  using TensorType = Tensor<DataType, TestType::value>;
 
   TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
 
-  DataIndexType* buf = tensor.data();
+  DataType* buf = tensor.data();
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
     buf[i] = i;

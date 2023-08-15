@@ -12,21 +12,10 @@
 #include <type_traits>
 
 #include "h2/tensor/strided_memory.hpp"
-#include "h2/meta/TypeList.hpp"
+#include "utils.hpp"
 
 using namespace h2;
 
-using CPUDev_t = std::integral_constant<Device, Device::CPU>;
-#ifdef HYDROGEN_HAVE_GPU
-using GPUDev_t = std::integral_constant<Device, Device::GPU>;
-#endif
-using AllDevList = meta::TypeList <CPUDev_t
-#ifdef HYDROGEN_HAVE_GPU
-                                   , GPUDev_t
-#endif
-                                    >;
-
-using DataType = float;
 
 TEST_CASE("get_contiguous_strides", "[tensor][strided_memory]") {
   CHECK(get_contiguous_strides(ShapeTuple{}) == StrideTuple{});
@@ -122,12 +111,10 @@ TEMPLATE_TEST_CASE("StridedMemory writing works",
                    "[tensor][strided_memory]",
                    CPUDev_t)
 {
-  // Using DataIndexType because we check the values and floating point
-  // would be a pain.
-  using MemType = StridedMemory<DataIndexType, TestType::value>;
+  using MemType = StridedMemory<DataType, TestType::value>;
 
   MemType mem = MemType({3, 7, 2});
-  DataIndexType* buf = mem.data();
+  DataType* buf = mem.data();
   for (std::size_t i = 0; i < 3 * 7 * 2; ++i)
   {
     buf[i] = i;
@@ -153,7 +140,7 @@ TEMPLATE_TEST_CASE("StridedMemory views work",
                    "[tensor][strided_memory]",
                    CPUDev_t)
 {
-  using MemType = StridedMemory<DataIndexType, TestType::value>;
+  using MemType = StridedMemory<DataType, TestType::value>;
 
   MemType base_mem = MemType({3, 7, 3});
   for (std::size_t i = 0; i < 3 * 7 * 3; ++i)
