@@ -61,7 +61,7 @@ public:
     return tensor_memory.strides();
   }
 
-  typename StrideTuple::type strides(typename StrideTuple::size_type i) const H2_NOEXCEPT override {
+  typename StrideTuple::type stride(typename StrideTuple::size_type i) const H2_NOEXCEPT override {
     return tensor_memory.strides()[i];
   }
 

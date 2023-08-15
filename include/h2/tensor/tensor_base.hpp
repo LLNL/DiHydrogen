@@ -66,7 +66,7 @@ public:
   virtual StrideTuple strides() const H2_NOEXCEPT = 0;
 
   /** Return the stride of a particular dimension. */
-  virtual typename StrideTuple::type strides(typename StrideTuple::size_type i) const H2_NOEXCEPT = 0;
+  virtual typename StrideTuple::type stride(typename StrideTuple::size_type i) const H2_NOEXCEPT = 0;
 
   /** Return the number of dimensions (i.e., the rank) of the tensor. */
   typename ShapeTuple::size_type ndim() const H2_NOEXCEPT {

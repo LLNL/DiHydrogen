@@ -143,7 +143,17 @@ public:
 
   StrideTuple strides() const H2_NOEXCEPT { return mem_strides; }
 
+  typename StrideTuple::type stride(typename StrideTuple::size_type i)
+  {
+    return mem_strides[i];
+  }
+
   ShapeTuple shape() const H2_NOEXCEPT { return mem_shape; }
+
+  typename ShapeTuple::type shape(typename ShapeTuple::size_type i)
+  {
+    return mem_shape[i];
+  }
 
   /** Get the index of coords in the buffer. */
   DataIndexType get_index(const SingleCoordTuple& coords) const H2_NOEXCEPT {
