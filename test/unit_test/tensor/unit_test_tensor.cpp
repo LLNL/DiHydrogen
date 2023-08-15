@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
@@ -13,6 +14,13 @@
 
 using namespace h2;
 
+
+TEST_CASE("is_shape_contained", "[tensor]")
+{
+  REQUIRE(is_shape_contained(CoordTuple{DRng{0, 2}, ALL}, ShapeTuple{4, 4}));
+  REQUIRE_FALSE(
+      is_shape_contained(CoordTuple{DRng{2, 6}, ALL}, ShapeTuple{4, 4}));
+}
 
 TEMPLATE_LIST_TEST_CASE("Tensors can be created", "[tensor]", AllDevList)
 {
@@ -48,6 +56,27 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(tensor.get_device() == TestType::value);
   REQUIRE(tensor.data() != nullptr);
   REQUIRE(tensor.const_data() != nullptr);
+  REQUIRE(tensor.get({0, 0}) == tensor.data());
+
+  const TensorType const_tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
+  REQUIRE(const_tensor.shape() == ShapeTuple{4, 6});
+  REQUIRE(const_tensor.shape(0) == 4);
+  REQUIRE(const_tensor.shape(1) == 6);
+  REQUIRE(const_tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
+  REQUIRE(const_tensor.dim_type(0) == DT::Sample);
+  REQUIRE(const_tensor.dim_type(1) == DT::Any);
+  REQUIRE(const_tensor.strides() == StrideTuple{1, 4});
+  REQUIRE(const_tensor.stride(0) == 1);
+  REQUIRE(const_tensor.stride(1) == 4);
+  REQUIRE(const_tensor.ndim() == 2);
+  REQUIRE(const_tensor.numel() == 4*6);
+  REQUIRE_FALSE(const_tensor.is_empty());
+  REQUIRE(const_tensor.is_contiguous());
+  REQUIRE_FALSE(const_tensor.is_view());
+  REQUIRE(const_tensor.get_device() == TestType::value);
+  REQUIRE(const_tensor.data() != nullptr);
+  REQUIRE(const_tensor.const_data() != nullptr);
+  REQUIRE(const_tensor.get({0, 0}) == const_tensor.data());
 }
 
 TEMPLATE_LIST_TEST_CASE("Empty tensor metadata is sane", "[tensor]", AllDevList)
@@ -225,6 +254,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
     REQUIRE(view->numel() == tensor.numel());
     REQUIRE(view->is_view());
     REQUIRE(view->const_data() == tensor.data());
+    REQUIRE_THROWS(view->data());
     REQUIRE(view->is_contiguous());
   }
   SECTION("Viewing a subtensor works")
@@ -319,10 +349,49 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   {
     TensorType* view = tensor.view();
     REQUIRE_THROWS(view->resize(ShapeTuple{2, 3}));
+    REQUIRE_THROWS(view->resize(ShapeTuple{2, 3, 4},
+                                DTTuple{DT::Sample, DT::Any, DT::Any}));
   }
   SECTION("Viewing an invalid range fails")
   {
     REQUIRE_THROWS(tensor.view({ALL, DRng(0, 7)}));
+  }
+}
+
+TEMPLATE_LIST_TEST_CASE("Viewing constant tensors works",
+                        "[tensor]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<DataType, TestType::value>;
+
+  const TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
+
+  SECTION("Basic views work")
+  {
+    TensorType* view = tensor.view();
+    REQUIRE(view->shape() == ShapeTuple{4, 6});
+    REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
+    REQUIRE(view->strides() == StrideTuple{1, 4});
+    REQUIRE(view->ndim() == 2);
+    REQUIRE(view->numel() == tensor.numel());
+    REQUIRE(view->is_view());
+    REQUIRE(view->const_data() == tensor.data());
+    REQUIRE_THROWS(view->data());
+    REQUIRE(view->is_contiguous());
+  }
+  SECTION("Operator-style views work")
+  {
+    TensorType* view = tensor({DRng(1, 3), ALL});
+    REQUIRE(view->shape() == ShapeTuple{2, 6});
+    REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
+    REQUIRE(view->strides() == StrideTuple{1, 4});
+    REQUIRE(view->ndim() == 2);
+    REQUIRE(view->numel() == 2 * 6);
+    REQUIRE(view->is_view());
+    REQUIRE(view->const_data() == (tensor.data() + 1));
+    REQUIRE_THROWS(view->data());
+    REQUIRE_FALSE(view->is_contiguous());
   }
 }
 
@@ -339,15 +408,27 @@ TEMPLATE_LIST_TEST_CASE("Making tensors contiguous works",
   {
     write_ele<Dev>(tensor.data(), i, static_cast<DataType>(i));
   }
-  TensorType* view = tensor.view({DRng(1), ALL});
-  REQUIRE_FALSE(view->is_contiguous());
-  TensorType* contig = view->contiguous();
-  REQUIRE(contig->is_contiguous());
-  REQUIRE(contig->data() != view->data());
-  REQUIRE(contig->shape() == ShapeTuple{6});
-  REQUIRE(contig->strides() == StrideTuple{1});
-  for (DimType i = 0; i < contig->shape(0); ++i)
+
+  SECTION("Making contiguous tensors contiguous works")
   {
-    REQUIRE(read_ele<Dev>(contig->get({i})) == (1 + 4*i));
+    REQUIRE(tensor.is_contiguous());
+    TensorType* contig = tensor.contiguous();
+    REQUIRE(contig->is_view());
+    REQUIRE(contig->data() == tensor.data());
+  }
+  SECTION("Making non-contiguous tensors contiguous work")
+  {
+    TensorType* view = tensor.view({DRng(1), ALL});
+    REQUIRE_FALSE(view->is_contiguous());
+
+    TensorType* contig = view->contiguous();
+    REQUIRE(contig->is_contiguous());
+    REQUIRE(contig->data() != view->data());
+    REQUIRE(contig->shape() == ShapeTuple{6});
+    REQUIRE(contig->strides() == StrideTuple{1});
+    for (DimType i = 0; i < contig->shape(0); ++i)
+    {
+      REQUIRE(read_ele<Dev>(contig->get({i})) == (1 + 4*i));
+    }
   }
 }
