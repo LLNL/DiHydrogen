@@ -43,7 +43,17 @@ set_tests_properties([==[Testing the Version String.]==] PROPERTIES
 # Add the sequential Catch2 driver.
 #
 
-add_executable(SeqCatchTests SequentialCatchMain.cpp)
+add_executable(SeqCatchTests)
+if (H2_HAS_GPU)
+  add_executable(GPUCatchTests GPUCatchMain.cpp)
+  target_link_libraries(GPUCatchTests
+    PRIVATE ${H2_LIBRARIES} Catch2::Catch2)
+  target_compile_definitions(GPUCatchTests PRIVATE H2_TEST_WITH_GPU=1)
+  set_target_properties(GPUCatchTests PROPERTIES
+    CXX_STANDARD 17
+    CXX_EXTENSIONS OFF
+    CXX_STANDARD_REQUIRED ON)
+endif ()
 
 # Add Catch2 unit tests
 add_subdirectory(patterns/factory)
@@ -52,13 +62,14 @@ add_subdirectory(utils)
 add_subdirectory(tensor)
 
 target_link_libraries(SeqCatchTests
-  PRIVATE ${H2_LIBRARIES} Catch2::Catch2)
+  PRIVATE ${H2_LIBRARIES} Catch2::Catch2WithMain)
 set_target_properties(SeqCatchTests
   PROPERTIES
   CXX_STANDARD 17
   CXX_EXTENSIONS OFF
   CXX_STANDARD_REQUIRED ON)
 
+# Not 100% sold on this
 catch_discover_tests(SeqCatchTests)
 
 if (H2_CODE_COVERAGE)
@@ -69,8 +80,4 @@ endif ()
 if (H2_EXTRA_CXX_FLAGS)
   target_compile_options(SeqCatchTests
     PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${H2_EXTRA_CXX_FLAGS}>)
-endif ()
-
-if (H2_SEQUENTIAL_CATCH_TESTS)
-  catch_discover_tests(SeqCatchTests TEST_PREFIX "Seq--")
 endif ()
