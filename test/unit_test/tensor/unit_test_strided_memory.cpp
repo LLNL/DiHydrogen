@@ -12,10 +12,19 @@
 #include <type_traits>
 
 #include "h2/tensor/strided_memory.hpp"
+#include "h2/meta/TypeList.hpp"
 
 using namespace h2;
 
 using CPUDev_t = std::integral_constant<Device, Device::CPU>;
+#ifdef HYDROGEN_HAVE_GPU
+using GPUDev_t = std::integral_constant<Device, Device::GPU>;
+#endif
+using AllDevList = meta::TypeList <CPUDev_t
+#ifdef HYDROGEN_HAVE_GPU
+                                   , GPUDev_t
+#endif
+                                    >;
 
 using DataType = float;
 
@@ -59,7 +68,9 @@ TEST_CASE("get_contiguous_strides and are_strides_contiguous are compatible",
                                get_contiguous_strides(ShapeTuple{13, 3, 7})));
 }
 
-TEMPLATE_TEST_CASE("StridedMemory is sane", "[tensor][strided_memory]", CPUDev_t) {
+TEMPLATE_LIST_TEST_CASE("StridedMemory is sane",
+                        "[tensor][strided_memory]",
+                        AllDevList) {
   using MemType = StridedMemory<DataType, TestType::value>;
 
   MemType mem = MemType({3, 7});
@@ -69,9 +80,9 @@ TEMPLATE_TEST_CASE("StridedMemory is sane", "[tensor][strided_memory]", CPUDev_t
   REQUIRE(mem.shape() == ShapeTuple{3, 7});
 }
 
-TEMPLATE_TEST_CASE("Empty StridedMemory is sane",
-                   "[tensor][strided_memory]",
-                   CPUDev_t)
+TEMPLATE_LIST_TEST_CASE("Empty StridedMemory is sane",
+                        "[tensor][strided_memory]",
+                        AllDevList)
 {
   using MemType = StridedMemory<DataType, TestType::value>;
 
@@ -82,9 +93,9 @@ TEMPLATE_TEST_CASE("Empty StridedMemory is sane",
   REQUIRE(mem.shape() == ShapeTuple{});
 }
 
-TEMPLATE_TEST_CASE("StridedMemory indexing works",
-                   "[tensor][strided_memory]",
-                   CPUDev_t)
+TEMPLATE_LIST_TEST_CASE("StridedMemory indexing works",
+                        "[tensor][strided_memory]",
+                        AllDevList)
 {
   using MemType = StridedMemory<DataType, TestType::value>;
 
@@ -137,6 +148,7 @@ TEMPLATE_TEST_CASE("StridedMemory writing works",
   }
 }
 
+// TODO: Support GPU devices.
 TEMPLATE_TEST_CASE("StridedMemory views work",
                    "[tensor][strided_memory]",
                    CPUDev_t)
