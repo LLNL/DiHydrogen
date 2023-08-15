@@ -19,4 +19,5 @@ h2_add_sources_to_target_and_install(
   tensor_types.hpp
   tensor.hpp
   tensor_cpu.hpp
+  tensor_gpu.hpp
   )

@@ -11,6 +11,10 @@
 #include <type_traits>
 
 #include "h2/tensor/tensor_cpu.hpp"
+#ifdef HYDROGEN_HAVE_GPU
+#include "h2/tensor/tensor_gpu.hpp"
+#endif
+#include "h2/meta/TypeList.hpp"
 
 using namespace h2;
 
@@ -18,11 +22,19 @@ using namespace h2;
 // parameters. We therefore turn them into types this way to simplify
 // things. These declarations are just to save typing.
 using CPUDev_t = std::integral_constant<Device, Device::CPU>;
+#ifdef HYDROGEN_HAVE_GPU
+using GPUDev_t = std::integral_constant<Device, Device::GPU>;
+#endif
+using AllDevList = meta::TypeList <CPUDev_t
+#ifdef HYDROGEN_HAVE_GPU
+                                   , GPUDev_t
+#endif
+                                    >;
 
 // Placeholder for now, the data type of the tensor.
 using DataType = float;
 
-TEMPLATE_TEST_CASE("Tensors can be created", "[tensor]", CPUDev_t) {
+TEMPLATE_LIST_TEST_CASE("Tensors can be created", "[tensor]", AllDevList) {
   using TensorType = Tensor<DataType, TestType::value>;
   REQUIRE_NOTHROW(TensorType());
   REQUIRE_NOTHROW(TensorType({2}, {DT::Any}));
@@ -32,7 +44,7 @@ TEMPLATE_TEST_CASE("Tensors can be created", "[tensor]", CPUDev_t) {
   REQUIRE_NOTHROW(TensorType(const_cast<const DataType*>(null_buf), {0}, {DT::Any}, {1}));
 }
 
-TEMPLATE_TEST_CASE("Tensor metadata is sane", "[tensor]", CPUDev_t) {
+TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList) {
   using TensorType = Tensor<DataType, TestType::value>;
 
   TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
@@ -54,7 +66,7 @@ TEMPLATE_TEST_CASE("Tensor metadata is sane", "[tensor]", CPUDev_t) {
   REQUIRE(tensor.const_data() != nullptr);
 }
 
-TEMPLATE_TEST_CASE("Empty tensor metadata is sane", "[tensor]", CPUDev_t) {
+TEMPLATE_LIST_TEST_CASE("Empty tensor metadata is sane", "[tensor]", AllDevList) {
   using TensorType = Tensor<DataType, TestType::value>;
 
   TensorType tensor = TensorType();
@@ -72,7 +84,7 @@ TEMPLATE_TEST_CASE("Empty tensor metadata is sane", "[tensor]", CPUDev_t) {
   REQUIRE(tensor.const_data() == nullptr);
 }
 
-TEMPLATE_TEST_CASE("Resizing tensors works", "[tensor]", CPUDev_t) {
+TEMPLATE_LIST_TEST_CASE("Resizing tensors works", "[tensor]", AllDevList) {
   using TensorType = Tensor<DataType, TestType::value>;
 
   TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});

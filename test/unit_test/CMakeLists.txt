@@ -43,7 +43,7 @@ set_tests_properties([==[Testing the Version String.]==] PROPERTIES
 # Add the sequential Catch2 driver.
 #
 
-add_executable(SeqCatchTests)
+add_executable(SeqCatchTests SequentialCatchMain.cpp)
 
 # Add Catch2 unit tests
 add_subdirectory(patterns/factory)
@@ -51,9 +51,8 @@ add_subdirectory(patterns/multimethods)
 add_subdirectory(utils)
 add_subdirectory(tensor)
 
-# These tests use the default Catch2 main().
 target_link_libraries(SeqCatchTests
-  PRIVATE ${H2_LIBRARIES} Catch2::Catch2WithMain)
+  PRIVATE ${H2_LIBRARIES} Catch2::Catch2)
 set_target_properties(SeqCatchTests
   PROPERTIES
   CXX_STANDARD 17
