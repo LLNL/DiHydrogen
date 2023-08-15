@@ -8,16 +8,25 @@
 #include <catch2/catch_session.hpp>
 
 #include <El.hpp>
+#include <h2/gpu/runtime.hpp>
 
+struct GPUEnvironment
+{
+    GPUEnvironment()
+    {
+        El::gpu::Initialize();
+        h2::gpu::init_runtime();
+    }
+
+    ~GPUEnvironment()
+    {
+        h2::gpu::finalize_runtime();
+        El::gpu::Finalize();
+    }
+};
 
 int main(int argc, char** argv)
 {
-#ifdef HYDROGEN_HAVE_GPU
-  El::gpu::Initialize();
-#endif
-  int result = Catch::Session().run(argc, argv);
-#ifdef HYDROGEN_HAVE_GPU
-  El::gpu::Finalize();
-#endif
-  return result;
+    GPUEnvironment env;
+    return Catch::Session().run(argc, argv);
 }

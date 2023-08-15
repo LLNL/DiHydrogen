@@ -193,7 +193,13 @@ endif ()
 
 # Required dependencies
 
+find_package(Hydrogen 1.5.0 CONFIG REQUIRED)
+
 if (H2_ENABLE_CUDA)
+  if (NOT _HYDROGEN_HAVE_CUDA)
+    message(FATAL_ERROR "Hydrogen does not have CUDA support.")
+  endif ()
+
   enable_language(CUDA)
   include(SetupCUDAToolkit)
   if (CMAKE_CUDA_COMPILER)
@@ -208,13 +214,15 @@ if (H2_ENABLE_CUDA)
   endif ()
 endif (H2_ENABLE_CUDA)
 
-find_package(Hydrogen 1.5.0 CONFIG REQUIRED)
-
 find_package(spdlog CONFIG REQUIRED)
 set(H2_HAS_SPDLOG TRUE)
 
 # This is a placeholder.
 if (H2_ENABLE_ROCM)
+  if (NOT _HYDROGEN_HAVE_ROCM)
+    message(FATAL_ERROR "Hydrogen does not have ROCm support.")
+  endif ()
+
   # Our ROCm installs generally have a common prefix. It's not clear
   # that this is a global truth, but it's global enough for me.
   if (NOT H2_ROCM_PATH)
