@@ -66,7 +66,11 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory is sane",
   REQUIRE(mem.data() != nullptr);
   REQUIRE(mem.const_data() != nullptr);
   REQUIRE(mem.strides() == StrideTuple{1, 3});
+  REQUIRE(mem.stride(0) == 1);
+  REQUIRE(mem.stride(1) == 3);
   REQUIRE(mem.shape() == ShapeTuple{3, 7});
+  REQUIRE(mem.shape(0) == 3);
+  REQUIRE(mem.shape(1) == 7);
 }
 
 TEMPLATE_LIST_TEST_CASE("Empty StridedMemory is sane",
@@ -92,11 +96,11 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory indexing works",
   // This should iterate in exactly the generalized column-major order
   // data is stored in.
   DataIndexType idx = 0;
-  for (DimType k = 0; k < 2; ++k)
+  for (DimType k = 0; k < mem.shape(2); ++k)
   {
-    for (DimType j = 0; j < 7; ++j)
+    for (DimType j = 0; j < mem.shape(1); ++j)
     {
-      for (DimType i = 0; i < 3; ++i)
+      for (DimType i = 0; i < mem.shape(0); ++i)
       {
         REQUIRE(mem.get_index({i, j, k}) == idx);
         REQUIRE(mem.get_coord(idx) == SingleCoordTuple{i, j, k});
@@ -115,17 +119,17 @@ TEMPLATE_TEST_CASE("StridedMemory writing works",
 
   MemType mem = MemType({3, 7, 2});
   DataType* buf = mem.data();
-  for (std::size_t i = 0; i < 3 * 7 * 2; ++i)
+  for (std::size_t i = 0; i < product<std::size_t>(mem.shape()); ++i)
   {
     buf[i] = i;
   }
 
   DataIndexType idx = 0;
-  for (DimType k = 0; k < 2; ++k)
+  for (DimType k = 0; k < mem.shape(2); ++k)
   {
-    for (DimType j = 0; j < 7; ++j)
+    for (DimType j = 0; j < mem.shape(1); ++j)
     {
-      for (DimType i = 0; i < 3; ++i)
+      for (DimType i = 0; i < mem.shape(0); ++i)
       {
         REQUIRE(*mem.get({i, j, k}) == idx);
         REQUIRE(*mem.const_get({i, j, k}) == idx);
@@ -143,7 +147,7 @@ TEMPLATE_TEST_CASE("StridedMemory views work",
   using MemType = StridedMemory<DataType, TestType::value>;
 
   MemType base_mem = MemType({3, 7, 3});
-  for (std::size_t i = 0; i < 3 * 7 * 3; ++i)
+  for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
   {
     base_mem.data()[i] = i;
   }
@@ -154,12 +158,12 @@ TEMPLATE_TEST_CASE("StridedMemory views work",
     REQUIRE(mem.strides() == StrideTuple{1, 3, 21});
     REQUIRE(mem.shape() == ShapeTuple{2, 7, 2});
     REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({1, 0, 1})));
-    for (DimType k = 0; k < 2; ++k)
+    for (DimType k = 0; k < mem.shape(2); ++k)
     {
-      for (DimType j = 0; j < 7; ++j)
+      for (DimType j = 0; j < mem.shape(1); ++j)
       {
         DataIndexType idx = 0;
-        for (DimType i = 0; i < 2; ++i)
+        for (DimType i = 0; i < mem.shape(0); ++i)
         {
           REQUIRE(*mem.get({i, j, k}) == base_mem.get_index({i+1, j, k+1}));
           *mem.get({i, j, k}) = 1337;  // Large enough to not be a real index.
@@ -170,11 +174,11 @@ TEMPLATE_TEST_CASE("StridedMemory views work",
     // Verify that writes are visible in the original StridedMemory and
     // that only the expected region was modified.
     DataIndexType idx = 0;
-    for (DimType k = 0; k < 3; ++k)
+    for (DimType k = 0; k < base_mem.shape(2); ++k)
     {
-      for (DimType j = 0; j < 7; ++j)
+      for (DimType j = 0; j < base_mem.shape(1); ++j)
       {
-        for (DimType i = 0; i < 3; ++i)
+        for (DimType i = 0; i < base_mem.shape(0); ++i)
         {
           if (i >= 1 && i < 3 && k >= 1 && k < 3)
           {
@@ -195,9 +199,9 @@ TEMPLATE_TEST_CASE("StridedMemory views work",
     REQUIRE(mem.strides() == StrideTuple{3, 21});
     REQUIRE(mem.shape() == ShapeTuple{7, 2});
     REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({1, 0, 1})));
-    for (DimType k = 0; k < 2; ++k)
+    for (DimType k = 0; k < mem.shape(1); ++k)
     {
-      for (DimType j = 0; j < 7; ++j)
+      for (DimType j = 0; j < mem.shape(0); ++j)
       {
         REQUIRE(*mem.get({j, k}) == base_mem.get_index({1, j, k+1}));
       }

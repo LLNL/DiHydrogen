@@ -36,6 +36,8 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList) {
   REQUIRE(tensor.dim_type(0) == DT::Sample);
   REQUIRE(tensor.dim_type(1) == DT::Any);
   REQUIRE(tensor.strides() == StrideTuple{1, 4});
+  REQUIRE(tensor.stride(0) == 1);
+  REQUIRE(tensor.stride(1) == 4);
   REQUIRE(tensor.ndim() == 2);
   REQUIRE(tensor.numel() == 4*6);
   REQUIRE_FALSE(tensor.is_empty());
@@ -132,9 +134,9 @@ TEMPLATE_TEST_CASE("Writing to tensors works", "[tensor]", CPUDev_t) {
   }
 
   DataIndexType idx = 0;
-  for (DimType j = 0; j < 6; ++j)
+  for (DimType j = 0; j < tensor.shape(1); ++j)
   {
-    for (DimType i = 0; i < 4; ++i)
+    for (DimType i = 0; i < tensor.shape(0); ++i)
     {
       REQUIRE(tensor.get({i, j}) == idx);
       ++idx;
@@ -144,10 +146,11 @@ TEMPLATE_TEST_CASE("Writing to tensors works", "[tensor]", CPUDev_t) {
 
 TEMPLATE_TEST_CASE("Attaching tensors to existing buffers works", "[tensor]", CPUDev_t) {
   using TensorType = Tensor<DataType, TestType::value>;
+  constexpr std::size_t buf_size = 4*6;
 
   // Even if DataType is floating point, small integers are exact.
-  DataType buf[4*6];
-  for (std::size_t i = 0; i < 4*6; ++i)
+  DataType buf[buf_size];
+  for (std::size_t i = 0; i < buf_size; ++i)
   {
     buf[i] = i;
   }
@@ -157,17 +160,17 @@ TEMPLATE_TEST_CASE("Attaching tensors to existing buffers works", "[tensor]", CP
   REQUIRE(tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
   REQUIRE(tensor.strides() == StrideTuple{1, 4});
   REQUIRE(tensor.ndim() == 2);
-  REQUIRE(tensor.numel() == 4*6);
+  REQUIRE(tensor.numel() == buf_size);
   REQUIRE(tensor.is_view());
 
-  for (std::size_t i = 0; i < 4 * 6; ++i)
+  for (std::size_t i = 0; i < tensor.numel(); ++i)
   {
     REQUIRE(tensor.data()[i] == i);
   }
   DataIndexType idx = 0;
-  for (DimType j = 0; j < 6; ++j)
+  for (DimType j = 0; j < tensor.shape(1); ++j)
   {
-    for (DimType i = 0; i < 4; ++i)
+    for (DimType i = 0; i < tensor.shape(0); ++i)
     {
       REQUIRE(tensor.get({i, j}) == idx);
       ++idx;
@@ -180,7 +183,7 @@ TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
   using TensorType = Tensor<DataType, TestType::value>;
 
   TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
-  for (DataIndexType i = 0; i < 4*6; ++i)
+  for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
     tensor.data()[i] = i;
   }
@@ -192,12 +195,12 @@ TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
     REQUIRE(view->ndim() == 2);
-    REQUIRE(view->numel() == 4 * 6);
+    REQUIRE(view->numel() == tensor.numel());
     REQUIRE(view->is_view());
     REQUIRE(view->data() == tensor.data());
     REQUIRE(view->is_contiguous());
 
-    for (DataIndexType i = 0; i < 4*6; ++i)
+    for (DataIndexType i = 0; i < view->numel(); ++i)
     {
       REQUIRE(view->data()[i] == i);
     }
@@ -209,7 +212,7 @@ TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
     REQUIRE(view->ndim() == 2);
-    REQUIRE(view->numel() == 4 * 6);
+    REQUIRE(view->numel() == tensor.numel());
     REQUIRE(view->is_view());
     REQUIRE(view->const_data() == tensor.data());
     REQUIRE(view->is_contiguous());
@@ -226,7 +229,7 @@ TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
     REQUIRE(view->data() == (tensor.data() + 1));
     REQUIRE_FALSE(view->is_contiguous());
 
-    for (DimType i = 0; i < 6; ++i)
+    for (DimType i = 0; i < view->shape(0); ++i)
     {
       REQUIRE(view->get({i}) == (1 + 4*i));
     }
@@ -243,9 +246,9 @@ TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
     REQUIRE(view->data() == (tensor.data() + 1));
     REQUIRE_FALSE(view->is_contiguous());
 
-    for (DimType j = 0; j < 6; ++j)
+    for (DimType j = 0; j < view->shape(1); ++j)
     {
-      for (DimType i = 0; i < 2; ++i)
+      for (DimType i = 0; i < view->shape(0); ++i)
       {
         REQUIRE(view->get({i, j}) == (i+1 + j*4));
       }
@@ -259,12 +262,12 @@ TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
     REQUIRE(view->ndim() == 2);
-    REQUIRE(view->numel() == 4 * 6);
+    REQUIRE(view->numel() == tensor.numel());
     REQUIRE(view->is_view());
     REQUIRE(view->data() == tensor.data());
     REQUIRE(view->is_contiguous());
 
-    for (DataIndexType i = 0; i < 4*6; ++i)
+    for (DataIndexType i = 0; i < view->numel(); ++i)
     {
       REQUIRE(view->data()[i] == i);
     }
@@ -319,7 +322,7 @@ TEMPLATE_TEST_CASE("Making tensors contiguous works", "[tensor][!mayfail]", CPUD
   using TensorType = Tensor<DataType, TestType::value>;
 
   TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
-  for (DataIndexType i = 0; i < 4 * 6; ++i)
+  for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
     tensor.data()[i] = i;
   }
@@ -330,7 +333,7 @@ TEMPLATE_TEST_CASE("Making tensors contiguous works", "[tensor][!mayfail]", CPUD
   REQUIRE(contig->data() != view->data());
   REQUIRE(contig->shape() == ShapeTuple{6});
   REQUIRE(contig->strides() == StrideTuple{1});
-  for (DimType i = 0; i < 6; ++i)
+  for (DimType i = 0; i < contig->shape(0); ++i)
   {
     REQUIRE(contig->get(i) == (1 + 4 * i));
   }

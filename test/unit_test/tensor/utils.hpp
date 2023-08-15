@@ -26,6 +26,6 @@ using AllDevList = h2::meta::TypeList <CPUDev_t
                                     >;
 
 // Standard datatype to be used when testing.
-// Note: When used with integers, floats are exact for any integer less
-// than 2^24.
+// Note: When used with integers, floats are exact for any integer with
+// absolute value less than 2^24.
 using DataType = float;
