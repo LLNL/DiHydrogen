@@ -178,8 +178,14 @@ public:
     return const_view(coords);
   }
 
-  T get(SingleCoordTuple coords) const override {
-    return *(tensor_memory.get(coords));
+  T* get(SingleCoordTuple coords) override
+  {
+    return tensor_memory.get(coords);
+  }
+
+  const T* get(SingleCoordTuple coords) const override
+  {
+    return tensor_memory.get(coords);
   }
 
   SyncInfo<Dev> get_sync_info() const H2_NOEXCEPT

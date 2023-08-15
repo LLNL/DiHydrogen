@@ -14,7 +14,8 @@
 using namespace h2;
 
 
-TEMPLATE_LIST_TEST_CASE("Tensors can be created", "[tensor]", AllDevList) {
+TEMPLATE_LIST_TEST_CASE("Tensors can be created", "[tensor]", AllDevList)
+{
   using TensorType = Tensor<DataType, TestType::value>;
   REQUIRE_NOTHROW(TensorType());
   REQUIRE_NOTHROW(TensorType({2}, {DT::Any}));
@@ -24,7 +25,8 @@ TEMPLATE_LIST_TEST_CASE("Tensors can be created", "[tensor]", AllDevList) {
   REQUIRE_NOTHROW(TensorType(const_cast<const DataType*>(null_buf), {0}, {DT::Any}, {1}));
 }
 
-TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList) {
+TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
+{
   using TensorType = Tensor<DataType, TestType::value>;
 
   TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
@@ -48,7 +50,8 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList) {
   REQUIRE(tensor.const_data() != nullptr);
 }
 
-TEMPLATE_LIST_TEST_CASE("Empty tensor metadata is sane", "[tensor]", AllDevList) {
+TEMPLATE_LIST_TEST_CASE("Empty tensor metadata is sane", "[tensor]", AllDevList)
+{
   using TensorType = Tensor<DataType, TestType::value>;
 
   TensorType tensor = TensorType();
@@ -66,7 +69,8 @@ TEMPLATE_LIST_TEST_CASE("Empty tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(tensor.const_data() == nullptr);
 }
 
-TEMPLATE_LIST_TEST_CASE("Resizing tensors works", "[tensor]", AllDevList) {
+TEMPLATE_LIST_TEST_CASE("Resizing tensors works", "[tensor]", AllDevList)
+{
   using TensorType = Tensor<DataType, TestType::value>;
 
   TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
@@ -122,7 +126,9 @@ TEMPLATE_LIST_TEST_CASE("Resizing tensors works", "[tensor]", AllDevList) {
   }
 }
 
-TEMPLATE_TEST_CASE("Writing to tensors works", "[tensor]", CPUDev_t) {
+TEMPLATE_LIST_TEST_CASE("Writing to tensors works", "[tensor]", AllDevList)
+{
+  constexpr Device Dev = TestType::value;
   using TensorType = Tensor<DataType, TestType::value>;
 
   TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
@@ -130,7 +136,7 @@ TEMPLATE_TEST_CASE("Writing to tensors works", "[tensor]", CPUDev_t) {
   DataType* buf = tensor.data();
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
-    buf[i] = i;
+    write_ele<Dev>(buf, i, static_cast<DataType>(i));
   }
 
   DataIndexType idx = 0;
@@ -138,24 +144,27 @@ TEMPLATE_TEST_CASE("Writing to tensors works", "[tensor]", CPUDev_t) {
   {
     for (DimType i = 0; i < tensor.shape(0); ++i)
     {
-      REQUIRE(tensor.get({i, j}) == idx);
+      REQUIRE(read_ele<Dev>(tensor.get({i, j})) == idx);
       ++idx;
     }
   }
 }
 
-TEMPLATE_TEST_CASE("Attaching tensors to existing buffers works", "[tensor]", CPUDev_t) {
+TEMPLATE_LIST_TEST_CASE("Attaching tensors to existing buffers works",
+                        "[tensor]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
   using TensorType = Tensor<DataType, TestType::value>;
   constexpr std::size_t buf_size = 4*6;
 
-  // Even if DataType is floating point, small integers are exact.
-  DataType buf[buf_size];
+  DeviceBuf<DataType, Dev> buf(buf_size);
   for (std::size_t i = 0; i < buf_size; ++i)
   {
-    buf[i] = i;
+    write_ele<Dev>(buf.buf, i, static_cast<DataType>(i));
   }
 
-  TensorType tensor = TensorType(buf, {4, 6}, {DT::Sample, DT::Any}, {1, 4});
+  TensorType tensor = TensorType(buf.buf, {4, 6}, {DT::Sample, DT::Any}, {1, 4});
   REQUIRE(tensor.shape() == ShapeTuple{4, 6});
   REQUIRE(tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
   REQUIRE(tensor.strides() == StrideTuple{1, 4});
@@ -165,27 +174,28 @@ TEMPLATE_TEST_CASE("Attaching tensors to existing buffers works", "[tensor]", CP
 
   for (std::size_t i = 0; i < tensor.numel(); ++i)
   {
-    REQUIRE(tensor.data()[i] == i);
+    REQUIRE(read_ele<Dev>(tensor.data(), i) == i);
   }
   DataIndexType idx = 0;
   for (DimType j = 0; j < tensor.shape(1); ++j)
   {
     for (DimType i = 0; i < tensor.shape(0); ++i)
     {
-      REQUIRE(tensor.get({i, j}) == idx);
+      REQUIRE(read_ele<Dev>(tensor.get({i, j})) == idx);
       ++idx;
     }
   }
 }
 
-TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
+TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
 {
+  constexpr Device Dev = TestType::value;
   using TensorType = Tensor<DataType, TestType::value>;
 
   TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
-    tensor.data()[i] = i;
+    write_ele<Dev>(tensor.data(), i, static_cast<DataType>(i));
   }
 
   SECTION("Basic views work")
@@ -202,7 +212,7 @@ TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
 
     for (DataIndexType i = 0; i < view->numel(); ++i)
     {
-      REQUIRE(view->data()[i] == i);
+      REQUIRE(read_ele<Dev>(view->data(), i) == i);
     }
   }
   SECTION("Constant views work")
@@ -231,7 +241,7 @@ TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
 
     for (DimType i = 0; i < view->shape(0); ++i)
     {
-      REQUIRE(view->get({i}) == (1 + 4*i));
+      REQUIRE(read_ele<Dev>(view->get({i})) == (1 + 4*i));
     }
   }
   SECTION("Operator-style views work")
@@ -250,7 +260,7 @@ TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
     {
       for (DimType i = 0; i < view->shape(0); ++i)
       {
-        REQUIRE(view->get({i, j}) == (i+1 + j*4));
+        REQUIRE(read_ele<Dev>(view->get({i, j})) == (i+1 + j*4));
       }
     }
   }
@@ -269,7 +279,7 @@ TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
 
     for (DataIndexType i = 0; i < view->numel(); ++i)
     {
-      REQUIRE(view->data()[i] == i);
+      REQUIRE(read_ele<Dev>(view->data(), i) == i);
     }
   }
   SECTION("Unviewing a view works")
@@ -317,14 +327,17 @@ TEMPLATE_TEST_CASE("Viewing tensors works", "[tensor]", CPUDev_t)
 }
 
 // contiguous is not yet implemented.
-TEMPLATE_TEST_CASE("Making tensors contiguous works", "[tensor][!mayfail]", CPUDev_t)
+TEMPLATE_LIST_TEST_CASE("Making tensors contiguous works",
+                        "[tensor][!mayfail]",
+                        AllDevList)
 {
+  constexpr Device Dev = TestType::value;
   using TensorType = Tensor<DataType, TestType::value>;
 
   TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
-    tensor.data()[i] = i;
+    write_ele<Dev>(tensor.data(), i, static_cast<DataType>(i));
   }
   TensorType* view = tensor.view({DRng(1), ALL});
   REQUIRE_FALSE(view->is_contiguous());
@@ -335,6 +348,6 @@ TEMPLATE_TEST_CASE("Making tensors contiguous works", "[tensor][!mayfail]", CPUD
   REQUIRE(contig->strides() == StrideTuple{1});
   for (DimType i = 0; i < contig->shape(0); ++i)
   {
-    REQUIRE(contig->get(i) == (1 + 4 * i));
+    REQUIRE(read_ele<Dev>(contig->get({i})) == (1 + 4*i));
   }
 }

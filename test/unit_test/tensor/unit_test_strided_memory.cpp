@@ -110,18 +110,18 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory indexing works",
   }
 }
 
-// TODO: Support GPU devices.
-TEMPLATE_TEST_CASE("StridedMemory writing works",
-                   "[tensor][strided_memory]",
-                   CPUDev_t)
+TEMPLATE_LIST_TEST_CASE("StridedMemory writing works",
+                        "[tensor][strided_memory]",
+                        AllDevList)
 {
+  constexpr Device Dev = TestType::value;
   using MemType = StridedMemory<DataType, TestType::value>;
 
   MemType mem = MemType({3, 7, 2});
   DataType* buf = mem.data();
   for (std::size_t i = 0; i < product<std::size_t>(mem.shape()); ++i)
   {
-    buf[i] = i;
+    write_ele<Dev>(buf, i, static_cast<DataType>(i));
   }
 
   DataIndexType idx = 0;
@@ -131,25 +131,25 @@ TEMPLATE_TEST_CASE("StridedMemory writing works",
     {
       for (DimType i = 0; i < mem.shape(0); ++i)
       {
-        REQUIRE(*mem.get({i, j, k}) == idx);
-        REQUIRE(*mem.const_get({i, j, k}) == idx);
+        REQUIRE(read_ele<Dev>(mem.get({i, j, k})) == idx);
+        REQUIRE(read_ele<Dev>(mem.const_get({i, j, k})) == idx);
         ++idx;
       }
     }
   }
 }
 
-// TODO: Support GPU devices.
-TEMPLATE_TEST_CASE("StridedMemory views work",
-                   "[tensor][strided_memory]",
-                   CPUDev_t)
+TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
+                        "[tensor][strided_memory]",
+                        AllDevList)
 {
+  constexpr Device Dev = TestType::value;
   using MemType = StridedMemory<DataType, TestType::value>;
 
   MemType base_mem = MemType({3, 7, 3});
   for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
   {
-    base_mem.data()[i] = i;
+    write_ele<Dev>(base_mem.data(), i, static_cast<DataType>(i));
   }
 
   SECTION("Viewing a subtensor with all three dimensions nontrivial")
@@ -165,8 +165,10 @@ TEMPLATE_TEST_CASE("StridedMemory views work",
         DataIndexType idx = 0;
         for (DimType i = 0; i < mem.shape(0); ++i)
         {
-          REQUIRE(*mem.get({i, j, k}) == base_mem.get_index({i+1, j, k+1}));
-          *mem.get({i, j, k}) = 1337;  // Large enough to not be a real index.
+          REQUIRE(read_ele<Dev>(mem.get({i, j, k}))
+                  == base_mem.get_index({i + 1, j, k + 1}));
+          // Large enough to not be a real index.
+          write_ele<Dev>(mem.get({i, j, k}), 0, static_cast<DataType>(1337));
           ++idx;
         }
       }
@@ -182,11 +184,11 @@ TEMPLATE_TEST_CASE("StridedMemory views work",
         {
           if (i >= 1 && i < 3 && k >= 1 && k < 3)
           {
-            REQUIRE(*base_mem.get({i, j, k}) == 1337);
+            REQUIRE(read_ele<Dev>(base_mem.get({i, j, k})) == 1337);
           }
           else
           {
-            REQUIRE(*base_mem.get({i, j, k}) == idx);
+            REQUIRE(read_ele<Dev>(base_mem.get({i, j, k})) == idx);
           }
           ++idx;
         }
@@ -203,7 +205,8 @@ TEMPLATE_TEST_CASE("StridedMemory views work",
     {
       for (DimType j = 0; j < mem.shape(0); ++j)
       {
-        REQUIRE(*mem.get({j, k}) == base_mem.get_index({1, j, k+1}));
+        REQUIRE(read_ele<Dev>(mem.get({j, k}))
+                == base_mem.get_index({1, j, k + 1}));
       }
     }
   }

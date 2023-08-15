@@ -212,10 +212,13 @@ public:
   /** Convenience wrapper for const_view(coords). */
   virtual BaseTensor<T>* operator()(CoordTuple coords) const = 0;
 
+  /** Return a pointer to the tensor at a particular coordinate. */
+  virtual T* get(SingleCoordTuple coords) = 0;
+
   /**
-   * Return the value at a particular coordinate.
+   * Return a constant pointer to the tensor at a particular coordinate.
    */
-  virtual T get(SingleCoordTuple coords) const = 0;
+  virtual const T* get(SingleCoordTuple coords) const = 0;
 
 protected:
   ShapeTuple tensor_shape;  /**< Shape of the tensor. */

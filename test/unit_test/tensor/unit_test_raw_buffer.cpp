@@ -16,7 +16,10 @@
 using namespace h2;
 
 
-TEMPLATE_LIST_TEST_CASE("Raw buffers are sane", "[tensor][raw_buffer]", AllDevList) {
+TEMPLATE_LIST_TEST_CASE("Raw buffers are sane",
+                        "[tensor][raw_buffer]",
+                        AllDevList)
+{
   using BufType = RawBuffer<DataType, TestType::value>;
   constexpr std::size_t buf_size = 32;
 
@@ -53,7 +56,10 @@ TEMPLATE_LIST_TEST_CASE("Raw buffers are sane", "[tensor][raw_buffer]", AllDevLi
   }
 }
 
-TEMPLATE_LIST_TEST_CASE("Empty raw buffers are sane", "[tensor][raw_buffer]", AllDevList) {
+TEMPLATE_LIST_TEST_CASE("Empty raw buffers are sane",
+                        "[tensor][raw_buffer]",
+                        AllDevList)
+{
   using BufType = RawBuffer<DataType, TestType::value>;
 
   BufType buf;
@@ -86,8 +92,11 @@ TEMPLATE_LIST_TEST_CASE("Empty raw buffers are sane", "[tensor][raw_buffer]", Al
   }
 }
 
-// TODO: Generalize to support GPU devices.
-TEMPLATE_TEST_CASE("Raw buffers are writable", "[tensor][raw_buffer]", CPUDev_t) {
+TEMPLATE_LIST_TEST_CASE("Raw buffers are writable",
+                        "[tensor][raw_buffer]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
   using BufType = RawBuffer<DataType, TestType::value>;
   constexpr std::size_t buf_size = 32;
 
@@ -98,16 +107,18 @@ TEMPLATE_TEST_CASE("Raw buffers are writable", "[tensor][raw_buffer]", CPUDev_t)
   // There are no assertions here, but hopefully things crash and burn
   // if this doesn't work (or a sanitizer catches it).
   DataType* raw_buf = buf.data();
-  for (std::size_t i = 0; i < buf_size; ++i) {
-    raw_buf[i] = i;
+  for (std::size_t i = 0; i < buf_size; ++i)
+  {
+    write_ele<Dev>(raw_buf, i, static_cast<DataType>(i));
   }
 
   // Ensure on already allocated data should not change anything.
   buf.ensure();
   REQUIRE(buf.size() == buf_size);
   REQUIRE(buf.data() == raw_buf);
-  for (std::size_t i = 0; i < buf_size; ++i) {
-    REQUIRE(raw_buf[i] == i);
+  for (std::size_t i = 0; i < buf_size; ++i)
+  {
+    REQUIRE(read_ele<Dev>(raw_buf, i) == i);
   }
 
   // Release then ensure should be sane, but has no guarantees about
@@ -119,7 +130,8 @@ TEMPLATE_TEST_CASE("Raw buffers are writable", "[tensor][raw_buffer]", CPUDev_t)
   REQUIRE(buf.size() == buf_size);
   REQUIRE(buf.data() != nullptr);
   raw_buf = buf.data();
-  for (std::size_t i = 0; i < buf_size; ++i) {
-    raw_buf[i] = i;
+  for (std::size_t i = 0; i < buf_size; ++i)
+  {
+    write_ele<Dev>(raw_buf, i, static_cast<DataType>(i));
   }
 }
