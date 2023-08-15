@@ -10,10 +10,7 @@
 
 #include <type_traits>
 
-#include "h2/tensor/tensor_cpu.hpp"
-#ifdef HYDROGEN_HAVE_GPU
-#include "h2/tensor/tensor_gpu.hpp"
-#endif
+#include "h2/tensor/tensor.hpp"
 #include "h2/meta/TypeList.hpp"
 
 using namespace h2;

@@ -9,233 +9,221 @@
 
 /** @file
  *
- * This defines the public API for local (non-distributed) tensors.
+ * Local tensors that live on CPUs.
  */
 
+#include "h2/tensor/tensor_base.hpp"
+#include "h2/tensor/strided_memory.hpp"
 #include "h2/tensor/tensor_types.hpp"
+#include "strided_memory.hpp"
 #include "tensor_types.hpp"
 
-namespace h2
-{
+namespace h2 {
 
-/**
- * Base class for n-dimensional tensors.
- */
-template <typename T>
-class BaseTensor {
+/** Tensor class for arbitrary types and devices. */
+template <typename T, Device Dev>
+class Tensor : public BaseTensor<T> {
 public:
-
   using value_type = T;
+  static constexpr Device device = Dev;
 
-  /**
-   * Construct a tensor with the given shape and dimension types.
-   *
-   * The tensor may be constructed lazily, in which case memory will
-   * not be allocated until necessary. The `ensure` and `release`
-   * methods may also be used to manually control this.
-   */
-  BaseTensor(ShapeTuple shape_, DimensionTypeTuple dim_types_) :
-    tensor_shape(shape_),
-    tensor_dim_types(dim_types_),
-    tensor_view_type(ViewType::None)
+  Tensor(ShapeTuple shape_,
+         DimensionTypeTuple dim_types_,
+         const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
+    BaseTensor<T>(shape_, dim_types_),
+    tensor_memory(shape_, sync)
+  {
+    // Enforce same length of shape and dim types
+  }
+
+  Tensor(const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : Tensor(ShapeTuple(), DimensionTypeTuple(), sync) {}
+
+  Tensor(T* buffer,
+         ShapeTuple shape_,
+         DimensionTypeTuple dim_types_,
+         StrideTuple strides_,
+         const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
+    BaseTensor<T>(ViewType::Mutable, shape_, dim_types_),
+    tensor_memory(buffer, shape_, strides_, sync)
   {}
 
-  /** Construct an empty tensor. */
-  BaseTensor() : BaseTensor(ShapeTuple(), DimensionTypeTuple()) {}
+  Tensor(const T* buffer,
+         ShapeTuple shape_,
+         DimensionTypeTuple dim_types_,
+         StrideTuple strides_,
+         const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
+    BaseTensor<T>(ViewType::Const, shape_, dim_types_),
+    tensor_memory(const_cast<T*>(buffer), shape_, strides_, sync)
+  {}
 
-  /** Return the shape of the tensor. */
-  ShapeTuple shape() const H2_NOEXCEPT {
-    return tensor_shape;
+  StrideTuple strides() const H2_NOEXCEPT override {
+    return tensor_memory.strides();
   }
 
-  /** Return the size of a particular dimension. */
-  typename ShapeTuple::type shape(typename ShapeTuple::size_type i) const H2_NOEXCEPT {
-    return tensor_shape[i];
+  typename StrideTuple::type strides(typename StrideTuple::size_type i) const H2_NOEXCEPT override {
+    return tensor_memory.strides()[i];
   }
 
-  /** Return the types of each dimension of the tensor. */
-  DimensionTypeTuple dim_types() const H2_NOEXCEPT {
-    return tensor_dim_types;
+  bool is_contiguous() const H2_NOEXCEPT override {
+    return are_strides_contiguous(this->tensor_shape, tensor_memory.strides());
   }
 
-  /** Return the type of a particular dimension. */
-  typename DimensionTypeTuple::type dim_type(typename DimensionTypeTuple::size_type i) const H2_NOEXCEPT {
-    return tensor_dim_types[i];
-  }
+  Device get_device() const H2_NOEXCEPT override { return device; }
 
-  /** Return the strides of the underlying memory for the tensor. */
-  virtual StrideTuple strides() const H2_NOEXCEPT = 0;
-
-  /** Return the stride of a particular dimension. */
-  virtual typename StrideTuple::type strides(typename StrideTuple::size_type i) const H2_NOEXCEPT = 0;
-
-  /** Return the number of dimensions (i.e., the rank) of the tensor. */
-  typename ShapeTuple::size_type ndim() const H2_NOEXCEPT {
-    return tensor_shape.size();
-  }
-
-  /** Return the number of elements in the tensor. */
-  DataIndexType numel() const H2_NOEXCEPT {
-    if (tensor_shape.empty()) {
-      return 0;
+  void empty() override
+  {
+    auto sync = tensor_memory.get_sync_info();
+    tensor_memory = StridedMemory<T, Dev>(sync);
+    this->tensor_shape = ShapeTuple();
+    this->tensor_dim_types = DimensionTypeTuple();
+    if (this->is_view()) {
+      this->tensor_view_type = ViewType::None;
     }
-    return product<DataIndexType>(tensor_shape);
   }
 
-  /** Return true if the tensor is empty (all dimensions size 0). */
-  bool is_empty() const H2_NOEXCEPT {
-    return numel() == 0;
+  void resize(ShapeTuple new_shape) override {
+    if (this->is_view()) {
+      throw H2Exception("Cannot resize a view");
+    }
+    if (new_shape.size() > this->tensor_shape.size()) {
+      throw H2Exception("Must provide dimension types to resize larger");
+    }
+    auto sync = tensor_memory.get_sync_info();
+    tensor_memory = StridedMemory<T, Dev>(new_shape, sync);
+    this->tensor_shape = new_shape;
+    this->tensor_dim_types.set_size(new_shape.size());
   }
 
-  /** Return true if the tensor's underlying memory is contiguous. */
-  virtual bool is_contiguous() const H2_NOEXCEPT = 0;
-
-  /** Return true if this tensor is a view (i.e., does not own its storage). */
-  bool is_view() const H2_NOEXCEPT {
-    return tensor_view_type != ViewType::None;
+  void resize(ShapeTuple new_shape, DimensionTypeTuple new_dim_types) override {
+    if (this->is_view()) {
+      throw H2Exception("Cannot resize a view");
+    }
+    auto sync = tensor_memory.get_sync_info();
+    tensor_memory = StridedMemory<T, Dev>(new_shape, sync);
+    this->tensor_shape = new_shape;
+    this->tensor_dim_types = new_dim_types;
   }
 
-  /** Return the type of device this tensor is on. */
-  virtual Device get_device() const H2_NOEXCEPT = 0;
+  T* data() override {
+    if (this->tensor_view_type == ViewType::Const) {
+      throw H2Exception("Cannot access non-const buffer of const view");
+    }
+    return tensor_memory.data();
+  }
 
-  /**
-   * Clear the tensor and reset it to empty.
-   *
-   * If this is a view, this is equivalent to `unview`.
-   */
-  virtual void empty() = 0;
+  const T* data() const override
+  {
+    return tensor_memory.const_data();
+  }
 
-  /**
-   * Resize the tensor to a new shape, keeping dimension types the same.
-   *
-   * It is an error to call this on a view.
-   */
-  virtual void resize(ShapeTuple new_shape) = 0;
+  const T* const_data() const override {
+    return tensor_memory.const_data();
+  }
 
-  /**
-   * Resize the tensor to a new shape, also changing dimension types.
-   *
-   * It is an error to call this on a view.
-   */
-  virtual void resize(ShapeTuple new_shape, DimensionTypeTuple new_dim_types) = 0;
+  void ensure() override {
+    // TODO
+  }
 
-  /**
-   * Return a raw pointer to the underlying storage.
-   *
-   * @note Remember to account for the strides when accessing this.
-   */
-  virtual T* data() = 0;
+  void release() override {
+    // TODO
+  }
 
-  /** Return a raw constant pointer to the underlying storage. */
-  virtual const T* data() const = 0;
+  Tensor<T, Dev>* contiguous() override {
+    if (is_contiguous()) {
+      return view();
+    }
+    throw H2Exception("contiguous() not implemented");
+  }
 
-  /** Return a raw constant pointer to the underlying storage. */
-  virtual const T* const_data() const = 0;
+  Tensor<T, Dev>* view() override {
+    return view(CoordTuple(TuplePad<CoordTuple>(this->tensor_shape.size(), ALL)));
+  }
 
-  /** Ensure memory is backing this tensor, allocating if necessary. */
-  virtual void ensure() = 0;
+  Tensor<T, Dev>* view() const override
+  {
+    return view(CoordTuple(TuplePad<CoordTuple>(this->tensor_shape.size(), ALL)));
+  }
 
-  /**
-   * Release memory associated with this tensor.
-   *
-   * Note that if there are views, memory may not be deallocated
-   * immediately.
-   */
-  virtual void release() = 0;
+  Tensor<T, Dev>* view(CoordTuple coords) override
+  {
+    return make_view(coords, ViewType::Mutable);
+  }
 
-  /**
-   * Return a contiguous version of this tensor.
-   *
-   * If the tensor is contiguous, a view of the original tensor is
-   * returned. Otherwise, a new tensor is allocated.
-   *
-   * If this tensor is a view, the returned tensor will be distinct
-   * from the viewed tensor. Any views of this tensor will still be
-   * viewing the original tensor, not the contiguous tensor.
-   */
-  virtual BaseTensor<T>* contiguous() = 0;
+  Tensor<T, Dev>* view(CoordTuple coords) const override
+  {
+    return make_view(coords, ViewType::Const);
+  }
 
-  /**
-   * Return a view of this tensor.
-   *
-   * A view will share the same underlying memory as the original tensor,
-   * and will therefore reflect any changes made to the data; likewise,
-   * changes made through the view will be reflected in the original
-   * tensor. Additionally, the memory will remain valid so long as the
-   * view exists, even if the original tensor no longer exists.
-   *
-   * However, changes to metadata (e.g., shape, stride, etc.) do not
-   * propagate to views. It is up to the caller to ensure views remain
-   * consistent. Certain operations that would require changes to the
-   * underlying memory (e.g., `resize`) are not permitted on views and
-   * will throw an exception. Other operations have special semantics
-   * when the tensor is a view (e.g., `contiguous`, `empty`).
-   */
-  virtual BaseTensor<T>* view() = 0;
+  Tensor<T, Dev>* operator()(CoordTuple coords) override
+  {
+    return view(coords);
+  }
 
-  /** Return a constant view of this tensor. */
-  virtual BaseTensor<T>* view() const = 0;
+  void unview() override {
+    H2_ASSERT_DEBUG(this->is_view(), "Must be a view to unview");
+    empty();  // Emptying a view is equivalent to unviewing.
+  }
 
-  /**
-   * Return a view of a subtensor of this tensor.
-   *
-   * Note that (inherent in the definition of `DimensionRange`), views
-   * must be of contiguous subsets of the tensor (i.e., no strides).
-   */
-  virtual BaseTensor<T>* view(CoordTuple coords) = 0;
+  Tensor<T, Dev>* const_view() const override {
+    return const_view(CoordTuple(TuplePad<CoordTuple>(this->tensor_shape.size(), ALL)));
+  }
 
-  /**
-   * Return a constant view of a subtensor of this tensor.
-   */
-  virtual BaseTensor<T>* view(CoordTuple coords) const = 0;
+  Tensor<T, Dev>* const_view(CoordTuple coords) const override
+  {
+    return make_view(coords, ViewType::Const);
+  }
 
-  /**
-   * If this tensor is a view, stop viewing.
-   *
-   * The tensor will have empty dimensions after this.
-   *
-   * It is an error to call this if the tensor is not a view.
-   */
-  virtual void unview() = 0;
+  Tensor<T, Dev>* operator()(CoordTuple coords) const override {
+    return const_view(coords);
+  }
 
-  // Note: The operator() is abstract rather than defaulting to
-  // view(coords) because we need to covariant return type.
+  T get(SingleCoordTuple coords) const override {
+    return *(tensor_memory.get(coords));
+  }
 
-  /** Convenience wrapper for view(coords). */
-  virtual BaseTensor<T>* operator()(CoordTuple coords) = 0;
+  SyncInfo<Dev> get_sync_info() const H2_NOEXCEPT
+  {
+    return tensor_memory.get_sync_info();
+  }
 
-  /** Return a constant view of this tensor. */
-  virtual BaseTensor<T>* const_view() const = 0;
+  void set_sync_info(const SyncInfo<Dev>& sync)
+  {
+    if (this->is_view())
+    {
+      tensor_memory.set_sync_info(sync);
+    }
+    else
+    {
+      tensor_memory.set_sync_info(sync, true);
+    }
+  }
 
-  /** Return a constant view of a subtensor of this tensor. */
-  virtual BaseTensor<T>* const_view(CoordTuple coords) const = 0;
+private:
+  /** Underlying memory buffer for the tensor. */
+  StridedMemory<T, Dev> tensor_memory;
 
-  /** Convenience wrapper for const_view(coords). */
-  virtual BaseTensor<T>* operator()(CoordTuple coords) const = 0;
+  /** Private constructor for views. */
+  Tensor(ViewType view_type_, const StridedMemory<T, Dev>& mem_,
+         ShapeTuple shape_, DimensionTypeTuple dim_types_, CoordTuple coords) :
+    BaseTensor<T>(view_type_, shape_, dim_types_),
+    tensor_memory(mem_, coords)
+  {}
 
-  /**
-   * Return the value at a particular coordinate.
-   */
-  virtual T get(SingleCoordTuple coords) const = 0;
-
-protected:
-  ShapeTuple tensor_shape;  /**< Shape of the tensor. */
-  DimensionTypeTuple tensor_dim_types;  /**< Type of each dimension. */
-  ViewType tensor_view_type;  /**< What type of view (if any) this tensor is. */
-
-  /** Construct a tensor with the given view type, shape, and dimension types. */
-  BaseTensor(ViewType view_type_,
-             ShapeTuple shape_,
-             DimensionTypeTuple dim_types_) :
-    tensor_shape(shape_),
-    tensor_dim_types(dim_types_),
-    tensor_view_type(view_type_) {}
+  /** Helper for constructing views. */
+  Tensor<T, Dev>* make_view(CoordTuple coords, ViewType view_type) const
+  {
+    if (!is_shape_contained(coords, this->tensor_shape))
+    {
+      throw H2Exception("Attempting to construct an out-of-range view");
+    }
+    return new Tensor<T, Dev>(
+        view_type,
+        tensor_memory,
+        get_range_shape(coords, this->tensor_shape),
+        filter_by_trivial(coords, this->tensor_dim_types),
+        coords);
+  }
 };
 
-/** Generic Tensor class for arbitrary types. */
-template <typename T, Device Dev>
-class Tensor;
-
 }  // namespace h2
-
-#include "h2/tensor/tensor_cpu.hpp"
