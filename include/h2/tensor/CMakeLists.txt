@@ -17,7 +17,6 @@ h2_add_sources_to_target_and_install(
   raw_buffer.hpp
   strided_memory.hpp
   tensor_types.hpp
+  tensor_base.hpp
   tensor.hpp
-  tensor_cpu.hpp
-  tensor_gpu.hpp
   )
