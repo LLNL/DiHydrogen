@@ -12,31 +12,58 @@
  * Manages a raw memory buffer.
  */
 
+#include <algorithm>
 #include <ostream>
+#include <vector>
 #include <cstddef>
 
 #include "h2/tensor/tensor_types.hpp"
 
+#ifdef HYDROGEN_HAVE_GPU
+#include <cuda_runtime_api.h>
+#endif
+
 namespace h2 {
 
-namespace internal {
+namespace internal
+{
+
+// TODO: Use proper memory pools (probably Hydrogen's).
 
 template <typename T, Device Dev>
 struct Allocator {
-  static T* allocate(std::size_t size);
-  static void deallocate(T* buf);
+  static T* allocate(std::size_t size, const SyncInfo<Dev>& sync);
+  static void deallocate(T* buf, const SyncInfo<Dev>& sync);
 };
 
 template <typename T>
 struct Allocator<T, Device::CPU> {
-  static T* allocate(std::size_t size) {
+  static T* allocate(std::size_t size, const SyncInfo<Device::CPU>&) {
     return new T[size];
   }
 
-  static void deallocate(T* buf) {
+  static void deallocate(T* buf, const SyncInfo<Device::CPU>&) {
     delete[] buf;
   }
 };
+
+#ifdef HYDROGEN_HAVE_GPU
+template <typename T>
+struct Allocator<T, Device::GPU>
+{
+  static T* allocate(std::size_t size, const SyncInfo<Device::GPU>&)
+  {
+    T* buf = nullptr;
+    H_CHECK_CUDA(cudaMalloc(&buf, sizeof(T) * size));
+    return buf;
+  }
+
+  static void deallocate(T* buf, const SyncInfo<Device::GPU>&)
+  {
+    H_CHECK_CUDA(cudaFree(buf));
+  }
+};
+#endif
 
 }  // namespace internal
 
@@ -46,47 +73,101 @@ struct Allocator<T, Device::CPU> {
 template <typename T, Device Dev>
 class RawBuffer {
 public:
-
-  RawBuffer() : buffer(nullptr), buffer_size(0) {}
-  RawBuffer(std::size_t size) : buffer(nullptr), buffer_size(size) {
+  RawBuffer(const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : buffer(nullptr), buffer_size(0), sync_info(sync)
+  {}
+  RawBuffer(std::size_t size, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : buffer(nullptr), buffer_size(size), sync_info(sync)
+  {
     ensure();
   }
-  ~RawBuffer() {
-    release();
-  }
 
-  void ensure() {
+  ~RawBuffer() { release(); }
+
+  void ensure()
+  {
     if (buffer_size && !buffer) {
-      buffer = internal::Allocator<T, Dev>::allocate(buffer_size);
+      buffer = internal::Allocator<T, Dev>::allocate(buffer_size, sync_info);
     }
   }
 
   void release() {
-    if (buffer) {
-      internal::Allocator<T, Dev>::deallocate(buffer);
+    if (buffer)
+    {
+#ifdef HYDROGEN_HAVE_GPU
+      if constexpr (Dev == Device::GPU)
+      {
+        // Have sync_info wait on all other syncs.
+        for (const auto& s : pending_syncs)
+        {
+          El::AddSynchronizationPoint(s, sync_info);
+        }
+      }
+#endif
+      internal::Allocator<T, Dev>::deallocate(buffer, sync_info);
       buffer = nullptr;
     }
+#ifdef HYDROGEN_HAVE_GPU
+    if constexpr (Dev == Device::GPU) {
+      // Clear all recorded syncs.
+      pending_syncs.clear();
+    }
+#endif
   }
 
-  T* data() H2_NOEXCEPT {
-    return buffer;
-  }
+  T* data() H2_NOEXCEPT { return buffer; }
 
-  const T* data() const H2_NOEXCEPT {
-    return buffer;
-  }
+  const T* data() const H2_NOEXCEPT { return buffer; }
 
-  const T* const_data() const H2_NOEXCEPT {
-    return buffer;
-  }
+  const T* const_data() const H2_NOEXCEPT { return buffer; }
 
-  std::size_t size() const H2_NOEXCEPT {
-    return buffer_size;
+  std::size_t size() const H2_NOEXCEPT { return buffer_size; }
+
+  SyncInfo<Dev> get_sync_info() const H2_NOEXCEPT { return sync_info; }
+
+  void set_sync_info(const SyncInfo<Dev>& sync) { sync_info = sync; }
+
+  /**
+   * Inform the RawBuffer that sync is no longer using the RawBuffer,
+   * but may have pending operations, and therefore need to be sync'd
+   * with the RawBuffer's SyncInfo.
+   */
+  void register_release(const SyncInfo<Dev>& sync)
+  {
+    // For CPU devices, we don't need to do anything.
+#ifdef HYDROGEN_HAVE_GPU
+    if constexpr (Dev == Device::GPU)
+    {
+      // Check whether we already have saved a sync object with the
+      // same stream.
+      // Note: We use a vector because we do not expect there to be
+      // many distinct sync objects here. (And we don't have to deal
+      // with hash functions.)
+      auto i = std::find_if(
+          pending_syncs.begin(),
+          pending_syncs.end(),
+          [&](const SyncInfo<Dev>& s) { return s.Stream() == sync.Stream(); });
+      if (i == pending_syncs.end())
+      {
+        pending_syncs.push_back(sync);
+      }
+      else
+      {
+        // Update the event to capture any new work.
+        El::AddSynchronizationPoint(*i);
+      }
+    }
+#endif
   }
 
 private:
   T* buffer;  /**< Internal buffer. */
-  std::size_t buffer_size;   /**< Number of elements in buffer. */
+  std::size_t buffer_size;  /**< Number of elements in buffer. */
+  SyncInfo<Dev> sync_info;  /**< Synchronization management. */
+#ifdef HYDROGEN_HAVE_GPU
+  /** List of sync objects that no longer reference this buffer. */
+  std::vector<SyncInfo<Dev>> pending_syncs;
+#endif
 };
 
 /** Support printing RawBuffer. */

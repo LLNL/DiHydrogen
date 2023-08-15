@@ -26,23 +26,34 @@ public:
   using value_type = T;
   static constexpr Device device = Device::CPU;
 
-  Tensor(ShapeTuple shape_, DimensionTypeTuple dim_types_) :
+  Tensor(ShapeTuple shape_,
+         DimensionTypeTuple dim_types_,
+         const SyncInfo<Device::CPU>& sync = SyncInfo<Device::CPU>{}) :
     BaseTensor<T>(shape_, dim_types_),
-    tensor_memory(shape_)
-  {}
+    tensor_memory(shape_, sync)
+  {
 
-  Tensor() : Tensor(ShapeTuple(), DimensionTypeTuple()) {}
+  }
 
-  Tensor(T* buffer, ShapeTuple shape_, DimensionTypeTuple dim_types_,
-         StrideTuple strides_) :
+  Tensor(const SyncInfo<Device::CPU>& sync = SyncInfo<Device::CPU>{})
+    : Tensor(ShapeTuple(), DimensionTypeTuple(), sync) {}
+
+  Tensor(T* buffer,
+         ShapeTuple shape_,
+         DimensionTypeTuple dim_types_,
+         StrideTuple strides_,
+         const SyncInfo<Device::CPU>& sync = SyncInfo<Device::CPU>{}) :
     BaseTensor<T>(ViewType::Mutable, shape_, dim_types_),
-    tensor_memory(buffer, shape_, strides_)
+    tensor_memory(buffer, shape_, strides_, sync)
   {}
 
-  Tensor(const T* buffer, ShapeTuple shape_, DimensionTypeTuple dim_types_,
-         StrideTuple strides_) :
+  Tensor(const T* buffer,
+         ShapeTuple shape_,
+         DimensionTypeTuple dim_types_,
+         StrideTuple strides_,
+         const SyncInfo<Device::CPU>& sync = SyncInfo<Device::CPU>{}) :
     BaseTensor<T>(ViewType::Const, shape_, dim_types_),
-    tensor_memory(const_cast<T*>(buffer), shape_, strides_)
+    tensor_memory(const_cast<T*>(buffer), shape_, strides_, sync)
   {}
 
   StrideTuple strides() const H2_NOEXCEPT override {
@@ -59,8 +70,10 @@ public:
 
   Device get_device() const H2_NOEXCEPT override { return device; }
 
-  void empty() override {
-    tensor_memory = StridedMemory<T, Device::CPU>();
+  void empty() override
+  {
+    auto sync = tensor_memory.get_sync_info();
+    tensor_memory = StridedMemory<T, Device::CPU>(sync);
     this->tensor_shape = ShapeTuple();
     this->tensor_dim_types = DimensionTypeTuple();
     if (this->is_view()) {
@@ -75,7 +88,8 @@ public:
     if (new_shape.size() > this->tensor_shape.size()) {
       throw H2Exception("Must provide dimension types to resize larger");
     }
-    tensor_memory = StridedMemory<T, Device::CPU>(new_shape);
+    auto sync = tensor_memory.get_sync_info();
+    tensor_memory = StridedMemory<T, Device::CPU>(new_shape, sync);
     this->tensor_shape = new_shape;
     this->tensor_dim_types.set_size(new_shape.size());
   }
@@ -84,7 +98,8 @@ public:
     if (this->is_view()) {
       throw H2Exception("Cannot resize a view");
     }
-    tensor_memory = StridedMemory<T, Device::CPU>(new_shape);
+    auto sync = tensor_memory.get_sync_info();
+    tensor_memory = StridedMemory<T, Device::CPU>(new_shape, sync);
     this->tensor_shape = new_shape;
     this->tensor_dim_types = new_dim_types;
   }
@@ -164,6 +179,23 @@ public:
 
   T get(SingleCoordTuple coords) const override {
     return *(tensor_memory.get(coords));
+  }
+
+  SyncInfo<Device::CPU> get_sync_info() const H2_NOEXCEPT
+  {
+    return tensor_memory.get_sync_info();
+  }
+
+  void set_sync_info(const SyncInfo<Device::CPU>& sync)
+  {
+    if (this->is_view())
+    {
+      tensor_memory.set_sync_info(sync);
+    }
+    else
+    {
+      tensor_memory.set_sync_info(sync, true);
+    }
   }
 
 private:

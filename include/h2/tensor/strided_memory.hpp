@@ -64,22 +64,24 @@ class StridedMemory {
 public:
 
   /** Allocate empty memory. */
-  StridedMemory()
+  StridedMemory(const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : raw_buffer(nullptr),
       mem_buffer(nullptr),
       mem_strides{},
-      mem_shape{}
+      mem_shape{},
+      sync_info(sync)
   {}
 
   /** Allocate memory for shape, with unit strides. */
-  StridedMemory(ShapeTuple shape)
-    : StridedMemory()
+  StridedMemory(ShapeTuple shape, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : StridedMemory(sync)
   {
     if (!shape.empty())
     {
       mem_strides = get_contiguous_strides(shape);
       mem_shape = shape;
-      raw_buffer = std::make_shared<RawBuffer<T, Dev>>(product<std::size_t>(shape));
+      raw_buffer = std::make_shared<RawBuffer<T, Dev>>(
+        product<std::size_t>(shape), sync);
       mem_buffer = raw_buffer->data();
     }
   }
@@ -89,8 +91,9 @@ public:
     : raw_buffer(base.raw_buffer),
       mem_buffer(const_cast<T*>(base.get(get_range_start(coords)))),
       mem_strides(
-        TuplePad<StrideTuple>(base.mem_strides.size())),  // Will be resized.
-      mem_shape(get_range_shape(coords, base.shape()))
+        TuplePad<StrideTuple>(base.mem_strides.size())), // Will be resized.
+      mem_shape(get_range_shape(coords, base.shape())),
+      sync_info(base.sync_info)
   {
     H2_ASSERT_DEBUG(coords.size() <= base.mem_strides.size(),
                     "coords size not compatible with strides");
@@ -107,14 +110,24 @@ public:
   }
 
   /** Wrap an existing memory buffer. */
-  StridedMemory(T* buffer, ShapeTuple shape, StrideTuple strides)
+  StridedMemory(T* buffer,
+                ShapeTuple shape,
+                StrideTuple strides,
+                const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : raw_buffer(nullptr),
       mem_buffer(buffer),
       mem_strides(strides),
-      mem_shape(shape)
+      mem_shape(shape),
+      sync_info(sync)
   {}
 
-  ~StridedMemory() {}
+  ~StridedMemory()
+  {
+    if (raw_buffer)
+    {
+      raw_buffer->register_release(sync_info);
+    }
+  }
 
   T* data() H2_NOEXCEPT {
     return mem_buffer;
@@ -167,6 +180,20 @@ public:
     return &(mem_buffer[get_index(coords)]);
   }
 
+  SyncInfo<Dev> get_sync_info() const H2_NOEXCEPT
+  {
+    return sync_info;
+  }
+
+  void set_sync_info(const SyncInfo<Dev>& sync, bool set_raw = false)
+  {
+    sync_info = sync;
+    if (raw_buffer && set_raw)
+    {
+      raw_buffer->set_sync_info(sync);
+    }
+  }
+
 private:
   /**
    * Raw underlying memory buffer.
@@ -178,6 +205,7 @@ private:
   T* mem_buffer;  /**< Pointer to usable buffer. */
   StrideTuple mem_strides;  /**< Strides associated with the memory. */
   ShapeTuple mem_shape;  /**< Shape describing the extent of the memory. */
+  SyncInfo<Dev> sync_info;  /**< Synchronization info for operations. */
 };
 
 /** Support printing StridedMemory. */
