@@ -102,7 +102,7 @@ public:
   void release() {
     if (buffer)
     {
-#ifdef HYDROGEN_HAVE_GPU
+#ifdef H2_HAS_GPU
       if constexpr (Dev == Device::GPU)
       {
         // Have sync_info wait on all other syncs.
@@ -115,7 +115,7 @@ public:
       internal::Allocator<T, Dev>::deallocate(buffer, sync_info);
       buffer = nullptr;
     }
-#ifdef HYDROGEN_HAVE_GPU
+#ifdef H2_HAS_GPU
     if constexpr (Dev == Device::GPU) {
       // Clear all recorded syncs.
       pending_syncs.clear();
@@ -143,7 +143,7 @@ public:
   void register_release(const SyncInfo<Dev>& sync)
   {
     // For CPU devices, we don't need to do anything.
-#ifdef HYDROGEN_HAVE_GPU
+#ifdef H2_HAS_GPU
     if constexpr (Dev == Device::GPU)
     {
       // Check whether we already have saved a sync object with the
@@ -172,7 +172,7 @@ private:
   T* buffer;  /**< Internal buffer. */
   std::size_t buffer_size;  /**< Number of elements in buffer. */
   SyncInfo<Dev> sync_info;  /**< Synchronization management. */
-#ifdef HYDROGEN_HAVE_GPU
+#ifdef H2_HAS_GPU
   /** List of sync objects that no longer reference this buffer. */
   std::vector<SyncInfo<Dev>> pending_syncs;
 #endif

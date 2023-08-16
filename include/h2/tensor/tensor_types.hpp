@@ -86,7 +86,7 @@ inline std::ostream& operator<<(std::ostream& os, const Device& dev)
   case Device::CPU:
     os << "CPU";
     break;
-#ifdef HYDROGEN_HAVE_GPU
+#ifdef H2_HAS_GPU
   case Device::GPU:
     os << "GPU";
     break;
@@ -179,7 +179,7 @@ inline std::ostream& operator<<(std::ostream& os,
   return os;
 }
 
-#ifdef HYDROGEN_HAVE_GPU
+#ifdef H2_HAS_GPU
 template <>
 inline std::ostream& operator<<(std::ostream& os,
                                 const SyncInfo<Device::GPU>& sync)
