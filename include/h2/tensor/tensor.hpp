@@ -32,9 +32,7 @@ public:
          const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
     BaseTensor<T>(shape_, dim_types_),
     tensor_memory(shape_, sync)
-  {
-    // Enforce same length of shape and dim types
-  }
+  {}
 
   Tensor(const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : Tensor(ShapeTuple(), DimensionTypeTuple(), sync) {}

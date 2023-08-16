@@ -37,7 +37,10 @@ public:
     tensor_shape(shape_),
     tensor_dim_types(dim_types_),
     tensor_view_type(ViewType::None)
-  {}
+  {
+    H2_ASSERT_DEBUG(tensor_shape.size() == tensor_dim_types.size(),
+                    "Tensor shape and dimension types must be the same size");
+  }
 
   /** Construct an empty tensor. */
   BaseTensor() : BaseTensor(ShapeTuple(), DimensionTypeTuple()) {}
