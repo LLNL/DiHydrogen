@@ -19,8 +19,8 @@
 
 #include "h2/tensor/tensor_types.hpp"
 
-#ifdef HYDROGEN_HAVE_GPU
-#include <cuda_runtime_api.h>
+#ifdef H2_HAS_GPU
+#include "h2/gpu/memory_utils.hpp"
 #endif
 
 namespace h2 {
@@ -47,20 +47,28 @@ struct Allocator<T, Device::CPU> {
   }
 };
 
-#ifdef HYDROGEN_HAVE_GPU
+#ifdef H2_HAS_GPU
 template <typename T>
 struct Allocator<T, Device::GPU>
 {
-  static T* allocate(std::size_t size, const SyncInfo<Device::GPU>&)
+  static T* allocate(std::size_t size, const SyncInfo<Device::GPU>& si)
   {
     T* buf = nullptr;
-    H_CHECK_CUDA(cudaMalloc(&buf, sizeof(T) * size));
+    // FIXME: add H2_CHECK_GPU...
+    H2_ASSERT(gpu::default_cub_allocator().DeviceAllocate(
+                  reinterpret_cast<void**>(&buf),
+                  size*sizeof(T),
+                  si.Stream()) == 0,
+              std::runtime_error,
+              "CUB allocation failed.");
     return buf;
   }
 
   static void deallocate(T* buf, const SyncInfo<Device::GPU>&)
   {
-    H_CHECK_CUDA(cudaFree(buf));
+    H2_ASSERT(gpu::default_cub_allocator().DeviceFree(buf) == 0,
+              std::runtime_error,
+              "CUB deallocation failed.");
   }
 };
 #endif

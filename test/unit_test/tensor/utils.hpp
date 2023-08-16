@@ -12,8 +12,8 @@
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/meta/TypeList.hpp"
 
-#ifdef HYDROGEN_HAVE_GPU
-#include <cuda_runtime_api.h>
+#ifdef H2_HAS_GPU
+#include "h2/gpu/memory_utils.hpp"
 #endif
 
 // List of device types that will be tested by Catch2.
@@ -60,12 +60,12 @@ struct Accessor<T, h2::Device::GPU>
   static T read_ele(const T* buf, std::size_t i)
   {
     T val;
-    H_CHECK_CUDA(cudaMemcpy(&val, buf + i, sizeof(T), cudaMemcpyDeviceToHost));
+    ::h2::gpu::mem_copy(&val, buf + i, 1);
     return val;
   }
   static void write_ele(T* buf, std::size_t i, const T& val)
   {
-    H_CHECK_CUDA(cudaMemcpy(buf + i, &val, sizeof(T), cudaMemcpyHostToDevice));
+    ::h2::gpu::mem_copy(buf + i, &val, 1);
   }
 };
 #endif
@@ -120,15 +120,19 @@ struct DeviceBuf<T, h2::Device::GPU>
   {
     if (size > 0)
     {
-      H_CHECK_CUDA(cudaMalloc(&buf, sizeof(T) * size));
+      H2_ASSERT(
+          ::h2::gpu::default_cub_allocator().DeviceAllocate(
+              reinterpret_cast<void**>(&buf),
+              size*sizeof(T),
+              /*stream=*/0) == 0,
+          std::runtime_error,
+          "CUB allocation failed.");
     }
   }
   ~DeviceBuf()
   {
     if (buf)
-    {
-      H_CHECK_CUDA(cudaFree(buf));
-    }
+      static_cast<void>(::h2::gpu::default_cub_allocator().DeviceFree(buf));
   }
 
   T* buf = nullptr;
