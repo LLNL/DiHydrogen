@@ -51,7 +51,7 @@ struct Accessor<T, h2::Device::CPU>
   static void write_ele(T* buf, std::size_t i, const T& val) { buf[i] = val; }
 };
 
-#ifdef HYDROGEN_HAVE_GPU
+#ifdef H2_HAS_GPU
 // Note: These are not at all efficient, and meant only for testing
 // with small test cases.
 template <typename T>
@@ -113,6 +113,7 @@ struct DeviceBuf<T, h2::Device::CPU>
   T* buf = nullptr;
 };
 
+#ifdef H2_HAS_GPU
 template <typename T>
 struct DeviceBuf<T, h2::Device::GPU>
 {
@@ -137,3 +138,4 @@ struct DeviceBuf<T, h2::Device::GPU>
 
   T* buf = nullptr;
 };
+#endif // H2_HAS_GPU
