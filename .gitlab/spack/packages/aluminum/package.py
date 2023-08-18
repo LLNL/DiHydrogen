@@ -8,6 +8,10 @@ import os
 import spack.platforms.cray
 from spack.package import *
 
+def cmake_cache_filepath(name, value, comment=""):
+    """Generate a string for a cmake cache variable"""
+    return 'set({0} "{1}" CACHE FILEPATH "{2}")\n'.format(name, value, comment)
+
 class Aluminum(CachedCMakePackage, CudaPackage, ROCmPackage):
     """Aluminum provides a generic interface to high-performance
     communication libraries, with a focus on allreduce
