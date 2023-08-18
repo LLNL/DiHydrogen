@@ -97,6 +97,14 @@ public:
     return tensor_view_type != ViewType::None;
   }
 
+  /** Return true if this tensor is a constant view. */
+  bool is_const_view() const H2_NOEXCEPT {
+    return tensor_view_type == ViewType::Const;
+  }
+
+  /** Return the type of view this tensor is (may be ViewType::None). */
+  ViewType get_view_type() const H2_NOEXCEPT { return tensor_view_type; }
+
   /** Return the type of device this tensor is on. */
   virtual Device get_device() const H2_NOEXCEPT = 0;
 

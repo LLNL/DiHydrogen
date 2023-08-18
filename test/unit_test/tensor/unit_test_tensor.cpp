@@ -53,6 +53,8 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE_FALSE(tensor.is_empty());
   REQUIRE(tensor.is_contiguous());
   REQUIRE_FALSE(tensor.is_view());
+  REQUIRE_FALSE(tensor.is_const_view());
+  REQUIRE(tensor.get_view_type() == ViewType::None);
   REQUIRE(tensor.get_device() == TestType::value);
   REQUIRE(tensor.data() != nullptr);
   REQUIRE(tensor.const_data() != nullptr);
@@ -73,6 +75,8 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE_FALSE(const_tensor.is_empty());
   REQUIRE(const_tensor.is_contiguous());
   REQUIRE_FALSE(const_tensor.is_view());
+  REQUIRE_FALSE(tensor.is_const_view());
+  REQUIRE(tensor.get_view_type() == ViewType::None);
   REQUIRE(const_tensor.get_device() == TestType::value);
   REQUIRE(const_tensor.data() != nullptr);
   REQUIRE(const_tensor.const_data() != nullptr);
@@ -93,6 +97,8 @@ TEMPLATE_LIST_TEST_CASE("Empty tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(tensor.is_empty());
   REQUIRE(tensor.is_contiguous());
   REQUIRE_FALSE(tensor.is_view());
+  REQUIRE_FALSE(tensor.is_const_view());
+  REQUIRE(tensor.get_view_type() == ViewType::None);
   REQUIRE(tensor.get_device() == TestType::value);
   REQUIRE(tensor.data() == nullptr);
   REQUIRE(tensor.const_data() == nullptr);
@@ -200,6 +206,8 @@ TEMPLATE_LIST_TEST_CASE("Attaching tensors to existing buffers works",
   REQUIRE(tensor.ndim() == 2);
   REQUIRE(tensor.numel() == buf_size);
   REQUIRE(tensor.is_view());
+  REQUIRE_FALSE(tensor.is_const_view());
+  REQUIRE(tensor.get_view_type() == ViewType::Mutable);
 
   for (std::size_t i = 0; i < tensor.numel(); ++i)
   {
@@ -236,6 +244,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
     REQUIRE(view->ndim() == 2);
     REQUIRE(view->numel() == tensor.numel());
     REQUIRE(view->is_view());
+    REQUIRE_FALSE(view->is_const_view());
+    REQUIRE(view->get_view_type() == ViewType::Mutable);
     REQUIRE(view->data() == tensor.data());
     REQUIRE(view->is_contiguous());
 
@@ -253,6 +263,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
     REQUIRE(view->ndim() == 2);
     REQUIRE(view->numel() == tensor.numel());
     REQUIRE(view->is_view());
+    REQUIRE(view->is_const_view());
+    REQUIRE(view->get_view_type() == ViewType::Const);
     REQUIRE(view->const_data() == tensor.data());
     REQUIRE_THROWS(view->data());
     REQUIRE(view->is_contiguous());
@@ -376,6 +388,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing constant tensors works",
     REQUIRE(view->ndim() == 2);
     REQUIRE(view->numel() == tensor.numel());
     REQUIRE(view->is_view());
+    REQUIRE(view->is_const_view());
+    REQUIRE(view->get_view_type() == ViewType::Const);
     REQUIRE(view->const_data() == tensor.data());
     REQUIRE_THROWS(view->data());
     REQUIRE(view->is_contiguous());
@@ -389,6 +403,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing constant tensors works",
     REQUIRE(view->ndim() == 2);
     REQUIRE(view->numel() == 2 * 6);
     REQUIRE(view->is_view());
+    REQUIRE(view->is_const_view());
+    REQUIRE(view->get_view_type() == ViewType::Const);
     REQUIRE(view->const_data() == (tensor.data() + 1));
     REQUIRE_THROWS(view->data());
     REQUIRE_FALSE(view->is_contiguous());
