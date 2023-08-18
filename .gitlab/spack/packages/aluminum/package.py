@@ -8,7 +8,7 @@ import os
 import spack.platforms.cray
 from spack.package import *
 
-class Aluminum(CMakePackage, CudaPackage, ROCmPackage):
+class Aluminum(CachedCMakePackage, CudaPackage, ROCmPackage):
     """Aluminum provides a generic interface to high-performance
     communication libraries, with a focus on allreduce
     algorithms. Blocking and non-blocking algorithms and GPU-aware
@@ -114,9 +114,14 @@ class Aluminum(CMakePackage, CudaPackage, ROCmPackage):
     with when("+cuda"):
         depends_on("cub", when="^cuda@:10")
         depends_on("hwloc +cuda +nvml")
-        depends_on("nccl@2.7.0-0:", when="+nccl")
-        if (spack.platforms.cray.slingshot_network()):
-            depends_on("aws-ofi-nccl", when="+nccl")
+        with when("+nccl"):
+            depends_on("nccl@2.7.0-0:")
+            for arch in CudaPackage.cuda_arch_values:
+                depends_on(
+                    "nccl +cuda cuda_arch={0}".format(arch),
+                    when="+cuda cuda_arch={0}".format(arch))
+            if (spack.platforms.cray.slingshot_network()):
+                depends_on("aws-ofi-nccl") # Note: NOT a CudaPackage
 
     with when("+rocm"):
         depends_on("hipcub +rocm")
@@ -156,18 +161,6 @@ class Aluminum(CMakePackage, CudaPackage, ROCmPackage):
     def initconfig_compiler_entries(self):
         spec = self.spec
         entries = super(Aluminum, self).initconfig_compiler_entries()
-
-        # We don't need this generator, we don't want this generator.
-        # We don't specify a generator for Aluminum BECAUSE IT DOESN'T
-        # (shouldn't) MATTER in the sense that it doesn't (shouldn't)
-        # impact the correctness of a build, and it should not be
-        # hard-coded into the CMake cache file (especially since
-        # "-G<something else>" doesn't override it). Moreover, to
-        # choose to encode it in the cache file is to make assumptions
-        # about how the cache file will be consumed, which creates a
-        # headache for consumers outside those assumptions (an old
-        # adage about what happens when one assumes comes to mind).
-        entries = [ x for x in entries if "CMAKE_GENERATOR" not in x and "CMAKE_MAKE_PROGRAM" not in x ]
 
         # FIXME: Enforce this better in the actual CMake.
         entries.append(cmake_cache_string("CMAKE_CXX_STANDARD", "17"))

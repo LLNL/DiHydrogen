@@ -8,8 +8,33 @@ import os
 import spack.build_environment
 from spack.package import *
 
+# This is a hack to get around some deficiencies in Hydrogen.
+def get_blas_entries(inspec):
+    entries = []
+    spec = inspec["hydrogen"]
+    if "blas=openblas" in spec:
+        entries.append(cmake_cache_option("DiHydrogen_USE_OpenBLAS", True))
+    elif "blas=mkl" in spec or spec.satisfies("^intel-mkl"):
+        entries.append(cmake_cache_option("DiHydrogen_USE_MKL", True))
+    elif "blas=essl" in spec or spec.satisfies("^essl"):
+        entries.append(cmake_cache_string("BLA_VENDOR", "IBMESSL"))
+        # IF IBM ESSL is used it needs help finding the proper LAPACK libraries
+        entries.append(cmake_cache_string("LAPACK_LIBRARIES", "%s;-llapack;-lblas" % ";".join("-l{0}".format(lib) for lib in self.spec["essl"].libs.names)))
+        entries.append(cmake_cache_string("BLAS_LIBRARIES", "%s;-lblas" % ";".join("-l{0}".format(lib) for lib in self.spec["essl"].libs.names)))
+    elif "blas=accelerate" in spec:
+        entries.append(cmake_cache_option("DiHydrogen_USE_ACCELERATE", True))
+    elif spec.satisfies("^netlib-lapack"):
+        entries.append(cmake_cache_string("BLA_VENDOR", "Generic"))
+    return entries
+
+def correct_cmake_prefix_path(entries):
+    entries = [ x for x in entries if "CMAKE_PREFIX_PATH" not in x ]
+    cmake_prefix_path = os.environ["CMAKE_PREFIX_PATH"].replace(os.pathsep,';')
+    entries.append(cmake_cache_string("CMAKE_PREFIX_PATH", cmake_prefix_path))
+    return entries
+
 def cmake_cache_filepath(name, value, comment=""):
-    """Generate a string for a cmake cache variable"""
+    """Generate a string for a cmake cache variable of type FILEPATH"""
     return 'set({0} "{1}" CACHE FILEPATH "{2}")\n'.format(name, value, comment)
 
 class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
@@ -207,29 +232,11 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     def std_initconfig_entries(self):
         spec = self.spec
         entries = super(Dihydrogen, self).std_initconfig_entries()
-
-        # CMAKE_PREFIX_PATH, in CMake types, is a "STRING", not a "PATH". :/
-        entries = [ x for x in entries if "CMAKE_PREFIX_PATH" not in x ]
-        cmake_prefix_path = os.environ["CMAKE_PREFIX_PATH"].replace(':',';')
-        entries.append(cmake_cache_string("CMAKE_PREFIX_PATH", cmake_prefix_path))
-
-        return entries
+        return correct_cmake_prefix_path(entries);
 
     def initconfig_compiler_entries(self):
         spec = self.spec
         entries = super(Dihydrogen, self).initconfig_compiler_entries()
-
-        # We don't need this generator, we don't want this generator. We
-        # don't specify a generator for DiHydrogen BECAUSE IT DOESN'T
-        # (shouldn't) MATTER in the sense that it doesn't (shouldn't)
-        # impact the correctness of a build, and it should not be
-        # hard-coded into the CMake cache file (especially since
-        # "-G<something else>" doesn't override it). Moreover, to choose to
-        # encode it in the cache file is to make assumptions about how the
-        # cache file will be consumed, which creates a headache for
-        # consumers outside those assumptions (an old adage about what
-        # happens when one assumes comes to mind).
-        entries = [ x for x in entries if "CMAKE_GENERATOR" not in x and "CMAKE_MAKE_PROGRAM" not in x ]
 
         # FIXME: Enforce this better in the actual CMake.
         entries.append(cmake_cache_string("CMAKE_CXX_STANDARD", "17"))
@@ -329,6 +336,9 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
             if "+cuda" in spec:
                 entries.append(cmake_cache_path("cuDNN_ROOT", spec["cudnn"].prefix))
 
+        # Currently this is a hack for all Hydrogen versions. WIP to
+        # fix this at develop.
+        entries.extend(get_blas_entries(spec))
         return entries
 
     def setup_build_environment(self, env):

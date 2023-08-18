@@ -137,17 +137,17 @@ class Hydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     depends_on("aluminum@0.7.0:", when="@1.5.2: +al")
 
     # Add Aluminum variants
-    depends_on("aluminum +cuda +nccl +ht", when="+al +cuda")
-    depends_on("aluminum +rocm +nccl +ht", when="+al +rocm")
+    depends_on("aluminum +cuda +ht", when="+al +cuda")
+    depends_on("aluminum +rocm +ht", when="+al +rocm")
 
     for arch in CudaPackage.cuda_arch_values:
-        depends_on("aluminum cuda_arch=%s" % arch,
+        depends_on("aluminum +cuda cuda_arch=%s" % arch,
                    when="+al +cuda cuda_arch=%s" % arch)
 
     # variants +rocm and amdgpu_targets are not automatically passed to
     # dependencies, so do it manually.
     for val in ROCmPackage.amdgpu_targets:
-        depends_on("aluminum amdgpu_target=%s" % val,
+        depends_on("aluminum +rocm amdgpu_target=%s" % val,
                    when="+al +rocm amdgpu_target=%s" % val)
 
     depends_on("cuda@11.0.0:", when="+cuda")
@@ -193,18 +193,6 @@ class Hydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     def initconfig_compiler_entries(self):
         spec = self.spec
         entries = super(Hydrogen, self).initconfig_compiler_entries()
-
-        # We don't need this generator, we don't want this generator.
-        # We don't specify a generator for Hydrogen BECAUSE IT DOESN'T
-        # (shouldn't) MATTER in the sense that it doesn't (shouldn't)
-        # impact the correctness of a build, and it should not be
-        # hard-coded into the CMake cache file (especially since
-        # "-G<something else>" doesn't override it). Moreover, to
-        # choose to encode it in the cache file is to make assumptions
-        # about how the cache file will be consumed, which creates a
-        # headache for consumers outside those assumptions (an old
-        # adage about what happens when one assumes comes to mind).
-        entries = [ x for x in entries if "CMAKE_GENERATOR" not in x and "CMAKE_MAKE_PROGRAM" not in x ]
 
         # FIXME: Enforce this better in the actual CMake.
         entries.append(cmake_cache_string("CMAKE_CXX_STANDARD", "17"))
@@ -287,14 +275,17 @@ class Hydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
             entries.append(cmake_cache_option("Hydrogen_USE_OpenBLAS", "blas=openblas" in spec))
             # CMAKE_PREFIX_PATH should handle this
             entries.append(cmake_cache_string("OpenBLAS_DIR", spec["openblas"].prefix))
-        elif "blas=mkl" in spec:
+        elif "blas=mkl" in spec or spec.satisfies("^intel-mkl"):
             entries.append(cmake_cache_option("Hydrogen_USE_MKL", True))
-        elif "blas=accelerate" in spec:
-            entries.append(cmake_cache_option("Hydrogen_USE_ACCELERATE", True))
-        elif "blas=essl" in spec:
+        elif "blas=essl" in spec or spec.satisfies("^essl"):
+            entries.append(cmake_cache_string("BLA_VENDOR", "IBMESSL"))
             # IF IBM ESSL is used it needs help finding the proper LAPACK libraries
             entries.append(cmake_cache_string("LAPACK_LIBRARIES", "%s;-llapack;-lblas" % ";".join("-l{0}".format(lib) for lib in self.spec["essl"].libs.names)))
             entries.append(cmake_cache_string("BLAS_LIBRARIES", "%s;-lblas" % ";".join("-l{0}".format(lib) for lib in self.spec["essl"].libs.names)))
+        elif "blas=accelerate" in spec:
+            entries.append(cmake_cache_option("Hydrogen_USE_ACCELERATE", True))
+        elif spec.satisfies("^netlib-lapack"):
+            entries.append(cmake_cache_string("BLA_VENDOR", "Generic"))
 
         return entries
 
