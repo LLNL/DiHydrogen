@@ -1366,14 +1366,14 @@ __global__ void backprop2_kernel(const DataType* __restrict__ input,
 }
 
 template <int ND, typename DataType, typename DataTypeV>
-__global__ void backprop2_opt_kernel(const DataTypeV* __restrict__ input,
+__global__ void backprop2_opt_kernel(const DataTypeV* input,
                                      const DataTypeV* __restrict__ d_output,
                                      const DataType* __restrict__ global_mean,
                                      const DataType* __restrict__ global_var,
                                      const DataType* __restrict__ global_scale,
                                      const DataType* __restrict__ global_dmean,
                                      const DataType* __restrict__ global_dvar,
-                                     DataTypeV* __restrict__ d_input,
+                                     DataTypeV* d_input,
                                      DataType epsilon,
                                      index_t num_per_sum,
                                      index_t spatial_size,
@@ -1495,7 +1495,9 @@ void backprop2(index_t num_samples,
     using DataType = typename TensorType::data_type;
 
     if (input.get_local_real_shape() == d_output.get_local_real_shape()
-        && input.get_local_real_shape() == d_input.get_local_real_shape())
+        && input.get_local_real_shape() == d_input.get_local_real_shape()
+        && input.get_overlap() == 0 && d_output.get_overlap() == 0
+        && d_input.get_overlap() == 0)
     {
         if (std::getenv("DISTCONV_DISABLE_BN_OPT"))
         {
