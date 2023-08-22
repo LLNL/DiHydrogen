@@ -1301,14 +1301,14 @@ namespace
 {
 
 template <int ND, typename DataType>
-__global__ void backprop2_kernel(const DataType* __restrict__ input,
+__global__ void backprop2_kernel(const DataType* input,
                                  const DataType* __restrict__ d_output,
                                  const DataType* __restrict__ global_mean,
                                  const DataType* __restrict__ global_var,
                                  const DataType* __restrict__ global_scale,
                                  const DataType* __restrict__ global_dmean,
                                  const DataType* __restrict__ global_dvar,
-                                 DataType* __restrict__ d_input,
+                                 DataType* d_input,
                                  DataType epsilon,
                                  index_t num_per_sum,
                                  tensor::Array<ND> shape,
