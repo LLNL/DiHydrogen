@@ -26,6 +26,8 @@ Build system:
      -- ROC-tracer
 
 Bug fixes:
+ - Fixed a bug in kernel selection for batchnorm gradients in the case of
+   overlap/strides.
 
 Retired features:
 
