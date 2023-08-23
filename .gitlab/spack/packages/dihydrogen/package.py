@@ -8,8 +8,33 @@ import os
 import spack.build_environment
 from spack.package import *
 
+# This is a hack to get around some deficiencies in Hydrogen.
+def get_blas_entries(inspec):
+    entries = []
+    spec = inspec["hydrogen"]
+    if "blas=openblas" in spec:
+        entries.append(cmake_cache_option("DiHydrogen_USE_OpenBLAS", True))
+    elif "blas=mkl" in spec or spec.satisfies("^intel-mkl"):
+        entries.append(cmake_cache_option("DiHydrogen_USE_MKL", True))
+    elif "blas=essl" in spec or spec.satisfies("^essl"):
+        entries.append(cmake_cache_string("BLA_VENDOR", "IBMESSL"))
+        # IF IBM ESSL is used it needs help finding the proper LAPACK libraries
+        entries.append(cmake_cache_string("LAPACK_LIBRARIES", "%s;-llapack;-lblas" % ";".join("-l{0}".format(lib) for lib in self.spec["essl"].libs.names)))
+        entries.append(cmake_cache_string("BLAS_LIBRARIES", "%s;-lblas" % ";".join("-l{0}".format(lib) for lib in self.spec["essl"].libs.names)))
+    elif "blas=accelerate" in spec:
+        entries.append(cmake_cache_option("DiHydrogen_USE_ACCELERATE", True))
+    elif spec.satisfies("^netlib-lapack"):
+        entries.append(cmake_cache_string("BLA_VENDOR", "Generic"))
+    return entries
+
+def correct_cmake_prefix_path(entries):
+    entries = [ x for x in entries if "CMAKE_PREFIX_PATH" not in x ]
+    cmake_prefix_path = os.environ["CMAKE_PREFIX_PATH"].replace(os.pathsep,';')
+    entries.append(cmake_cache_string("CMAKE_PREFIX_PATH", cmake_prefix_path))
+    return entries
+
 def cmake_cache_filepath(name, value, comment=""):
-    """Generate a string for a cmake cache variable"""
+    """Generate a string for a cmake cache variable of type FILEPATH"""
     return 'set({0} "{1}" CACHE FILEPATH "{2}")\n'.format(name, value, comment)
 
 class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
@@ -24,7 +49,7 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     git = "https://github.com/LLNL/DiHydrogen.git"
     tags = ["ecp", "radiuss"]
 
-    maintainers("bvanessen")
+    maintainers("benson31", "bvanessen")
 
     version("develop", branch="develop")
     version("master", branch="master")
@@ -104,6 +129,17 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     depends_on("cuda@11.0:", when="+cuda")
     depends_on("spdlog", when="@:0.1,0.2:")
 
+    depends_on("hydrogen +al", when="@0.3.0:")
+    for arch in CudaPackage.cuda_arch_values:
+        depends_on(
+            "hydrogen +cuda cuda_arch={0}".format(arch),
+            when="+cuda cuda_arch={0}".format(arch))
+
+    for val in ROCmPackage.amdgpu_targets:
+        depends_on(
+            "hydrogen amdgpu_target={0}".format(val),
+            when="+rocm amdgpu_target={0}".format(val))
+
     with when("+distconv"):
         depends_on("mpi")
 
@@ -115,7 +151,7 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
 
         # Add Aluminum variants
         depends_on("aluminum +cuda +nccl", when="+distconv +cuda")
-        depends_on("aluminum +rocm +rccl", when="+distconv +rocm")
+        depends_on("aluminum +rocm +nccl", when="+distconv +rocm")
 
         # TODO: Debug linker errors when NVSHMEM is built with UCX
         depends_on("nvshmem +nccl~ucx", when="+nvshmem")
@@ -196,29 +232,11 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     def std_initconfig_entries(self):
         spec = self.spec
         entries = super(Dihydrogen, self).std_initconfig_entries()
-
-        # CMAKE_PREFIX_PATH, in CMake types, is a "STRING", not a "PATH". :/
-        entries = [ x for x in entries if "CMAKE_PREFIX_PATH" not in x ]
-        cmake_prefix_path = os.environ["CMAKE_PREFIX_PATH"].replace(':',';')
-        entries.append(cmake_cache_string("CMAKE_PREFIX_PATH", cmake_prefix_path))
-
-        return entries
+        return correct_cmake_prefix_path(entries);
 
     def initconfig_compiler_entries(self):
         spec = self.spec
         entries = super(Dihydrogen, self).initconfig_compiler_entries()
-
-        # We don't need this generator, we don't want this generator. We
-        # don't specify a generator for DiHydrogen BECAUSE IT DOESN'T
-        # (shouldn't) MATTER in the sense that it doesn't (shouldn't)
-        # impact the correctness of a build, and it should not be
-        # hard-coded into the CMake cache file (especially since
-        # "-G<something else>" doesn't override it). Moreover, to choose to
-        # encode it in the cache file is to make assumptions about how the
-        # cache file will be consumed, which creates a headache for
-        # consumers outside those assumptions (an old adage about what
-        # happens when one assumes comes to mind).
-        entries = [ x for x in entries if "CMAKE_GENERATOR" not in x and "CMAKE_MAKE_PROGRAM" not in x ]
 
         # FIXME: Enforce this better in the actual CMake.
         entries.append(cmake_cache_string("CMAKE_CXX_STANDARD", "17"))
@@ -231,8 +249,13 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
                     "CMAKE_HIP_COMPILER",
                     os.path.join(spec["llvm-amdgpu"].prefix.bin, "clang++")))
 
-        if "platform=cray" in spec:
-            entries.append(cmake_cache_option("MPI_ASSUME_NO_BUILTIN_MPI", True))
+        # It's possible this should have a `if "platform=cray" in
+        # spec:` in front of it, but it's not clear to me when this is
+        # set. In particular, I don't actually see this blurb showing
+        # up on Tioga builds. Which is causing the obvious problem
+        # (namely, the one this was added to supposedly solve in the
+        # first place.
+        entries.append(cmake_cache_option("MPI_ASSUME_NO_BUILTIN_MPI", True))
 
         if spec.satisfies("%clang +distconv platform=darwin"):
             clang = self.compiler.cc
@@ -313,6 +336,9 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
             if "+cuda" in spec:
                 entries.append(cmake_cache_path("cuDNN_ROOT", spec["cudnn"].prefix))
 
+        # Currently this is a hack for all Hydrogen versions. WIP to
+        # fix this at develop.
+        entries.extend(get_blas_entries(spec))
         return entries
 
     def setup_build_environment(self, env):

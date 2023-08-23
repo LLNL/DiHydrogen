@@ -28,9 +28,18 @@
 #cmakedefine01 H2_HAS_MPI
 #cmakedefine01 H2_HAS_DACE
 
+#cmakedefine H2_DEBUG
+
 // Features detected at configure time
 #define H2_PRETTY_FUNCTION @H2_PRETTY_FUNCTION@
 #define H2_RESTRICT @H2_RESTRICT@
+
+// Disable noexcept when debugging, as debug asserts may throw.
+#ifdef H2_DEBUG
+#define H2_NOEXCEPT
+#else
+#define H2_NOEXCEPT noexcept
+#endif
 
 // C++ standard
 #ifdef __cplusplus

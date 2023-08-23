@@ -105,6 +105,11 @@ set(MPI_ASSUME_NO_BUILTIN_MPI ON
   CACHE BOOL
   "Force compiler interrogation for MPI")
 
+string(TOUPPER "${CMAKE_BUILD_TYPE}" H2_BUILD_TYPE_UPPER)
+if (H2_BUILD_TYPE_UPPER MATCHES "DEBUG")
+  set(H2_DEBUG ON)
+endif ()
+
 include(GNUInstallDirs)
 include(H2CMakeUtils)
 include(H2CXXFeatureDetection)
@@ -188,7 +193,13 @@ endif ()
 
 # Required dependencies
 
+find_package(Hydrogen 1.5.0 CONFIG REQUIRED)
+
 if (H2_ENABLE_CUDA)
+  if (NOT _HYDROGEN_HAVE_CUDA)
+    message(FATAL_ERROR "Hydrogen does not have CUDA support.")
+  endif ()
+
   enable_language(CUDA)
   include(SetupCUDAToolkit)
   if (CMAKE_CUDA_COMPILER)
@@ -208,6 +219,10 @@ set(H2_HAS_SPDLOG TRUE)
 
 # This is a placeholder.
 if (H2_ENABLE_ROCM)
+  if (NOT _HYDROGEN_HAVE_ROCM)
+    message(FATAL_ERROR "Hydrogen does not have ROCm support.")
+  endif ()
+
   # Our ROCm installs generally have a common prefix. It's not clear
   # that this is a global truth, but it's global enough for me.
   if (NOT H2_ROCM_PATH)
@@ -423,6 +438,7 @@ target_link_libraries(H2Core PRIVATE
   $<BUILD_INTERFACE:$<TARGET_NAME_IF_EXISTS:h2_coverage_flags>>)
 target_link_libraries(H2Core PUBLIC
   spdlog::spdlog
+  ${HYDROGEN_LIBRARIES}
   ${H2_CUDA_LIBS}
   ${H2_ROCM_LIBS}
   $<$<BOOL:${H2_HAS_MPI}>:MPI::MPI_CXX>)

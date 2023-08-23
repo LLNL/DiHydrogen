@@ -216,6 +216,11 @@ spack:
       externals:
       - spec: ninja@1.11.0
         prefix: /usr/tce/packages/ninja/ninja-1.11.0
+    openblas:
+      buildable: false
+      externals:
+      - spec: openblas@0.3.15
+        prefix: /usr
     openmpi:
       buildable: false
       externals:
@@ -273,3 +278,8 @@ spack:
       externals:
       - spec: xz@5.2.4
         prefix: /usr
+    all:
+      providers:
+        blas: [openblas]
+        lapack: [openblas]
+        mpi: [openmpi, mvapich2]

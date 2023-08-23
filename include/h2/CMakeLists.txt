@@ -19,6 +19,8 @@ h2_add_sources_to_target_and_install(
 
 add_subdirectory(gpu)
 
+add_subdirectory(tensor)
+
 # Setup the metaprogramming component. The metaprogramming facilities
 # are expected to be available everywhere and carry no
 # intra-DiHydrogen dependencies -- there is only an external

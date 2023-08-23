@@ -66,7 +66,5 @@ clang-13-0-1-gcc-8-3-1-cuda-11-8-0-distconv:
 
 .build-and-test-on-lassen:
   stage: build
-  variables:
-    LLNL_LSF_SCHEDULER_PARAMETERS: "-q pbatch -nnodes 1 -W 10"
   tags: [lassen, batch]
   extends: .build-and-test
