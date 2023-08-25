@@ -1301,20 +1301,23 @@ namespace
 {
 
 template <int ND, typename DataType>
-__global__ void backprop2_kernel(const DataType* input,
-                                 const DataType* __restrict__ d_output,
-                                 const DataType* __restrict__ global_mean,
-                                 const DataType* __restrict__ global_var,
-                                 const DataType* __restrict__ global_scale,
-                                 const DataType* __restrict__ global_dmean,
-                                 const DataType* __restrict__ global_dvar,
-                                 DataType* d_input,
-                                 DataType epsilon,
-                                 index_t num_per_sum,
-                                 tensor::Array<ND> shape,
-                                 tensor::Array<ND> input_strides,
-                                 tensor::Array<ND> d_output_strides,
-                                 tensor::Array<ND> d_input_strides)
+__global__ void backprop2_kernel(
+    const DataType* input, // no __restrict__ so input can be reused for d_input
+                           // as a memory optimization
+    const DataType* __restrict__ d_output,
+    const DataType* __restrict__ global_mean,
+    const DataType* __restrict__ global_var,
+    const DataType* __restrict__ global_scale,
+    const DataType* __restrict__ global_dmean,
+    const DataType* __restrict__ global_dvar,
+    DataType* d_input, // no __restrict__ so input can be reused for d_input as
+                       // a memory optimization
+    DataType epsilon,
+    index_t num_per_sum,
+    tensor::Array<ND> shape,
+    tensor::Array<ND> input_strides,
+    tensor::Array<ND> d_output_strides,
+    tensor::Array<ND> d_input_strides)
 {
     const index_t gidx = threadIdx.x + blockIdx.x * blockDim.x;
     const int ch_idx = blockIdx.y;
@@ -1366,18 +1369,21 @@ __global__ void backprop2_kernel(const DataType* input,
 }
 
 template <int ND, typename DataType, typename DataTypeV>
-__global__ void backprop2_opt_kernel(const DataTypeV* input,
-                                     const DataTypeV* __restrict__ d_output,
-                                     const DataType* __restrict__ global_mean,
-                                     const DataType* __restrict__ global_var,
-                                     const DataType* __restrict__ global_scale,
-                                     const DataType* __restrict__ global_dmean,
-                                     const DataType* __restrict__ global_dvar,
-                                     DataTypeV* d_input,
-                                     DataType epsilon,
-                                     index_t num_per_sum,
-                                     index_t spatial_size,
-                                     int num_channels)
+__global__ void backprop2_opt_kernel(
+    const DataTypeV* input, // no __restrict__ so input can be reused for
+                            // d_input as a memory optimization
+    const DataTypeV* __restrict__ d_output,
+    const DataType* __restrict__ global_mean,
+    const DataType* __restrict__ global_var,
+    const DataType* __restrict__ global_scale,
+    const DataType* __restrict__ global_dmean,
+    const DataType* __restrict__ global_dvar,
+    DataTypeV* d_input, // no __restrict__ so input can be reused for d_input as
+                        // a memory optimization
+    DataType epsilon,
+    index_t num_per_sum,
+    index_t spatial_size,
+    int num_channels)
 {
     const auto ch_idx = blockIdx.y;
     const auto sample_idx = blockIdx.z;
