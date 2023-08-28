@@ -129,16 +129,17 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     depends_on("cuda@11.0:", when="+cuda")
     depends_on("spdlog", when="@:0.1,0.2:")
 
-    depends_on("hydrogen +al", when="@0.3.0:")
-    for arch in CudaPackage.cuda_arch_values:
-        depends_on(
-            "hydrogen +cuda cuda_arch={0}".format(arch),
-            when="+cuda cuda_arch={0}".format(arch))
-
-    for val in ROCmPackage.amdgpu_targets:
-        depends_on(
-            "hydrogen amdgpu_target={0}".format(val),
-            when="+rocm amdgpu_target={0}".format(val))
+    with when("@0.3.0:"):
+        depends_on("hydrogen +al")
+        for arch in CudaPackage.cuda_arch_values:
+            depends_on(
+                "hydrogen +cuda cuda_arch={0}".format(arch),
+                when="+cuda cuda_arch={0}".format(arch))
+            
+        for val in ROCmPackage.amdgpu_targets:
+            depends_on(
+                "hydrogen amdgpu_target={0}".format(val),
+                when="+rocm amdgpu_target={0}".format(val))
 
     with when("+distconv"):
         depends_on("mpi")
