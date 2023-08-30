@@ -61,6 +61,11 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
     # Primary features
 
     variant(
+        "dace",
+        default=False,
+        description="Enable DaCe backend.")
+
+    variant(
         "distconv",
         default=False,
         description="Enable (legacy) Distributed Convolution support.")
@@ -135,7 +140,7 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
             depends_on(
                 "hydrogen +cuda cuda_arch={0}".format(arch),
                 when="+cuda cuda_arch={0}".format(arch))
-            
+
         for val in ROCmPackage.amdgpu_targets:
             depends_on(
                 "hydrogen amdgpu_target={0}".format(val),
@@ -313,6 +318,8 @@ class Dihydrogen(CachedCMakePackage, CudaPackage, ROCmPackage):
 
         entries.append(cmake_cache_option("H2_ENABLE_CODE_COVERAGE", "+coverage" in spec))
         entries.append(cmake_cache_option("H2_CI_BUILD", "+ci" in spec))
+
+        entries.append(cmake_cache_option("H2_ENABLE_DACE", "+dace" in spec))
 
         # DistConv options
         entries.append(cmake_cache_option("H2_ENABLE_ALUMINUM", "+distconv" in spec))
