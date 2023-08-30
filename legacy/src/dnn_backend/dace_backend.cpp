@@ -488,10 +488,10 @@ DaCeDNNBackend<VendorBackendT>::try_load(const std::string& hash,
     }
 
     std::stringstream fname, initname, exitname, funcname;
-    fname << path << "/.dacecache/" << hash << "/build/lib" << hash << ".so";
-    initname << "__dace_init_" << hash;
-    exitname << "__dace_exit_" << hash;
-    funcname << "__program_" << hash;
+    fname << path << "/lib" << hash << ".so";
+    initname << "__dace_init_conv";
+    exitname << "__dace_exit_conv";
+    funcname << "__program_conv";
     void* handle = dlopen(fname.str().c_str(), RTLD_LAZY);
     if (handle)
     {
