@@ -24,9 +24,6 @@ public:
     void* get(size_t size, hipStream_t st);
     void release(void* p);
     size_t get_max_allocatable_size(size_t limit);
-
-private:
-    hipcub::CachingDeviceAllocator m_allocator;
 };
 
 class RuntimeHIP
