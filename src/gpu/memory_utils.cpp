@@ -81,11 +81,11 @@ bool h2::gpu::cub_debug() noexcept
     return (env && std::strlen(env) && env[0] != '0');
 }
 
-h2::gpu::RawCUBAllocType make_allocator(unsigned int const gf,
-                                        unsigned int const min,
-                                        unsigned int const max,
-                                        size_t const max_cached,
-                                        bool const debug)
+h2::gpu::RawCUBAllocType h2::gpu::make_allocator(unsigned int const gf,
+                                                 unsigned int const min,
+                                                 unsigned int const max,
+                                                 size_t const max_cached,
+                                                 bool const debug)
 {
     H2_GPU_TRACE("H2 created CUB allocator"
                 "(gf={}, min={}, max={}, max_cached={}, debug={})",
@@ -123,7 +123,7 @@ static h2::gpu::RawCUBAllocType& borrow_hydrogen_cub_allocator()
 
 static h2::gpu::RawCUBAllocType& get_internal_cub_allocator()
 {
-    static auto alloc = make_allocator();
+    static auto alloc = h2::gpu::make_allocator();
     return alloc;
 }
 
@@ -131,6 +131,6 @@ h2::gpu::RawCUBAllocType& h2::gpu::default_cub_allocator()
 {
     static auto& alloc = (use_internal_pool()
                           ? get_internal_cub_allocator()
-                          : borrow_hydrogen_cub_allocator();
+                          : borrow_hydrogen_cub_allocator());
     return alloc;
 }

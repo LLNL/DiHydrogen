@@ -91,28 +91,28 @@ RawCUBAllocType& default_cub_allocator();
  *  Environment variable: H2_CUB_BIN_GROWTH
  *  Default value: 2U
  */
-unsigned int cub_growth_factor() noexcept
+unsigned int cub_growth_factor() noexcept;
 
 /** @brief The default smallest bin size for a new CUB allocator.
  *
  *  Environment variable: H2_CUB_MIN_BIN
  *  Default value: 1U
  */
-unsigned int cub_min_bin() noexcept
+unsigned int cub_min_bin() noexcept;
 
 /** @brief The default largest bin size for a new CUB allocator.
  *
  *  Environment variable: H2_CUB_MAX_BIN
  *  Default value: no limit
  */
-unsigned int cub_max_bin() noexcept
+unsigned int cub_max_bin() noexcept;
 
 /** @brief The default maximum size of a new CUB allocator.
  *
  *  Environment variable: H2_CUB_MAX_CACHED_SIZE
  *  Default value: no limit
  */
-size_t cub_max_cached_size() noexcept
+size_t cub_max_cached_size() noexcept;
 
 /** @brief The default debugging flag for a new CUB allocator.
  *
