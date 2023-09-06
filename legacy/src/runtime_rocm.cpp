@@ -23,18 +23,6 @@ namespace internal
 {
 
 HIPDeviceMemoryPool::HIPDeviceMemoryPool()
-    : m_allocator(
-        /*bin_growth=*/4,
-        /*min_bin=*/8,
-        /*max_bin=*/hipcub::CachingDeviceAllocator::INVALID_BIN,
-        /*max_cached_bytes=*/hipcub::CachingDeviceAllocator::INVALID_SIZE,
-        /*skip_cleanup=*/false,
-#ifdef DISTCONV_DEBUG
-        /*debug=*/true
-#else
-        /*debug=*/false
-#endif
-    )
 {}
 
 HIPDeviceMemoryPool::~HIPDeviceMemoryPool()
@@ -43,7 +31,8 @@ HIPDeviceMemoryPool::~HIPDeviceMemoryPool()
 void* HIPDeviceMemoryPool::get(size_t size, hipStream_t st)
 {
     void* p = nullptr;
-    hipError_t const err = m_allocator.DeviceAllocate(&p, size, st);
+    auto const err
+      = h2::gpu::default_cub_allocator().DeviceAllocate(&p, size, st);
     if (err != hipSuccess)
     {
         auto [available, total] = h2::gpu::mem_info();
@@ -61,12 +50,12 @@ void* HIPDeviceMemoryPool::get(size_t size, hipStream_t st)
 
 void HIPDeviceMemoryPool::release(void* p)
 {
-    DISTCONV_CHECK_HIP(m_allocator.DeviceFree(p));
+    DISTCONV_CHECK_HIP(h2::gpu::default_cub_allocator().DeviceFree(p));
 }
 
 size_t HIPDeviceMemoryPool::get_max_allocatable_size(size_t const limit)
 {
-    size_t const bin_growth = m_allocator.bin_growth;
+    size_t const bin_growth = h2::gpu::default_cub_allocator().bin_growth;
     size_t const x = std::log(limit) / std::log(bin_growth);
     size_t const max_allowed_size = std::pow(bin_growth, x);
     return max_allowed_size;
