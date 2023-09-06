@@ -78,7 +78,57 @@ namespace h2
 namespace gpu
 {
 
+/** @brief The default CUB allocator used in H2.
+ *
+ *  Currently, this borrows the CUB allocator used in Hydrogen.
+ */
 RawCUBAllocType& default_cub_allocator();
+
+/** @brief The default growth factor for a new CUB allocator.
+ *
+ *  Environment variable: H2_CUB_BIN_GROWTH
+ *  Default value: 2U
+ */
+unsigned int cub_growth_factor() noexcept
+
+/** @brief The default smallest bin size for a new CUB allocator.
+ *
+ *  Environment variable: H2_CUB_MIN_BIN
+ *  Default value: 1U
+ */
+unsigned int cub_min_bin() noexcept
+
+/** @brief The default largest bin size for a new CUB allocator.
+ *
+ *  Environment variable: H2_CUB_MAX_BIN
+ *  Default value: no limit
+ */
+unsigned int cub_max_bin() noexcept
+
+/** @brief The default maximum size of a new CUB allocator.
+ *
+ *  Environment variable: H2_CUB_MAX_CACHED_SIZE
+ *  Default value: no limit
+ */
+size_t cub_max_cached_size() noexcept
+
+/** @brief The default debugging flag for a new CUB allocator.
+ *
+ *  Environment variable: H2_CUB_DEBUG
+ *  Default value: false
+ */
+bool cub_debug() noexcept;
+
+/** @brief Create a new CUB allocator.
+ *
+ *  At this time, users are recommended to just use the default CUB
+ *  allocator. This helps with consistency and debugging.
+ */
+RawCUBAllocType make_allocator(unsigned int const gf = cub_growth_factor(),
+                               unsigned int const min = cub_min_bin(),
+                               unsigned int const max = cub_max_bin(),
+                               size_t const max_cached = cub_max_cached_size(),
+                               bool const debug = cub_debug());
 
 template <typename T>
 inline void mem_copy(T* dst, T const* src)
