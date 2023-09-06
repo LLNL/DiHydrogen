@@ -31,8 +31,8 @@ HIPDeviceMemoryPool::~HIPDeviceMemoryPool()
 void* HIPDeviceMemoryPool::get(size_t size, hipStream_t st)
 {
     void* p = nullptr;
-    auto const err
-      = h2::gpu::default_cub_allocator().DeviceAllocate(&p, size, st);
+    auto const err =
+        h2::gpu::default_cub_allocator().DeviceAllocate(&p, size, st);
     if (err != hipSuccess)
     {
         auto [available, total] = h2::gpu::mem_info();

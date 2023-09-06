@@ -9,12 +9,14 @@
 namespace distconv {
 namespace internal {
 
-CUDADeviceMemoryPool::CUDADeviceMemoryPool() {}
+CUDADeviceMemoryPool::CUDADeviceMemoryPool()
+{}
 CUDADeviceMemoryPool::~CUDADeviceMemoryPool() {}
 
 void *CUDADeviceMemoryPool::get(size_t size, cudaStream_t st) {
   void *p = nullptr;
-  cudaError_t err = h2::gpu::default_cub_allocator().DeviceAllocate(&p, size, st);
+  cudaError_t err =
+      h2::gpu::default_cub_allocator().DeviceAllocate(&p, size, st);
   if (err != cudaSuccess) {
     size_t available;
     size_t total;

@@ -63,9 +63,8 @@ unsigned int h2::gpu::cub_min_bin() noexcept
 unsigned int h2::gpu::cub_max_bin() noexcept
 {
     char const* env = std::getenv("H2_CUB_MAX_BIN");
-    return (env
-            ? static_cast<unsigned int>(std::atoi(env))
-            : h2::gpu::RawCUBAllocType::INVALID_BIN);
+    return (env ? static_cast<unsigned int>(std::atoi(env))
+                : h2::gpu::RawCUBAllocType::INVALID_BIN);
 }
 
 size_t h2::gpu::cub_max_cached_size() noexcept
@@ -88,12 +87,12 @@ h2::gpu::RawCUBAllocType h2::gpu::make_allocator(unsigned int const gf,
                                                  bool const debug)
 {
     H2_GPU_TRACE("H2 created CUB allocator"
-                "(gf={}, min={}, max={}, max_cached={}, debug={})",
-                gf,
-                min,
-                max,
-                max_cached,
-                debug);
+                 "(gf={}, min={}, max={}, max_cached={}, debug={})",
+                 gf,
+                 min,
+                 max,
+                 max_cached,
+                 debug);
     return h2::gpu::RawCUBAllocType{/*bin_growth=*/gf,
                                     /*min_bin=*/min,
                                     /*max_bin=*/max,
@@ -129,8 +128,8 @@ static h2::gpu::RawCUBAllocType& get_internal_cub_allocator()
 
 h2::gpu::RawCUBAllocType& h2::gpu::default_cub_allocator()
 {
-    static auto& alloc = (use_internal_pool()
-                          ? get_internal_cub_allocator()
-                          : borrow_hydrogen_cub_allocator());
+    static auto& alloc =
+        (use_internal_pool() ? get_internal_cub_allocator()
+                             : borrow_hydrogen_cub_allocator());
     return alloc;
 }
