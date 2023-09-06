@@ -80,7 +80,9 @@ namespace gpu
 
 /** @brief The default CUB allocator used in H2.
  *
- *  Currently, this borrows the CUB allocator used in Hydrogen.
+ *  If H2_INTERNAL_CUB_POOL=1, then this constructs a new CUB
+ *  allocator for H2 use. Otherwise, this borrows the CUB allocator
+ *  used in Hydrogen.
  */
 RawCUBAllocType& default_cub_allocator();
 
