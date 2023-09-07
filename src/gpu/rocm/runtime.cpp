@@ -406,7 +406,7 @@ void h2::gpu::destroy(hipStream_t stream)
 hipEvent_t h2::gpu::make_event()
 {
     hipEvent_t event;
-    H2_CHECK_HIP(hipEventCreate(&event));
+    H2_CHECK_HIP(hipEventCreateWithFlags(&event, hipEventDisableSystemFence));
     H2_GPU_TRACE("created event {}", (void*) event);
     return event;
 }
@@ -414,7 +414,8 @@ hipEvent_t h2::gpu::make_event()
 hipEvent_t h2::gpu::make_event_notiming()
 {
     hipEvent_t event;
-    H2_CHECK_HIP(hipEventCreateWithFlags(&event, hipEventDisableTiming));
+    H2_CHECK_HIP(hipEventCreateWithFlags(
+        &event, hipEventDisableTiming | hipEventDisableSystemFence));
     H2_GPU_TRACE("created non-timing event {}", (void*) event);
     return event;
 }
