@@ -2,6 +2,9 @@
 #include "distconv/util/util.hpp"
 #include "distconv/util/util_cuda.hpp"
 
+#include "h2/gpu/memory_utils.hpp"
+#include "h2/gpu/runtime.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cuda_runtime.h>
