@@ -22,28 +22,21 @@ set(H2_HAS_ALUMINUM @H2_HAS_ALUMINUM@)
 set(H2_HAS_OPENMP @H2_HAS_OPENMP@)
 set(H2_HAS_HALF @H2_HAS_HALF@)
 set(H2_HAS_CUDA @H2_HAS_CUDA@)
-set(H2_HAS_HIP_ROCM @H2_HAS_HIP_ROCM@)
+set(H2_HAS_ROCM @H2_HAS_ROCM@)
 set(H2_DISTCONV_HAS_P2P @P2P_FOUND@)
 set(H2_DISTCONV_HAS_NVSHMEM @NVSHMEM_FOUND@)
+
+find_dependency(spdlog)
+
+if (H2_HAS_DISTCONV)
+  find_dependency(MPI)
+endif ()
 
 if (H2_HAS_ALUMINUM)
   set(_BUILD_AL_DIR "@Aluminum_DIR@")
   set(_MIN_AL_VERSION "@H2_MINIMUM_ALUMINUM_VERSION@")
-  find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
-    HINTS "${_BUILD_AL_DIR}"
-    NO_DEFAULT_PATH)
-  find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE QUIET
-    HINTS ${Aluminum_DIR} ${ALUMINUM_DIR} ${AL_DIR}
-    $ENV{Aluminum_DIR} $ENV{ALUMINUM_DIR} $ENV{AL_DIR}
-    PATH_SUFFIXES lib64/cmake/aluminum lib/cmake/aluminum
-    NO_DEFAULT_PATH)
-  if (NOT Aluminum_FOUND)
-    find_package(Aluminum ${_MIN_AL_VERSION} NO_MODULE REQUIRED)
-  endif ()
-endif ()
-
-if (H2_HAS_DISTCONV)
-  find_dependency(MPI)
+  find_dependency(Aluminum ${_MIN_AL_VERSION}
+    HINTS "${_BUILD_AL_DIR}")
 endif ()
 
 if (H2_HAS_OPENMP)
@@ -55,26 +48,7 @@ if (H2_HAS_HALF)
 endif ()
 
 if (H2_HAS_CUDA)
-  enable_language(CUDA)
   include(SetupCUDAToolkit)
-  # Hack around a dependency naming issue in the Hydrogen/LBANN
-  # stack. This will be cleaned up as DiHydrogen usage stabilizes.
-  if (NOT TARGET cuda::CUB)
-    if (CUB_FOUND AND TARGET cuda::cub)
-      add_library(cuda::CUB INTERFACE IMPORTED)
-      target_link_libraries(cuda::CUB INTERFACE cuda::cub)
-    else ()
-      find_dependency(CUB)
-    endif ()
-  endif ()
-  if (NOT TARGET cuda::cuDNN)
-    if (cuDNN_FOUND AND TARGET cuda::cudnn)
-      add_library(cuda::cuDNN INTERFACE IMPORTED)
-      target_link_libraries(cuda::cuDNN INTERFACE cuda::cudnn)
-    else ()
-      find_dependency(cuDNN)
-    endif ()
-  endif ()
   if (H2_DISTCONV_HAS_P2P)
     find_dependency(P2P)
   endif ()
@@ -83,8 +57,18 @@ if (H2_HAS_CUDA)
   endif ()
 endif ()
 
-if (H2_HAS_HIP_ROCM)
-  message(FATAL_ERROR "This should not be possible.")
+if (H2_HAS_ROCM)
+  find_dependency(hip)
+  find_library(HSA_LIBRARY hsa-runtime64
+    HINTS ${ROCM_PATH}/hsa $ENV{ROCM_PATH}/hsa
+    PATH_SUFFIXES lib lib64
+    DOC "HSA runtime library"
+    NO_DEFAULT_PATH)
+  find_library(HSA_LIBRARY hsa-runtime64 REQUIRED)
+  find_dependency(MIOpen CONFIG)
+  find_dependency(hipcub CONFIG)
+  find_dependency(rocm_smi CONFIG)
+  find_dependency(Roctracer MODULE)
 endif ()
 
 @PACKAGE_INIT@

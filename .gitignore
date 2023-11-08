@@ -7,6 +7,7 @@
 
 # Emacs backup garbage
 .backup/
+.cache/
 
 # Other standard ignores
 *~
@@ -16,6 +17,8 @@
 .*.swp
 .DS_Store
 *.bak
+.dir-locals.el
+compile_commands.json
 
 # building/install not-entirely-out-of-source stuff
 build*/

@@ -353,6 +353,12 @@ inline cudnnDataType_t get_cudnn_type<const half>() {
   return CUDNN_DATA_HALF;
 }
 
+template <typename T>
+inline cudnnDataType_t get_dnnlib_type()
+{
+    return get_cudnn_type<T>();
+}
+
 inline std::string get_cudnn_version_number_string() {
   int version[3];
   cudnnGetProperty(MAJOR_VERSION, &version[0]);

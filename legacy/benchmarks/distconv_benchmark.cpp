@@ -18,8 +18,11 @@
 #include "distconv/tensor/tensor_cuda.hpp"
 #include "distconv/util/util_cuda.hpp"
 #endif
+#if H2_HAS_ROCM
+#include "distconv/util/util_rocm.hpp"
+#endif
 #ifdef DISTCONV_HAS_CUDNN
-#include "distconv/util/util_cudnn.hpp"
+#include "distconv/util/util_gpu_dnn.hpp"
 #endif
 
 #include <Al.hpp>
@@ -167,10 +170,10 @@ class Data {
         dilations, cfg.deconv, MPI_COMM_WORLD);
     d_input = create_d_input_tensor<Tensor>(input);
 
-    filter = create_filter_tensor<Tensor>(locale_shape, filter_dims,
+    filter = create_filter_tensor<Tensor>(locale_shape, filter_dims, input,
                                           cfg.i_c, cfg.f_k, cfg.num_groups,
                                           MPI_COMM_WORLD,
-                                          cfg.chanfilt_algo);
+                                          cfg.chanfilt_algo, cfg.p_f);
     d_filter = create_d_filter_tensor<Tensor>(filter);
 
     if (!cfg.deconv) {
@@ -532,7 +535,7 @@ int test_convolution_backward(Data<NSD, Backend, DataType> &d,
     }
   }
   conv.wait();
-  DISTCONV_CHECK_CUDA(cudaGetLastError());
+  util::check_for_device_runtime_error();
 
   util::MPIRootPrintStreamInfo() << "Starting " << cfg.run_count
                                  << " times of measurement";

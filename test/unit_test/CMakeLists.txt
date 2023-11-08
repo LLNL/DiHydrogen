@@ -1,5 +1,5 @@
 ################################################################################
-## Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+## Copyright 2019-2023 Lawrence Livermore National Security, LLC and other
 ## DiHydrogen Project Developers. See the top-level LICENSE file for details.
 ##
 ## SPDX-License-Identifier: Apache-2.0
@@ -24,7 +24,7 @@ add_executable(VersionTestExe VersionTest.cpp)
 target_link_libraries(VersionTestExe PRIVATE ${H2_LIBRARIES})
 set_target_properties(VersionTestExe
   PROPERTIES
-  CXX_STANDARD 14
+  CXX_STANDARD 17
   CXX_EXTENSIONS OFF
   CXX_STANDARD_REQUIRED ON)
 
@@ -33,35 +33,43 @@ if (H2_EXTRA_CXX_FLAGS)
     PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${H2_EXTRA_CXX_FLAGS}>)
 endif ()
 
-if (H2_CODE_COVERAGE)
-  add_code_coverage(VersionTestExe coverage)
-  target_link_libraries(VersionTestExe PRIVATE h2_coverage_flags)
-endif ()
-
-add_test(NAME "[==[Testing the Version String.]==]"
+add_test(NAME [==[Testing the Version String.]==]
   COMMAND $<TARGET_FILE:VersionTestExe>
   WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
-set_tests_properties("[==[Testing the Version String.]==]" PROPERTIES
+set_tests_properties([==[Testing the Version String.]==] PROPERTIES
   PASS_REGULAR_EXPRESSION "${PROJECT_VERSION}")
 
 #
 # Add the sequential Catch2 driver.
 #
 
-add_executable(SeqCatchTests SequentialCatchMain.cpp)
+add_executable(SeqCatchTests)
+if (H2_HAS_GPU)
+  add_executable(GPUCatchTests GPUCatchMain.cpp)
+  target_link_libraries(GPUCatchTests
+    PRIVATE ${H2_LIBRARIES} Catch2::Catch2)
+  target_compile_definitions(GPUCatchTests PRIVATE H2_TEST_WITH_GPU=1)
+  set_target_properties(GPUCatchTests PROPERTIES
+    CXX_STANDARD 17
+    CXX_EXTENSIONS OFF
+    CXX_STANDARD_REQUIRED ON)
+endif ()
 
 # Add Catch2 unit tests
 add_subdirectory(patterns/factory)
 add_subdirectory(patterns/multimethods)
+add_subdirectory(utils)
+add_subdirectory(tensor)
 
 target_link_libraries(SeqCatchTests
-  PRIVATE ${H2_LIBRARIES} Catch2::Catch2)
+  PRIVATE ${H2_LIBRARIES} Catch2::Catch2WithMain)
 set_target_properties(SeqCatchTests
   PROPERTIES
   CXX_STANDARD 17
   CXX_EXTENSIONS OFF
   CXX_STANDARD_REQUIRED ON)
 
+# Not 100% sold on this
 catch_discover_tests(SeqCatchTests)
 
 if (H2_CODE_COVERAGE)
@@ -72,8 +80,4 @@ endif ()
 if (H2_EXTRA_CXX_FLAGS)
   target_compile_options(SeqCatchTests
     PRIVATE $<$<COMPILE_LANGUAGE:CXX>:${H2_EXTRA_CXX_FLAGS}>)
-endif ()
-
-if (H2_SEQUENTIAL_CATCH_TESTS)
-  catch_discover_tests(SeqCatchTests TEST_PREFIX "Seq--")
 endif ()

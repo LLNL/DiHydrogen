@@ -1,0 +1,70 @@
+################################################################################
+## Copyright 2019-2023 Lawrence Livermore National Security, LLC and other
+## DiHydrogen Project Developers. See the top-level LICENSE file for details.
+##
+## SPDX-License-Identifier: Apache-2.0
+################################################################################
+
+stages:
+  - build
+
+include:
+  local: "/.gitlab/build-and-test-common.yml"
+
+gcc-8-3-1-cuda-11-7-0:
+  variables:
+    SPEC: "%gcc@8.3.1 +developer +cuda cuda_arch=70 ^cuda@11.7.0"
+    MODULES: "gcc/8.3.1 spectrum-mpi/rolling-release cuda/11.7.0"
+  extends: .build-and-test-on-lassen
+
+gcc-8-3-1-cuda-11-8-0:
+  variables:
+    SPEC: "%gcc@8.3.1 +developer +cuda cuda_arch=70 ^cuda@11.8.0"
+    MODULES: "gcc/8.3.1 spectrum-mpi/rolling-release cuda/11.8.0"
+  extends: .build-and-test-on-lassen
+
+gcc-8-3-1-cuda-12-0-0:
+  variables:
+    SPEC: "%gcc@8.3.1 +developer +cuda cuda_arch=70 ^cuda@12.0.0"
+    MODULES: "gcc/8.3.1 spectrum-mpi/rolling-release cuda/12.0.0"
+  extends: .build-and-test-on-lassen
+
+# The NCCL spec used here is actually a bug in NCCL+GCC@8.3.1 that (of
+# course) is not "conflict"ed in Spack.
+gcc-8-3-1-cuda-11-8-0-distconv:
+  variables:
+    SPEC: "%gcc@8.3.1 +developer +distconv +cuda cuda_arch=70 ^cuda@11.8.0 ^nccl@2.16.2-1"
+    MODULES: "gcc/8.3.1 spectrum-mpi/rolling-release cuda/11.8.0"
+    LLNL_LSF_SCHEDULER_PARAMETERS: "-q pbatch -nnodes 1 -W 20"
+  extends: .build-and-test-on-lassen
+  rules:
+    - if: $TEST_DISTCONV_BUILD == "1"
+
+clang-13-0-1-gcc-8-3-1-cuda-11-8-0:
+  variables:
+    SPEC: "%clang@13.0.1-gcc-8.3.1 +developer +cuda cuda_arch=70 ^cuda@11.8.0"
+    MODULES: "clang/13.0.1-gcc-8.3.1 spectrum-mpi/rolling-release cuda/11.8.0"
+  extends: .build-and-test-on-lassen
+
+clang-13-0-1-gcc-8-3-1-cuda-12-0-0:
+  variables:
+    SPEC: "%clang@13.0.1-gcc-8.3.1 +developer +cuda cuda_arch=70 ^cuda@12.0.0"
+    MODULES: "clang/13.0.1-gcc-8.3.1 spectrum-mpi/rolling-release cuda/12.0.0"
+  extends: .build-and-test-on-lassen
+
+# See above for rationale of the NCCL spec. I'm not sure if it's a
+# compiler or a toolchain issue, so I'm duplicating that spec here to
+# be safe.
+clang-13-0-1-gcc-8-3-1-cuda-11-8-0-distconv:
+  variables:
+    SPEC: "%clang@13.0.1-gcc-8.3.1 +developer +distconv +cuda cuda_arch=70 ^cuda@11.8.0 ^nccl@2.16.2-1"
+    MODULES: "clang/13.0.1-gcc-8.3.1 spectrum-mpi/rolling-release cuda/11.8.0"
+    LLNL_LSF_SCHEDULER_PARAMETERS: "-q pbatch -nnodes 1 -W 20"
+  extends: .build-and-test-on-lassen
+  rules:
+    - if: $TEST_DISTCONV_BUILD == "1"
+
+.build-and-test-on-lassen:
+  stage: build
+  tags: [lassen, batch]
+  extends: .build-and-test

@@ -53,7 +53,7 @@ struct AllreduceNVSHMEMDevice {
       // Inter-device reduction
       for (int i = 0; i < m_num_steps; ++i) {
         int peer = m_pid ^ (1 << i);
-        put_nbi(tmp_buf + 1, tmp_buf, 1, peer);
+        util::nvshmem::put_nbi(tmp_buf + 1, tmp_buf, 1, peer);
         m_sync.sync(peer, true, true, st, sync_idx + i);
         tmp_buf[1] += tmp_buf[0];
         ++tmp_buf;
@@ -206,13 +206,13 @@ class AllreduceNVSHMEM: public Allreduce<DataType> {
   void ensure_native_sync() {
     using SyncType = long;
     size_t cur_size = m_native_sync.get_size() / sizeof(SyncType);
-    size_t required_size = NVSHMEM_REDUCE_SYNC_SIZE;
+    size_t required_size = NVSHMEMI_REDUCE_SYNC_SIZE;
     if (cur_size >= required_size) return;
     m_native_sync.allocate(required_size * sizeof(SyncType));
   }
 
   void ensure_native_buffer(size_t count) {
-    size_t required_size = std::max(count / 2 + 1, (size_t)NVSHMEM_REDUCE_MIN_WRKDATA_SIZE);
+    size_t required_size = std::max(count / 2 + 1, (size_t)NVSHMEMI_REDUCE_MIN_WRKDATA_SIZE);
     ensure_buffer(required_size);
   }
 

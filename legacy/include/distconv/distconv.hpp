@@ -88,6 +88,13 @@ void get_halo_sizes(const tensor::Tensor<DataType, Locale, Allocator> &input,
       const auto offset_from_next_stride = (s - (yp1 % s)) % s;
       fwd_halo_send[i] = radius - offset_from_next_stride;
     }
+
+    // Make sure halo sizes are non-negative
+    fwd_halo_send[i] = std::max(fwd_halo_send[i], 0);
+    fwd_halo_recv[i] = std::max(fwd_halo_recv[i], 0);
+    bwd_halo_send[i] = std::max(bwd_halo_send[i], 0);
+    bwd_halo_recv[i] = std::max(bwd_halo_recv[i], 0);
+
   }
 }
 
@@ -198,8 +205,6 @@ tensor::Shape get_deconvolution_output_local_tensor_shape(
     const int_vector &filter_dims,
     const int_vector &strides,
     bool with_padding, const int_vector &dilations, int num_groups) {
-  // Padding is not considered yet
-  assert_always(!with_padding);
   const int nsd = input.get_num_spatial_dims();
   const auto input_local_shape = input.get_local_shape();
   auto output_local_shape = input.get_local_shape();
@@ -210,27 +215,38 @@ tensor::Shape get_deconvolution_output_local_tensor_shape(
                            fwd_halo_recv, bwd_halo_recv, with_padding);
 
   for (int i = 0; i < nsd; ++i) {
+    util::MPIPrintStreamDebug()
+        << "i: " << i
+        << ", input_local_shape: " << input_local_shape[i]
+        << ", bwd_halo_recv: " << bwd_halo_recv[i]
+        << ", fwd_halo_recv: " << fwd_halo_recv[i]
+        << ", filter_dims: " << filter_dims[i]
+        << ", padding: " << with_padding;
     int dilated_filter_dim = internal::get_dilated_filter_size(
         filter_dims[i], dilations[i]);
-    int dim_with_halo_padding = input_local_shape[i] +
-        bwd_halo_recv[i] + fwd_halo_recv[i];
+    int dim = (input_local_shape[i]-1) * strides[i] + dilated_filter_dim;
+    dim -= bwd_halo_recv[i] + fwd_halo_recv[i];
     // Halo size is 0 when not partitioned, but its logical size
     // includes the padding. At this point, padding size is either
     // zero or exact match with the stencil size.
     if (with_padding &&
         input.get_distribution().get_split_shape()[i] == 1) {
-      dim_with_halo_padding += dilated_filter_dim - 1;
+      dim -= dilated_filter_dim - 1;
     }
-    // padding assumed to be zero
-    assert_always(!with_padding);
-    output_local_shape[i] = (dim_with_halo_padding - 1) * strides[i] + dilated_filter_dim;
+    output_local_shape[i] = dim;
   }
 
   // channel size - only if not doing channel parallelism.
   auto input_split_shape = input.get_distribution().get_split_shape();
-  // Assumes no channel partitioning
-  assert_always(input_split_shape[-2] == 1);
-  output_local_shape[-2] = *(filter_dims.rbegin() + 1);
+  if (input_split_shape[-2] == 1) {
+    assert_eq((int)output_local_shape[-2],
+              filter_dims.back() * num_groups);
+    output_local_shape[-2] = *(filter_dims.rbegin() + 1);
+  } else {
+    assert0(*(filter_dims.rbegin()+1) % input_split_shape[-2]);
+    output_local_shape[-2] = *(filter_dims.rbegin()+1) / input_split_shape[-2];
+  }
+
   return output_local_shape;
 }
 
@@ -284,9 +300,11 @@ Tensor create_d_input_tensor(const Tensor &input) {
 template <typename Tensor>
 Tensor create_filter_tensor(const int_vector &locale_shape,
                             const int_vector &filter_dims,
+                            const Tensor &input,
                             index_t num_channels, index_t num_filters,
                             int num_groups, MPI_Comm comm,
-                            ChannelParallelismAlgorithm chanfilt_algo) {
+                            ChannelParallelismAlgorithm chanfilt_algo,
+                            int filter_dim = 0) {
   const int nd = locale_shape.size();
   const int nsd = nd - 2;
   assert_eq(nsd, (int)filter_dims.size());
@@ -299,12 +317,28 @@ Tensor create_filter_tensor(const int_vector &locale_shape,
   if (filter_locale_shape[-2] > 1) {
     // Handle channel/filter parallelism.
     assert(num_groups == 1);  // No grouped convolution for now.
-    // TODO: Support stationary-w.
     if (chanfilt_algo == ChannelParallelismAlgorithm::X) {
+      filter_locale_shape[-1] = 1;
       split_shape[-2] = filter_locale_shape[-2];
     } else if (chanfilt_algo == ChannelParallelismAlgorithm::Y) {
-      std::swap(filter_locale_shape[-2], filter_locale_shape[-1]);
+      // This is specified with the channel dimension on input.
+      filter_locale_shape[-1] = filter_locale_shape[-2];
+      filter_locale_shape[-2] = 1;
       split_shape[-1] = filter_locale_shape[-1];
+    } else if (chanfilt_algo == ChannelParallelismAlgorithm::W) {
+      if (static_cast<size_t>(filter_dim) > filter_locale_shape[-2] ||
+          filter_locale_shape[-2] % filter_dim != 0) {
+        std::cerr << "Invalid filter_dim: channel="
+                  << filter_locale_shape[-2]
+                  << " filter=" << filter_dim << "\n";
+        abort();
+      }
+      // The channel dimension of input is split based on
+      // filter_dim.
+      filter_locale_shape[-1] = filter_dim;
+      filter_locale_shape[-2] /= filter_dim;
+      split_shape[-1] = filter_locale_shape[-1];
+      split_shape[-2] = filter_locale_shape[-2];
     }
   }
   filter_shape[-2] = num_channels / num_groups;
@@ -314,7 +348,7 @@ Tensor create_filter_tensor(const int_vector &locale_shape,
   util::MPIPrintStreamDebug()
     << "Filter locale shape: " << dist.get_locale_shape()
     << " split shape: " << dist.get_split_shape();
-  Tensor t = Tensor(filter_shape, tensor::LocaleMPI(comm),
+  Tensor t = Tensor(filter_shape, input.get_sub_locale_except_dim(-1),
                     dist);
   util::MPIPrintStreamDebug() << "Filter tensor: " << t;
   return t;
@@ -637,10 +671,3 @@ inline int dump_local_tensor(
 }
 
 } // namespace distconv
-
-// Reference backend
-#include "distconv/ref/backend.hpp"
-
-#ifdef DISTCONV_HAS_CUDNN
-#include "distconv/cudnn/backend.hpp"
-#endif

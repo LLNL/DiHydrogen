@@ -11,7 +11,7 @@
 #include <iterator>
 #include <numeric>
 
-#ifdef __CUDACC__
+#if defined(__CUDACC__) || __HIP__
 #define TENSOR_FUNC_DECL __host__ __device__
 #else
 #define TENSOR_FUNC_DECL

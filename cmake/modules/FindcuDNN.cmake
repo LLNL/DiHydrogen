@@ -16,13 +16,14 @@ The following variables will be defined::
   cuDNN_FOUND          - True if the system has the cuDNN library.
   cuDNN_INCLUDE_DIRS   - The include directory needed for cuDNN.
   cuDNN_LIBRARIES      - The libraries needed for cuDNN.
+  cuDNN_VERSION        - The version for cuDNN.
 
 The following cache variable will be set and marked as "advanced"::
 
   cuDNN_INCLUDE_PATH - The include directory needed for cuDNN.
   cuDNN_LIBRARY      - The library needed for cuDNN.
 
-In addition, the :prop_tgt:`IMPORTED` target ``cuda::cuDNN`` will
+In addition, the :prop_tgt:`IMPORTED` target ``cuda::cudnn`` will
 be created.
 
 #]=============]
@@ -46,20 +47,46 @@ find_library(cuDNN_LIBRARY cudnn
   )
 find_library(cuDNN_LIBRARY cudnn)
 
+# Shamelessly copied from LBANN
+set(cuDNN_VERSION)
+if (cuDNN_INCLUDE_PATH)
+  set(_cuDNN_VERSION_SRC "
+#include <stdio.h>
+#include <cudnn_version.h>
+int main() {
+  printf(\"%d.%d.%d\\n\", CUDNN_MAJOR, CUDNN_MINOR, CUDNN_PATCHLEVEL);
+  return 0;
+}
+")
+
+  file(
+    WRITE
+    "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cxx"
+    "${_cuDNN_VERSION_SRC}\n")
+
+  try_run(
+    _cuDNN_RUN_RESULT _cuDNN_COMPILE_RESULT
+    ${CMAKE_BINARY_DIR}
+    ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/src.cxx
+    CMAKE_FLAGS "-DINCLUDE_DIRECTORIES:STRING=${cuDNN_INCLUDE_PATH}"
+    RUN_OUTPUT_VARIABLE cuDNN_VERSION
+    COMPILE_OUTPUT_VARIABLE _cuDNN_COMPILE_OUTPUT)
+endif ()
+
 # Standard handling of the package arguments
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(cuDNN
-  DEFAULT_MSG cuDNN_LIBRARY cuDNN_INCLUDE_PATH)
+  DEFAULT_MSG cuDNN_VERSION cuDNN_LIBRARY cuDNN_INCLUDE_PATH)
 
-if (NOT TARGET cuda::cuDNN)
-  add_library(cuda::cuDNN INTERFACE IMPORTED)
-endif (NOT TARGET cuda::cuDNN)
+if (NOT TARGET cuda::cudnn)
+  add_library(cuda::cudnn INTERFACE IMPORTED)
+endif (NOT TARGET cuda::cudnn)
 
-target_include_directories(cuda::cuDNN INTERFACE "${cuDNN_INCLUDE_PATH}")
-target_link_libraries(cuda::cuDNN INTERFACE "${cuDNN_LIBRARY}")
+target_include_directories(cuda::cudnn INTERFACE "${cuDNN_INCLUDE_PATH}")
+target_link_libraries(cuda::cudnn INTERFACE "${cuDNN_LIBRARY}")
 
 set(cuDNN_INCLUDE_DIRS "${cuDNN_INCLUDE_PATH}")
-set(cuDNN_LIBRARIES cuda::cuDNN)
+set(cuDNN_LIBRARIES cuda::cudnn)
 
 mark_as_advanced(FORCE
   cuDNN_INCLUDE_PATH

@@ -28,10 +28,8 @@ constexpr bool MemberV()
     return MemberVT<T, List>::value;
 }
 
-#ifdef H2_USE_CXX17
 template <typename T, typename List>
 inline constexpr bool Member = MemberV<T, List>();
-#endif // H2_USE_CXX17
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 

@@ -27,10 +27,8 @@ constexpr unsigned long SizeV()
     return SizeVT<List>::value;
 }
 
-#ifndef H2_NO_CXX17
 template <typename List>
 inline constexpr unsigned long Size = SizeV<List>();
-#endif // H2_NO_CXX17
 
 } // namespace tlist
 } // namespace meta

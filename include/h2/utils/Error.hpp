@@ -8,7 +8,10 @@
 #ifndef H2_UTILS_ERROR_HPP_
 #define H2_UTILS_ERROR_HPP_
 
+#include <stdexcept>
 #include <string>
+
+#include <h2_config.hpp>
 
 /** @file Error.hpp
  *
@@ -25,15 +28,17 @@
  *  @param name The name of the new class.
  *  @param parent The name of the parent class.
  */
-#define H2_DEFINE_FORWARDING_EXCEPTION(name, parent)           \
-    class name : public parent                                 \
-    {                                                          \
-    public:                                                    \
-        /* @brief Constructor */                               \
-        template <typename... Ts>                              \
-        name(Ts&&... args) : parent(std::forward<Ts>(args)...) \
-        {}                                                     \
+#define H2_DEFINE_FORWARDING_EXCEPTION(name, parent)                           \
+    class name : public parent                                                 \
+    {                                                                          \
+    public:                                                                    \
+        /* @brief Constructor */                                               \
+        template <typename... Ts>                                              \
+        name(Ts&&... args) : parent(std::forward<Ts>(args)...)                 \
+        {}                                                                     \
     }
+
+H2_DEFINE_FORWARDING_EXCEPTION(H2Exception, std::runtime_error);
 
 /** @def H2_ASSERT(cond, excptn, msg)
  *  @brief Check that the condition is true and throw an exception if
@@ -44,9 +49,22 @@
  *                `false`.
  *  @param ... The arguments to pass to the exception.
  */
-#define H2_ASSERT_MSG(cond, excptn, ...)        \
-    if (!(cond))                                \
+#define H2_ASSERT(cond, excptn, ...)                                           \
+    if (!(cond))                                                               \
         throw excptn(__VA_ARGS__);
+
+#ifdef H2_DEBUG
+/** @def H2_ASSERT_DEBUG
+ *  @brief Check that a condition is true and throw an exception if
+ *         not, but only in a debug build.
+ *
+ * @param cond Boolean condition to test.
+ * @param msg Message to pass to the exception if the condition fails.
+ */
+#define H2_ASSERT_DEBUG(cond, msg) H2_ASSERT(cond, H2Exception, msg)
+#else
+#define H2_ASSERT_DEBUG(cond, msg)
+#endif
 
 namespace h2
 {

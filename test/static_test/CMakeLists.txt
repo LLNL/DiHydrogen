@@ -11,7 +11,8 @@
 # way.
 add_library(StaticTest MODULE "")
 add_subdirectory(meta)
-target_link_libraries(StaticTest PRIVATE H2Meta)
+add_subdirectory(tensor)
+target_link_libraries(StaticTest PRIVATE H2Meta H2Core)
 set_target_properties(StaticTest
   PROPERTIES
   CXX_STANDARD 17

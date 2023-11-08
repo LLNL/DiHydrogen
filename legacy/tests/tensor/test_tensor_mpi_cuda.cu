@@ -1,12 +1,14 @@
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/tensor.hpp"
-#include "distconv/tensor/tensor_mpi.hpp"
 #include "distconv/tensor/tensor_cuda.hpp"
+#include "distconv/tensor/tensor_mpi.hpp"
 #include "distconv/tensor/tensor_mpi_cuda.hpp"
-#include "test_tensor.hpp"
-#include "distconv/util/util_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
+#include "test_tensor.hpp"
 
 #include <assert.h>
+
 #include <iostream>
 #include <vector>
 
@@ -98,13 +100,12 @@ inline int test_data_access_mpi_cuda(const Shape &shape,
                         t.get_pitch(),
                         t.get_shape(),
                         t.get_global_index());
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
 
   int error_counter = 0;
   int *error_counter_d;
-  cudaMalloc(&error_counter_d, sizeof(int));
-  cudaMemcpy(error_counter_d, &error_counter, sizeof(int),
-             cudaMemcpyDefault);
+  GPU_MALLOC(&error_counter_d, sizeof(int));
+  h2::gpu::mem_copy(error_counter_d, &error_counter);
   check_tensor<<<1, 1>>>(buf,
                          t.get_local_shape(),
                          dist.get_overlap(),
@@ -113,8 +114,7 @@ inline int test_data_access_mpi_cuda(const Shape &shape,
                          t.get_global_index(),
                          error_counter_d);
 
-  cudaMemcpy(&error_counter, error_counter_d, sizeof(int),
-             cudaMemcpyDefault);
+  h2::gpu::mem_copy(&error_counter, error_counter_d);
   assert0(error_counter);
 
   return 0;
@@ -136,7 +136,7 @@ int test_view_raw_ptr(const Shape &shape,
                         t.get_pitch(),
                         t.get_shape(),
                         t.get_global_index());
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
   using ConstTensorType = Tensor<typename TensorType::data_type,
                                  typename TensorType::locale_type,
                                  typename TensorType::allocator_type>;
@@ -145,9 +145,8 @@ int test_view_raw_ptr(const Shape &shape,
   assert_always(const_tensor_view.get_const_buffer() == buf);
   int error_counter = 0;
   int *error_counter_d;
-  cudaMalloc(&error_counter_d, sizeof(int));
-  cudaMemcpy(error_counter_d, &error_counter, sizeof(int),
-             cudaMemcpyDefault);
+  GPU_MALLOC(&error_counter_d, sizeof(int));
+  h2::gpu::mem_copy(error_counter_d, &error_counter);
   check_tensor<<<1, 1>>>(const_tensor_view.get_const_buffer(),
                          const_tensor_view.get_local_shape(),
                          dist.get_overlap(),
@@ -155,8 +154,7 @@ int test_view_raw_ptr(const Shape &shape,
                          const_tensor_view.get_shape(),
                          const_tensor_view.get_global_index(),
                          error_counter_d);
-  cudaMemcpy(&error_counter, error_counter_d, sizeof(int),
-             cudaMemcpyDefault);
+  h2::gpu::mem_copy(&error_counter, error_counter_d);
   assert0(error_counter);
   return 0;
 }
@@ -207,34 +205,34 @@ int test_clear_halo(const Shape &shape,
 
   int error_counter = 0;
   int *error_counter_d;
-  cudaMalloc(&error_counter_d, sizeof(int));
-  cudaMemcpy(error_counter_d, &error_counter, sizeof(int),
-             cudaMemcpyDefault);
+  GPU_MALLOC(&error_counter_d, sizeof(int));
+  h2::gpu::mem_copy(error_counter_d, &error_counter);
 
   assert0(t.allocate());
   auto *buf = t.get_buffer();
-  DataType *h = new DataType[t.get_local_real_size()];
+  std::vector<DataType> hvec;
+  hvec.reserve(t.get_local_real_size());
+  auto* h = hvec.data();
   DataType default_value = 1;
   for (size_t i = 0; i < t.get_local_real_size(); ++i) {
     h[i] = default_value;
   }
   for (int i = 0; i < num_dims; ++i) {
-    cudaMemcpy(buf, h, t.get_local_real_size() * sizeof(DataType),
-               cudaMemcpyDefault);
-    t.clear_halo(i);
-    dim3 gsize(local_real_shape[1], local_real_shape[2]);
-    if (num_dims == 4) {
-      gsize.z = local_real_shape[3];
-    }
+      h2::gpu::mem_copy(buf, h, t.get_local_real_size());
+      t.clear_halo(i);
+      dim3 gsize(local_real_shape[1], local_real_shape[2]);
+      if (num_dims == 4)
+      {
+          gsize.z = local_real_shape[3];
+      }
     check_clear_halo<ND, DataType><<<gsize, 128>>>(
         buf, local_real_shape, i, dist.get_overlap(i), 1, error_counter_d);
-    cudaMemcpy(&error_counter, error_counter_d, sizeof(int), cudaMemcpyDefault);
+    h2::gpu::mem_copy(&error_counter, error_counter_d);
     if (error_counter != 0) {
       util::MPIPrintStreamError() << error_counter << " errors at dimension ";
-      DISTCONV_CHECK_CUDA(cudaMemcpy(h, buf, sizeof(DataType) *
-                                     t.get_local_real_size(), cudaMemcpyDefault));
+      h2::gpu::mem_copy(h, buf, t.get_local_real_size());
       std::ofstream out;
-      std::stringstream file_path;
+      std::ostringstream file_path;
       file_path << "clear_halo_test_" << loc.get_rank();
       out.open(file_path.str(), std::ios::out | std::ios::trunc);
       for (size_t i = 0; i < t.get_local_real_size(); ++i) {
@@ -244,11 +242,11 @@ int test_clear_halo(const Shape &shape,
       return -1;
     }
 #if 0
+    // FIXME: Whenever this gets un-"#if 0"-ed, we should use a vector.
     DataType *result_h = new DataType[t.get_local_real_size()];
-    DISTCONV_CHECK_CUDA(cudaMemcpy(result_h, buf, sizeof(DataType) *
-                                   t.get_local_real_size(), cudaMemcpyDefault));
+    h2::gpu::mem_copy(result_h, buf, t.get_local_real_size());
     std::ofstream out;
-    std::stringstream file_path;
+    std::ostringstream file_path;
     file_path << "clear_halo_test_" << i << "_" << loc.get_rank();
     out.open(file_path.str(), std::ios::out | std::ios::trunc);
     for (size_t i = 0; i < t.get_local_real_size(); ++i) {
@@ -266,32 +264,33 @@ int test_clear_halo(const Shape &shape,
   divisible by 8.
  */
 int main(int argc, char *argv[]) {
-  int dev = util::choose_gpu();
-  cudaSetDevice(dev);
-  MPI_Init(&argc, &argv);
-  int pid;
-  int np;
-  MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-  MPI_Comm_size(MPI_COMM_WORLD, &np);
+    h2::gpu::set_gpu(util::choose_gpu());
+    MPI_Init(&argc, &argv);
+    int pid;
+    int np;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &np);
 
-  MPIPrintStreamInfo() << "Using device " << dev;
+    MPIPrintStreamInfo() << "Using device " << h2::gpu::current_gpu();
 
-  constexpr int ND = 3;
-  using DataType = int;
+    constexpr int ND = 3;
+    using DataType = int;
 
-  using TensorMPI = Tensor<DataType, LocaleMPI, CUDAAllocator>;
-  auto dist3 = Distribution::make_overlapped_distribution({2, 2, np/4}, {1, 1, 0});
-  auto dist4 = Distribution::make_overlapped_distribution({2, 2, 2, np/8}, {1, 1, 0, 0});
-  assert_always((np % 8) == 0 && (np >= 8));
-  //Distribution<3> dist({1, 1, np}, {1, 1, 0});
+    using TensorMPI = Tensor<DataType, LocaleMPI, CUDAAllocator>;
+    auto dist3 =
+        Distribution::make_overlapped_distribution({2, 2, np / 4}, {1, 1, 0});
+    auto dist4 = Distribution::make_overlapped_distribution({2, 2, 2, np / 8},
+                                                            {1, 1, 0, 0});
+    assert_always((np % 8) == 0 && (np >= 8));
+    // Distribution<3> dist({1, 1, np}, {1, 1, 0});
 
-  assert0(test_alloc<TensorMPI>(Shape({2, 2, 2}), dist3));
-  MPIRootPrintStreamInfo() << "test_alloc success";
+    assert0(test_alloc<TensorMPI>(Shape({2, 2, 2}), dist3));
+    MPIRootPrintStreamInfo() << "test_alloc success";
 
-  assert0(test_data_access_mpi_cuda<TensorMPI>(Shape({2, 2, 2}), dist3));
-  MPIRootPrintStreamInfo() << "test_data_access_mpi_cuda success";
+    assert0(test_data_access_mpi_cuda<TensorMPI>(Shape({2, 2, 2}), dist3));
+    MPIRootPrintStreamInfo() << "test_data_access_mpi_cuda success";
 
-  // Doesn't work with Spectrum-MPI
+    // Doesn't work with Spectrum-MPI
 #if 0
   assert0(test_data_access_mpi_cuda<Tensor<DataType, LocaleMPI,
           CUDAPitchedAllocator>>(Shape({32, 32, 4}), dist3));
@@ -310,6 +309,6 @@ int main(int argc, char *argv[]) {
 
   MPI_Finalize();
 
-  cudaDeviceReset();
+  DISTCONV_CHECK_GPU(GPU_DEVICE_RESET());
   return 0;
 }

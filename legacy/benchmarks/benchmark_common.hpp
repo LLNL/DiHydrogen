@@ -1,13 +1,15 @@
 #pragma once
 
 #include "distconv/base.hpp"
-#include "distconv/vector.hpp"
-#include "distconv/util/cxxopts.hpp"
+#include "distconv/ref/backend.hpp"
 #include "distconv/tensor/tensor_base.hpp"
-#include <cstdlib>
-#include <vector>
+#include "distconv/util/cxxopts.hpp"
+#include "distconv/vector.hpp"
+
 #include <algorithm>
+#include <cstdlib>
 #include <numeric>
+#include <vector>
 
 namespace distconv_benchmark {
 
@@ -31,10 +33,12 @@ struct GetType<BenchmarkDataType::DOUBLE> {
   using type = double;
 };
 
+#if H2_HAS_HALF
 template <>
 struct GetType<BenchmarkDataType::HALF> {
   using type = half;
 };
+#endif // H2_HAS_HALF
 
 const unsigned input_tensor_seed = 0;
 const unsigned filter_tensor_seed = 1;
@@ -129,6 +133,7 @@ class BenchmarkConfig {
   int p_n;
   int p_c;
   int_vector p_s;
+  int p_f;
 
   int warming_up_count;
   int run_count;
@@ -188,7 +193,7 @@ class BenchmarkConfig {
             strides({}),
             dilations({}),
             num_groups(1),
-            p_n(-1), p_c(-1), p_s({}),
+            p_n(-1), p_c(-1), p_s({}), p_f(-1),
             warming_up_count(-1), run_count(-1),
             conv_fwd_algo("DEFAULT"),
             conv_bwd_data_algo("DEFAULT"),
@@ -236,6 +241,7 @@ class BenchmarkConfig {
         distconv::util::split_spaced_array<int>(pr["dilations"].as<std::string>()));
     num_groups = pr["num-groups"].as<int>();
     substitute_nd_argument(p_n, p_c, p_s, pr["proc-size"].as<std::string>());
+    p_f = pr["filter-dim"].as<int>();
     conv_fwd_algo = pr["conv-fwd-algo"].as<std::string>();
     conv_bwd_data_algo = pr["conv-bwd-data-algo"].as<std::string>();
     conv_bwd_filter_algo = pr["conv-bwd-filter-algo"].as<std::string>();
@@ -281,6 +287,10 @@ class BenchmarkConfig {
         chanfilt_algo = distconv::ChannelParallelismAlgorithm::Y;
       } else if (algo == "W") {
         chanfilt_algo = distconv::ChannelParallelismAlgorithm::W;
+        if (p_f == 0) {
+          std::cerr << "Must specify --filter-dim for stationary-w\n";
+          abort();
+        }
       } else {
         std::cerr << "Unknown algorithm name for channel/filter algorithm\n";
         abort();
@@ -412,6 +422,7 @@ class BenchmarkConfig {
        << ", dilation: " << reverse_and_join_array(dilations)
        << ", group count: " << num_groups
        << ", proc dims: " << p_n << "x" << p_c << "x" << reverse_and_join_array(p_s)
+       << ", proc F dim: " << p_f
        << ", backend: " << backend
        << ", fwd algorithm: " << conv_fwd_algo
        << ", bwd data algorithm: " << conv_bwd_data_algo
@@ -440,6 +451,7 @@ class BenchmarkConfig {
        << reverse_and_join_array(dilations) << " "
        << num_groups << " "
        << p_n << " " << p_c << " " << reverse_and_join_array(p_s) << " "
+       << p_f << " "
        << backend << " "
        << conv_fwd_algo << " " << conv_bwd_data_algo
        << " " << conv_bwd_filter_algo
@@ -525,6 +537,7 @@ inline BenchmarkConfig<NSD> process_opt(int argc, char *argv[], int pid,
       ("dilations", "Vertical and horizontal dilation", cxxopts::value<std::string>()->default_value(default_dilations))
       ("num-groups", "Number of convolution groups", cxxopts::value<int>()->default_value("1"))
       ("proc-size", "Process grid size" + shape_notation, cxxopts::value<std::string>()->default_value(default_proc_size))
+      ("filter-dim", "Process grid filter dimension", cxxopts::value<int>()->default_value("0"))
       ("a,conv-fwd-algo", "Convolution fwd algorithm", cxxopts::value<std::string>()->default_value("DEFAULT"))
       ("g,conv-bwd-data-algo", "Convolution bwd data algorithm", cxxopts::value<std::string>()->default_value("DEFAULT"))
       ("k,conv-bwd-filter-algo", "Convolution bwd filter algorithm", cxxopts::value<std::string>()->default_value("DEFAULT"))

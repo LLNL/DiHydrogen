@@ -1,27 +1,32 @@
 #include "distconv/distconv.hpp"
-#include "distconv/tensor/tensor.hpp"
-#include "distconv/tensor/tensor_mpi_cuda.hpp"
-#include "distconv/tensor/tensor_cuda.hpp"
-#include "test_tensor.hpp"
-#include "distconv/util/util_cuda.hpp"
-#include "distconv/util/util_mpi.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda_al.hpp"
+#include "distconv/tensor/tensor.hpp"
+#include "distconv/tensor/tensor_cuda.hpp"
+#include "distconv/tensor/tensor_mpi_cuda.hpp"
+#include "distconv/util/util_gpu.hpp"
+#include "distconv/util/util_mpi.hpp"
+#include "test_tensor.hpp"
 #ifdef DISTCONV_HAS_P2P
 #include "distconv/tensor/shuffle_mpi_cuda_p2p.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda_hybrid.hpp"
 #endif // DISTCONV_HAS_P2P
 
+#include "h2/gpu/memory_utils.hpp"
+#include "h2/gpu/runtime.hpp"
+
 #include <Al.hpp>
 
-#include <iostream>
 #include <cmath>
+#include <iostream>
 
 using DataType = float;
 
 using namespace distconv;
 using namespace distconv::tensor;
-using AlBackend = Al::HostTransferBackend;
+using namespace h2::gpu;
+using AlBackend = Al::NCCLBackend;
 
 MPI_Comm local_comm;
 int local_comm_size;
@@ -248,7 +253,7 @@ int test_copy_shuffle(const Shape &shape,
       t_src.get_shape(),
       t_src.get_global_index());
 
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
 
   assert_always(t_dest.allocate() == 0);
 
@@ -257,8 +262,7 @@ int test_copy_shuffle(const Shape &shape,
   p2p::P2P *p2p_h = nullptr;
 #endif // DISTCONV_HAS_P2P
   AlBackend::comm_type *al_comm = nullptr;
-  cudaStream_t stream;
-  DISTCONV_CHECK_CUDA(cudaStreamCreate(&stream));
+  DeviceStream stream = make_stream();
 
   MPI_Barrier(MPI_COMM_WORLD);
   util::MPIRootPrintStreamInfo() << "Creating a shuffler";
@@ -299,9 +303,8 @@ int test_copy_shuffle(const Shape &shape,
   int error_counter = 0;
 
   int *error_counter_d;
-  cudaMalloc(&error_counter_d, sizeof(int));
-  cudaMemcpy(error_counter_d, &error_counter, sizeof(int),
-             cudaMemcpyDefault);
+  GPU_MALLOC(&error_counter_d, sizeof(int));
+  mem_copy(error_counter_d, &error_counter);
 
   if (t_dest.is_split_root()) {
     check_tensor<ND><<<grid_dim, block_dim>>>(
@@ -312,8 +315,7 @@ int test_copy_shuffle(const Shape &shape,
         t_dest.get_shape(),
         t_dest.get_global_index(),
         error_counter_d);
-    cudaMemcpy(&error_counter, error_counter_d, sizeof(int),
-               cudaMemcpyDefault);
+    mem_copy(&error_counter, error_counter_d);
     util::MPIPrintStreamDebug() << "#errors: " << error_counter;
   }
 
@@ -347,8 +349,7 @@ int test_copy_shuffle(const Shape &shape,
         t_src.get_shape(),
         t_src.get_global_index(),
         error_counter_d);
-    cudaMemcpy(&error_counter, error_counter_d, sizeof(int),
-               cudaMemcpyDefault);
+    mem_copy(&error_counter, error_counter_d);
     if (error_counter) {
       util::MPIPrintStreamError() << "#errors: " << error_counter;
     }
@@ -361,7 +362,7 @@ int test_copy_shuffle(const Shape &shape,
   if (p2p_h) delete p2p_h;
 #endif // DISTCONV_HAS_P2P
   if (al_comm) delete al_comm;
-  DISTCONV_CHECK_CUDA(cudaStreamDestroy(stream));
+  destroy(stream);
 
   MPI_Barrier(MPI_COMM_WORLD);
   return 0;
@@ -560,8 +561,7 @@ int main(int argc, char *argv[]) {
         return arg;
       };
 
-  int dev = util::choose_gpu();
-  cudaSetDevice(dev);
+  set_gpu(util::choose_gpu());
   Al::Initialize(argc, argv);
 
   int pid;

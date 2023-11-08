@@ -12,6 +12,15 @@
 #include "distconv/util/stopwatch.h"
 #include "distconv/util/util.hpp"
 
+#include "distconv/dnn_backend/batchnorm.hpp"
+#include "distconv/dnn_backend/convolution.hpp"
+#include "distconv/dnn_backend/cross_entropy.hpp"
+#include "distconv/dnn_backend/leaky_relu.hpp"
+#include "distconv/dnn_backend/mean_squared_error.hpp"
+#include "distconv/dnn_backend/pooling.hpp"
+#include "distconv/dnn_backend/relu.hpp"
+#include "distconv/dnn_backend/softmax.hpp"
+
 /*
   Miscellaneous structures and functions that should be only used for
   benchmarks using Distconv. cudnn_benchmark, e.g., should not used

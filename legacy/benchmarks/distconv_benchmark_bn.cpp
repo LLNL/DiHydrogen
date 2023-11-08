@@ -18,8 +18,11 @@
 #include "distconv/tensor/tensor_cuda.hpp"
 #include "distconv/util/util_cuda.hpp"
 #endif
+#if H2_HAS_ROCM
+#include "distconv/util/util_rocm.hpp"
+#endif
 #ifdef DISTCONV_HAS_CUDNN
-#include "distconv/util/util_cudnn.hpp"
+#include "distconv/util/util_gpu_dnn.hpp"
 #endif
 
 #include <Al.hpp>
@@ -99,7 +102,6 @@ class Data {
   typename TensorType<Backend, DataType>::type d_var;
 
   Data(const BenchmarkConfig<NSD> &cfg, MPI_Comm comm): m_cfg(cfg) {
-    using Tensor = typename TensorType<Backend, DataType>::type;
 
     int pid;
     int np;
@@ -328,7 +330,7 @@ int test_backward(Data<NSD, Backend, DataType> &d,
                        d.d_mean, d.d_var, d.d_input);
   }
   be.wait();
-  DISTCONV_CHECK_CUDA(cudaGetLastError());
+  util::check_for_device_runtime_error();
 
   util::MPIRootPrintStreamInfo() << "Starting " << cfg.run_count
                                  << " times of measurement";

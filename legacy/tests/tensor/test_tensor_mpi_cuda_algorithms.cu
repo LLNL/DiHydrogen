@@ -1,10 +1,11 @@
-#include "distconv/tensor/tensor.hpp"
-#include "distconv/tensor/tensor_mpi.hpp"
-#include "distconv/tensor/tensor_cuda.hpp"
+#include "distconv/runtime_gpu.hpp"
 #include "distconv/tensor/algorithms_cuda.hpp"
-#include "test_tensor.hpp"
-#include "distconv/util/util_cuda.hpp"
+#include "distconv/tensor/tensor.hpp"
+#include "distconv/tensor/tensor_cuda.hpp"
+#include "distconv/tensor/tensor_mpi.hpp"
+#include "distconv/util/util_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
+#include "test_tensor.hpp"
 
 #include <iostream>
 #include <vector>
@@ -116,7 +117,7 @@ inline int test_transform(const Shape &shape,
                         t.get_pitch(),
                         t.get_shape(),
                         t.get_global_index());
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
 
   auto times2_lambda = [] __device__ (int &x) {
     x = x * 2;
@@ -126,9 +127,8 @@ inline int test_transform(const Shape &shape,
 
   int error_counter = 0;
   int *error_counter_d;
-  cudaMalloc(&error_counter_d, sizeof(int));
-  cudaMemcpy(error_counter_d, &error_counter, sizeof(int),
-             cudaMemcpyDefault);
+  GPU_MALLOC(&error_counter_d, sizeof(int));
+  h2::gpu::mem_copy(error_counter_d, &error_counter);
   check_tensor<<<1, 1>>>(buf,
                          t.get_local_shape(),
                          dist.get_overlap(),
@@ -138,10 +138,9 @@ inline int test_transform(const Shape &shape,
                          times2_functor<typename TensorType::data_type>(),
                          error_counter_d);
 
-  cudaMemcpy(&error_counter, error_counter_d, sizeof(int),
-             cudaMemcpyDefault);
+  h2::gpu::mem_copy(&error_counter, error_counter_d);
   assert0(error_counter);
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
   MPI_Barrier(MPI_COMM_WORLD);
   MPIRootPrintStreamInfo() << "Transform with times2_lambda completed.";
 
@@ -154,8 +153,7 @@ inline int test_transform(const Shape &shape,
                          t2.get_global_index(),
                          times2_functor<typename TensorType::data_type>(),
                          error_counter_d);
-  cudaMemcpy(&error_counter, error_counter_d, sizeof(int),
-             cudaMemcpyDefault);
+  h2::gpu::mem_copy(&error_counter, error_counter_d);
   assert0(error_counter);
 
   using TensorTypeLong = Tensor<long, typename TensorType::locale_type,
@@ -174,11 +172,10 @@ inline int test_transform(const Shape &shape,
                          t3.get_global_index(),
                          times2_functor<typename TensorTypeLong::data_type>(),
                          error_counter_d);
-  cudaMemcpy(&error_counter, error_counter_d, sizeof(int),
-             cudaMemcpyDefault);
+  h2::gpu::mem_copy(&error_counter, error_counter_d);
   assert0(error_counter);
 
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
   MPI_Barrier(MPI_COMM_WORLD);
   MPIRootPrintStreamInfo() << "Transform with copy_functor completed.";
 
@@ -218,7 +215,7 @@ inline int test_reduce(const Shape &shape,
                         t.get_pitch(),
                         t.get_shape(),
                         t.get_global_index());
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
 
   auto reduce_dist = dist;
   auto reduce_split_shape = reduce_dist.get_split_shape();
@@ -237,7 +234,7 @@ inline int test_reduce(const Shape &shape,
   ReduceSum<ND, DataType, LocaleType, typename TensorType::allocator_type>(
       t, t.get_local_shape(), reduce_tensor);
 
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
   util::MPIPrintStreamDebug() << "Reduction done";
 
   using TensorProcType = Tensor<DataType, tensor::LocaleProcess,
@@ -324,7 +321,7 @@ inline int test_transform_reduce(const Shape &shape,
                         t.get_pitch(),
                         t.get_shape(),
                         t.get_global_index());
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
 
   auto reduce_dist = dist;
   auto reduce_split_shape = reduce_dist.get_split_shape();
@@ -342,7 +339,7 @@ inline int test_transform_reduce(const Shape &shape,
   TransformReduceSum<ND, DataType, LocaleType, typename TensorType::allocator_type>(
       t, reduce_tensor, op);
 
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
   util::MPIPrintStreamDebug() << "Reduction done";
 
   using TensorProcType = Tensor< DataType, LocaleProcess,
@@ -417,7 +414,7 @@ inline int test_transform_reduce2(const Shape &shape,
                         t.get_pitch(),
                         t.get_shape(),
                         t.get_global_index());
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
 
   auto reduce_dist1 = dist;
   auto reduce_split_shape1 = reduce_dist1.get_split_shape();
@@ -448,7 +445,7 @@ inline int test_transform_reduce2(const Shape &shape,
   TransformReduceSum<ND, DataType, LocaleType, typename TensorType::allocator_type>(
       t, reduce_tensor1, op1, reduce_tensor2, op2);
 
-  cudaDeviceSynchronize();
+  h2::gpu::sync();
   util::MPIPrintStreamDebug() << "Reduction done";
 
   using TensorProcType = Tensor<DataType,
@@ -524,28 +521,28 @@ inline int test_transform_reduce2(const Shape &shape,
   be >= 4 and divisible by 4.
  */
 int main(int argc, char *argv[]) {
-  int dev = util::choose_gpu();
-  cudaSetDevice(dev);
-  MPI_Init(&argc, &argv);
-  int pid;
-  int np;
-  MPI_Comm_rank(MPI_COMM_WORLD, &pid);
-  MPI_Comm_size(MPI_COMM_WORLD, &np);
+    h2::gpu::set_gpu(util::choose_gpu());
+    MPI_Init(&argc, &argv);
+    int pid;
+    int np;
+    MPI_Comm_rank(MPI_COMM_WORLD, &pid);
+    MPI_Comm_size(MPI_COMM_WORLD, &np);
 
-  MPIPrintStreamInfo() << "Using device " << dev;
+    MPIPrintStreamInfo() << "Using device " << h2::gpu::current_gpu();
 
-  constexpr int num_dims = 3;
-  using DataType = int;
+    constexpr int num_dims = 3;
+    using DataType = int;
 
-  using TensorMPI = Tensor<DataType, LocaleMPI, CUDAAllocator>;
-  auto dist = Distribution::make_overlapped_distribution({2, 2, np/4}, {1, 1, 0});
-  assert_always((np % 4) == 0 && (np / 4 > 0));
-  Shape tensor_shape({4, 4, 4});
+    using TensorMPI = Tensor<DataType, LocaleMPI, CUDAAllocator>;
+    auto dist =
+        Distribution::make_overlapped_distribution({2, 2, np / 4}, {1, 1, 0});
+    assert_always((np % 4) == 0 && (np / 4 > 0));
+    Shape tensor_shape({4, 4, 4});
 
-  {
-    assert0(test_transform<TensorMPI>(tensor_shape, dist));
-    MPIRootPrintStreamInfo() << "test_transform success";
-  }
+    {
+        assert0(test_transform<TensorMPI>(tensor_shape, dist));
+        MPIRootPrintStreamInfo() << "test_transform success";
+    }
 
   Shape reduced_dim(num_dims, 2);
   for (auto it = reduced_dim.index_begin();
@@ -587,6 +584,6 @@ int main(int argc, char *argv[]) {
   MPIRootPrintStreamInfo() << "Completed successfully.";
 
   MPI_Finalize();
-  cudaDeviceReset();
+  GPU_DEVICE_RESET();
   return 0;
 }

@@ -2,6 +2,9 @@
 #include "distconv/util/util.hpp"
 #include "distconv/util/util_cuda.hpp"
 
+#include "h2/gpu/memory_utils.hpp"
+#include "h2/gpu/runtime.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cuda_runtime.h>
@@ -9,20 +12,14 @@
 namespace distconv {
 namespace internal {
 
-CUDADeviceMemoryPool::CUDADeviceMemoryPool():
-    m_allocator(4, 8, cub::CachingDeviceAllocator::INVALID_BIN,
-                cub::CachingDeviceAllocator::INVALID_SIZE, false,
-#ifdef DISTCONV_DEBUG
-                true
-#else
-                false
-#endif
-                ) {}
+CUDADeviceMemoryPool::CUDADeviceMemoryPool()
+{}
 CUDADeviceMemoryPool::~CUDADeviceMemoryPool() {}
 
 void *CUDADeviceMemoryPool::get(size_t size, cudaStream_t st) {
   void *p = nullptr;
-  cudaError_t err = m_allocator.DeviceAllocate(&p, size, st);
+  cudaError_t err =
+      h2::gpu::default_cub_allocator().DeviceAllocate(&p, size, st);
   if (err != cudaSuccess) {
     size_t available;
     size_t total;
@@ -40,11 +37,11 @@ void *CUDADeviceMemoryPool::get(size_t size, cudaStream_t st) {
 }
 
 void CUDADeviceMemoryPool::release(void *p) {
-  DISTCONV_CHECK_CUDA(m_allocator.DeviceFree(p));
+  DISTCONV_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(p));
 }
 
 size_t CUDADeviceMemoryPool::get_max_allocatable_size(size_t limit) {
-  size_t bin_growth = m_allocator.bin_growth;
+  size_t bin_growth = h2::gpu::default_cub_allocator().bin_growth;
   size_t x = std::log(limit) / std::log(bin_growth);
   size_t max_allowed_size = std::pow(bin_growth, x);
   return max_allowed_size;
@@ -81,4 +78,3 @@ cudaEvent_t &RuntimeCUDA::get_event(int idx) {
 
 } // namespace internal
 } // namespace distconv
-

@@ -55,31 +55,3 @@ function (h2_cxx_determine_restrict_qualifier OUTVAR)
   endforeach ()
   unset(${OUTVAR} PARENT_SCOPE)
 endfunction ()
-
-# Attempt to setup warning flags for developer mode. Appends to the
-# variable passed in OUTVAR. This is very GNU/Clang-centric.
-function (h2_cxx_get_developer_warning_flags OUTVAR)
-  set(_FOUND_CXX_FLAGS)
-  list(APPEND _CANDIDATE_CXX_FLAGS
-    "-Wall" "-Wextra" "-Wpedantic" "-pedantic")
-
-  foreach (flag IN LISTS _CANDIDATE_CXX_FLAGS)
-    string(REGEX REPLACE "^-" "" _flag_no_dash "${flag}")
-    string(TOUPPER "${_flag_no_dash}" _flag_upper)
-    check_cxx_compiler_flag("${flag}" CXX_HAS_FLAG_${_flag_upper})
-    if (CXX_HAS_FLAG_${_flag_upper})
-      list(APPEND _FOUND_CXX_FLAGS "${flag}")
-    endif ()
-  endforeach ()
-  set(${OUTVAR} ${${OUTVAR}} ${_FOUND_CXX_FLAGS} PARENT_SCOPE)
-endfunction ()
-
-# Attempt to setup warnings-as-errors ("-Werror") flag. Currently only
-# checks for "-Werror". If found, the flag is appended to the initial
-# value of OUTVAR; if not found, OUTVAR is not changed.
-function (h2_cxx_get_warnings_as_errors_flag OUTVAR)
-  check_cxx_compiler_flag("-Werror" CXX_HAS_FLAG_WERROR)
-  if (CXX_HAS_FLAG_WERROR)
-    set(${OUTVAR} ${${OUTVAR}} "-Werror" PARENT_SCOPE)
-  endif ()
-endfunction ()

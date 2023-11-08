@@ -1,11 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2023 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "h2/meta/TypeList.hpp"
 #include "h2/patterns/multimethods/SwitchDispatcher.hpp"
@@ -132,7 +132,7 @@ struct TestFunctorWithArgs
 using DTypes = TL<derived_one, derived_two, derived_three>;
 using DTypesNoD3 = TL<derived_one, derived_two>;
 
-TEST_CASE("Switch dispatcher", "[h2][utils][multimethods]")
+TEST_CASE("Switch dispatcher", "[utilities][multimethods]")
 {
     derived_one d1;
     derived_two d2;
