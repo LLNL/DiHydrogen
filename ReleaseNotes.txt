@@ -5,12 +5,17 @@ API:
  - H2 added a thin GPU portability layer that supports CUDA and ROCm
    (HIP) programming environments.
  - Added a spdlog-based logging capability.
+ - Added initial support for (sequential) tensors.
 
 Performance optimizations:
 
 Internal features:
 
- - MIOpen is supported as a backend for "DNN compute kernels" in DistConv.
+ - MIOpen is supported as a backend for "DNN compute kernels" in
+   DistConv.
+ - DistConv is supported on ROCm systems.
+ - Added support for Gitlab CI.
+ - Support for DaCe convolution kernels in DistConv
 
 Build system:
 
