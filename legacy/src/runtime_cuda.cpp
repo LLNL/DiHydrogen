@@ -36,8 +36,8 @@ void *CUDADeviceMemoryPool::get(size_t size, cudaStream_t st) {
   return p;
 }
 
-void CUDADeviceMemoryPool::release(void *p) {
-  DISTCONV_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(p));
+void CUDADeviceMemoryPool::release(void *p, cudaStream_t st) {
+  DISTCONV_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(p, st));
 }
 
 size_t CUDADeviceMemoryPool::get_max_allocatable_size(size_t limit) {

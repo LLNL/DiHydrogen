@@ -741,8 +741,8 @@ int Softmax<BackendDNNLib>::forward(const Tensor& x, Tensor& y)
     // update the output
     compute_softmax(sample_exp, y, m_stream);
 
-    mempool.release(sample_max);
-    mempool.release(sample_exp);
+    mempool.release(sample_max, m_stream);
+    mempool.release(sample_exp, m_stream);
     return 0;
 }
 
@@ -780,7 +780,7 @@ int Softmax<BackendDNNLib>::backward(const Tensor& y,
 
     bp_compute_gradient(y, dy, sample_dp, dx, m_stream);
 
-    mempool.release(sample_dp);
+    mempool.release(sample_dp, m_stream);
     return 0;
 }
 

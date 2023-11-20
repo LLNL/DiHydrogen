@@ -64,9 +64,9 @@ struct Allocator<T, Device::GPU>
     return buf;
   }
 
-  static void deallocate(T* buf, const SyncInfo<Device::GPU>&)
+  static void deallocate(T* buf, const SyncInfo<Device::GPU>& si)
   {
-    H2_ASSERT(gpu::default_cub_allocator().DeviceFree(buf) == 0,
+    H2_ASSERT(gpu::default_cub_allocator().DeviceFree(buf, si.Stream()) == 0,
               std::runtime_error,
               "CUB deallocation failed.");
   }

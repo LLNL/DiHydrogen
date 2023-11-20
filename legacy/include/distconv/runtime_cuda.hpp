@@ -11,7 +11,7 @@ class CUDADeviceMemoryPool {
   CUDADeviceMemoryPool();
   ~CUDADeviceMemoryPool();
   void *get(size_t size, cudaStream_t st);
-  void release(void *p);
+  void release(void *p, cudaStream_t st);
   size_t get_max_allocatable_size(size_t limit);
 };
 

@@ -471,8 +471,8 @@ void TensorMPICUDAShuffler<DataType>::shuffle(const DataType* src,
     }
   }
 
-  release_buf(send_buf);
-  release_buf(recv_buf);
+  release_buf(send_buf, stream);
+  release_buf(recv_buf, stream);
 }
 
 #define INSTANTIATE_SHUFFLE(TYPE)                                              \

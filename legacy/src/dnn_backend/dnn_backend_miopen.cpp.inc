@@ -79,6 +79,8 @@ public:
         {
             if (internal_ptr)
             {
+                auto const stream = GPUDNNBackend::get_stream(handle);
+
                 // Here's the API doc, because this one's weird:
                 // https://rocmsoftwareplatform.github.io/MIOpen/doc/html/tensor.html#miopenoptensor.
                 // Following hipDNN, we combine first using the op,
@@ -97,8 +99,8 @@ public:
                                    &zero,
                                    desc,
                                    real_ptr));
-                H2_CHECK_HIP(
-                    h2::gpu::default_cub_allocator().DeviceFree(internal_ptr));
+                H2_CHECK_HIP(h2::gpu::default_cub_allocator().DeviceFree(
+                    internal_ptr, stream));
             }
         }
         catch (...)
@@ -416,21 +418,21 @@ void GPUDNNBackend::copy_convolution_descriptor(
 }
 
 void GPUDNNBackend::get_convolution_descriptor(
-                                           ConvolutionDescriptor_t const& conv_desc,
-                                           int array_len,
-                                           int* const pad,
-                                           int* const stride,
-                                           int* const dilation,
-                                           int& ngrps,
-                                           ConvolutionMode_t& mode,
-                                           DataType_t& /*data_type*/)
+    ConvolutionDescriptor_t const& conv_desc,
+    int array_len,
+    int* const pad,
+    int* const stride,
+    int* const dilation,
+    int& ngrps,
+    ConvolutionMode_t& mode,
+    DataType_t& /*data_type*/)
 {
     int ndim;
     DISTCONV_CHECK_MIOPEN(miopenGetConvolutionNdDescriptor(
         conv_desc, array_len, &ndim, pad, stride, dilation, &mode));
     // miopenGetConvolutionGroupCount is not in the MIOpen API, so we're
     // ignoring groups for now.
-    //DISTCONV_CHECK_MIOPEN(miopenGetConvolutionGroupCount(conv_desc, &ngrps));
+    // DISTCONV_CHECK_MIOPEN(miopenGetConvolutionGroupCount(conv_desc, &ngrps));
     ngrps = 1;
 }
 
@@ -679,7 +681,7 @@ auto GPUDNNBackend::get_fwd_algorithm_by_autotune(
             util::MPIPrintStreamDebug() << oss.str();
         }
     }
-    H2_CHECK_HIP(h2::gpu::default_cub_allocator().DeviceFree(ws));
+    H2_CHECK_HIP(h2::gpu::default_cub_allocator().DeviceFree(ws, stream));
 
     auto const best_algo = best_result.fwd_algo;
     util::MPIPrintStreamDebug()
@@ -896,7 +898,6 @@ void GPUDNNBackend::set_stream(Handle_t handle, Stream_t stream)
 
 namespace
 {
-
 miopenIndexType_t get_index_type()
 {
     char const* env = std::getenv("H2_MIOPEN_POOLING_INDEX_SIZE");
@@ -943,7 +944,6 @@ void GPUDNNBackend::setup_pooling_descriptor(PoolingDescriptor_t& desc,
 
 namespace
 {
-
 int get_pooling_descriptor_dims(miopenPoolingDescriptor_t const& desc)
 {
     int num_dims = -1;
@@ -1100,8 +1100,7 @@ void GPUDNNBackend::get_tensor_descriptor(TensorDescriptor_t const& desc,
                                           int* dims,
                                           int* strides)
 {
-    DISTCONV_CHECK_MIOPEN(
-        miopenGetTensorDescriptor(desc, &dt, dims, strides));
+    DISTCONV_CHECK_MIOPEN(miopenGetTensorDescriptor(desc, &dt, dims, strides));
 }
 
 void GPUDNNBackend::set_tensor_descriptor(TensorDescriptor_t const& desc,
@@ -1110,12 +1109,8 @@ void GPUDNNBackend::set_tensor_descriptor(TensorDescriptor_t const& desc,
                                           int const* dims,
                                           int const* strides)
 {
-    DISTCONV_CHECK_MIOPEN(
-        miopenSetTensorDescriptor(desc,
-                                  dt,
-                                  ndims,
-                                  const_cast<int*>(dims),
-                                  const_cast<int*>(strides)));
+    DISTCONV_CHECK_MIOPEN(miopenSetTensorDescriptor(
+        desc, dt, ndims, const_cast<int*>(dims), const_cast<int*>(strides)));
 }
 
 void GPUDNNBackend::set_tensor_descriptor(TensorDescriptor_t const& desc,
@@ -1124,11 +1119,7 @@ void GPUDNNBackend::set_tensor_descriptor(TensorDescriptor_t const& desc,
                                           std::vector<int> const& strides)
 {
     assert_eq(dims.size(), strides.size());
-    set_tensor_descriptor(desc,
-                          dt,
-                          dims.size(),
-                          dims.data(),
-                          strides.data());
+    set_tensor_descriptor(desc, dt, dims.size(), dims.data(), strides.data());
 }
 
 auto GPUDNNBackend::make_filter_descriptor() -> TensorDescriptor_t

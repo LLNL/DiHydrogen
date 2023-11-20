@@ -15,7 +15,6 @@
 
 namespace distconv
 {
-
 template <typename DataType>
 class Convolution<BackendDNNLib, DataType>
 {
@@ -391,7 +390,7 @@ public:
                     input.clear_halo(dim, m_be.get_stream());
                 }
             }
-            
+
             forward_exchange_halo(input);
         }
 
@@ -575,7 +574,7 @@ public:
                                          st_boundary);
                 record_end_boundary(i, side);
                 internal::RuntimeGPU::get_device_memory_pool().release(
-                    ws_boundary);
+                    ws_boundary, m_be.get_stream());
                 util::wait_stream(st_boundary, m_be.get_stream());
             });
         }
@@ -601,7 +600,8 @@ public:
             release_tmp_tensor_buffer(m_input_gathered_t);
         }
 
-        internal::RuntimeGPU::get_device_memory_pool().release(ws);
+        internal::RuntimeGPU::get_device_memory_pool().release(
+            ws, m_be.get_stream());
 
         if (m_be.profiling())
         {
@@ -850,7 +850,8 @@ public:
         {
             release_tmp_tensor_buffer(m_d_input_all_channels_t);
         }
-        internal::RuntimeGPU::get_device_memory_pool().release(ws);
+        internal::RuntimeGPU::get_device_memory_pool().release(
+            ws, m_be.get_stream());
 
         if (dump_profile)
             dump_profile_statistics(true, false, false);
@@ -1066,7 +1067,8 @@ public:
                 }
             }
 
-            internal::RuntimeGPU::get_device_memory_pool().release(ws);
+            internal::RuntimeGPU::get_device_memory_pool().release(
+                ws, m_be.get_stream());
 
             util::MPIPrintStreamDebug() << "Bp filter done";
         }
@@ -2866,7 +2868,8 @@ protected:
     void
     release_tmp_tensor_buffer(tensor::Tensor<DataType, LocaleMPI, Allocator>& t)
     {
-        internal::RuntimeGPU::get_device_memory_pool().release(t.get_buffer());
+        internal::RuntimeGPU::get_device_memory_pool().release(
+            t.get_buffer(), m_be.get_stream());
         tensor::View(t, (DataType*) nullptr);
     }
 

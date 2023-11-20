@@ -48,9 +48,9 @@ void* HIPDeviceMemoryPool::get(size_t size, hipStream_t st)
     return p;
 }
 
-void HIPDeviceMemoryPool::release(void* p)
+void HIPDeviceMemoryPool::release(void* p, hipStream_t st)
 {
-    DISTCONV_CHECK_HIP(h2::gpu::default_cub_allocator().DeviceFree(p));
+    DISTCONV_CHECK_HIP(h2::gpu::default_cub_allocator().DeviceFree(p, st));
 }
 
 size_t HIPDeviceMemoryPool::get_max_allocatable_size(size_t const limit)

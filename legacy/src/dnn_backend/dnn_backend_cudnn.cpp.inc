@@ -27,7 +27,6 @@ namespace distconv
 {
 namespace
 {
-
 constexpr int nb_dims_requested = 100;
 
 template <typename AlgoType, typename PerfType>
@@ -221,24 +220,18 @@ void GPUDNNBackend::copy_convolution_descriptor(
 }
 
 void GPUDNNBackend::get_convolution_descriptor(
-                                           ConvolutionDescriptor_t const& conv_desc,
-                                           int array_len,
-                                           int* const pad,
-                                           int* const stride,
-                                           int* const dilation,
-                                           int& ngrps,
-                                           ConvolutionMode_t& mode,
-                                           DataType_t& data_type)
+    ConvolutionDescriptor_t const& conv_desc,
+    int array_len,
+    int* const pad,
+    int* const stride,
+    int* const dilation,
+    int& ngrps,
+    ConvolutionMode_t& mode,
+    DataType_t& data_type)
 {
     int ndim;
-    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionNdDescriptor(conv_desc,
-                                                         array_len,
-                                                         &ndim,
-                                                         pad,
-                                                         stride,
-                                                         dilation,
-                                                         &mode,
-                                                         &data_type));
+    DISTCONV_CHECK_CUDNN(cudnnGetConvolutionNdDescriptor(
+        conv_desc, array_len, &ndim, pad, stride, dilation, &mode, &data_type));
     DISTCONV_CHECK_CUDNN(cudnnGetConvolutionGroupCount(conv_desc, &ngrps));
 }
 
@@ -548,7 +541,10 @@ auto GPUDNNBackend::get_fwd_algorithm_by_autotune(
     }
     delete[] perf_results;
     if (ws_size)
-        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(ws));
+    {
+        auto const stream = get_stream(handle);
+        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(ws, stream));
+    }
     auto const best_algo =
         find_best_algorithm<cudnnConvolutionFwdAlgo_t,
                             cudnnConvolutionFwdAlgoPerf_t>(perf_results_all);
@@ -709,7 +705,10 @@ auto GPUDNNBackend::get_bwd_data_algorithm_by_autotune(
     }
     delete[] perf_results;
     if (ws_size)
-        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(ws));
+    {
+        auto const stream = get_stream(handle);
+        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(ws, stream));
+    }
     auto const best_algo =
         find_best_algorithm<cudnnConvolutionBwdDataAlgo_t,
                             cudnnConvolutionBwdDataAlgoPerf_t>(
@@ -873,7 +872,10 @@ auto GPUDNNBackend::get_bwd_filter_algorithm_by_autotune(
     }
     delete[] perf_results;
     if (ws_size)
-        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(ws));
+    {
+        auto const stream = get_stream(handle);
+        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(ws, stream));
+    }
     auto const best_algo =
         find_best_algorithm<cudnnConvolutionBwdFilterAlgo_t,
                             cudnnConvolutionBwdFilterAlgoPerf_t>(
@@ -1038,8 +1040,8 @@ void GPUDNNBackend::get_filter_descriptor(FilterDescriptor_t const& desc,
 {
     int nbdims;
     cudnnTensorFormat_t format;
-    DISTCONV_CHECK_CUDNN(cudnnGetFilterNdDescriptor(
-        desc, ndims, &dt, &format, &nbdims, dims));
+    DISTCONV_CHECK_CUDNN(
+        cudnnGetFilterNdDescriptor(desc, ndims, &dt, &format, &nbdims, dims));
 }
 
 void GPUDNNBackend::set_filter_descriptor(FilterDescriptor_t const& desc,
@@ -1077,8 +1079,8 @@ void GPUDNNBackend::get_tensor_descriptor(TensorDescriptor_t const& desc,
                                           int* strides)
 {
     int nbdims;
-    DISTCONV_CHECK_CUDNN(cudnnGetTensorNdDescriptor(
-        desc, ndims, &dt, &nbdims, dims, strides));
+    DISTCONV_CHECK_CUDNN(
+        cudnnGetTensorNdDescriptor(desc, ndims, &dt, &nbdims, dims, strides));
 }
 
 void GPUDNNBackend::set_tensor_descriptor(TensorDescriptor_t const& desc,

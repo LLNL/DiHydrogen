@@ -16,6 +16,7 @@ class PackedTensorReadProxy
     GPUDNNBackend::TensorDescriptor_t m_packed_desc = 0;
     void const* m_unpacked_data = nullptr;
     void* m_packed_data = nullptr;
+    GPUDNNBackend::Handle_t m_handle = nullptr;
 
 public:
     /** @brief Construct a "descriptor-only" read proxy.

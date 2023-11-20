@@ -42,7 +42,6 @@ void do_gpu_tensor_repack(float const& alpha,
 // Utilities
 namespace
 {
-
 // The behavior we should have is to just be able to shove whatever
 // (valid) tensor we want through these interfaces. HOWEVER, doing
 // this on ROCm platfmorms means accepting incorrect results, and this
@@ -203,7 +202,8 @@ PackedTensorReadProxy::PackedTensorReadProxy(
     : m_unpacked_desc{unpacked_desc},
       m_packed_desc{unpacked_desc},
       m_unpacked_data{nullptr},
-      m_packed_data{nullptr}
+      m_packed_data{nullptr},
+      m_handle{nullptr}
 {
     if (force || do_pack_unpack())
         m_packed_desc = get_packed_desc(m_unpacked_desc);
@@ -217,7 +217,8 @@ PackedTensorReadProxy::PackedTensorReadProxy(
     : m_unpacked_desc{unpacked_desc},
       m_packed_desc{unpacked_desc},
       m_unpacked_data{unpacked_data},
-      m_packed_data{nullptr}
+      m_packed_data{nullptr},
+      m_handle{handle}
 {
     if (force || do_pack_unpack())
         m_packed_desc = get_packed_desc(m_unpacked_desc);
@@ -242,8 +243,9 @@ PackedTensorReadProxy::~PackedTensorReadProxy()
 {
     if ((m_packed_data != m_unpacked_data) && m_packed_data)
     {
+        auto stream = GPUDNNBackend::get_stream(m_handle);
         static_cast<void>(
-            h2::gpu::default_cub_allocator().DeviceFree(m_packed_data));
+            h2::gpu::default_cub_allocator().DeviceFree(m_packed_data, stream));
         m_packed_data = nullptr;
         m_unpacked_data = nullptr;
     }
@@ -322,6 +324,8 @@ PackedTensorWriteProxy::~PackedTensorWriteProxy()
 {
     if ((m_unpacked_data != m_packed_data) && m_packed_data)
     {
+        auto stream = GPUDNNBackend::get_stream(m_handle);
+
         if (!std::uncaught_exceptions())
         {
             copy_tensor(m_handle,
@@ -333,7 +337,7 @@ PackedTensorWriteProxy::~PackedTensorWriteProxy()
                         m_unpacked_data);
         }
         static_cast<void>(
-            h2::gpu::default_cub_allocator().DeviceFree(m_packed_data));
+            h2::gpu::default_cub_allocator().DeviceFree(m_packed_data, stream));
         m_packed_data = nullptr;
         m_unpacked_data = nullptr;
     }

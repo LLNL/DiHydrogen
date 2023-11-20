@@ -201,7 +201,7 @@ class TensorMPICUDAShufflerHybrid:
     }
   }
 
-  void release_buf(DataType *buf) override {
+  void release_buf(DataType *buf, h2::gpu::DeviceStream stream) override {
     // Buffers are reused without releasing
     return;
   }

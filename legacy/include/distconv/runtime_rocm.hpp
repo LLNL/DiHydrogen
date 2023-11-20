@@ -22,7 +22,7 @@ public:
     HIPDeviceMemoryPool();
     ~HIPDeviceMemoryPool();
     void* get(size_t size, hipStream_t st);
-    void release(void* p);
+    void release(void* p, hipStream_t st);
     size_t get_max_allocatable_size(size_t limit);
 };
 

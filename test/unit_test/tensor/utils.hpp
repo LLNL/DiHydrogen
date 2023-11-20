@@ -1,16 +1,16 @@
- ////////////////////////////////////////////////////////////////////////////////
- // Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
- // DiHydrogen Project Developers. See the top-level LICENSE file for details.
- //
- // SPDX-License-Identifier: Apache-2.0
- ////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+// Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+// DiHydrogen Project Developers. See the top-level LICENSE file for details.
+//
+// SPDX-License-Identifier: Apache-2.0
+////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
 
-#include <type_traits>
-
-#include "h2/tensor/tensor_types.hpp"
 #include "h2/meta/TypeList.hpp"
+#include "h2/tensor/tensor_types.hpp"
+
+#include <type_traits>
 
 #ifdef H2_HAS_GPU
 #include "h2/gpu/memory_utils.hpp"
@@ -34,21 +34,20 @@ using DataType = float;
 
 namespace internal
 {
-
 // Helpers for managing buffers on different devices.
 
 template <typename T, h2::Device Dev>
 struct Accessor
 {
-  static T read_ele(const T* buf, std::size_t i);
-  static void write_ele(T* buf, std::size_t i, const T& val);
+    static T read_ele(const T* buf, std::size_t i);
+    static void write_ele(T* buf, std::size_t i, const T& val);
 };
 
 template <typename T>
 struct Accessor<T, h2::Device::CPU>
 {
-  static T read_ele(const T* buf, std::size_t i) { return buf[i]; }
-  static void write_ele(T* buf, std::size_t i, const T& val) { buf[i] = val; }
+    static T read_ele(const T* buf, std::size_t i) { return buf[i]; }
+    static void write_ele(T* buf, std::size_t i, const T& val) { buf[i] = val; }
 };
 
 #ifdef H2_HAS_GPU
@@ -57,27 +56,27 @@ struct Accessor<T, h2::Device::CPU>
 template <typename T>
 struct Accessor<T, h2::Device::GPU>
 {
-  static T read_ele(const T* buf, std::size_t i)
-  {
-    T val;
-    ::h2::gpu::mem_copy(&val, buf + i, 1);
-    return val;
-  }
-  static void write_ele(T* buf, std::size_t i, const T& val)
-  {
-    ::h2::gpu::mem_copy(buf + i, &val, 1);
-  }
+    static T read_ele(const T* buf, std::size_t i)
+    {
+        T val;
+        ::h2::gpu::mem_copy(&val, buf + i, 1);
+        return val;
+    }
+    static void write_ele(T* buf, std::size_t i, const T& val)
+    {
+        ::h2::gpu::mem_copy(buf + i, &val, 1);
+    }
 };
 #endif
 
-}  // namespace internal
+} // namespace internal
 
 // Helper to read a value from a buffer on a device.
 // Equivalent to buf[i].
 template <h2::Device Dev, typename T>
 inline T read_ele(const T* buf, std::size_t i = 0)
 {
-  return internal::Accessor<T, Dev>::read_ele(buf, i);
+    return internal::Accessor<T, Dev>::read_ele(buf, i);
 }
 
 // Helper to write a value from a buffer on a device.
@@ -85,57 +84,59 @@ inline T read_ele(const T* buf, std::size_t i = 0)
 template <h2::Device Dev, typename T>
 inline void write_ele(T* buf, std::size_t i, const T& val)
 {
-  internal::Accessor<T, Dev>::write_ele(buf, i, val);
+    internal::Accessor<T, Dev>::write_ele(buf, i, val);
 }
 
 // Simple class to manage a buffer on a device.
 template <typename T, h2::Device Dev>
-struct DeviceBuf {};
+struct DeviceBuf
+{};
 
 template <typename T>
 struct DeviceBuf<T, h2::Device::CPU>
 {
-  DeviceBuf(std::size_t size)
-  {
-    if (size > 0)
+    DeviceBuf(std::size_t size)
     {
-      buf = new T[size];
+        if (size > 0)
+        {
+            buf = new T[size];
+        }
     }
-  }
-  ~DeviceBuf()
-  {
-    if (buf)
+    ~DeviceBuf()
     {
-      delete[] buf;
+        if (buf)
+        {
+            delete[] buf;
+        }
     }
-  }
 
-  T* buf = nullptr;
+    T* buf = nullptr;
 };
 
 #ifdef H2_HAS_GPU
 template <typename T>
 struct DeviceBuf<T, h2::Device::GPU>
 {
-  DeviceBuf(std::size_t size)
-  {
-    if (size > 0)
+    DeviceBuf(std::size_t size)
     {
-      H2_ASSERT(
-          ::h2::gpu::default_cub_allocator().DeviceAllocate(
-              reinterpret_cast<void**>(&buf),
-              size*sizeof(T),
-              /*stream=*/0) == 0,
-          std::runtime_error,
-          "CUB allocation failed.");
+        if (size > 0)
+        {
+            H2_ASSERT(::h2::gpu::default_cub_allocator().DeviceAllocate(
+                          reinterpret_cast<void**>(&buf),
+                          size * sizeof(T),
+                          /*stream=*/0)
+                          == 0,
+                      std::runtime_error,
+                      "CUB allocation failed.");
+        }
     }
-  }
-  ~DeviceBuf()
-  {
-    if (buf)
-      static_cast<void>(::h2::gpu::default_cub_allocator().DeviceFree(buf));
-  }
+    ~DeviceBuf()
+    {
+        if (buf)
+            static_cast<void>(::h2::gpu::default_cub_allocator().DeviceFree(
+                buf, /*stream=*/0));
+    }
 
-  T* buf = nullptr;
+    T* buf = nullptr;
 };
 #endif // H2_HAS_GPU
