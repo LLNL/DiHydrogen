@@ -13,7 +13,7 @@
  *  Thin wrappers around cudaMem{cpy,set} functions. These are here so
  *  they can be inlined if possible.
  */
-#if H2_HAS_CUDA || H2_HAS_ROCM
+#if H2_HAS_CUDA
 #include "hydrogen/PoolAllocator.hpp"
 #endif
 

@@ -13,8 +13,9 @@
  *  Thin wrappers around hipMem{cpy,set} functions. These are here so
  *  they can be inlined if possible.
  */
-
+#if H2_HAS_ROCM
 #include "hydrogen/PoolAllocator.hpp"
+#endif
 
 #include "h2/gpu/logger.hpp"
 #include "h2/gpu/runtime.hpp"
