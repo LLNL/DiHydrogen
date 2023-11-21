@@ -13,6 +13,7 @@
  *  Thin wrappers around hipMem{cpy,set} functions. These are here so
  *  they can be inlined if possible.
  */
+#include <hydrogen/PoolAllocator.hpp>
 
 #include "h2/gpu/logger.hpp"
 #include "h2/gpu/runtime.hpp"
@@ -20,17 +21,12 @@
 
 #include <hip/hip_runtime.h>
 
-namespace hipcub
-{
-class CachingDeviceAllocator;
-} // namespace hipcub
-
 namespace h2
 {
 namespace gpu
 {
 
-using RawCUBAllocType = hipcub::CachingDeviceAllocator;
+using RawCUBAllocType = hydrogen::PooledDeviceAllocator;
 
 inline MemInfo mem_info()
 {
