@@ -13,17 +13,15 @@
  *  Thin wrappers around cudaMem{cpy,set} functions. These are here so
  *  they can be inlined if possible.
  */
+#if H2_HAS_CUDA || H2_HAS_ROCM
+#include "hydrogen/PoolAllocator.hpp"
+#endif
 
 #include "h2/gpu/logger.hpp"
 #include "h2/gpu/runtime.hpp"
 #include "h2_config.hpp"
 
 #include <cuda_runtime.h>
-
-namespace cub
-{
-struct CachingDeviceAllocator;
-} // namespace cub
 
 namespace h2
 {
@@ -37,7 +35,7 @@ inline MemInfo mem_info()
     return info;
 }
 
-using RawCUBAllocType = cub::CachingDeviceAllocator;
+using RawCUBAllocType = hydrogen::PooledDeviceAllocator;
 
 inline void mem_copy(void* dst, void const* src, size_t bytes)
 {
