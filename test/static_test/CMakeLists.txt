@@ -12,6 +12,7 @@
 add_library(StaticTest MODULE "")
 add_subdirectory(meta)
 add_subdirectory(tensor)
+add_subdirectory(utils)
 target_link_libraries(StaticTest PRIVATE H2Meta H2Core)
 set_target_properties(StaticTest
   PROPERTIES
