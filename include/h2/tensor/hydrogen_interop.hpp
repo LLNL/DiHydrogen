@@ -79,10 +79,6 @@ hydrogen::SyncInfo<D> get_sync_info(El::Matrix<T, D> const& m)
 namespace internal
 {
 
-/** @brief Convert an H2 Tensor to a Hydrogen matrix.
- *
- *  Things can get weird.
- */
 template <typename BufferT, typename T, Device D>
 auto as_h_mat_impl(BufferT buf, Tensor<T, D> const& tensor)
     -> El::Matrix<T, HydrogenDevice<D>>
@@ -150,26 +146,150 @@ auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
 }
 } // namespace internal
 
+/** @brief View an H2 Tensor as a Hydrogen matrix.
+ *
+ *  This creates a weak view of certain tensors in Hydrogen matrix
+ *  format. The tensors must either be rank-1 or be at least
+ *  CHW-packed (in cuDNN's nomenclature); that is, at least the N-1
+ *  fastest varying indices of a rank-N tensor must be fully packed.
+ *
+ *  For a general rank-N (N>1) tensor, the slowest-varying index
+ *  becomes the width of the matrix, and the product of the N-1
+ *  fastest varying indices becomes the height. The "leading
+ *  dimension" will be the stride of the slowest-varying index.
+ *
+ *  Rank-1 tensors can always be viewed. Packed rank-1 tensors will be
+ *  viewed as "column vectors" (height == tensor.shape(0), width == 1,
+ *  ldim == height), and non-packed rank-1 tensors will be viewed as
+ *  "row vectors" (height == 1, width == tensor.shape(0), ldim ==
+ *  tensor.stride(0)).
+ *
+ *  "Empty" tensors are not viewable as their data pointer is not
+ *  considered valid.
+ *
+ *  It is important to note that the reference count on the internal
+ *  H2 data structure is not affected by this call -- hence, "weak
+ *  view". Users of this API are responsible for ensuring data
+ *  consistency of the tensor data for the lifetime of the Hydrogen
+ *  view.
+ *
+ *  @tparam T (Inferred) Data type of tensor elements
+ *  @tparam D (Inferred) Device residency of tensor data
+ *
+ *  @param[in] tensor The tensor to view in Hydrogen format.
+ *
+ *  @returns A "locked" view of the tensor data in Hydrogen format
+ *
+ *  @throws std::runtime_error Thrown when the source tensor cannot be
+ *                             viewed in Hydrogen format.
+ */
 template <typename T, Device D>
 auto as_h_mat(Tensor<T, D> const& tensor) -> El::Matrix<T, HydrogenDevice<D>>
 {
     return internal::as_h_mat_impl(tensor.const_data(), tensor);
 }
 
+/** @brief View an H2 Tensor as a Hydrogen matrix.
+ *
+ *  This creates a weak view of certain tensors in Hydrogen matrix
+ *  format. The tensors must either be rank-1 or be at least
+ *  CHW-packed (in cuDNN's nomenclature); that is, at least the N-1
+ *  fastest varying indices of a rank-N tensor must be fully packed.
+ *
+ *  For a general rank-N (N>1) tensor, the slowest-varying index
+ *  becomes the width of the matrix, and the product of the N-1
+ *  fastest varying indices becomes the height. The "leading
+ *  dimension" will be the stride of the slowest-varying index.
+ *
+ *  Rank-1 tensors can always be viewed. Packed rank-1 tensors will be
+ *  viewed as "column vectors" (height == tensor.shape(0), width == 1,
+ *  ldim == height), and non-packed rank-1 tensors will be viewed as
+ *  "row vectors" (height == 1, width == tensor.shape(0), ldim ==
+ *  tensor.stride(0)).
+ *
+ *  "Empty" tensors are not viewable as their data pointer is not
+ *  considered valid.
+ *
+ *  It is important to note that the reference count on the internal
+ *  H2 data structure is not affected by this call -- hence, "weak
+ *  view". Users of this API are responsible for ensuring data
+ *  consistency of the tensor data for the lifetime of the Hydrogen
+ *  view.
+ *
+ *  @tparam T (Inferred) Data type of tensor elements
+ *  @tparam D (Inferred) Device residency of tensor data
+ *
+ *  @param[in] tensor The tensor to view in Hydrogen format.
+ *
+ *  @returns A mutable view of the tensor data in Hydrogen format
+ *
+ *  @throws std::runtime_error Thrown when the source tensor cannot be
+ *                             viewed in Hydrogen format.
+ */
 template <typename T, Device D>
 auto as_h_mat(Tensor<T, D>& tensor) -> El::Matrix<T, HydrogenDevice<D>>
 {
     return internal::as_h_mat_impl(tensor.data(), tensor);
 }
 
+/** @brief View a Hydrogen matrix as an H2 Tensor
+ *
+ *  This creates a weak view of a Hydrogen matrix in H2 tensor format.
+ *  All non-empty Hydrogen matrices are viewable in this format.
+ *
+ *  Special behavior applies when the matrix is a "vector", i.e., it
+ *  has either unit height or unit width. In both cases, the resulting
+ *  tensor will be of rank 1. In the case of a "column vector" (`width
+ *  == 1`), the output tensor will be fully-packed (`tensor.stride(0)
+ *  == 1`). In the case of a "row vector", the output tensor will be
+ *  strided according to the "leading dimension" of the matrix
+ *  (`tensor.stride(0) == matrix.LDim()`).
+ *
+ *  "Empty" matrices are not viewable as their data pointer is not
+ *  considered valid.
+ *
+ *  @tparam T (Inferred) Data type of matrix elements
+ *  @tparam D (Inferred) Device residency of matrix data
+ *
+ *  @param[in] matrix The matrix to view in H2 tensor format.
+ *
+ *  @returns A "Const" view of the matrix data in H2 tensor format
+ *
+ *  @throws std::runtime_error Thrown when the source matrix cannot be
+ *                             viewed in H2 tensor format.
+ */
 template <typename T, hydrogen::Device D>
 auto as_h2_tensor(El::Matrix<T, D> const& matrix) -> Tensor<T, H2Device<D>>
 {
     return internal::as_h2_tensor_impl(matrix.LockedBuffer(), matrix);
 }
 
-// Generalized column-major indexing:
-//   dims[0] = fastest, ..., dims[n-1] = slowest
+/** @brief View a Hydrogen matrix as an H2 Tensor
+ *
+ *  This creates a weak view of a Hydrogen matrix in H2 tensor format.
+ *  All non-empty Hydrogen matrices are viewable in this format.
+ *
+ *  Special behavior applies when the matrix is a "vector", i.e., it
+ *  has either unit height or unit width. In both cases, the resulting
+ *  tensor will be of rank 1. In the case of a "column vector" (`width
+ *  == 1`), the output tensor will be fully-packed (`tensor.stride(0)
+ *  == 1`). In the case of a "row vector", the output tensor will be
+ *  strided according to the "leading dimension" of the matrix
+ *  (`tensor.stride(0) == matrix.LDim()`).
+ *
+ *  "Empty" matrices are not viewable as their data pointer is not
+ *  considered valid.
+ *
+ *  @tparam T (Inferred) Data type of matrix elements
+ *  @tparam D (Inferred) Device residency of matrix data
+ *
+ *  @param[in] matrix The matrix to view in H2 tensor format.
+ *
+ *  @returns A "Mutable" view of the matrix data in H2 tensor format
+ *
+ *  @throws std::runtime_error Thrown when the source matrix cannot be
+ *                             viewed in H2 tensor format.
+ */
 template <typename T, hydrogen::Device D>
 auto as_h2_tensor(El::Matrix<T, D>& matrix) -> Tensor<T, H2Device<D>>
 {
