@@ -76,6 +76,9 @@ hydrogen::SyncInfo<D> get_sync_info(El::Matrix<T, D> const& m)
     return El::SyncInfoFromMatrix(m);
 }
 
+namespace internal
+{
+
 /** @brief Convert an H2 Tensor to a Hydrogen matrix.
  *
  *  Things can get weird.
@@ -115,18 +118,6 @@ auto as_h_mat_impl(BufferT buf, Tensor<T, D> const& tensor)
     return MatrixType{height, width, buf, ldim};
 }
 
-template <typename T, Device D>
-auto as_h_mat(Tensor<T, D> const& tensor) -> El::Matrix<T, HydrogenDevice<D>>
-{
-    return as_h_mat_impl(tensor.const_data(), tensor);
-}
-
-template <typename T, Device D>
-auto as_h_mat(Tensor<T, D>& tensor) -> El::Matrix<T, HydrogenDevice<D>>
-{
-    return as_h_mat_impl(tensor.data(), tensor);
-}
-
 template <typename BufferT, typename T, hydrogen::Device D>
 auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
 {
@@ -157,11 +148,24 @@ auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
                       {as<DataIndexType>(1), ldim},
                       get_sync_info(matrix)};
 }
+} // namespace internal
+
+template <typename T, Device D>
+auto as_h_mat(Tensor<T, D> const& tensor) -> El::Matrix<T, HydrogenDevice<D>>
+{
+    return internal::as_h_mat_impl(tensor.const_data(), tensor);
+}
+
+template <typename T, Device D>
+auto as_h_mat(Tensor<T, D>& tensor) -> El::Matrix<T, HydrogenDevice<D>>
+{
+    return internal::as_h_mat_impl(tensor.data(), tensor);
+}
 
 template <typename T, hydrogen::Device D>
 auto as_h2_tensor(El::Matrix<T, D> const& matrix) -> Tensor<T, H2Device<D>>
 {
-    return as_h2_tensor_impl(matrix.LockedBuffer(), matrix);
+    return internal::as_h2_tensor_impl(matrix.LockedBuffer(), matrix);
 }
 
 // Generalized column-major indexing:
@@ -169,7 +173,7 @@ auto as_h2_tensor(El::Matrix<T, D> const& matrix) -> Tensor<T, H2Device<D>>
 template <typename T, hydrogen::Device D>
 auto as_h2_tensor(El::Matrix<T, D>& matrix) -> Tensor<T, H2Device<D>>
 {
-    return as_h2_tensor_impl(matrix.Buffer(), matrix);
+    return internal::as_h2_tensor_impl(matrix.Buffer(), matrix);
 }
 
 } // namespace h2
