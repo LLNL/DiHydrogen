@@ -6,6 +6,7 @@
 ################################################################################
 
 target_sources(SeqCatchTests PRIVATE
+  unit_test_as.cpp
   unit_test_cloneable.cpp
   unit_test_describable.cpp
   unit_test_integer_math.cpp
