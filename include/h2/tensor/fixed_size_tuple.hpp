@@ -203,7 +203,7 @@ template <typename T, typename SizeType, SizeType N>
 constexpr h2::FixedSizeTuple<T, SizeType, N>
 init(h2::FixedSizeTuple<T, SizeType, N> const& in)
 {
-  if (in.size() == 0)
+  if (in.empty())
     throw std::runtime_error("cannot get init of empty FixedSizeTuple");
   h2::FixedSizeTuple<T, SizeType, N> out{in};
   if (in.size() > 0UL)
@@ -214,7 +214,7 @@ init(h2::FixedSizeTuple<T, SizeType, N> const& in)
 template <typename T, typename SizeType, SizeType N>
 constexpr T last(h2::FixedSizeTuple<T, SizeType, N> const& in)
 {
-  if (in.size() == 0UL)
+  if (in.empty())
     throw std::runtime_error("cannot get last of empty FixedSizeTuple");
   return in[in.size() - 1];
 }

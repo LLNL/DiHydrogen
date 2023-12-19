@@ -98,7 +98,7 @@ auto as_h_mat_impl(BufferT buf, Tensor<T, D> const& tensor)
     if (tensor.ndim() == 1)
     {
         auto constexpr h_one = h_size_type{1};
-        auto const nelems = safe_as<h_size_type>(tensor.shape(0));
+        auto const nelems = safe_as<h_size_type>(tensor.numel());
         auto const elem_stride = safe_as<h_size_type>(tensor.stride(0));
         if (elem_stride == h_one)
             return MatrixType{nelems, h_one, buf, nelems};
