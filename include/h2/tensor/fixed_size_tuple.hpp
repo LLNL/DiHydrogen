@@ -199,6 +199,7 @@ constexpr AccT inner_product(const FixedSizeTuple<T1, SizeType1, N1>& a,
   return r;
 }
 
+/** @brief Get all but the last element of the input tuple */
 template <typename T, typename SizeType, SizeType N>
 constexpr h2::FixedSizeTuple<T, SizeType, N>
 init(h2::FixedSizeTuple<T, SizeType, N> const& in)
@@ -206,11 +207,11 @@ init(h2::FixedSizeTuple<T, SizeType, N> const& in)
   if (in.empty())
     throw std::runtime_error("cannot get init of empty FixedSizeTuple");
   h2::FixedSizeTuple<T, SizeType, N> out{in};
-  if (in.size() > 0UL)
-    out.set_size(in.size() - 1);
+  out.set_size(in.size() - 1);
   return out;
 }
 
+/** @brief Get the last element of the input tuple */
 template <typename T, typename SizeType, SizeType N>
 constexpr T last(h2::FixedSizeTuple<T, SizeType, N> const& in)
 {

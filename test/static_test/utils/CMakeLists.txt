@@ -7,5 +7,6 @@
 
 target_sources(StaticTest
   PRIVATE
+  static_test_as.cpp
   static_test_cloneable.cpp
   )
