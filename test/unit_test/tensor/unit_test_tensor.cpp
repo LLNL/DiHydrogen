@@ -14,6 +14,49 @@
 
 using namespace h2;
 
+TEST_CASE("last(FixedSizeTuple)", "[utilities]")
+{
+    using TupleType = h2::FixedSizeTuple<int, unsigned, 8U>;
+    SECTION("last of a zero-element (empty) tuple is error")
+    {
+        TupleType x;
+        CHECK_THROWS(h2::last(x));
+    }
+
+    SECTION("last of a single-element tuple returns only element")
+    {
+        TupleType x = {1};
+        CHECK(h2::last(x) == 1);
+    }
+
+    SECTION("last of multi-element tuple returns last element")
+    {
+        TupleType x = {1, 2, 3, 4, 5};
+        CHECK(h2::last(x) == 5);
+    }
+}
+
+TEST_CASE("init(FixedSizeTuple)", "[utilities]")
+{
+    using TupleType = h2::FixedSizeTuple<int, unsigned, 8U>;
+    SECTION("init of a zero-element (empty) tuple is error")
+    {
+        TupleType x;
+        CHECK_THROWS(h2::init(x));
+    }
+
+    SECTION("init of a single-element tuple is empty")
+    {
+        TupleType x = {1};
+        CHECK(h2::init(x).size() == 0);
+    }
+
+    SECTION("init of multi-element tuple returns first n-1 elements")
+    {
+        TupleType x = {1, 2, 3, 4, 5};
+        CHECK(h2::init(x) == TupleType{1, 2, 3, 4});
+    }
+}
 
 TEST_CASE("is_shape_contained", "[tensor]")
 {

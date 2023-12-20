@@ -136,4 +136,21 @@ static_assert(test_sized_tuple_pad3[3] == 0,
               "Padded sized tuple index 3 has wrong value");
 }
 
+namespace last_test
+{
+
+constexpr TestFixedSizeTuple test_last{1, 2, 3};
+static_assert(last(test_last) == 3, "last(tuple) gives wrong value");
+
+} // namespace last_test
+
+namespace init_test
+{
+
+constexpr TestFixedSizeTuple test_init{3, 2, 1};
+static_assert(init(test_init) == TestFixedSizeTuple{3, 2},
+              "init(tuple) gives wrong value");
+
+} // namespace init_test
+
 // Sized tuple.

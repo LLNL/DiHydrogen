@@ -9,6 +9,7 @@ target_sources(SeqCatchTests PRIVATE
   unit_test_raw_buffer.cpp
   unit_test_strided_memory.cpp
   unit_test_tensor.cpp
+  unit_test_hydrogen_interop.cpp
 )
 
 if (H2_HAS_GPU)
@@ -16,5 +17,6 @@ if (H2_HAS_GPU)
     unit_test_raw_buffer.cpp
     unit_test_strided_memory.cpp
     unit_test_tensor.cpp
+    unit_test_hydrogen_interop.cpp
   )
 endif ()
