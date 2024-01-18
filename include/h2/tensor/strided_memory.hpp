@@ -13,6 +13,7 @@
  */
 
 #include <memory>
+#include <utility>
 #include <cstddef>
 
 #include "h2/tensor/tensor_types.hpp"
@@ -60,13 +61,17 @@ constexpr inline bool are_strides_contiguous(
  * A managed chunk of memory with an associated stride.
  */
 template <typename T, Device Dev>
-class StridedMemory {
+class StridedMemory
+{
+private:
+  static constexpr std::size_t INVALID_OFFSET = static_cast<std::size_t>(-1);
 public:
 
   /** Allocate empty memory. */
   StridedMemory(const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : raw_buffer(nullptr),
-      mem_buffer(nullptr),
+      mem_offset(INVALID_OFFSET),
+      unowned_mem_buffer(nullptr),
       mem_strides{},
       mem_shape{},
       sync_info(sync)
@@ -81,15 +86,17 @@ public:
       mem_strides = get_contiguous_strides(shape);
       mem_shape = shape;
       raw_buffer = std::make_shared<RawBuffer<T, Dev>>(
-        product<std::size_t>(shape), sync);
-      mem_buffer = raw_buffer->data();
+          product<std::size_t>(shape), sync);
+      mem_offset = 0;
+      unowned_mem_buffer = nullptr;
     }
   }
 
   /** View a subregion of an existing memory region. */
   StridedMemory(const StridedMemory<T, Dev>& base, CoordTuple coords)
     : raw_buffer(base.raw_buffer),
-      mem_buffer(const_cast<T*>(base.get(get_range_start(coords)))),
+      mem_offset(base.get_index(get_range_start(coords))),
+      unowned_mem_buffer(nullptr),
       mem_strides(
         TuplePad<StrideTuple>(base.mem_strides.size())), // Will be resized.
       mem_shape(get_range_shape(coords, base.shape())),
@@ -115,7 +122,8 @@ public:
                 StrideTuple strides,
                 const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : raw_buffer(nullptr),
-      mem_buffer(buffer),
+      mem_offset(INVALID_OFFSET),
+      unowned_mem_buffer(buffer),
       mem_strides(strides),
       mem_shape(shape),
       sync_info(sync)
@@ -129,16 +137,28 @@ public:
     }
   }
 
-  T* data() H2_NOEXCEPT {
-    return mem_buffer;
+  T* data() H2_NOEXCEPT
+  {
+    return const_cast<T*>(std::as_const(*this).data());
   }
 
-  const T* data() const H2_NOEXCEPT {
-    return mem_buffer;
+  const T* data() const H2_NOEXCEPT
+  {
+    return const_data();
   }
 
-  const T* const_data() const H2_NOEXCEPT {
-    return mem_buffer;
+  const T* const_data() const H2_NOEXCEPT
+  {
+    if (unowned_mem_buffer)
+    {
+      return unowned_mem_buffer;
+    }
+    if (raw_buffer)
+    {
+      H2_ASSERT_DEBUG(mem_offset != INVALID_OFFSET, "Invalid offset");
+      return raw_buffer->data() + mem_offset;
+    }
+    return nullptr;
   }
 
   StrideTuple strides() const H2_NOEXCEPT { return mem_strides; }
@@ -176,18 +196,18 @@ public:
 
   /** Return a pointer to the memory at the given coordinates. */
   T* get(SingleCoordTuple coords) H2_NOEXCEPT {
-    H2_ASSERT_DEBUG(mem_buffer, "No memory");
-    return &(mem_buffer[get_index(coords)]);
+    H2_ASSERT_DEBUG(data(), "No memory");
+    return &(data()[get_index(coords)]);
   }
 
   const T* get(SingleCoordTuple coords) const H2_NOEXCEPT {
-    H2_ASSERT_DEBUG(mem_buffer, "No memory");
-    return &(mem_buffer[get_index(coords)]);
+    H2_ASSERT_DEBUG(data(), "No memory");
+    return &(data()[get_index(coords)]);
   }
 
   const T* const_get(SingleCoordTuple coords) const H2_NOEXCEPT {
-    H2_ASSERT_DEBUG(mem_buffer, "No memory");
-    return &(mem_buffer[get_index(coords)]);
+    H2_ASSERT_DEBUG(const_data(), "No memory");
+    return &(const_data()[get_index(coords)]);
   }
 
   SyncInfo<Dev> get_sync_info() const H2_NOEXCEPT
@@ -210,9 +230,16 @@ private:
    *
    * This may be shared across StridedMemory objects that have different
    * strides or offsets into the raw buffer.
+   *
+   * If there is no memory, or we are wrapping externally managed
+   * memory, this is null.
+   *
+   * As `RawBuffer` may change the underlying memory, when using one,
+   * we work with offsets instead of direct pointers into it.
    */
   std::shared_ptr<RawBuffer<T, Dev>> raw_buffer;
-  T* mem_buffer;  /**< Pointer to usable buffer. */
+  std::size_t mem_offset;  /**< Offset to start of raw_buffer. */
+  T* unowned_mem_buffer;  /**< Pointer to an externally managed  buffer. */
   StrideTuple mem_strides;  /**< Strides associated with the memory. */
   ShapeTuple mem_shape;  /**< Shape describing the extent of the memory. */
   SyncInfo<Dev> sync_info;  /**< Synchronization info for operations. */
