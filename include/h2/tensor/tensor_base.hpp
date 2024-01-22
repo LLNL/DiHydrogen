@@ -19,6 +19,26 @@ namespace h2
 
 /**
  * Base class for n-dimensional tensors.
+ *
+ * Tensors may be allocated lazily: This means that all their metadata
+ * is created, but their underlying memory is not allocated until it is
+ * needed. `ensure` may be used to guarantee that a tensor has memory
+ * backing it. `release` may be used to indicate that the tensor may
+ * free its underlying memory (however, memory will not be actually
+ * freed until all references to it, e.g., views, have been destroyed
+ * or have released their memory).
+ *
+ * A view cannot `ensure` or `release` memory. Further, creating a view
+ * of a tensor requires that its memory be allocated (i.e., that
+ * `ensure` has been called).
+ *
+ * If a tensor `release`s its memory, then calls `ensure` while its
+ * original memory remains (e.g., due to a still-extant view), `ensure`
+ * can optionally "recover" the original memory. This ensures that any
+ * views of the original tensor remain in sync. (This is the default.)
+ *
+ * Certain operations may implicitly call `ensure` (`data` and `view`).
+ * This only happens when the tensor is not const.
  */
 template <typename T>
 class BaseTensor {
@@ -28,10 +48,6 @@ public:
 
   /**
    * Construct a tensor with the given shape and dimension types.
-   *
-   * The tensor may be constructed lazily, in which case memory will
-   * not be allocated until necessary. The `ensure` and `release`
-   * methods may also be used to manually control this.
    */
   BaseTensor(ShapeTuple shape_, DimensionTypeTuple dim_types_) :
     tensor_shape(shape_),
@@ -142,8 +158,13 @@ public:
   /** Return a raw constant pointer to the underlying storage. */
   virtual const T* const_data() const = 0;
 
-  /** Ensure memory is backing this tensor, allocating if necessary. */
-  virtual void ensure() = 0;
+  /**
+   * Ensure memory is backing this tensor, allocating if necessary.
+   *
+   * Optionally attempt to reuse existing memory from still-extant
+   * views of this tensor.
+   */
+  virtual void ensure(bool attempt_recover = true) = 0;
 
   /**
    * Release memory associated with this tensor.

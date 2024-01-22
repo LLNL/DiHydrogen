@@ -92,6 +92,42 @@ TEMPLATE_LIST_TEST_CASE("Empty raw buffers are sane",
   }
 }
 
+TEMPLATE_LIST_TEST_CASE("Raw buffer with explicit size 0 is sane",
+                        "[tensor][raw_buffer]",
+                        AllDevList)
+{
+  using BufType = RawBuffer<DataType, TestType::value>;
+
+  BufType buf(0);
+
+  REQUIRE(buf.size() == 0);
+  REQUIRE(buf.data() == nullptr);
+  REQUIRE(buf.const_data() == nullptr);
+
+  SECTION("Ensure then release works") {
+    buf.ensure();
+    REQUIRE(buf.size() == 0);
+    REQUIRE(buf.data() == nullptr);
+    REQUIRE(buf.const_data() == nullptr);
+
+    buf.release();
+    REQUIRE(buf.size() == 0);
+    REQUIRE(buf.data() == nullptr);
+    REQUIRE(buf.const_data() == nullptr);
+  }
+  SECTION("Release then ensure works") {
+    buf.release();
+    REQUIRE(buf.size() == 0);
+    REQUIRE(buf.data() == nullptr);
+    REQUIRE(buf.const_data() == nullptr);
+
+    buf.ensure();
+    REQUIRE(buf.size() == 0);
+    REQUIRE(buf.data() == nullptr);
+    REQUIRE(buf.const_data() == nullptr);
+  }
+}
+
 TEMPLATE_LIST_TEST_CASE("Raw buffers are writable",
                         "[tensor][raw_buffer]",
                         AllDevList)

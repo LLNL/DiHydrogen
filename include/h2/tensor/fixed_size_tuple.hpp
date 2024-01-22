@@ -199,6 +199,21 @@ constexpr AccT inner_product(const FixedSizeTuple<T1, SizeType1, N1>& a,
   return r;
 }
 
+/**
+ * Return true if the predicate returns true for any entry in a
+ * FixedSizeTuple; otherwise return false.
+ */
+template <typename T, typename SizeType, SizeType N, typename Predicate>
+constexpr bool any_of(const FixedSizeTuple<T, SizeType, N>& tuple,
+                      Predicate p) {
+  for (SizeType i = 0; i < tuple.size(); ++i) {
+    if (p(tuple[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** @brief Get all but the last element of the input tuple */
 template <typename T, typename SizeType, SizeType N>
 constexpr h2::FixedSizeTuple<T, SizeType, N>

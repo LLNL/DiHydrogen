@@ -25,6 +25,9 @@ static_assert(h2::product<int>(test_tuple) == 1,
               "Product of empty tuple is wrong.");
 static_assert(h2::inner_product<int>(test_tuple, test_tuple2) == 0,
               "Inner product of empty tuples is wrong");
+static_assert(!h2::any_of(test_tuple,
+                          [](TestFixedSizeTuple::type x) { return x == 0; }),
+              "Any of for empty tuples is wrong");
 
 constexpr auto test_tuple_copy = test_tuple;
 static_assert(test_tuple_copy.size() == 0,
@@ -63,6 +66,12 @@ static_assert(h2::product<int>(test_tuple) == 2,
               "Sized tuple product has wrong value");
 static_assert(h2::inner_product<int>(test_tuple, test_tuple2) == 5,
               "Inner product of sized tuples has wrong value");
+static_assert(h2::any_of(test_tuple,
+                         [](TestFixedSizeTuple::type x) { return x == 1; }),
+              "Any of for sized tuples is wrong");
+static_assert(!h2::any_of(test_tuple,
+                          [](TestFixedSizeTuple::type x) { return x == 3; }),
+              "Any of for sized tuples is wrong");
 
 constexpr auto test_tuple_copy = test_tuple;
 static_assert(test_tuple_copy.size() == 2,

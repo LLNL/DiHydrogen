@@ -29,13 +29,14 @@ public:
 
   Tensor(ShapeTuple shape_,
          DimensionTypeTuple dim_types_,
+         bool lazy = false,
          const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
     BaseTensor<T>(shape_, dim_types_),
-    tensor_memory(shape_, sync)
+    tensor_memory(shape_, lazy, sync)
   {}
 
-  Tensor(const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : Tensor(ShapeTuple(), DimensionTypeTuple(), sync) {}
+  Tensor(bool lazy = false, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : Tensor(ShapeTuple(), DimensionTypeTuple(), lazy, sync) {}
 
   Tensor(T* buffer,
          ShapeTuple shape_,
@@ -72,7 +73,7 @@ public:
   void empty() override
   {
     auto sync = tensor_memory.get_sync_info();
-    tensor_memory = StridedMemory<T, Dev>(sync);
+    tensor_memory = StridedMemory<T, Dev>(tensor_memory.is_lazy(), sync);
     this->tensor_shape = ShapeTuple();
     this->tensor_dim_types = DimensionTypeTuple();
     if (this->is_view()) {
@@ -88,7 +89,8 @@ public:
       throw H2Exception("Must provide dimension types to resize larger");
     }
     auto sync = tensor_memory.get_sync_info();
-    tensor_memory = StridedMemory<T, Dev>(new_shape, sync);
+    tensor_memory = StridedMemory<T, Dev>(
+      new_shape, tensor_memory.is_lazy(), sync);
     this->tensor_shape = new_shape;
     this->tensor_dim_types.set_size(new_shape.size());
   }
@@ -98,7 +100,8 @@ public:
       throw H2Exception("Cannot resize a view");
     }
     auto sync = tensor_memory.get_sync_info();
-    tensor_memory = StridedMemory<T, Dev>(new_shape, sync);
+    tensor_memory = StridedMemory<T, Dev>(
+      new_shape, tensor_memory.is_lazy(), sync);
     this->tensor_shape = new_shape;
     this->tensor_dim_types = new_dim_types;
   }
@@ -107,6 +110,7 @@ public:
     if (this->tensor_view_type == ViewType::Const) {
       throw H2Exception("Cannot access non-const buffer of const view");
     }
+    ensure();
     return tensor_memory.data();
   }
 
@@ -119,12 +123,14 @@ public:
     return tensor_memory.const_data();
   }
 
-  void ensure() override {
-    // TODO
+  void ensure(bool attempt_recover = true) override
+  {
+    tensor_memory.ensure();
   }
 
-  void release() override {
-    // TODO
+  void release() override
+  {
+    tensor_memory.release();
   }
 
   Tensor<T, Dev>* contiguous() override {
@@ -145,6 +151,7 @@ public:
 
   Tensor<T, Dev>* view(CoordTuple coords) override
   {
+    ensure();
     return make_view(coords, ViewType::Mutable);
   }
 
@@ -201,6 +208,11 @@ public:
     {
       tensor_memory.set_sync_info(sync, true);
     }
+  }
+
+  bool is_lazy() const H2_NOEXCEPT
+  {
+    return tensor_memory.is_lazy();
   }
 
 private:
