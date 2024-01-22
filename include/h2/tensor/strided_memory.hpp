@@ -73,7 +73,6 @@ public:
   StridedMemory(bool lazy = false, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : raw_buffer(nullptr),
       mem_offset(INVALID_OFFSET),
-      unowned_mem_buffer(nullptr),
       mem_strides{},
       mem_shape{},
       sync_info(sync),
@@ -101,7 +100,6 @@ public:
   StridedMemory(const StridedMemory<T, Dev>& base, CoordTuple coords)
     : raw_buffer(base.raw_buffer),
       mem_offset(base.get_index(get_range_start(coords))),
-      unowned_mem_buffer(nullptr),
       mem_strides(
         TuplePad<StrideTuple>(base.mem_strides.size())), // Will be resized.
       mem_shape(get_range_shape(coords, base.shape())),
@@ -128,8 +126,7 @@ public:
                 StrideTuple strides,
                 const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : raw_buffer(nullptr),
-      mem_offset(INVALID_OFFSET),
-      unowned_mem_buffer(buffer),
+      mem_offset(0),
       mem_strides(strides),
       mem_shape(shape),
       sync_info(sync),
@@ -139,6 +136,8 @@ public:
                     || shape.empty()
                     || any_of(shape, [](ShapeTuple::type x) { return x == 0; }),
                     "Null buffer but non-zero shape provided to StridedMemory");
+    std::size_t size = product<std::size_t>(shape);
+    raw_buffer = std::make_shared<raw_buffer_t>(buffer, size, sync);
   }
 
   ~StridedMemory()
@@ -151,7 +150,7 @@ public:
 
   void ensure(bool attempt_recover = true)
   {
-    if (unowned_mem_buffer || raw_buffer)
+    if (raw_buffer)
     {
       return;  // Data is already allocated.
     }
@@ -177,11 +176,7 @@ public:
 
   void release()
   {
-    if (unowned_mem_buffer)
-    {
-      unowned_mem_buffer = nullptr;
-    }
-    else if (raw_buffer)
+    if (raw_buffer)
     {
       old_raw_buffer = raw_buffer;
       raw_buffer.reset();
@@ -200,10 +195,6 @@ public:
 
   const T* const_data() const H2_NOEXCEPT
   {
-    if (unowned_mem_buffer)
-    {
-      return unowned_mem_buffer;
-    }
     if (raw_buffer)
     {
       H2_ASSERT_DEBUG(mem_offset != INVALID_OFFSET,
@@ -298,7 +289,6 @@ private:
    */
   std::shared_ptr<raw_buffer_t> raw_buffer;
   std::size_t mem_offset;  /**< Offset to start of raw_buffer. */
-  T* unowned_mem_buffer;  /**< Pointer to an externally managed  buffer. */
   /**
    * Reference to the prior `raw_buffer`, which may be used when
    * recovering existing memory from views using `ensure`.

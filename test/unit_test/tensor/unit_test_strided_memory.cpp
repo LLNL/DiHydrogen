@@ -393,15 +393,45 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory with external buffers works",
   REQUIRE(mem.shape() == ShapeTuple{2, 2});
   REQUIRE(mem.strides() == StrideTuple{1, 2});
 
-  mem.ensure();
-  REQUIRE(mem.data() == test_data);
-  REQUIRE(mem.const_data() == test_data);
-  mem.release();
-  REQUIRE(mem.data() == nullptr);
-  REQUIRE(mem.const_data() == nullptr);
-  mem.ensure();
-  REQUIRE(mem.data() != nullptr);
-  REQUIRE(mem.const_data() != nullptr);
+  SECTION("Ensure and release works")
+  {
+    mem.ensure();
+    REQUIRE(mem.data() == test_data);
+    REQUIRE(mem.const_data() == test_data);
+    mem.release();
+    REQUIRE(mem.data() == nullptr);
+    REQUIRE(mem.const_data() == nullptr);
+    mem.ensure();
+    REQUIRE(mem.data() != nullptr);
+    REQUIRE(mem.const_data() != nullptr);
+  }
 
-  // TODO: Views.
+  SECTION("Views work")
+  {
+    MemType mem2 = mem;
+    REQUIRE(mem.data() == mem2.data());
+    REQUIRE(mem.const_data() == mem2.const_data());
+    mem.release();
+    REQUIRE(mem.data() == nullptr);
+    REQUIRE(mem.const_data() == nullptr);
+    mem.ensure();
+    REQUIRE(mem.data() == mem2.data());
+    REQUIRE(mem.const_data() == mem2.const_data());
+    mem.release();
+    mem.ensure(false);
+    REQUIRE(mem.data() != nullptr);
+    REQUIRE(mem.data() != mem2.data());
+    REQUIRE(mem.const_data() != nullptr);
+    REQUIRE(mem.const_data() != mem2.const_data());
+    mem.release();
+    mem2.release();
+    mem.ensure();
+    mem2.ensure();
+    REQUIRE(mem.data() != nullptr);
+    REQUIRE(mem.const_data() != nullptr);
+    REQUIRE(mem2.data() != nullptr);
+    REQUIRE(mem2.const_data() != nullptr);
+    REQUIRE(mem.data() != mem2.data());
+    REQUIRE(mem.const_data() != mem2.const_data());
+  }
 }

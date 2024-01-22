@@ -128,6 +128,31 @@ TEMPLATE_LIST_TEST_CASE("Raw buffer with explicit size 0 is sane",
   }
 }
 
+TEMPLATE_LIST_TEST_CASE("Raw buffer with external memory is sane",
+                        "[tensor][raw_buffer]",
+                        AllDevList)
+{
+  using BufType = RawBuffer<DataType, TestType::value>;
+
+  DataType test_data[] = {0, 0, 0, 0};
+  BufType buf = BufType(test_data, 4);
+
+  REQUIRE(buf.size() == 4);
+  REQUIRE(buf.data() == test_data);
+  REQUIRE(buf.const_data() == test_data);
+  buf.ensure();
+  REQUIRE(buf.data() == test_data);
+  REQUIRE(buf.const_data() == test_data);
+  buf.release();
+  REQUIRE(buf.data() == nullptr);
+  REQUIRE(buf.const_data() == nullptr);
+  buf.ensure();
+  REQUIRE(buf.data() != nullptr);
+  REQUIRE(buf.const_data() != nullptr);
+  REQUIRE(buf.data() != test_data);
+  REQUIRE(buf.const_data() != test_data);
+}
+
 TEMPLATE_LIST_TEST_CASE("Raw buffers are writable",
                         "[tensor][raw_buffer]",
                         AllDevList)
