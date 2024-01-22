@@ -88,10 +88,7 @@ public:
     {
       mem_strides = get_contiguous_strides(shape);
       mem_shape = shape;
-      if (!lazy)
-      {
-        ensure(false);  // Allocate memory.
-      }
+      make_raw_buffer(lazy);
       mem_offset = 0;
     }
   }
@@ -152,6 +149,10 @@ public:
   {
     if (raw_buffer)
     {
+      if (is_lazy())
+      {
+        raw_buffer->ensure();
+      }
       return;  // Data is already allocated.
     }
     if (attempt_recover)
@@ -162,14 +163,7 @@ public:
     if (!raw_buffer)
     {
       // Either not attempting to recover or no old raw buffer.
-      // Do not allocate a RawBuffer for empty memory.
-      if (!mem_shape.empty())
-      {
-        std::size_t size = product<std::size_t>(mem_shape);
-        if (size) {
-          raw_buffer = std::make_shared<raw_buffer_t>(size, sync_info);
-        }
-      }
+      make_raw_buffer(false);
     }
     old_raw_buffer.reset();  // Drop reference to old raw buffer.
   }
@@ -298,6 +292,19 @@ private:
   ShapeTuple mem_shape;  /**< Shape describing the extent of the memory. */
   SyncInfo<Dev> sync_info;  /**< Synchronization info for operations. */
   bool is_mem_lazy;  /**< Whether allocation is lazy. */
+
+  /** Helper to create a raw buffer if size is non-empty. */
+  void make_raw_buffer(bool lazy)
+  {
+    // Do not allocate a RawBuffer for empty memory.
+    if (!mem_shape.empty())
+    {
+      std::size_t size = product<std::size_t>(mem_shape);
+      if (size) {
+        raw_buffer = std::make_shared<raw_buffer_t>(size, lazy, sync_info);
+      }
+    }
+  }
 };
 
 /** Support printing StridedMemory. */

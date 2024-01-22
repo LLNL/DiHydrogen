@@ -84,10 +84,14 @@ public:
   RawBuffer(const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : buffer(nullptr), buffer_size(0), sync_info(sync), unowned_buffer(false)
   {}
-  RawBuffer(std::size_t size, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+  RawBuffer(std::size_t size, bool defer_alloc = false,
+            const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : buffer(nullptr), buffer_size(size), sync_info(sync), unowned_buffer(false)
   {
-    ensure();
+    if (!defer_alloc)
+    {
+      ensure();
+    }
   }
   RawBuffer(T* external_buffer, std::size_t size,
             const SyncInfo<Dev>& sync = SyncInfo<Dev>{})

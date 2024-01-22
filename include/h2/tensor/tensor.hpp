@@ -151,7 +151,6 @@ public:
 
   Tensor<T, Dev>* view(CoordTuple coords) override
   {
-    ensure();
     return make_view(coords, ViewType::Mutable);
   }
 

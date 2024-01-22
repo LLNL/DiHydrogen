@@ -28,9 +28,9 @@ namespace h2
  * freed until all references to it, e.g., views, have been destroyed
  * or have released their memory).
  *
- * A view cannot `ensure` or `release` memory. Further, creating a view
- * of a tensor requires that its memory be allocated (i.e., that
- * `ensure` has been called).
+ * A view of a lazy tensor functions as usual. `ensure` may be called
+ * on either the original tensor or the view to allocate memory, even
+ * if the view is const.
  *
  * If a tensor `release`s its memory, then calls `ensure` while its
  * original memory remains (e.g., due to a still-extant view), `ensure`

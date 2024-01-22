@@ -353,6 +353,36 @@ TEMPLATE_LIST_TEST_CASE("Lazy StridedMemory works",
     REQUIRE(mem.data() != mem2.data());
     REQUIRE(mem.const_data() != mem2.const_data());
   }
+
+  SECTION("Viewing lazy strided memory works")
+  {
+    MemType mem2 = mem;
+    REQUIRE(mem2.is_lazy());
+    REQUIRE(mem2.data() == nullptr);
+    REQUIRE(mem2.const_data() == nullptr);
+
+    SECTION("Ensure from view 1 works")
+    {
+      mem.ensure();
+      REQUIRE(mem.data() != nullptr);
+      REQUIRE(mem.const_data() != nullptr);
+      REQUIRE(mem.data() == mem2.data());
+      REQUIRE(mem.const_data() == mem2.const_data());
+      mem.release();
+      REQUIRE(mem.data() == nullptr);
+      REQUIRE(mem.const_data() == nullptr);
+      REQUIRE(mem2.data() != nullptr);
+      REQUIRE(mem2.const_data() != nullptr);
+    }
+    SECTION("Ensure from view 2 works")
+    {
+      mem2.ensure();
+      REQUIRE(mem2.data() != nullptr);
+      REQUIRE(mem2.const_data() != nullptr);
+      REQUIRE(mem.data() == mem2.data());
+      REQUIRE(mem.const_data() == mem2.const_data());
+    }
+  }
 }
 
 TEMPLATE_LIST_TEST_CASE("Empty lazy StridedMemory works",
