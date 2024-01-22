@@ -17,6 +17,13 @@
 namespace h2
 {
 
+/** For controlling `BaseTensor::ensure`. */
+enum class TensorEnsure
+{
+  NoRecovery,
+  AttemptRecovery
+};
+
 /**
  * Base class for n-dimensional tensors.
  *
@@ -37,7 +44,7 @@ namespace h2
  * can optionally "recover" the original memory. This ensures that any
  * views of the original tensor remain in sync. (This is the default.)
  *
- * Certain operations may implicitly call `ensure` (`data` and `view`).
+ * Certain operations may implicitly call `ensure` (e.g., `data`).
  * This only happens when the tensor is not const.
  */
 template <typename T>
@@ -164,7 +171,8 @@ public:
    * Optionally attempt to reuse existing memory from still-extant
    * views of this tensor.
    */
-  virtual void ensure(bool attempt_recover = true) = 0;
+  virtual void ensure(
+    TensorEnsure attempt_recover = TensorEnsure::AttemptRecovery) = 0;
 
   /**
    * Release memory associated with this tensor.

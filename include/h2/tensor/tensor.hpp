@@ -123,7 +123,8 @@ public:
     return tensor_memory.const_data();
   }
 
-  void ensure(bool attempt_recover = true) override
+  void ensure(
+    TensorEnsure attempt_recover = TensorEnsure::AttemptRecovery) override
   {
     tensor_memory.ensure();
   }
