@@ -8,6 +8,7 @@
 #pragma once
 
 #include <array>
+#include <iterator>
 #include <type_traits>
 #include <ostream>
 
@@ -46,6 +47,11 @@ struct FixedSizeTuple {
   using type = T;
   using size_type = SizeType;
   static constexpr SizeType max_size = N;
+
+  using iterator = typename std::array<T, N>::iterator;
+  using const_iterator = typename std::array<T, N>::const_iterator;
+  using reverse_iterator = typename std::array<T, N>::reverse_iterator;
+  using const_reverse_iterator = typename std::array<T, N>::const_reverse_iterator;
 
   /**
    * Construct a tuple from the arguments and set the number of valid
@@ -87,6 +93,80 @@ struct FixedSizeTuple {
 
   /** Return a constant raw pointer to the tuple. */
   const T* const_data() const H2_NOEXCEPT { return data_.data(); }
+
+  /** Return an iterator to the first element of the tuple. */
+  constexpr iterator begin() H2_NOEXCEPT { return data_.begin(); }
+
+  constexpr const_iterator begin() const H2_NOEXCEPT { return data_.begin(); }
+
+  /** Return a constant iterator to the first element of the tuple. */
+  constexpr const_iterator cbegin() const H2_NOEXCEPT { return data_.cbegin(); }
+
+  /**
+   * Return an iterator to the element past the last element of the
+   * tuple.
+   */
+  constexpr iterator end() H2_NOEXCEPT { return data_.begin() + size_; }
+
+  constexpr const_iterator end() const H2_NOEXCEPT
+  {
+    return data_.begin() + size_;
+  }
+
+  /**
+   * Return a constant iterator to the element past the last element of
+   * the tuple.
+   */
+  constexpr const_iterator cend() const H2_NOEXCEPT
+  {
+    return data_.cbegin() + size_;
+  }
+
+  /**
+   * Return a reverse iterator to the first element of the reversed
+   * tuple.
+   */
+  constexpr reverse_iterator rbegin() H2_NOEXCEPT
+  {
+    return std::make_reverse_iterator(end());
+  }
+
+  constexpr const_reverse_iterator rbegin() const H2_NOEXCEPT
+  {
+    return std::make_reverse_iterator(end());
+  }
+
+  /**
+   * Return a const reverse iterator to the first element of the
+   * reversed tuple.
+   */
+  constexpr const_reverse_iterator crbegin() const H2_NOEXCEPT
+  {
+    return std::make_reverse_iterator(cend());
+  }
+
+  /**
+   * Return a reverse iterator to the element past the last element of
+   * the reversed tuple.
+   */
+  constexpr reverse_iterator rend() H2_NOEXCEPT
+  {
+    return std::make_reverse_iterator(begin());
+  }
+
+  constexpr const_reverse_iterator rend() const H2_NOEXCEPT
+  {
+    return std::make_reverse_iterator(begin());
+  }
+
+  /**
+   * Return a const reverse iterator to the element past the last
+   * element of the reversed tuple.
+   */
+  constexpr const_reverse_iterator crend() const H2_NOEXCEPT
+  {
+    return std::make_reverse_iterator(cbegin());
+  }
 
   /** Return the value of the tuple at the i'th index. */
   constexpr T& operator[](SizeType i) H2_NOEXCEPT {

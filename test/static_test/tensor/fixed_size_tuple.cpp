@@ -29,6 +29,15 @@ static_assert(!h2::any_of(test_tuple,
                           [](TestFixedSizeTuple::type x) { return x == 0; }),
               "Any of for empty tuples is wrong");
 
+static_assert(test_tuple.begin() == test_tuple.end(),
+              "Empty tuple iterators are wrong");
+static_assert(test_tuple.cbegin() == test_tuple.cend(),
+              "Empty tuple iterators are wrong");
+static_assert(test_tuple.rbegin() == test_tuple.rend(),
+              "Empty tuple reverse iterators are wrong");
+static_assert(test_tuple.crbegin() == test_tuple.crend(),
+              "Empty tuple reverse iterators are wrong");
+
 constexpr auto test_tuple_copy = test_tuple;
 static_assert(test_tuple_copy.size() == 0,
               "Empty tuple copy does not have size 0");
@@ -72,6 +81,20 @@ static_assert(h2::any_of(test_tuple,
 static_assert(!h2::any_of(test_tuple,
                           [](TestFixedSizeTuple::type x) { return x == 3; }),
               "Any of for sized tuples is wrong");
+
+static_assert(*test_tuple.begin() == 1,
+              "Sized tuple iterators are wrong");
+static_assert(*std::next(test_tuple.begin()) == 2,
+              "Sized tuple iterators are wrong");
+static_assert(test_tuple.begin() + test_tuple.size() == test_tuple.end(),
+              "Sized tuple iterators are wrong");
+
+static_assert(*test_tuple.rbegin() == 2,
+              "Sized tuple reverse iterators are wrong");
+static_assert(*std::next(test_tuple.rbegin()) == 1,
+              "Sized tuple reverse iterators are wrong");
+static_assert(test_tuple.rbegin() + test_tuple.size() == test_tuple.rend(),
+              "Sized tuple reverse iterators are wrong");
 
 constexpr auto test_tuple_copy = test_tuple;
 static_assert(test_tuple_copy.size() == 2,
