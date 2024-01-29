@@ -102,6 +102,7 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(tensor.data() != nullptr);
   REQUIRE(tensor.const_data() != nullptr);
   REQUIRE(tensor.get({0, 0}) == tensor.data());
+  REQUIRE_FALSE(tensor.is_lazy());
 
   const TensorType const_tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
   REQUIRE(const_tensor.shape() == ShapeTuple{4, 6});
@@ -124,6 +125,7 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(const_tensor.data() != nullptr);
   REQUIRE(const_tensor.const_data() != nullptr);
   REQUIRE(const_tensor.get({0, 0}) == const_tensor.data());
+  REQUIRE_FALSE(const_tensor.is_lazy());
 }
 
 TEMPLATE_LIST_TEST_CASE("Empty tensor metadata is sane", "[tensor]", AllDevList)
@@ -145,6 +147,21 @@ TEMPLATE_LIST_TEST_CASE("Empty tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(tensor.get_device() == TestType::value);
   REQUIRE(tensor.data() == nullptr);
   REQUIRE(tensor.const_data() == nullptr);
+  REQUIRE_FALSE(tensor.is_lazy());
+}
+
+TEMPLATE_LIST_TEST_CASE("Lazy and unlazy tensors are sane",
+                        "[tensor]",
+                        AllDevList)
+{
+  using TensorType = Tensor<DataType, TestType::value>;
+
+  REQUIRE_FALSE(TensorType().is_lazy());
+  REQUIRE_FALSE(TensorType(UnlazyAlloc).is_lazy());
+  REQUIRE(TensorType(LazyAlloc).is_lazy());
+
+  REQUIRE_FALSE(TensorType({4, 6}, {DT::Sample, DT::Any}, UnlazyAlloc).is_lazy());
+  REQUIRE(TensorType({4, 6}, {DT::Sample, DT::Any}, LazyAlloc).is_lazy());
 }
 
 TEMPLATE_LIST_TEST_CASE("Resizing tensors works", "[tensor]", AllDevList)
