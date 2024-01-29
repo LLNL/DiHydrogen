@@ -82,23 +82,41 @@ template <typename T, Device Dev>
 class RawBuffer {
 public:
   RawBuffer(const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : buffer(nullptr), buffer_size(0), sync_info(sync)
+    : buffer(nullptr), buffer_size(0), sync_info(sync), unowned_buffer(false)
   {}
-  RawBuffer(std::size_t size, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : buffer(nullptr), buffer_size(size), sync_info(sync)
+  RawBuffer(std::size_t size, bool defer_alloc = false,
+            const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : buffer(nullptr), buffer_size(size), sync_info(sync), unowned_buffer(false)
   {
-    ensure();
+    if (!defer_alloc)
+    {
+      ensure();
+    }
   }
+  RawBuffer(T* external_buffer, std::size_t size,
+            const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : buffer(external_buffer), buffer_size(size), sync_info(sync),
+      unowned_buffer(true)
+  {}
 
   ~RawBuffer() { release(); }
 
+  /** Allocate memory if the buffer is not present. */
   void ensure()
   {
-    if (buffer_size && !buffer) {
+    if (buffer_size && !buffer && !unowned_buffer)
+    {
       buffer = internal::Allocator<T, Dev>::allocate(buffer_size, sync_info);
     }
   }
 
+  /**
+   * Deallocate allocated memory.
+   *
+   * If the buffer is external, it will not be deallocated, but this
+   * RawBuffer will no longer refer to it. Subsequent calls to `ensure`
+   * will allocate a fresh buffer.
+   */
   void release() {
     if (buffer)
     {
@@ -112,11 +130,16 @@ public:
         }
       }
 #endif
-      internal::Allocator<T, Dev>::deallocate(buffer, sync_info);
+      if (!unowned_buffer)
+      {
+        internal::Allocator<T, Dev>::deallocate(buffer, sync_info);
+      }
       buffer = nullptr;
+      unowned_buffer = false;
     }
 #ifdef H2_HAS_GPU
-    if constexpr (Dev == Device::GPU) {
+    if constexpr (Dev == Device::GPU)
+    {
       // Clear all recorded syncs.
       pending_syncs.clear();
     }
@@ -172,6 +195,7 @@ private:
   T* buffer;  /**< Internal buffer. */
   std::size_t buffer_size;  /**< Number of elements in buffer. */
   SyncInfo<Dev> sync_info;  /**< Synchronization management. */
+  bool unowned_buffer;  /**< Whether buffer is externally managed. */
 #ifdef H2_HAS_GPU
   /** List of sync objects that no longer reference this buffer. */
   std::vector<SyncInfo<Dev>> pending_syncs;

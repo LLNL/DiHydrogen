@@ -33,8 +33,9 @@ TEST_CASE("is_chw_packed predicate", "[tensor][utilities]")
     // This is simply a pointer that can be used to construct a tensor
     // using the "pointer-attach" constructors. The data is never read
     // in these tests, which just exercise metadata capabilities, so
-    // it doesn't matter that the pointer is null.
-    DataType* mock_data = nullptr;
+    // it doesn't matter that the pointer is invalid.
+    // Don't use nullptr because that is checked.
+    DataType* mock_data = reinterpret_cast<DataType*>(1);
 
     SECTION("Empty tensor is considered trivially packed.")
     {
@@ -280,8 +281,8 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
     using MatrixType = El::Matrix<DataType, HDev>;
 
     // Metadata checks ONLY
-    DataType* const mock_data = nullptr;
-    DataType const* const mock_const_data = nullptr;
+    DataType* const mock_data = reinterpret_cast<DataType* const>(1);
+    DataType const* const mock_const_data = reinterpret_cast<DataType const* const>(1);
 
     SECTION("Rank-1 contiguous tensor")
     {

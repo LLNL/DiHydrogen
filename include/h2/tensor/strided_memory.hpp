@@ -13,6 +13,7 @@
  */
 
 #include <memory>
+#include <utility>
 #include <cstddef>
 
 #include "h2/tensor/tensor_types.hpp"
@@ -60,40 +61,47 @@ constexpr inline bool are_strides_contiguous(
  * A managed chunk of memory with an associated stride.
  */
 template <typename T, Device Dev>
-class StridedMemory {
+class StridedMemory
+{
+private:
+  static constexpr std::size_t INVALID_OFFSET = static_cast<std::size_t>(-1);
+
+  using raw_buffer_t = RawBuffer<T, Dev>;
 public:
 
   /** Allocate empty memory. */
-  StridedMemory(const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+  StridedMemory(bool lazy = false, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : raw_buffer(nullptr),
-      mem_buffer(nullptr),
+      mem_offset(INVALID_OFFSET),
       mem_strides{},
       mem_shape{},
-      sync_info(sync)
+      sync_info(sync),
+      is_mem_lazy(lazy)
   {}
 
   /** Allocate memory for shape, with unit strides. */
-  StridedMemory(ShapeTuple shape, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : StridedMemory(sync)
+  StridedMemory(ShapeTuple shape, bool lazy = false,
+                const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : StridedMemory(lazy, sync)
   {
     if (!shape.empty())
     {
       mem_strides = get_contiguous_strides(shape);
       mem_shape = shape;
-      raw_buffer = std::make_shared<RawBuffer<T, Dev>>(
-        product<std::size_t>(shape), sync);
-      mem_buffer = raw_buffer->data();
+      make_raw_buffer(lazy);
+      mem_offset = 0;
     }
   }
 
   /** View a subregion of an existing memory region. */
   StridedMemory(const StridedMemory<T, Dev>& base, CoordTuple coords)
     : raw_buffer(base.raw_buffer),
-      mem_buffer(const_cast<T*>(base.get(get_range_start(coords)))),
+      mem_offset(base.get_index(get_range_start(coords))),
       mem_strides(
         TuplePad<StrideTuple>(base.mem_strides.size())), // Will be resized.
       mem_shape(get_range_shape(coords, base.shape())),
-      sync_info(base.sync_info)
+      sync_info(base.sync_info),
+      is_mem_lazy(base.is_lazy())
   {
     H2_ASSERT_DEBUG(coords.size() <= base.mem_strides.size(),
                     "coords size not compatible with strides");
@@ -115,11 +123,19 @@ public:
                 StrideTuple strides,
                 const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : raw_buffer(nullptr),
-      mem_buffer(buffer),
+      mem_offset(0),
       mem_strides(strides),
       mem_shape(shape),
-      sync_info(sync)
-  {}
+      sync_info(sync),
+      is_mem_lazy(false)
+  {
+    H2_ASSERT_DEBUG(buffer
+                    || shape.empty()
+                    || any_of(shape, [](ShapeTuple::type x) { return x == 0; }),
+                    "Null buffer but non-zero shape provided to StridedMemory");
+    std::size_t size = product<std::size_t>(shape);
+    raw_buffer = std::make_shared<raw_buffer_t>(buffer, size, sync);
+  }
 
   ~StridedMemory()
   {
@@ -129,16 +145,58 @@ public:
     }
   }
 
-  T* data() H2_NOEXCEPT {
-    return mem_buffer;
+  void ensure(bool attempt_recover = true)
+  {
+    if (raw_buffer)
+    {
+      if (is_lazy())
+      {
+        raw_buffer->ensure();
+      }
+      return;  // Data is already allocated.
+    }
+    if (attempt_recover)
+    {
+      // If the old raw buffer is still allocated, reuse it.
+      raw_buffer = old_raw_buffer.lock();
+    }
+    if (!raw_buffer)
+    {
+      // Either not attempting to recover or no old raw buffer.
+      make_raw_buffer(false);
+    }
+    old_raw_buffer.reset();  // Drop reference to old raw buffer.
   }
 
-  const T* data() const H2_NOEXCEPT {
-    return mem_buffer;
+  void release()
+  {
+    if (raw_buffer)
+    {
+      old_raw_buffer = raw_buffer;
+      raw_buffer.reset();
+    }
   }
 
-  const T* const_data() const H2_NOEXCEPT {
-    return mem_buffer;
+  T* data() H2_NOEXCEPT
+  {
+    return const_cast<T*>(std::as_const(*this).data());
+  }
+
+  const T* data() const H2_NOEXCEPT
+  {
+    return const_data();
+  }
+
+  const T* const_data() const H2_NOEXCEPT
+  {
+    if (raw_buffer)
+    {
+      H2_ASSERT_DEBUG(mem_offset != INVALID_OFFSET,
+                      "Invalid offset in StridedMemory: "
+                      "raw_buffer is non-null but no offset was set");
+      return raw_buffer->data() + mem_offset;
+    }
+    return nullptr;
   }
 
   StrideTuple strides() const H2_NOEXCEPT { return mem_strides; }
@@ -176,18 +234,18 @@ public:
 
   /** Return a pointer to the memory at the given coordinates. */
   T* get(SingleCoordTuple coords) H2_NOEXCEPT {
-    H2_ASSERT_DEBUG(mem_buffer, "No memory");
-    return &(mem_buffer[get_index(coords)]);
+    H2_ASSERT_DEBUG(data(), "No memory");
+    return &(data()[get_index(coords)]);
   }
 
   const T* get(SingleCoordTuple coords) const H2_NOEXCEPT {
-    H2_ASSERT_DEBUG(mem_buffer, "No memory");
-    return &(mem_buffer[get_index(coords)]);
+    H2_ASSERT_DEBUG(data(), "No memory");
+    return &(data()[get_index(coords)]);
   }
 
   const T* const_get(SingleCoordTuple coords) const H2_NOEXCEPT {
-    H2_ASSERT_DEBUG(mem_buffer, "No memory");
-    return &(mem_buffer[get_index(coords)]);
+    H2_ASSERT_DEBUG(const_data(), "No memory");
+    return &(const_data()[get_index(coords)]);
   }
 
   SyncInfo<Dev> get_sync_info() const H2_NOEXCEPT
@@ -204,18 +262,49 @@ public:
     }
   }
 
+  bool is_lazy() const H2_NOEXCEPT
+  {
+    return is_mem_lazy;
+  }
+
 private:
   /**
    * Raw underlying memory buffer.
    *
    * This may be shared across StridedMemory objects that have different
    * strides or offsets into the raw buffer.
+   *
+   * If there is no memory, we are lazy and memory has not yet been
+   * allocated, or we are wrapping externally managed memory, this is
+   * null.
+   *
+   * As `RawBuffer` may change the underlying memory, when using one,
+   * we work with offsets instead of direct pointers into it.
    */
-  std::shared_ptr<RawBuffer<T, Dev>> raw_buffer;
-  T* mem_buffer;  /**< Pointer to usable buffer. */
+  std::shared_ptr<raw_buffer_t> raw_buffer;
+  std::size_t mem_offset;  /**< Offset to start of raw_buffer. */
+  /**
+   * Reference to the prior `raw_buffer`, which may be used when
+   * recovering existing memory from views using `ensure`.
+   */
+  std::weak_ptr<raw_buffer_t> old_raw_buffer;
   StrideTuple mem_strides;  /**< Strides associated with the memory. */
   ShapeTuple mem_shape;  /**< Shape describing the extent of the memory. */
   SyncInfo<Dev> sync_info;  /**< Synchronization info for operations. */
+  bool is_mem_lazy;  /**< Whether allocation is lazy. */
+
+  /** Helper to create a raw buffer if size is non-empty. */
+  void make_raw_buffer(bool lazy)
+  {
+    // Do not allocate a RawBuffer for empty memory.
+    if (!mem_shape.empty())
+    {
+      const std::size_t size = product<std::size_t>(mem_shape);
+      if (size) {
+        raw_buffer = std::make_shared<raw_buffer_t>(size, lazy, sync_info);
+      }
+    }
+  }
 };
 
 /** Support printing StridedMemory. */
@@ -224,7 +313,9 @@ inline std::ostream& operator<<(std::ostream& os,
                                 const StridedMemory<T, Dev>& mem)
 {
   // TODO: Print the type along with the device.
-  os << "StridedMemory<" << Dev << ">(" << mem.data() << ", " << mem.strides()
+  os << "StridedMemory<" << Dev << ">("
+     << (mem.is_lazy() ? "lazy" : "not lazy") << ", "
+     << mem.data() << ", " << mem.strides()
      << ", " << mem.shape() << ")";
   return os;
 }
