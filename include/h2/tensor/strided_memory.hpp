@@ -299,7 +299,7 @@ private:
     // Do not allocate a RawBuffer for empty memory.
     if (!mem_shape.empty())
     {
-      std::size_t size = product<std::size_t>(mem_shape);
+      const std::size_t size = product<std::size_t>(mem_shape);
       if (size) {
         raw_buffer = std::make_shared<raw_buffer_t>(size, lazy, sync_info);
       }

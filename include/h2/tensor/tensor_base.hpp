@@ -17,12 +17,10 @@
 namespace h2
 {
 
-/** For controlling `BaseTensor::ensure`. */
-enum class TensorEnsure
-{
-  NoRecovery,
-  AttemptRecovery
-};
+/** Do not attempt recovery in `BaseTensor::ensure`. */
+static constexpr struct tensor_no_recovery_t {} TensorNoRecovery;
+/** Attempt recovery in `BaseTensor::ensure`. */
+static constexpr struct tensor_attempt_recovery_t {} TensorAttemptRecovery;
 
 /**
  * Base class for n-dimensional tensors.
@@ -168,11 +166,26 @@ public:
   /**
    * Ensure memory is backing this tensor, allocating if necessary.
    *
-   * Optionally attempt to reuse existing memory from still-extant
+   * This attempts to reuse existing memory from still-extant views of
+   * this tensor.
+   */
+  virtual void ensure() = 0;
+
+  /**
+   * Ensure memory is backing this tensor, allocating if necessary.
+   *
+   * This does not attempt to reuse existing memory from still-extant
    * views of this tensor.
    */
-  virtual void ensure(
-    TensorEnsure attempt_recover = TensorEnsure::AttemptRecovery) = 0;
+  virtual void ensure(tensor_no_recovery_t) = 0;
+
+  /**
+   * Ensure memory is backing this tensor, allocating if necessary.
+   *
+   * This attempts to reuse existing memory from still-extant views of
+   * this tensor.
+   */
+  virtual void ensure(tensor_attempt_recovery_t) = 0;
 
   /**
    * Release memory associated with this tensor.

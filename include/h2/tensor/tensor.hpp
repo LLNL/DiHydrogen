@@ -20,6 +20,9 @@
 
 namespace h2 {
 
+static constexpr struct lazy_alloc_t {} LazyAlloc;
+static constexpr struct unlazy_alloc_t {} UnlazyAlloc;
+
 /** Tensor class for arbitrary types and devices. */
 template <typename T, Device Dev>
 class Tensor : public BaseTensor<T> {
@@ -29,14 +32,33 @@ public:
 
   Tensor(ShapeTuple shape_,
          DimensionTypeTuple dim_types_,
-         bool lazy = false,
+         const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : Tensor(shape_, dim_types_, UnlazyAlloc, sync) {}
+
+  Tensor(ShapeTuple shape_,
+         DimensionTypeTuple dim_types_,
+         lazy_alloc_t,
          const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
     BaseTensor<T>(shape_, dim_types_),
-    tensor_memory(shape_, lazy, sync)
+    tensor_memory(shape_, true, sync)
   {}
 
-  Tensor(bool lazy = false, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : Tensor(ShapeTuple(), DimensionTypeTuple(), lazy, sync) {}
+  Tensor(ShapeTuple shape_,
+         DimensionTypeTuple dim_types_,
+         unlazy_alloc_t,
+         const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
+    BaseTensor<T>(shape_, dim_types_),
+    tensor_memory(shape_, false, sync)
+  {}
+
+  Tensor(const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : Tensor(ShapeTuple(), DimensionTypeTuple(), UnlazyAlloc, sync) {}
+
+  Tensor(lazy_alloc_t, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : Tensor(ShapeTuple(), DimensionTypeTuple(), LazyAlloc, sync) {}
+
+  Tensor(unlazy_alloc_t, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : Tensor(ShapeTuple(), DimensionTypeTuple(), UnlazyAlloc, sync) {}
 
   Tensor(T* buffer,
          ShapeTuple shape_,
@@ -123,10 +145,19 @@ public:
     return tensor_memory.const_data();
   }
 
-  void ensure(
-    TensorEnsure attempt_recover = TensorEnsure::AttemptRecovery) override
+  void ensure() override
   {
-    tensor_memory.ensure();
+    ensure(TensorAttemptRecovery);
+  }
+
+  void ensure(tensor_no_recovery_t) override
+  {
+    tensor_memory.ensure(false);
+  }
+
+  void ensure(tensor_attempt_recovery_t) override
+  {
+    tensor_memory.ensure(true);
   }
 
   void release() override
