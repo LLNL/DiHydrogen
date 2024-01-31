@@ -27,10 +27,12 @@ struct HydrogenDeviceT<Device::CPU>
     : std::integral_constant<hydrogen::Device, hydrogen::Device::CPU>
 {};
 
+#ifdef H2_HAS_GPU
 template <>
 struct HydrogenDeviceT<Device::GPU>
     : std::integral_constant<hydrogen::Device, hydrogen::Device::GPU>
 {};
+#endif
 
 template <Device D>
 inline constexpr auto HydrogenDevice = HydrogenDeviceT<D>::value;
@@ -44,10 +46,12 @@ struct H2DeviceT<hydrogen::Device::CPU>
     : std::integral_constant<Device, Device::CPU>
 {};
 
+#ifdef H2_HAS_GPU
 template <>
 struct H2DeviceT<hydrogen::Device::GPU>
     : std::integral_constant<Device, Device::GPU>
 {};
+#endif
 
 template <Device D>
 inline constexpr auto H2Device = H2DeviceT<D>::value;
