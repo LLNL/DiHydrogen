@@ -2,6 +2,7 @@
 
 #include <tuple>
 #include <list>
+#include <cstddef>
 
 namespace distconv {
 namespace tensor {
