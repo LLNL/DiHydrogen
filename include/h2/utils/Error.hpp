@@ -66,6 +66,15 @@ H2_DEFINE_FORWARDING_EXCEPTION(H2Exception, std::runtime_error);
 #define H2_ASSERT_DEBUG(cond, msg)
 #endif
 
+/** @def H2_ASSERT_ALWAYS
+ * @brief Check that a condition is true and throw an exception if
+ *        not regardless of the build type.
+ *
+ * @param cond Boolean condition to test.
+ * @param msg Message to pass to the exception if the condition fails.
+ */
+#define H2_ASSERT_ALWAYS(cond, msg) H2_ASSERT(cond, H2Exception, msg)
+
 namespace h2
 {
 
