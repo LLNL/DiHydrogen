@@ -90,14 +90,9 @@ h2::Comm& get_comm(int size)
 
 int main(int argc, char** argv)
 {
-  // Set up the basic test environment.
-  TestEnvironment env(argc, argv);
-  comm_manager = new CommManager();
-
-  int rank = El::mpi::COMM_WORLD.Rank();
-  int size = El::mpi::COMM_WORLD.Size();
-
   // Initialize Catch2.
+  // This is done first to avoid any initialization if the user asks
+  // for help.
   Catch::Session session;
 
   int hang_rank = -1;
@@ -106,14 +101,21 @@ int main(int argc, char** argv)
                       "Hang this rank to attach a debugger.");
   session.cli(cli);
 
-  // Parse the command line.
+  // Parse the command line. Also exit if the user asks for help.
   {
     const int return_code = session.applyCommandLine(argc, argv);
-    if (return_code != 0)
+    if (return_code != 0 || session.configData().showHelp)
     {
       return return_code;
     }
   }
+
+  // Set up the basic test environment.
+  TestEnvironment env(argc, argv);
+  comm_manager = new CommManager();
+
+  int rank = El::mpi::COMM_WORLD.Rank();
+  int size = El::mpi::COMM_WORLD.Size();
 
   // Handle a debugger hang.
   if (rank == hang_rank)
