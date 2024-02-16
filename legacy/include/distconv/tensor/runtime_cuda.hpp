@@ -2,7 +2,7 @@
 
 #include <tuple>
 #include <list>
-#include <cstddef>
+#include <stddef.h>
 
 namespace distconv {
 namespace tensor {
