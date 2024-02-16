@@ -44,6 +44,17 @@ set_tests_properties([==[Testing the Version String.]==] PROPERTIES
 #
 
 add_executable(SeqCatchTests)
+
+# Add the MPI Catch2 driver.
+add_executable(MPICatchTests MPICatchMain.cpp mpi_cumulative_reporter.cpp)
+target_link_libraries(MPICatchTests
+  PRIVATE ${H2_LIBRARIES} Catch2::Catch2)
+set_target_properties(MPICatchTests
+  PROPERTIES
+  CXX_STANDARD 17
+  CXX_EXTENSIONS OFF
+  CXX_STANDARD_REQUIRED ON)
+
 if (H2_HAS_GPU)
   add_executable(GPUCatchTests GPUCatchMain.cpp)
   target_link_libraries(GPUCatchTests
@@ -53,6 +64,8 @@ if (H2_HAS_GPU)
     CXX_STANDARD 17
     CXX_EXTENSIONS OFF
     CXX_STANDARD_REQUIRED ON)
+  # MPI testing always tests with GPUs when built with them.
+  target_compile_definitions(MPICatchTests PRIVATE H2_TEST_WITH_GPU=1)
 endif ()
 
 # Add Catch2 unit tests

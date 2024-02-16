@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -27,6 +27,19 @@ struct GPUEnvironment
 
 int main(int argc, char** argv)
 {
+    // Initialize and parse the Catch2 command line before any other
+    // initialization.
+    Catch::Session session;
+    {
+        const int return_code = session.applyCommandLine(argc, argv);
+        if (return_code != 0 || session.configData().showHelp)
+        {
+            return return_code;
+        }
+    }
+
+    // Initialize the GPU environment.
     GPUEnvironment env;
-    return Catch::Session().run(argc, argv);
+
+    return session.run();
 }
