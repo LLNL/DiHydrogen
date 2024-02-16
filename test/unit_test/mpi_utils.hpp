@@ -13,7 +13,7 @@
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/generators/catch_generators_adapters.hpp>
 
-#include "h2/tensor/proc_grid.hpp"
+#include "h2/tensor/dist_types.hpp"
 #include "h2/utils/Error.hpp"
 
 
