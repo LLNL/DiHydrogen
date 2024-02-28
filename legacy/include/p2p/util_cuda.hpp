@@ -56,10 +56,17 @@ inline bool is_stream_mem_enabled() {
   CUdevice dev;
   P2P_CHECK_CUDA_DRV_ALWAYS(cuCtxGetDevice(&dev));
   int attr;
+ // There was an API change to these in CUDA 11.7, and the flag to check
+ // for support changed (to have _V1) in CUDA 12. But as of CUDA 12,
+ // these are enabled by default, so we do not need to check.
+#if CUDA_VERSION >= 12000
+  attr = 1;
+#else
   P2P_CHECK_CUDA_DRV_ALWAYS(
       cuDeviceGetAttribute(&attr,
                            CU_DEVICE_ATTRIBUTE_CAN_USE_STREAM_MEM_OPS,
                            dev));
+#endif
   return attr;
 }
 
@@ -92,11 +99,11 @@ class EventPool {
   cudaEvent_t get();
   void release(cudaEvent_t e);
   void expand();
-  
+
  private:
   int m_expansion;
   std::list<cudaEvent_t> m_events;
-  std::mutex m_mutex;  
+  std::mutex m_mutex;
 
   static void expand_list(std::list<cudaEvent_t> &list,
                           int num_events);
