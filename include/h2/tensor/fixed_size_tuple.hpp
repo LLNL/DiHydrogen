@@ -279,6 +279,21 @@ constexpr AccT inner_product(const FixedSizeTuple<T1, SizeType1, N1>& a,
   return r;
 }
 
+/** Compute an exclusive prefix product of a FixedSizeTuple. */
+template <typename AccT, typename T, typename SizeType, SizeType N>
+constexpr FixedSizeTuple<AccT, SizeType, N> prefix_product(
+  const FixedSizeTuple<T, SizeType, N>& tuple,
+  const AccT start = AccT{1}) H2_NOEXCEPT
+{
+  using result_t = FixedSizeTuple<AccT, SizeType, N>;
+  result_t result(TuplePad<result_t>(tuple.size(), start));
+  for (SizeType i = 1; i < tuple.size(); ++i)
+  {
+    result[i] = tuple[i-1] * result[i-1];
+  }
+  return result;
+}
+
 /**
  * Return true if the predicate returns true for any entry in a
  * FixedSizeTuple; otherwise return false.
@@ -296,23 +311,62 @@ constexpr bool any_of(const FixedSizeTuple<T, SizeType, N>& tuple,
 
 /** @brief Get all but the last element of the input tuple */
 template <typename T, typename SizeType, SizeType N>
-constexpr h2::FixedSizeTuple<T, SizeType, N>
-init(h2::FixedSizeTuple<T, SizeType, N> const& in)
+constexpr FixedSizeTuple<T, SizeType, N>
+init(FixedSizeTuple<T, SizeType, N> const& in)
 {
   if (in.empty())
     throw std::runtime_error("cannot get init of empty FixedSizeTuple");
-  h2::FixedSizeTuple<T, SizeType, N> out{in};
+  FixedSizeTuple<T, SizeType, N> out{in};
   out.set_size(in.size() - 1);
   return out;
 }
 
 /** @brief Get the last element of the input tuple */
 template <typename T, typename SizeType, SizeType N>
-constexpr T last(h2::FixedSizeTuple<T, SizeType, N> const& in)
+constexpr T last(FixedSizeTuple<T, SizeType, N> const& in)
 {
   if (in.empty())
     throw std::runtime_error("cannot get last of empty FixedSizeTuple");
   return in[in.size() - 1];
 }
 
+/**
+ * Return a tuple containing the first n elements of the given tuple.
+ */
+template <typename T, typename SizeType, SizeType N>
+constexpr FixedSizeTuple<T, SizeType, N>
+init_n(const FixedSizeTuple<T, SizeType, N>& tuple, const SizeType n)
+{
+  H2_ASSERT_DEBUG(n <= tuple.size(),
+                  "Cannot get more elements than present in tuple");
+  FixedSizeTuple<T, SizeType, N> out{tuple};
+  out.set_size(n);
+  return out;
+}
+
 }  // namespace h2
+
+namespace std
+{
+
+// Inject hash specializations for tuples.
+
+template <typename T, typename SizeType, SizeType N>
+struct hash<h2::FixedSizeTuple<T, SizeType, N>>
+{
+  size_t
+  operator()(const h2::FixedSizeTuple<T, SizeType, N>& tuple) const noexcept
+  {
+    // Mixing adapted from Boost.
+    // Hash both the size and elements.
+    size_t seed = hash<SizeType>()(tuple.size());
+    auto hasher = hash<T>();
+    for (SizeType i = 0; i < tuple.size(); ++i)
+    {
+      seed ^= hasher(tuple[i]) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+    return seed;
+  }
+};
+
+}  // namespace std

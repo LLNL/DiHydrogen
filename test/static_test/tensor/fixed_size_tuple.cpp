@@ -5,6 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
+#include <unordered_map>
+
 #include "h2/tensor/fixed_size_tuple.hpp"
 
 // Test the constexpr version of FixedSizeTuple.
@@ -25,6 +27,8 @@ static_assert(h2::product<int>(test_tuple) == 1,
               "Product of empty tuple is wrong.");
 static_assert(h2::inner_product<int>(test_tuple, test_tuple2) == 0,
               "Inner product of empty tuples is wrong");
+static_assert(h2::prefix_product<int>(test_tuple) == TestFixedSizeTuple{},
+              "Prefix product of empty tuples is wrong");
 static_assert(!h2::any_of(test_tuple,
                           [](TestFixedSizeTuple::type x) { return x == 0; }),
               "Any of for empty tuples is wrong");
@@ -75,6 +79,11 @@ static_assert(h2::product<int>(test_tuple) == 2,
               "Sized tuple product has wrong value");
 static_assert(h2::inner_product<int>(test_tuple, test_tuple2) == 5,
               "Inner product of sized tuples has wrong value");
+static_assert(h2::prefix_product<int>(test_tuple) == TestFixedSizeTuple(1, 1),
+              "Prefix product of sized tuples has wrong value");
+static_assert(h2::prefix_product<int>(TestFixedSizeTuple(1, 2, 3))
+              == TestFixedSizeTuple(1, 1, 2),
+              "Prefix product of sized tuples has wrong value");
 static_assert(h2::any_of(test_tuple,
                          [](TestFixedSizeTuple::type x) { return x == 1; }),
               "Any of for sized tuples is wrong");
@@ -183,6 +192,23 @@ constexpr TestFixedSizeTuple test_init{3, 2, 1};
 static_assert(init(test_init) == TestFixedSizeTuple{3, 2},
               "init(tuple) gives wrong value");
 
-} // namespace init_test
+}  // namespace init_test
+
+namespace init_n_test
+{
+constexpr TestFixedSizeTuple test(1, 2, 3);
+static_assert(h2::init_n(test, std::size_t{0}) == TestFixedSizeTuple{},
+              "init_n is wrong");
+static_assert(h2::init_n(test, std::size_t{1}) == TestFixedSizeTuple(1),
+              "init_n is wrong");
+static_assert(h2::init_n(test, std::size_t{3}) == TestFixedSizeTuple(1, 2, 3),
+              "init_n is wrong");
+constexpr TestFixedSizeTuple test_empty;
+static_assert(h2::init_n(test_empty, std::size_t{0}) == TestFixedSizeTuple{},
+              "init_n is wrong");
+}  // namespace init_n_test
+
+// Ensure the hash specialization is picked up.
+std::unordered_map<TestFixedSizeTuple, int> hash_test_map;
 
 // Sized tuple.
