@@ -9,19 +9,18 @@
 
 /** @file
  *
- * Local tensors that live on CPUs.
+ * Local tensors that live on a device.
  */
 
 #include "h2/tensor/tensor_base.hpp"
 #include "h2/tensor/strided_memory.hpp"
 #include "h2/tensor/tensor_types.hpp"
-#include "strided_memory.hpp"
-#include "tensor_types.hpp"
 
-namespace h2 {
+namespace h2
+{
 
-static constexpr struct lazy_alloc_t {} LazyAlloc;
-static constexpr struct unlazy_alloc_t {} UnlazyAlloc;
+// Forward declaration:
+template <typename T, Device Dev> class DistTensor;
 
 /** Tensor class for arbitrary types and devices. */
 template <typename T, Device Dev>

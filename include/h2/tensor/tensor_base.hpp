@@ -17,11 +17,6 @@
 namespace h2
 {
 
-/** Do not attempt recovery in `BaseTensor::ensure`. */
-static constexpr struct tensor_no_recovery_t {} TensorNoRecovery;
-/** Attempt recovery in `BaseTensor::ensure`. */
-static constexpr struct tensor_attempt_recovery_t {} TensorAttemptRecovery;
-
 /**
  * Base class for n-dimensional tensors.
  *

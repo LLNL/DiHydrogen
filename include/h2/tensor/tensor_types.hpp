@@ -7,8 +7,10 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <ostream>
 
 #include <El.hpp>
@@ -242,18 +244,38 @@ struct DimensionRange {
   constexpr DimensionRange() : start(0), end(0) {}
   constexpr DimensionRange(DimType i) : start(i), end(i+1) {}
   constexpr DimensionRange(DimType start_, DimType end_) : start(start_), end(end_) {}
-
-  constexpr bool operator==(const DimensionRange& other) H2_NOEXCEPT {
-    return start == other.start && end == other.end;
-  }
 };
 
+/** Equality for ranges. */
+inline constexpr bool operator==(const DimensionRange& dr1,
+                                 const DimensionRange& dr2)
+{
+  return dr1.start == dr2.start && dr1.end == dr2.end;
+}
+
+/** Inequality for ranges. */
+inline constexpr bool operator!=(const DimensionRange& dr1,
+                                 const DimensionRange& dr2)
+{
+  return dr1.start != dr2.start || dr1.end != dr2.end;
+}
+
 using DRng = DimensionRange;  // Alias to save you some typing.
+
+/** Special DimensionRange that represents a entire range. */
+static constexpr DimensionRange ALL(0, std::numeric_limits<DimType>::max());
 
 /** Support printing DimensionRange. */
 inline std::ostream& operator<<(std::ostream& os, const DimensionRange& dr)
 {
-  os << "[" << dr.start << ", " << dr.end << ")";
+  if (dr == ALL)
+  {
+    os << "[ALL]";
+  }
+  else
+  {
+    os << "[" << dr.start << ", " << dr.end << ")";
+  }
   return os;
 }
 
@@ -261,9 +283,6 @@ inline std::ostream& operator<<(std::ostream& os, const DimensionRange& dr)
  * Tuple of dimension ranges.
  */
 using CoordTuple = NDimTuple<DimensionRange>;
-
-/** Special DimensionRange that represents a entire range. */
-static constexpr DimensionRange ALL(0, -1);
 
 /**
  * Tuple of exact coordinates.
@@ -287,6 +306,25 @@ constexpr inline SingleCoordTuple get_range_start(CoordTuple coords) H2_NOEXCEPT
  */
 constexpr inline bool is_coord_trivial(DimensionRange coord) H2_NOEXCEPT {
   return coord.start + 1 == coord.end;
+}
+
+/**
+ * Return true if the DimensionRange is empty (i.e., start == end).
+ */
+constexpr inline bool is_coord_empty(DimensionRange coord) H2_NOEXCEPT
+{
+  return coord.start == coord.end;
+}
+
+/**
+ * Return true if the coordinate range is empty.
+ *
+ * This occurs when at least one entry in the range is empty or the
+ * range itself is empty.
+ */
+constexpr inline bool is_range_empty(CoordTuple coords) H2_NOEXCEPT
+{
+  return coords.empty() || any_of(coords, is_coord_empty);
 }
 
 /**
@@ -323,7 +361,8 @@ constexpr inline bool is_shape_contained(CoordTuple coords,
   }
   for (typename CoordTuple::size_type i = 0; i < coords.size(); ++i)
   {
-    if (coords[i].start > shape[i] || coords[i].end > shape[i])
+    if (coords[i] != ALL
+        && (coords[i].start > shape[i] || coords[i].end > shape[i]))
     {
       return false;
     }
@@ -354,10 +393,55 @@ constexpr inline FixedSizeTuple<T, SizeType, N> filter_by_trivial(
 /**
  * Specifies the type of view.
  */
-enum class ViewType {
-  None,  /**< Not a view. */
-  Mutable,  /**< A view that can modify the original. */
-  Const  /**< A view that cannot modify the original. */
+enum class ViewType
+{
+  None,    /**< Not a view. */
+  Mutable, /**< A view that can modify the original. */
+  Const    /**< A view that cannot modify the original. */
 };
+
+// These are used by local and distributed tensors for memory recovery.
+/** Do not attempt recovery in `BaseTensor::ensure`. */
+static constexpr struct tensor_no_recovery_t {} TensorNoRecovery;
+/** Attempt recovery in `BaseTensor::ensure`. */
+static constexpr struct tensor_attempt_recovery_t {} TensorAttemptRecovery;
+
+/** Tag to indicate a tensor should allocate lazily. */
+static constexpr struct lazy_alloc_t {} LazyAlloc;
+/** Tag to indicate a tensor should not allocate lazily. */
+static constexpr struct unlazy_alloc_t {} UnlazyAlloc;
+
+/**
+ * Iterate over an n-dimensional region.
+ *
+ * The given function f will be called with a `SingleCoordTuple` for
+ * each coordinate position.
+ *
+ * @todo In the future, we could specialize for specific dimensions.
+ */
+template <typename Func>
+void for_ndim(ShapeTuple shape, Func f)
+{
+  if (shape.empty())
+  {
+    return;
+  }
+  SingleCoordTuple coord(TuplePad<SingleCoordTuple>(shape.size(), 0));
+  const DataIndexType ub = product<DataIndexType>(shape);
+  for (DataIndexType i = 0; i < ub; ++i)
+  {
+    f(coord);
+    coord[0] += 1;
+    for (typename SingleCoordTuple::size_type dim = 0; dim < coord.size() - 1;
+         ++dim)
+    {
+      if (coord[dim] == shape[dim])
+      {
+        coord[dim] = 0;
+        coord[dim + 1] += 1;
+      }
+    }
+  }
+}
 
 }  // namespace h2

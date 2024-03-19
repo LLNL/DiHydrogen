@@ -105,8 +105,7 @@ constexpr CoordTuple coord6(DRng(0), DRng(2, 4));
 constexpr auto range_shape6 = get_range_shape(coord6, shape1);
 static_assert(range_shape6.size() == 1,
               "get_range_shape returned wrong size");
-static_assert(range_shape6[0] == 2,
-              "get_range_shape index 0 is wrong");
+static_assert(range_shape6[0] == 2, "get_range_shape index 0 is wrong");
 }
 
 namespace is_shape_contained_tests
