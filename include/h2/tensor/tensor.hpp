@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2022 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -32,7 +32,8 @@ public:
   Tensor(ShapeTuple shape_,
          DimensionTypeTuple dim_types_,
          const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : Tensor(shape_, dim_types_, UnlazyAlloc, sync) {}
+      : Tensor(shape_, dim_types_, UnlazyAlloc, sync)
+  {}
 
   Tensor(ShapeTuple shape_,
          DimensionTypeTuple dim_types_,
@@ -120,6 +121,8 @@ public:
     if (this->is_view()) {
       throw H2Exception("Cannot resize a view");
     }
+    H2_ASSERT_ALWAYS(new_dim_types.size() == new_shape.size(),
+                     "New shape and dimension types must have the same size");
     auto sync = tensor_memory.get_sync_info();
     tensor_memory = StridedMemory<T, Dev>(
       new_shape, tensor_memory.is_lazy(), sync);
@@ -263,6 +266,15 @@ private:
     {
       throw H2Exception("Attempting to construct an out-of-range view");
     }
+    if (is_range_empty(coords))
+    {
+      return new Tensor<T, Dev>(view_type,
+                                tensor_memory,
+                                ShapeTuple{},
+                                DimensionTypeTuple{},
+                                CoordTuple{});
+    }
+    ShapeTuple view_shape = get_range_shape(coords, this->tensor_shape);
     return new Tensor<T, Dev>(
         view_type,
         tensor_memory,

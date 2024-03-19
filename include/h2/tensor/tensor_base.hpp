@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2022 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -56,6 +56,8 @@ public:
   {
     H2_ASSERT_DEBUG(tensor_shape.size() == tensor_dim_types.size(),
                     "Tensor shape and dimension types must be the same size");
+    H2_ASSERT_DEBUG(shape_.empty() || product<DataIndexType>(shape_) > 0,
+                    "Zero-length dimensions are not permitted");
   }
 
   /** Construct an empty tensor. */
@@ -228,6 +230,9 @@ public:
    *
    * Note that (inherent in the definition of `DimensionRange`), views
    * must be of contiguous subsets of the tensor (i.e., no strides).
+   *
+   * The `coords` given may omit dimensions on the right. In this case,
+   * they are assumed to have their full range.
    */
   virtual BaseTensor<T>* view(CoordTuple coords) = 0;
 
@@ -276,10 +281,14 @@ protected:
   /** Construct a tensor with the given view type, shape, and dimension types. */
   BaseTensor(ViewType view_type_,
              ShapeTuple shape_,
-             DimensionTypeTuple dim_types_) :
-    tensor_shape(shape_),
-    tensor_dim_types(dim_types_),
-    tensor_view_type(view_type_) {}
+             DimensionTypeTuple dim_types_)
+      : tensor_shape(shape_),
+        tensor_dim_types(dim_types_),
+        tensor_view_type(view_type_)
+  {
+    H2_ASSERT_DEBUG(tensor_shape.size() == tensor_dim_types.size(),
+                    "Tensor shape and dimension types must be the same size");
+  }
 };
 
 }  // namespace h2

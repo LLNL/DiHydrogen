@@ -65,6 +65,58 @@ TEST_CASE("is_shape_contained", "[tensor]")
       is_shape_contained(CoordTuple{DRng{2, 6}, ALL}, ShapeTuple{4, 4}));
 }
 
+TEST_CASE("for_ndim", "[tensor]")
+{
+  SECTION("Empty")
+  {
+    ShapeTuple shape;
+    for_ndim(shape, [&](SingleCoordTuple c) {
+      REQUIRE(false);  // Should never be reached.
+    });
+  }
+
+  SECTION("1d")
+  {
+    ShapeTuple shape{4};
+    std::vector<SingleCoordTuple> v = {{0}, {1}, {2}, {3}};
+    DataIndexType i = 0;
+    for_ndim(shape, [&](SingleCoordTuple c) {
+      REQUIRE(c == v[i]);
+      ++i;
+    });
+  }
+
+  SECTION("2d")
+  {
+    ShapeTuple shape{4, 2};
+    std::vector<SingleCoordTuple> v = {
+        {0, 0}, {1, 0}, {2, 0}, {3, 0}, {0, 1}, {1, 1}, {2, 1}, {3, 1}};
+    DataIndexType i = 0;
+    for_ndim(shape, [&](SingleCoordTuple c) {
+      REQUIRE(c == v[i]);
+      ++i;
+    });
+  }
+
+  SECTION("3d")
+  {
+    ShapeTuple shape{2, 2, 2};
+    std::vector<SingleCoordTuple> v = {{0, 0, 0},
+                                       {1, 0, 0},
+                                       {0, 1, 0},
+                                       {1, 1, 0},
+                                       {0, 0, 1},
+                                       {1, 0, 1},
+                                       {0, 1, 1},
+                                       {1, 1, 1}};
+    DataIndexType i = 0;
+    for_ndim(shape, [&](SingleCoordTuple c) {
+      REQUIRE(c == v[i]);
+      ++i;
+    });
+  }
+}
+
 TEMPLATE_LIST_TEST_CASE("Tensors can be created", "[tensor]", AllDevList)
 {
   using TensorType = Tensor<DataType, TestType::value>;
@@ -430,6 +482,49 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
 }
 
+TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
+                        "[tensor]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<DataType, TestType::value>;
+
+  TensorType tensor = TensorType({1}, {DT::Sample});
+  write_ele<Dev>(tensor.data(), 0, static_cast<DataType>(1));
+
+  SECTION("Basic views work")
+  {
+    TensorType* view = tensor.view();
+    REQUIRE(view->shape() == ShapeTuple{1});
+    REQUIRE(view->dim_types() == DTTuple{DT::Sample});
+    REQUIRE(view->strides() == StrideTuple{1});
+    REQUIRE(view->ndim() == 1);
+    REQUIRE(view->numel() == 1);
+    REQUIRE(view->is_view());
+    REQUIRE_FALSE(view->is_const_view());
+    REQUIRE(view->get_view_type() == ViewType::Mutable);
+    REQUIRE(view->data() == tensor.data());
+    REQUIRE(view->is_contiguous());
+    REQUIRE(read_ele<Dev>(view->data(), 0) == 1);
+  }
+
+  SECTION("Manually-specified view range works")
+  {
+    TensorType* view = tensor.view({DRng(0, 1)});
+    REQUIRE(view->shape() == ShapeTuple{1});
+    REQUIRE(view->dim_types() == DTTuple{DT::Sample});
+    REQUIRE(view->strides() == StrideTuple{1});
+    REQUIRE(view->ndim() == 1);
+    REQUIRE(view->numel() == 1);
+    REQUIRE(view->is_view());
+    REQUIRE_FALSE(view->is_const_view());
+    REQUIRE(view->get_view_type() == ViewType::Mutable);
+    REQUIRE(view->data() == tensor.data());
+    REQUIRE(view->is_contiguous());
+    REQUIRE(read_ele<Dev>(view->data(), 0) == 1);
+  }
+}
+
 TEMPLATE_LIST_TEST_CASE("Viewing constant tensors works",
                         "[tensor]",
                         AllDevList)
@@ -469,6 +564,30 @@ TEMPLATE_LIST_TEST_CASE("Viewing constant tensors works",
     REQUIRE_THROWS(view->data());
     REQUIRE_FALSE(view->is_contiguous());
   }
+}
+
+TEMPLATE_LIST_TEST_CASE("Empty views work", "[tensor]", AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<DataType, TestType::value>;
+
+  TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
+  for (DataIndexType i = 0; i < tensor.numel(); ++i)
+  {
+    write_ele<Dev>(tensor.data(), i, static_cast<DataType>(i));
+  }
+
+  TensorType* view = tensor.view({DRng(0, 0), DRng(0, 0)});
+  REQUIRE(view->shape() == ShapeTuple{});
+  REQUIRE(view->dim_types() == DTTuple{});
+  REQUIRE(view->strides() == StrideTuple{});
+  REQUIRE(view->ndim() == 0);
+  REQUIRE(view->numel() == 0);
+  REQUIRE(view->is_view());
+  REQUIRE_FALSE(view->is_const_view());
+  REQUIRE(view->get_view_type() == ViewType::Mutable);
+  REQUIRE(view->data() == nullptr);
+  REQUIRE(view->is_contiguous());
 }
 
 // contiguous is not yet implemented.
