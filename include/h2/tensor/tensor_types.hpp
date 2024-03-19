@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <limits>
 #include <ostream>
+#include <type_traits>
 
 #include <El.hpp>
 
@@ -237,58 +238,97 @@ using DTTuple = DimensionTypeTuple;  // Alias to save you some typing.
 using StrideTuple = NDimTuple<DataIndexType>;
 
 /**
- * Represents a contiguous range [start, end).
+ * Represents a range of indices.
+ *
+ * This is either a single scalar index or a half-open range containing
+ * [start, stop).
+ *
+ * If the range is a scalar, both start and end will have the same
+ * value.
+ *
+ * The range may also be empty, in which case the values of `start` and
+ * `stop` are undefined.
  */
-struct DimensionRange {
-  DimType start;  /**< Start of a range. */
-  DimType end;  /**< End of a range. */
-  constexpr DimensionRange() : start(0), end(0) {}
-  constexpr DimensionRange(DimType i) : start(i), end(i+1) {}
-  constexpr DimensionRange(DimType start_, DimType end_) : start(start_), end(end_) {}
+struct IndexRange
+{
+  /** Construct an empty IndexRange. */
+  constexpr IndexRange() : index_start(0), index_end(-1) {}
+  /** Construct a scalar IndexRange. */
+  constexpr IndexRange(DimType i) : index_start(i), index_end(i) {}
+  /** Construct a half-open IndexRange. */
+  constexpr IndexRange(DimType start_, DimType end_)
+      : index_start(start_),
+        index_end(end_)
+  {}
+
+  constexpr inline DimType start() const H2_NOEXCEPT { return index_start; }
+  constexpr inline DimType end() const H2_NOEXCEPT { return index_end; }
+  constexpr inline bool is_scalar() const H2_NOEXCEPT
+  {
+    return index_start == index_end;
+  }
+  constexpr inline bool is_empty() const H2_NOEXCEPT
+  {
+    return index_end < index_start;
+  }
+
+private:
+  // Implementation detail: index_end < index_start is used to denote
+  // an empty range. To prevent "gotchas" if DimType changes, enforce
+  // that is be signed so this holds.
+  static_assert(std::is_signed_v<DimType>,
+                "Underlying dimension type for IndexRange must be signed");
+
+  DimType index_start;  /**< Start of a range. */
+  DimType index_end;    /**< End of a range. */
 };
 
 /** Equality for ranges. */
-inline constexpr bool operator==(const DimensionRange& dr1,
-                                 const DimensionRange& dr2)
+inline constexpr bool operator==(const IndexRange& dr1,
+                                 const IndexRange& dr2)
 {
-  return dr1.start == dr2.start && dr1.end == dr2.end;
+  return dr1.start() == dr2.start() && dr1.end() == dr2.end();
 }
 
 /** Inequality for ranges. */
-inline constexpr bool operator!=(const DimensionRange& dr1,
-                                 const DimensionRange& dr2)
+inline constexpr bool operator!=(const IndexRange& dr1,
+                                 const IndexRange& dr2)
 {
-  return dr1.start != dr2.start || dr1.end != dr2.end;
+  return dr1.start() != dr2.start() || dr1.end() != dr2.end();
 }
 
-using DRng = DimensionRange;  // Alias to save you some typing.
+using DRng = IndexRange;  // Alias to save you some typing.
 
 /** Special DimensionRange that represents a entire range. */
-static constexpr DimensionRange ALL(0, std::numeric_limits<DimType>::max());
+static constexpr IndexRange ALL(0, std::numeric_limits<DimType>::max());
 
 /** Support printing DimensionRange. */
-inline std::ostream& operator<<(std::ostream& os, const DimensionRange& dr)
+inline std::ostream& operator<<(std::ostream& os, const IndexRange& dr)
 {
   if (dr == ALL)
   {
     os << "[ALL]";
   }
+  else if (dr.is_scalar())
+  {
+    os << "[" << dr.start() << "]";
+  }
   else
   {
-    os << "[" << dr.start << ", " << dr.end << ")";
+    os << "[" << dr.start() << ", " << dr.end() << ")";
   }
   return os;
 }
 
 /**
- * Tuple of dimension ranges.
+ * Tuple of IndexRanges, which represent a region.
  */
-using CoordTuple = NDimTuple<DimensionRange>;
+using IndexRangeTuple = NDimTuple<IndexRange>;
 
 /**
- * Tuple of exact coordinates.
+ * Tuple of scalar indices, which represent a point.
  */
-using SingleCoordTuple = NDimTuple<DimType>;
+using ScalarIndexTuple = NDimTuple<DimType>;
 
 /**
  * Specifies the type of view.

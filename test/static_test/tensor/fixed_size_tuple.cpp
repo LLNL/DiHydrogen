@@ -33,6 +33,22 @@ static_assert(h2::prefix_product<int>(test_tuple) == TestFixedSizeTuple{},
 static_assert(!h2::any_of(test_tuple,
                           [](TestFixedSizeTuple::type x) { return x == 0; }),
               "Any of for empty tuples is wrong");
+static_assert(h2::all_of(test_tuple,
+                         [](TestFixedSizeTuple::type x) { return x == 0; }),
+              "All of for empty tuples is wrong");
+static_assert(h2::map(test_tuple, [](TestFixedSizeTuple::type x) { return x; })
+                  == TestFixedSizeTuple{},
+              "Map for empty tuples is wrong");
+static_assert(h2::filter(test_tuple,
+                         [](TestFixedSizeTuple::type x) { return x == 0; })
+                  == TestFixedSizeTuple{},
+              "Filter for empty tuples is wrong");
+static_assert(h2::filter_index(test_tuple,
+                               [](TestFixedSizeTuple::size_type x) {
+                                 return x == 0;
+                               })
+                  == TestFixedSizeTuple{},
+              "Filter index for empty tuples is wrong");
 
 static_assert(test_tuple.begin() == test_tuple.end(),
               "Empty tuple iterators are wrong");
@@ -58,7 +74,7 @@ static_assert(test_tuple_move.size() == 0,
 constexpr auto test_tuple_move_construct(std::move(test_tuple_copy));
 static_assert(test_tuple_move_construct.size() == 0,
               "Move-constructed empty tuple does not have size 0");
-}
+}  // namespace empty_test
 
 // Sized tuple.
 namespace sized_test {
@@ -92,6 +108,37 @@ static_assert(h2::any_of(test_tuple,
 static_assert(!h2::any_of(test_tuple,
                           [](TestFixedSizeTuple::type x) { return x == 3; }),
               "Any of for sized tuples is wrong");
+static_assert(h2::all_of(test_tuple,
+                         [](TestFixedSizeTuple::type x) {
+                           return x == 1 || x == 2;
+                         }),
+              "All of for fixed sized tuples is wrong");
+static_assert(!h2::all_of(test_tuple,
+                          [](TestFixedSizeTuple::type x) {
+                            return x == 1 || x == 3;
+                          }),
+              "All of for fixed sized tuples is wrong");
+static_assert(h2::map(test_tuple,
+                      [](TestFixedSizeTuple::type x) { return x + 1; })
+                  == TestFixedSizeTuple{2, 3},
+              "Map for fixed sized tuples is wrong");
+static_assert(h2::map<bool>(test_tuple,
+                            [](TestFixedSizeTuple::type x) { return x == 1; })
+                  == h2::FixedSizeTuple<bool,
+                                        typename TestFixedSizeTuple::size_type,
+                                        TestFixedSizeTuple::max_size>(true,
+                                                                      false),
+              "Map with type change for fixed size tuples is wrong");
+static_assert(h2::filter(test_tuple,
+                         [](TestFixedSizeTuple::type x) { return x == 1; })
+                  == TestFixedSizeTuple{1},
+              "Filter for fixed sized tuples is wrong");
+static_assert(h2::filter_index(test_tuple,
+                               [](TestFixedSizeTuple::size_type x) {
+                                 return x == 0;
+                               })
+                  == TestFixedSizeTuple{1},
+              "Filter index for fixed sized tuples is wrong");
 
 static_assert(*test_tuple.begin() == 1,
               "Sized tuple iterators are wrong");
@@ -138,7 +185,7 @@ static_assert(test_tuple_move_construct[0] == 1,
               "Move-constructed sized tuple index 0 has wrong value");
 static_assert(test_tuple_move_construct[1] == 2,
               "Moved-constructed sized tuple index 1 has wrong value");
-}
+}  // namespace sized_test
 
 // Tuple padding.
 namespace padding_test {

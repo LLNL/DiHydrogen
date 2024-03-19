@@ -15,6 +15,7 @@
 #include <memory>
 #include <utility>
 #include <cstddef>
+#include "tensor_types.hpp"
 
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/tensor/tensor_utils.hpp"
@@ -95,30 +96,30 @@ public:
   }
 
   /** View a subregion of an existing memory region. */
-  StridedMemory(const StridedMemory<T, Dev>& base, CoordTuple coords)
+  StridedMemory(const StridedMemory<T, Dev>& base, IndexRangeTuple coords)
       : raw_buffer(base.raw_buffer),
         mem_offset(INVALID_OFFSET),
         mem_strides(
           TuplePad<StrideTuple>(base.mem_strides.size())), // Will be resized.
-        mem_shape(get_range_shape(coords, base.shape())),
+        mem_shape(get_index_range_shape(coords, base.shape())),
         sync_info(base.sync_info),
         is_mem_lazy(base.is_lazy())
   {
     H2_ASSERT_DEBUG(coords.size() <= base.mem_strides.size(),
                     "coords size not compatible with strides");
-    if (is_range_empty(coords))
+    if (is_index_range_empty(coords))
     {
       mem_strides = StrideTuple{};
       mem_shape = ShapeTuple{};
     }
     else
     {
-      mem_offset = base.get_index(get_range_start(coords));
+      mem_offset = base.get_index(get_index_range_start(coords));
       typename StrideTuple::size_type j = 0;
       for (typename StrideTuple::size_type i = 0; i < base.mem_strides.size(); ++i) {
-        // Dimensions that are now trivial are removed.
+        // Dimensions that are scalars are removed.
         // Unspecified dimensions on the right use their full range.
-        if (i >= coords.size() || !is_coord_trivial(coords[i])) {
+        if (i >= coords.size() || !coords[i].is_scalar()) {
           mem_strides[j] = base.mem_strides[i];
           ++j;
         }
@@ -224,17 +225,17 @@ public:
   }
 
   /** Get the index of coords in the buffer. */
-  DataIndexType get_index(const SingleCoordTuple& coords) const H2_NOEXCEPT {
+  DataIndexType get_index(const ScalarIndexTuple& coords) const H2_NOEXCEPT {
     return inner_product<DataIndexType>(coords, mem_strides);
   }
 
   /**
-   * Return the coordinate corresponding to the given index in the
+   * Return the point corresponding to the given index in the
    * generalized column-major order.
    */
-  SingleCoordTuple get_coord(DataIndexType idx) const H2_NOEXCEPT
+  ScalarIndexTuple get_coord(DataIndexType idx) const H2_NOEXCEPT
   {
-    SingleCoordTuple coord(TuplePad<SingleCoordTuple>(mem_shape.size()));
+    ScalarIndexTuple coord(TuplePad<ScalarIndexTuple>(mem_shape.size()));
     for (typename ShapeTuple::size_type i = 0; i < mem_shape.size(); ++i)
     {
       coord[i] = (idx / mem_strides[i]) % mem_shape[i];
@@ -243,17 +244,17 @@ public:
   }
 
   /** Return a pointer to the memory at the given coordinates. */
-  T* get(SingleCoordTuple coords) H2_NOEXCEPT {
+  T* get(ScalarIndexTuple coords) H2_NOEXCEPT {
     H2_ASSERT_DEBUG(data(), "No memory");
     return &(data()[get_index(coords)]);
   }
 
-  const T* get(SingleCoordTuple coords) const H2_NOEXCEPT {
+  const T* get(ScalarIndexTuple coords) const H2_NOEXCEPT {
     H2_ASSERT_DEBUG(data(), "No memory");
     return &(data()[get_index(coords)]);
   }
 
-  const T* const_get(SingleCoordTuple coords) const H2_NOEXCEPT {
+  const T* const_get(ScalarIndexTuple coords) const H2_NOEXCEPT {
     H2_ASSERT_DEBUG(const_data(), "No memory");
     return &(const_data()[get_index(coords)]);
   }

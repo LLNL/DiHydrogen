@@ -228,18 +228,21 @@ public:
   /**
    * Return a view of a subtensor of this tensor.
    *
-   * Note that (inherent in the definition of `DimensionRange`), views
+   * Note that (inherent in the definition of `IndexRange`), views
    * must be of contiguous subsets of the tensor (i.e., no strides).
    *
    * The `coords` given may omit dimensions on the right. In this case,
    * they are assumed to have their full range.
+   *
+   * If dimensions in `coords` are given as scalars, these dimensions
+   * are eliminated from the tensor.
    */
-  virtual BaseTensor<T>* view(CoordTuple coords) = 0;
+  virtual BaseTensor<T>* view(IndexRangeTuple coords) = 0;
 
   /**
    * Return a constant view of a subtensor of this tensor.
    */
-  virtual BaseTensor<T>* view(CoordTuple coords) const = 0;
+  virtual BaseTensor<T>* view(IndexRangeTuple coords) const = 0;
 
   /**
    * If this tensor is a view, stop viewing.
@@ -254,24 +257,24 @@ public:
   // view(coords) because we need to covariant return type.
 
   /** Convenience wrapper for view(coords). */
-  virtual BaseTensor<T>* operator()(CoordTuple coords) = 0;
+  virtual BaseTensor<T>* operator()(IndexRangeTuple coords) = 0;
 
   /** Return a constant view of this tensor. */
   virtual BaseTensor<T>* const_view() const = 0;
 
   /** Return a constant view of a subtensor of this tensor. */
-  virtual BaseTensor<T>* const_view(CoordTuple coords) const = 0;
+  virtual BaseTensor<T>* const_view(IndexRangeTuple coords) const = 0;
 
   /** Convenience wrapper for const_view(coords). */
-  virtual BaseTensor<T>* operator()(CoordTuple coords) const = 0;
+  virtual BaseTensor<T>* operator()(IndexRangeTuple coords) const = 0;
 
   /** Return a pointer to the tensor at a particular coordinate. */
-  virtual T* get(SingleCoordTuple coords) = 0;
+  virtual T* get(ScalarIndexTuple coords) = 0;
 
   /**
    * Return a constant pointer to the tensor at a particular coordinate.
    */
-  virtual const T* get(SingleCoordTuple coords) const = 0;
+  virtual const T* get(ScalarIndexTuple coords) const = 0;
 
 protected:
   ShapeTuple tensor_shape;  /**< Shape of the tensor. */

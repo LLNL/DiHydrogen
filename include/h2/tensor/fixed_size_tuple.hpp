@@ -42,7 +42,7 @@ TuplePad(typename TupleType::size_type size, typename TupleType::type pad_value 
 template <typename T, typename SizeType, SizeType N>
 struct FixedSizeTuple {
   std::array<T, N> data_;  /**< Fixed size data buffer. */
-  SizeType size_; /**< Number of valid elements in the tuple. */
+  SizeType size_;          /**< Number of valid elements in the tuple. */
 
   using type = T;
   using size_type = SizeType;
@@ -195,6 +195,20 @@ struct FixedSizeTuple {
   constexpr void set_size(SizeType new_size) H2_NOEXCEPT {
     H2_ASSERT_DEBUG(new_size <= N, "New size exceeds max");
     size_ = new_size;
+  }
+
+  /**
+   * Add a value to the end of the tuple and increase the number of
+   * valid entries by one.
+   *
+   * It is an error to call this if this would exceed the maximum size
+   * of the tuple.
+   */
+  constexpr void append(T v) H2_NOEXCEPT
+  {
+    H2_ASSERT_DEBUG(size_ < N - 1, "Append would exceed tuple size");
+    data_[size_] = v;
+    ++size_;
   }
 
   /**

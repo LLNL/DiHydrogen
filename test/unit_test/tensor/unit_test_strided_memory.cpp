@@ -1,5 +1,5 @@
- ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+////////////////////////////////////////////////////////////////////////////////
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -183,7 +183,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory indexing works",
       for (DimType i = 0; i < mem.shape(0); ++i)
       {
         REQUIRE(mem.get_index({i, j, k}) == idx);
-        REQUIRE(mem.get_coord(idx) == SingleCoordTuple{i, j, k});
+        REQUIRE(mem.get_coord(idx) == ScalarIndexTuple{i, j, k});
         ++idx;
       }
     }

@@ -1,5 +1,5 @@
- ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+////////////////////////////////////////////////////////////////////////////////
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -58,11 +58,12 @@ TEST_CASE("init(FixedSizeTuple)", "[utilities]")
     }
 }
 
-TEST_CASE("is_shape_contained", "[tensor]")
+TEST_CASE("is_index_range_contained", "[tensor]")
 {
-  REQUIRE(is_shape_contained(CoordTuple{DRng{0, 2}, ALL}, ShapeTuple{4, 4}));
-  REQUIRE_FALSE(
-      is_shape_contained(CoordTuple{DRng{2, 6}, ALL}, ShapeTuple{4, 4}));
+  REQUIRE(is_index_range_contained(IndexRangeTuple{DRng{0, 2}, ALL},
+                                   ShapeTuple{4, 4}));
+  REQUIRE_FALSE(is_index_range_contained(IndexRangeTuple{DRng{2, 6}, ALL},
+                                         ShapeTuple{4, 4}));
 }
 
 TEST_CASE("for_ndim", "[tensor]")
@@ -70,7 +71,7 @@ TEST_CASE("for_ndim", "[tensor]")
   SECTION("Empty")
   {
     ShapeTuple shape;
-    for_ndim(shape, [&](SingleCoordTuple c) {
+    for_ndim(shape, [&](ScalarIndexTuple c) {
       REQUIRE(false);  // Should never be reached.
     });
   }
@@ -78,9 +79,9 @@ TEST_CASE("for_ndim", "[tensor]")
   SECTION("1d")
   {
     ShapeTuple shape{4};
-    std::vector<SingleCoordTuple> v = {{0}, {1}, {2}, {3}};
+    std::vector<ScalarIndexTuple> v = {{0}, {1}, {2}, {3}};
     DataIndexType i = 0;
-    for_ndim(shape, [&](SingleCoordTuple c) {
+    for_ndim(shape, [&](ScalarIndexTuple c) {
       REQUIRE(c == v[i]);
       ++i;
     });
@@ -89,10 +90,10 @@ TEST_CASE("for_ndim", "[tensor]")
   SECTION("2d")
   {
     ShapeTuple shape{4, 2};
-    std::vector<SingleCoordTuple> v = {
+    std::vector<ScalarIndexTuple> v = {
         {0, 0}, {1, 0}, {2, 0}, {3, 0}, {0, 1}, {1, 1}, {2, 1}, {3, 1}};
     DataIndexType i = 0;
-    for_ndim(shape, [&](SingleCoordTuple c) {
+    for_ndim(shape, [&](ScalarIndexTuple c) {
       REQUIRE(c == v[i]);
       ++i;
     });
@@ -101,7 +102,7 @@ TEST_CASE("for_ndim", "[tensor]")
   SECTION("3d")
   {
     ShapeTuple shape{2, 2, 2};
-    std::vector<SingleCoordTuple> v = {{0, 0, 0},
+    std::vector<ScalarIndexTuple> v = {{0, 0, 0},
                                        {1, 0, 0},
                                        {0, 1, 0},
                                        {1, 1, 0},
@@ -110,7 +111,7 @@ TEST_CASE("for_ndim", "[tensor]")
                                        {0, 1, 1},
                                        {1, 1, 1}};
     DataIndexType i = 0;
-    for_ndim(shape, [&](SingleCoordTuple c) {
+    for_ndim(shape, [&](ScalarIndexTuple c) {
       REQUIRE(c == v[i]);
       ++i;
     });

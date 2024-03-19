@@ -69,12 +69,110 @@ constexpr FixedSizeTuple<AccT, SizeType, N> prefix_product(
 template <typename T, typename SizeType, SizeType N, typename Predicate>
 constexpr bool any_of(const FixedSizeTuple<T, SizeType, N>& tuple,
                       Predicate p) {
-  for (SizeType i = 0; i < tuple.size(); ++i) {
-    if (p(tuple[i])) {
+  for (const auto& v : tuple)
+  {
+    if (p(v))
+    {
       return true;
     }
   }
   return false;
+}
+
+/**
+ * Return true if the predicate returns true for every entry in a
+ * FixedSizeTuple; otherwise return false.
+ *
+ * Returns true if the tuple is empty.
+ */
+template <typename T, typename SizeType, SizeType N, typename Predicate>
+constexpr bool all_of(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
+{
+  for (const auto& v : tuple)
+  {
+    if (!p(v))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Return a new tuple that is the result of applying a predicate to
+ * each entry of the tuple.
+ */
+template <typename T,
+          typename SizeType,
+          SizeType N,
+          typename Predicate>
+constexpr FixedSizeTuple<T, SizeType, N>
+map(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
+{
+  FixedSizeTuple<T, SizeType, N> mapped_tuple;
+  for (const auto& v : tuple)
+  {
+    mapped_tuple.append(p(v));
+  }
+  return mapped_tuple;
+}
+
+/** Map with a different FixedSizeTuple return type. */
+template <typename NewT,
+          typename T,
+          typename SizeType,
+          SizeType N,
+          typename Predicate>
+constexpr FixedSizeTuple<NewT, SizeType, N>
+map(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
+{
+  FixedSizeTuple<NewT, SizeType, N> mapped_tuple;
+  for (const auto& v : tuple)
+  {
+    mapped_tuple.append(p(v));
+  }
+  return mapped_tuple;
+}
+
+/**
+ * Return a new tuple consisting only of the entries in the original
+ * tuple where the predicate returns true.
+ */
+template <typename T, typename SizeType, SizeType N, typename Predicate>
+constexpr FixedSizeTuple<T, SizeType, N>
+filter(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
+{
+  FixedSizeTuple<T, SizeType, N> filtered_tuple;
+  for (const auto& v : tuple)
+  {
+    if (p(v))
+    {
+      filtered_tuple.append(v);
+    }
+  }
+  return filtered_tuple;
+}
+
+/**
+ * Like filter, except passes the index of each entry in tuple to the
+ * given predicate, rather than the value.
+ *
+ * This is primarily useful when your predicate can capture some other
+ * object that it needs to interact with.
+ */
+template <typename T, typename SizeType, SizeType N, typename Predicate>
+constexpr FixedSizeTuple<T, SizeType, N>
+filter_index(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
+{
+  FixedSizeTuple<T, SizeType, N> filtered_tuple;
+  for (SizeType i = 0; i < tuple.size(); ++i)
+  {
+    if (p(i))
+    {
+      filtered_tuple.append(tuple[i]);
+    }
+  }
+  return filtered_tuple;
 }
 
 /** @brief Get all but the last element of the input tuple */
