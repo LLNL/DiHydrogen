@@ -56,7 +56,7 @@ public:
   {
     H2_ASSERT_DEBUG(tensor_shape.size() == tensor_dim_types.size(),
                     "Tensor shape and dimension types must be the same size");
-    H2_ASSERT_DEBUG(shape_.empty() || product<DataIndexType>(shape_) > 0,
+    H2_ASSERT_DEBUG(shape_.is_empty() || product<DataIndexType>(shape_) > 0,
                     "Zero-length dimensions are not permitted");
   }
 
@@ -96,7 +96,7 @@ public:
 
   /** Return the number of elements in the tensor. */
   DataIndexType numel() const H2_NOEXCEPT {
-    if (tensor_shape.empty()) {
+    if (tensor_shape.is_empty()) {
       return 0;
     }
     return product<DataIndexType>(tensor_shape);

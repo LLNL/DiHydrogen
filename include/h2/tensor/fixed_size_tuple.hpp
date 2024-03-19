@@ -84,7 +84,7 @@ struct FixedSizeTuple {
   constexpr SizeType size() const H2_NOEXCEPT { return size_; }
 
   /** Return true when there are no valid elements in the tuple. */
-  constexpr bool empty() const H2_NOEXCEPT { return size_ == 0; }
+  constexpr bool is_empty() const H2_NOEXCEPT { return size_ == 0; }
 
   /** Return a raw pointer to the tuple. */
   T* data() H2_NOEXCEPT { return data_.data(); }
@@ -314,7 +314,7 @@ template <typename T, typename SizeType, SizeType N>
 constexpr FixedSizeTuple<T, SizeType, N>
 init(FixedSizeTuple<T, SizeType, N> const& in)
 {
-  if (in.empty())
+  if (in.is_empty())
     throw std::runtime_error("cannot get init of empty FixedSizeTuple");
   FixedSizeTuple<T, SizeType, N> out{in};
   out.set_size(in.size() - 1);
@@ -325,7 +325,7 @@ init(FixedSizeTuple<T, SizeType, N> const& in)
 template <typename T, typename SizeType, SizeType N>
 constexpr T last(FixedSizeTuple<T, SizeType, N> const& in)
 {
-  if (in.empty())
+  if (in.is_empty())
     throw std::runtime_error("cannot get last of empty FixedSizeTuple");
   return in[in.size() - 1];
 }

@@ -16,8 +16,8 @@ using TestFixedSizeTuple = h2::FixedSizeTuple<int, std::size_t, 4>;
 // Empty tuple.
 namespace empty_test {
 constexpr TestFixedSizeTuple test_tuple;
-static_assert(test_tuple.size() == 0,
-              "Empty tuple does not have size 0");
+static_assert(test_tuple.size() == 0, "Empty tuple does not have size 0");
+static_assert(test_tuple.is_empty(), "Empty tuple does not think it is empty");
 
 constexpr TestFixedSizeTuple test_tuple2;
 static_assert(test_tuple == test_tuple2,
@@ -68,6 +68,7 @@ static_assert(test_tuple[0] == 1,
               "Sized tuple index 0 has wrong value");
 static_assert(test_tuple[1] == 2,
               "Sized tuple index 1 has wrong value");
+static_assert(!test_tuple.is_empty(), "Non-empty tuple thinks it is empty");
 constexpr TestFixedSizeTuple test_tuple2(1, 2);
 static_assert(test_tuple == test_tuple2,
               "Sized tuple comparison is wrong");

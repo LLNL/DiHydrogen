@@ -85,7 +85,7 @@ public:
                 const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : StridedMemory(lazy, sync)
   {
-    if (!shape.empty())
+    if (!shape.is_empty())
     {
       mem_strides = get_contiguous_strides(shape);
       mem_shape = shape;
@@ -140,7 +140,7 @@ public:
       is_mem_lazy(false)
   {
     H2_ASSERT_DEBUG(buffer
-                    || shape.empty()
+                    || shape.is_empty()
                     || any_of(shape, [](ShapeTuple::type x) { return x == 0; }),
                     "Null buffer but non-zero shape provided to StridedMemory");
     std::size_t size = product<std::size_t>(shape);
@@ -199,7 +199,7 @@ public:
 
   const T* const_data() const H2_NOEXCEPT
   {
-    if (raw_buffer && !mem_shape.empty())
+    if (raw_buffer && !mem_shape.is_empty())
     {
       H2_ASSERT_DEBUG(mem_offset != INVALID_OFFSET,
                       "Invalid offset in StridedMemory: "
@@ -307,7 +307,7 @@ private:
   void make_raw_buffer(bool lazy)
   {
     // Do not allocate a RawBuffer for empty memory.
-    if (!mem_shape.empty())
+    if (!mem_shape.is_empty())
     {
       const std::size_t size = product<std::size_t>(mem_shape);
       if (size) {

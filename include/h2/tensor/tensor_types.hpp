@@ -324,7 +324,7 @@ constexpr inline bool is_coord_empty(DimensionRange coord) H2_NOEXCEPT
  */
 constexpr inline bool is_range_empty(CoordTuple coords) H2_NOEXCEPT
 {
-  return coords.empty() || any_of(coords, is_coord_empty);
+  return coords.is_empty() || any_of(coords, is_coord_empty);
 }
 
 /**
@@ -422,7 +422,7 @@ static constexpr struct unlazy_alloc_t {} UnlazyAlloc;
 template <typename Func>
 void for_ndim(ShapeTuple shape, Func f)
 {
-  if (shape.empty())
+  if (shape.is_empty())
   {
     return;
   }
