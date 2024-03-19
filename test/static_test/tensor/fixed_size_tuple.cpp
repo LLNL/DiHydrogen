@@ -8,6 +8,7 @@
 #include <unordered_map>
 
 #include "h2/tensor/fixed_size_tuple.hpp"
+#include "h2/tensor/tuple_utils.hpp"
 
 // Test the constexpr version of FixedSizeTuple.
 

@@ -21,4 +21,5 @@ h2_add_sources_to_target_and_install(
   tensor_types.hpp
   tensor_base.hpp
   tensor.hpp
+  tuple_utils.hpp
   )

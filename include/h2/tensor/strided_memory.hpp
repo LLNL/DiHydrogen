@@ -15,7 +15,6 @@
 #include <memory>
 #include <utility>
 #include <cstddef>
-#include "tensor_types.hpp"
 
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/tensor/raw_buffer.hpp"
