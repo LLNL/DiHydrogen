@@ -312,10 +312,9 @@ constexpr bool any_of(const FixedSizeTuple<T, SizeType, N>& tuple,
 /** @brief Get all but the last element of the input tuple */
 template <typename T, typename SizeType, SizeType N>
 constexpr FixedSizeTuple<T, SizeType, N>
-init(FixedSizeTuple<T, SizeType, N> const& in)
+init(FixedSizeTuple<T, SizeType, N> const& in) H2_NOEXCEPT
 {
-  if (in.is_empty())
-    throw std::runtime_error("cannot get init of empty FixedSizeTuple");
+  H2_ASSERT_DEBUG(!in.is_empty(), "Cannot get init of empty tuple");
   FixedSizeTuple<T, SizeType, N> out{in};
   out.set_size(in.size() - 1);
   return out;
@@ -323,10 +322,9 @@ init(FixedSizeTuple<T, SizeType, N> const& in)
 
 /** @brief Get the last element of the input tuple */
 template <typename T, typename SizeType, SizeType N>
-constexpr T last(FixedSizeTuple<T, SizeType, N> const& in)
+constexpr T last(FixedSizeTuple<T, SizeType, N> const& in) H2_NOEXCEPT
 {
-  if (in.is_empty())
-    throw std::runtime_error("cannot get last of empty FixedSizeTuple");
+  H2_ASSERT_DEBUG(!in.is_empty(), "Cannot get last of empty tuple");
   return in[in.size() - 1];
 }
 
@@ -335,7 +333,7 @@ constexpr T last(FixedSizeTuple<T, SizeType, N> const& in)
  */
 template <typename T, typename SizeType, SizeType N>
 constexpr FixedSizeTuple<T, SizeType, N>
-init_n(const FixedSizeTuple<T, SizeType, N>& tuple, const SizeType n)
+init_n(const FixedSizeTuple<T, SizeType, N>& tuple, const SizeType n) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(n <= tuple.size(),
                   "Cannot get more elements than present in tuple");
