@@ -15,6 +15,7 @@
 #include "h2/tensor/tensor_base.hpp"
 #include "h2/tensor/strided_memory.hpp"
 #include "h2/tensor/tensor_types.hpp"
+#include "h2/tensor/tensor_utils.hpp"
 
 namespace h2
 {

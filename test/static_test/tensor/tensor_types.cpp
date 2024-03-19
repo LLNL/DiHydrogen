@@ -6,6 +6,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "h2/tensor/tensor_types.hpp"
+#include "h2/tensor/tensor_utils.hpp"
 
 using namespace h2;
 

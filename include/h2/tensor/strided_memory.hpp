@@ -17,6 +17,7 @@
 #include <cstddef>
 
 #include "h2/tensor/tensor_types.hpp"
+#include "h2/tensor/tensor_utils.hpp"
 #include "h2/tensor/raw_buffer.hpp"
 
 namespace h2 {
