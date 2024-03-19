@@ -292,6 +292,13 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
       }
     }
   }
+  SECTION("Empty views work")
+  {
+    MemType mem = MemType(base_mem, {DRng(0, 0), DRng(0, 0), DRng(0, 0)});
+    REQUIRE(mem.strides() == StrideTuple{});
+    REQUIRE(mem.shape() == ShapeTuple{});
+    REQUIRE(mem.data() == nullptr);
+  }
 }
 
 TEMPLATE_LIST_TEST_CASE("Lazy StridedMemory works",

@@ -15,6 +15,7 @@
 #include <memory>
 #include <utility>
 #include <cstddef>
+#include "tensor_types.hpp"
 
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/tensor/raw_buffer.hpp"
@@ -95,26 +96,35 @@ public:
 
   /** View a subregion of an existing memory region. */
   StridedMemory(const StridedMemory<T, Dev>& base, CoordTuple coords)
-    : raw_buffer(base.raw_buffer),
-      mem_offset(base.get_index(get_range_start(coords))),
-      mem_strides(
-        TuplePad<StrideTuple>(base.mem_strides.size())), // Will be resized.
-      mem_shape(get_range_shape(coords, base.shape())),
-      sync_info(base.sync_info),
-      is_mem_lazy(base.is_lazy())
+      : raw_buffer(base.raw_buffer),
+        mem_offset(INVALID_OFFSET),
+        mem_strides(
+          TuplePad<StrideTuple>(base.mem_strides.size())), // Will be resized.
+        mem_shape(get_range_shape(coords, base.shape())),
+        sync_info(base.sync_info),
+        is_mem_lazy(base.is_lazy())
   {
     H2_ASSERT_DEBUG(coords.size() <= base.mem_strides.size(),
                     "coords size not compatible with strides");
-    typename StrideTuple::size_type j = 0;
-    for (typename StrideTuple::size_type i = 0; i < base.mem_strides.size(); ++i) {
-      // Dimensions that are now trivial are removed.
-      // Unspecified dimensions on the right use their full range.
-      if (i >= coords.size() || !is_coord_trivial(coords[i])) {
-        mem_strides[j] = base.mem_strides[i];
-        ++j;
-      }
+    if (is_range_empty(coords))
+    {
+      mem_strides = StrideTuple{};
+      mem_shape = ShapeTuple{};
     }
-    mem_strides.set_size(j);
+    else
+    {
+      mem_offset = base.get_index(get_range_start(coords));
+      typename StrideTuple::size_type j = 0;
+      for (typename StrideTuple::size_type i = 0; i < base.mem_strides.size(); ++i) {
+        // Dimensions that are now trivial are removed.
+        // Unspecified dimensions on the right use their full range.
+        if (i >= coords.size() || !is_coord_trivial(coords[i])) {
+          mem_strides[j] = base.mem_strides[i];
+          ++j;
+        }
+      }
+      mem_strides.set_size(j);
+    }
   }
 
   /** Wrap an existing memory buffer. */
@@ -189,7 +199,7 @@ public:
 
   const T* const_data() const H2_NOEXCEPT
   {
-    if (raw_buffer)
+    if (raw_buffer && !mem_shape.empty())
     {
       H2_ASSERT_DEBUG(mem_offset != INVALID_OFFSET,
                       "Invalid offset in StridedMemory: "
