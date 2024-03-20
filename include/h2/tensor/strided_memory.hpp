@@ -99,9 +99,7 @@ public:
   StridedMemory(const StridedMemory<T, Dev>& base, IndexRangeTuple coords)
       : raw_buffer(base.raw_buffer),
         mem_offset(INVALID_OFFSET),
-        mem_strides(
-          TuplePad<StrideTuple>(base.mem_strides.size())), // Will be resized.
-        mem_shape(get_index_range_shape(coords, base.shape())),
+        // mem_shape and mem_strides are set below.
         sync_info(base.sync_info),
         is_mem_lazy(base.is_lazy())
   {
@@ -115,16 +113,33 @@ public:
     else
     {
       mem_offset = base.get_index(get_index_range_start(coords));
-      typename StrideTuple::size_type j = 0;
-      for (typename StrideTuple::size_type i = 0; i < base.mem_strides.size(); ++i) {
-        // Dimensions that are scalars are removed.
-        // Unspecified dimensions on the right use their full range.
-        if (i >= coords.size() || !coords[i].is_scalar()) {
-          mem_strides[j] = base.mem_strides[i];
-          ++j;
+      mem_shape = get_index_range_shape(coords, base.shape());
+      if (mem_shape.is_empty())
+      {
+        // mem_shape is empty if the coordinates are all scalars.
+        // Reset to have a shape and stride of 1.
+        mem_shape = ShapeTuple(1);
+        mem_strides = StrideTuple(1);
+      }
+      else if (all_of(mem_shape, [](ShapeTuple::type x) { return x == 1; }))
+      {
+        // mem_shape is all 1s if every coordinate is a range of length
+        // 1. Hence we essentially have a scalar and are contiguous,
+        // so force the strides to look contiguous.
+        mem_strides = StrideTuple(TuplePad<StrideTuple>(mem_shape.size(), 1));
+      }
+      else
+      {
+        // Compute strides as normal.
+        for (typename StrideTuple::size_type i = 0; i < base.mem_strides.size();
+             ++i)
+        {
+          if (i >= coords.size() || !coords[i].is_scalar())
+          {
+            mem_strides.append(base.mem_strides[i]);
+          }
         }
       }
-      mem_strides.set_size(j);
     }
   }
 

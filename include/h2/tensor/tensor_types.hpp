@@ -36,13 +36,15 @@ namespace h2 {
  *
  * These are not used for other sorts of correctness checking.
  */
-enum class DimensionType {
-  Any,  /**< Catch-all, does not ascribe particular semantics. */
+enum class DimensionType
+{
+  Any,     /**< Catch-all, does not ascribe particular semantics. */
+  Scalar,  /** Internal use for views that eliminate all dimension. */
   Sample,  /**< The sample ("batch") dimension. */
-  Channel,  /**< The channel ("feature") dimension in convolutions. */
+  Channel, /**< The channel ("feature") dimension in convolutions. */
   Filter,  /**< The filter dimension in convolutions. */
-  Spatial,  /**< The spatial (height, width, depth, etc.) dimension(s). */
-  Sequence  /**< The sequence dimension (e.g., in textual data). */
+  Spatial, /**< The spatial (height, width, depth, etc.) dimension(s). */
+  Sequence /**< The sequence dimension (e.g., in textual data). */
 };
 
 using DT = DimensionType;  // Alias to save you some typing.
@@ -54,6 +56,9 @@ inline std::ostream& operator<<(std::ostream& os, const DimensionType& dim_type)
   {
   case DT::Any:
     os << "Any";
+    break;
+  case DT::Scalar:
+    os << "Scalar";
     break;
   case DT::Sample:
     os << "Sample";
@@ -259,7 +264,11 @@ struct IndexRange
   constexpr IndexRange(DimType start_, DimType end_)
       : index_start(start_),
         index_end(end_)
-  {}
+  {
+    H2_ASSERT_DEBUG(start_ <= end_,
+                    "IndexRange with end < start not supported, you probably "
+                    "have a bug or want an empty IndexRange");
+  }
 
   constexpr inline DimType start() const H2_NOEXCEPT { return index_start; }
   constexpr inline DimType end() const H2_NOEXCEPT { return index_end; }
@@ -312,6 +321,10 @@ inline std::ostream& operator<<(std::ostream& os, const IndexRange& dr)
   else if (dr.is_scalar())
   {
     os << "[" << dr.start() << "]";
+  }
+  else if (dr.is_empty())
+  {
+    os << "[empty]";
   }
   else
   {

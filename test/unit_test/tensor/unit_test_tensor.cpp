@@ -203,6 +203,31 @@ TEMPLATE_LIST_TEST_CASE("Empty tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE_FALSE(tensor.is_lazy());
 }
 
+TEMPLATE_LIST_TEST_CASE("Single element tensor metadata is sane",
+                        "[tensor]",
+                        AllDevList)
+{
+  using TensorType = Tensor<DataType, TestType::value>;
+
+  TensorType tensor = TensorType({1}, {DT::Any});
+
+  REQUIRE(tensor.shape() == ShapeTuple{1});
+  REQUIRE(tensor.dim_types() == DTTuple{DT::Any});
+  REQUIRE(tensor.strides() == StrideTuple{1});
+  REQUIRE(tensor.ndim() == 1);
+  REQUIRE(tensor.numel() == 1);
+  REQUIRE_FALSE(tensor.is_empty());
+  REQUIRE(tensor.is_contiguous());
+  REQUIRE_FALSE(tensor.is_view());
+  REQUIRE_FALSE(tensor.is_const_view());
+  REQUIRE(tensor.get_view_type() == ViewType::None);
+  REQUIRE(tensor.get_device() == TestType::value);
+  REQUIRE(tensor.data() != nullptr);
+  REQUIRE(tensor.const_data() != nullptr);
+  REQUIRE(tensor.get({0}) == tensor.data());
+  REQUIRE_FALSE(tensor.is_lazy());
+}
+
 TEMPLATE_LIST_TEST_CASE("Lazy and unlazy tensors are sane",
                         "[tensor]",
                         AllDevList)
@@ -419,6 +444,34 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
       }
     }
   }
+  SECTION("View of a single element works")
+  {
+    TensorType* view = tensor.view({DRng(1, 2), DRng(0, 1)});
+    REQUIRE(view->shape() == ShapeTuple{1, 1});
+    REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
+    REQUIRE(view->strides() == StrideTuple{1, 1});
+    REQUIRE(view->ndim() == 2);
+    REQUIRE(view->numel() == 1);
+    REQUIRE(view->is_view());
+    REQUIRE(view->data() == (tensor.data() + 1));
+    REQUIRE(view->is_contiguous());
+
+    REQUIRE(read_ele<Dev>(view->get({0, 0})) == 1);
+  }
+  SECTION("View of a single element, eliminating dimensions, works")
+  {
+    TensorType* view = tensor.view({DRng(1), DRng(0)});
+    REQUIRE(view->shape() == ShapeTuple{1});
+    REQUIRE(view->dim_types() == DTTuple{DT::Scalar});
+    REQUIRE(view->strides() == StrideTuple{1});
+    REQUIRE(view->ndim() == 1);
+    REQUIRE(view->numel() == 1);
+    REQUIRE(view->is_view());
+    REQUIRE(view->data() == (tensor.data() + 1));
+    REQUIRE(view->is_contiguous());
+
+    REQUIRE(read_ele<Dev>(view->get({0})) == 1);
+  }
   SECTION("Viewing a view works")
   {
     TensorType* view_orig = tensor.view();
@@ -524,6 +577,22 @@ TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
     REQUIRE(view->is_contiguous());
     REQUIRE(read_ele<Dev>(view->data(), 0) == 1);
   }
+
+  SECTION("View with a scalar index works")
+  {
+    TensorType* view = tensor.view({DRng(0)});
+    REQUIRE(view->shape() == ShapeTuple{1});
+    REQUIRE(view->dim_types() == DTTuple{DT::Scalar});
+    REQUIRE(view->strides() == StrideTuple{1});
+    REQUIRE(view->ndim() == 1);
+    REQUIRE(view->numel() == 1);
+    REQUIRE(view->is_view());
+    REQUIRE_FALSE(view->is_const_view());
+    REQUIRE(view->get_view_type() == ViewType::Mutable);
+    REQUIRE(view->data() == tensor.data());
+    REQUIRE(view->is_contiguous());
+    REQUIRE(read_ele<Dev>(view->data(), 0) == 1);
+  }
 }
 
 TEMPLATE_LIST_TEST_CASE("Viewing constant tensors works",
@@ -578,17 +647,35 @@ TEMPLATE_LIST_TEST_CASE("Empty views work", "[tensor]", AllDevList)
     write_ele<Dev>(tensor.data(), i, static_cast<DataType>(i));
   }
 
-  TensorType* view = tensor.view({DRng(0, 0), DRng(0, 0)});
-  REQUIRE(view->shape() == ShapeTuple{});
-  REQUIRE(view->dim_types() == DTTuple{});
-  REQUIRE(view->strides() == StrideTuple{});
-  REQUIRE(view->ndim() == 0);
-  REQUIRE(view->numel() == 0);
-  REQUIRE(view->is_view());
-  REQUIRE_FALSE(view->is_const_view());
-  REQUIRE(view->get_view_type() == ViewType::Mutable);
-  REQUIRE(view->data() == nullptr);
-  REQUIRE(view->is_contiguous());
+  SECTION("View with fully empty coordinates work")
+  {
+    TensorType* view = tensor.view(IndexRangeTuple{});
+    REQUIRE(view->shape() == ShapeTuple{});
+    REQUIRE(view->dim_types() == DTTuple{});
+    REQUIRE(view->strides() == StrideTuple{});
+    REQUIRE(view->ndim() == 0);
+    REQUIRE(view->numel() == 0);
+    REQUIRE(view->is_view());
+    REQUIRE_FALSE(view->is_const_view());
+    REQUIRE(view->get_view_type() == ViewType::Mutable);
+    REQUIRE(view->data() == nullptr);
+    REQUIRE(view->is_contiguous());
+  }
+
+  SECTION("View with one coordinate empty works")
+  {
+    TensorType* view = tensor.view({DRng(0, 1), DRng()});
+    REQUIRE(view->shape() == ShapeTuple{});
+    REQUIRE(view->dim_types() == DTTuple{});
+    REQUIRE(view->strides() == StrideTuple{});
+    REQUIRE(view->ndim() == 0);
+    REQUIRE(view->numel() == 0);
+    REQUIRE(view->is_view());
+    REQUIRE_FALSE(view->is_const_view());
+    REQUIRE(view->get_view_type() == ViewType::Mutable);
+    REQUIRE(view->data() == nullptr);
+    REQUIRE(view->is_contiguous());
+  }
 }
 
 // contiguous is not yet implemented.
@@ -614,7 +701,7 @@ TEMPLATE_LIST_TEST_CASE("Making tensors contiguous works",
   }
   SECTION("Making non-contiguous tensors contiguous work")
   {
-    TensorType* view = tensor.view({DRng(1), ALL});
+    TensorType* view = tensor.view({DRng(1, 2), ALL});
     REQUIRE_FALSE(view->is_contiguous());
 
     TensorType* contig = view->contiguous();

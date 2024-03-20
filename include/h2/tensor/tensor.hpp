@@ -16,6 +16,7 @@
 #include "h2/tensor/strided_memory.hpp"
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/tensor/tensor_utils.hpp"
+#include "tensor_types.hpp"
 
 namespace h2
 {
@@ -267,6 +268,9 @@ private:
     {
       throw H2Exception("Attempting to construct an out-of-range view");
     }
+    // We need an explicit check here because specific coordinates may
+    // be empty. We can handle empty IndexRangeTuples, but not empty
+    // IndexRanges.
     if (is_index_range_empty(coords))
     {
       return new Tensor<T, Dev>(view_type,
@@ -276,13 +280,26 @@ private:
                                 IndexRangeTuple{});
     }
     ShapeTuple view_shape = get_index_range_shape(coords, this->tensor_shape);
+    // Eliminate dimension types from dimensions that have been
+    // eliminated.
+    // If we would eliminate all dimensions (i.e., use scalars for all
+    // coordinates), decay to a shape of 1 with a Scalar dimension.
+    DimensionTypeTuple filtered_dim_types;
+    if (!coords.is_empty() && view_shape.is_empty())
+    {
+      view_shape = ShapeTuple(1);
+      filtered_dim_types = DimensionTypeTuple(DimensionType::Scalar);
+    }
+    else
+    {
+      filtered_dim_types = filter_index(
+          this->tensor_dim_types,
+          [&](IndexRangeTuple::size_type i) { return !coords[i].is_scalar(); });
+    }
     return new Tensor<T, Dev>(view_type,
                               tensor_memory,
                               view_shape,
-                              filter_index(this->tensor_dim_types,
-                                           [&](IndexRangeTuple::size_type i) {
-                                             return !coords[i].is_scalar();
-                                           }),
+                              filtered_dim_types,
                               coords);
   }
 };

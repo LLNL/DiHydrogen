@@ -235,7 +235,9 @@ public:
    * they are assumed to have their full range.
    *
    * If dimensions in `coords` are given as scalars, these dimensions
-   * are eliminated from the tensor.
+   * are eliminated from the tensor. If all dimensions are eliminated,
+   * i.e., you access a specific element, the resulting view will have
+   * one dimension with dimension-type `Scalar`.
    */
   virtual BaseTensor<T>* view(IndexRangeTuple coords) = 0;
 
