@@ -9,7 +9,7 @@ cmake_minimum_required(VERSION 3.21.0)
 cmake_policy(VERSION 3.21.0)
 
 project(DiHydrogen
-  VERSION 0.3.0
+  VERSION 0.4.0
   DESCRIPTION "A distributed multilinear algebra interface library."
   HOMEPAGE_URL "https://github.com/llnl/DiHydrogen"
   LANGUAGES CXX)
