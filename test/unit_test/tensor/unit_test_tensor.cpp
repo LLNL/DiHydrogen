@@ -17,11 +17,13 @@ using namespace h2;
 TEST_CASE("last(FixedSizeTuple)", "[utilities]")
 {
     using TupleType = h2::FixedSizeTuple<int, unsigned, 8U>;
+#ifdef H2_DEBUG
     SECTION("last of a zero-element (empty) tuple is error")
     {
         TupleType x;
         CHECK_THROWS(h2::last(x));
     }
+#endif
 
     SECTION("last of a single-element tuple returns only element")
     {
@@ -39,11 +41,13 @@ TEST_CASE("last(FixedSizeTuple)", "[utilities]")
 TEST_CASE("init(FixedSizeTuple)", "[utilities]")
 {
     using TupleType = h2::FixedSizeTuple<int, unsigned, 8U>;
+#ifdef H2_DEBUG
     SECTION("init of a zero-element (empty) tuple is error")
     {
         TupleType x;
         CHECK_THROWS(h2::init(x));
     }
+#endif
 
     SECTION("init of a single-element tuple is empty")
     {
