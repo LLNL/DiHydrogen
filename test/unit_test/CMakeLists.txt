@@ -46,7 +46,7 @@ set_tests_properties([==[Testing the Version String.]==] PROPERTIES
 add_executable(SeqCatchTests)
 
 # Add the MPI Catch2 driver.
-add_executable(MPICatchTests MPICatchMain.cpp mpi_cumulative_reporter.cpp)
+add_executable(MPICatchTests MPICatchMain.cpp mpi_cumulative_reporter.cpp mpi_event_listener.cpp)
 target_link_libraries(MPICatchTests
   PRIVATE ${H2_LIBRARIES} Catch2::Catch2)
 set_target_properties(MPICatchTests
