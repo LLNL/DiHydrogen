@@ -21,9 +21,6 @@
 namespace h2
 {
 
-// Forward declaration:
-template <typename T, Device Dev> class DistTensor;
-
 /** Tensor class for arbitrary types and devices. */
 template <typename T, Device Dev>
 class Tensor : public BaseTensor<T> {
