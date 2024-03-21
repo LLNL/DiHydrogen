@@ -13,6 +13,7 @@
  */
 
 #include <El.hpp>
+#include "tensor_types.hpp"
 
 
 namespace h2
@@ -25,5 +26,46 @@ namespace h2
  * Wrapper around communicators for various Aluminum backends.
  */
 using Comm = El::mpi::Comm;  // Use Hydrogen's communicator wrappers for now.
+
+/**
+ * Defines how a dimension of a tensor is distributed on a processor
+ * grid.
+ */
+enum class Distribution
+{
+  Undefined,  /**< No defined distribution. */
+  Block,      /**< A block distribution with same-sized blocks. */
+  Replicated, /**< Data is replicated. */
+  Single      /**< Data resides on a single processor. */
+};
+
+/** Support printing Distribution. */
+inline std::ostream& operator<<(std::ostream& os, const Distribution& dist)
+{
+  switch (dist)
+  {
+  case Distribution::Undefined:
+    os << "Undefined";
+    break;
+  case Distribution::Block:
+    os << "Block";
+    break;
+  case Distribution::Replicated:
+    os << "Replicated";
+    break;
+  case Distribution::Single:
+    os << "Single";
+    break;
+  default:
+    os << "Unknown";
+    break;
+  }
+  return os;
+}
+
+/** Tuple of distributions. */
+using DistributionTypeTuple = NDimTuple<Distribution>;
+
+using DistTTuple = DistributionTypeTuple;  // Alias to save some typing.
 
 }  // namespace h2
