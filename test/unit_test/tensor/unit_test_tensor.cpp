@@ -60,9 +60,9 @@ TEST_CASE("init(FixedSizeTuple)", "[utilities]")
 
 TEST_CASE("is_index_range_contained", "[tensor]")
 {
-  REQUIRE(is_index_range_contained(IndexRangeTuple{DRng{0, 2}, ALL},
+  REQUIRE(is_index_range_contained(IndexRangeTuple{IRng{0, 2}, ALL},
                                    ShapeTuple{4, 4}));
-  REQUIRE_FALSE(is_index_range_contained(IndexRangeTuple{DRng{2, 6}, ALL},
+  REQUIRE_FALSE(is_index_range_contained(IndexRangeTuple{IRng{2, 6}, ALL},
                                          ShapeTuple{4, 4}));
 }
 
@@ -409,7 +409,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Viewing a subtensor works")
   {
-    TensorType* view = tensor.view({DRng(1), ALL});
+    TensorType* view = tensor.view({IRng(1), ALL});
     REQUIRE(view->shape() == ShapeTuple{6});
     REQUIRE(view->dim_types() == DTTuple{DT::Any});
     REQUIRE(view->strides() == StrideTuple{4});
@@ -426,7 +426,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Operator-style views work")
   {
-    TensorType* view = tensor({DRng(1, 3), ALL});
+    TensorType* view = tensor({IRng(1, 3), ALL});
     REQUIRE(view->shape() == ShapeTuple{2, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -446,7 +446,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("View of a single element works")
   {
-    TensorType* view = tensor.view({DRng(1, 2), DRng(0, 1)});
+    TensorType* view = tensor.view({IRng(1, 2), IRng(0, 1)});
     REQUIRE(view->shape() == ShapeTuple{1, 1});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 1});
@@ -460,7 +460,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("View of a single element, eliminating dimensions, works")
   {
-    TensorType* view = tensor.view({DRng(1), DRng(0)});
+    TensorType* view = tensor.view({IRng(1), IRng(0)});
     REQUIRE(view->shape() == ShapeTuple{1});
     REQUIRE(view->dim_types() == DTTuple{DT::Scalar});
     REQUIRE(view->strides() == StrideTuple{1});
@@ -532,7 +532,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Viewing an invalid range fails")
   {
-    REQUIRE_THROWS(tensor.view({ALL, DRng(0, 7)}));
+    REQUIRE_THROWS(tensor.view({ALL, IRng(0, 7)}));
   }
 }
 
@@ -564,7 +564,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
 
   SECTION("Manually-specified view range works")
   {
-    TensorType* view = tensor.view({DRng(0, 1)});
+    TensorType* view = tensor.view({IRng(0, 1)});
     REQUIRE(view->shape() == ShapeTuple{1});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample});
     REQUIRE(view->strides() == StrideTuple{1});
@@ -580,7 +580,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
 
   SECTION("View with a scalar index works")
   {
-    TensorType* view = tensor.view({DRng(0)});
+    TensorType* view = tensor.view({IRng(0)});
     REQUIRE(view->shape() == ShapeTuple{1});
     REQUIRE(view->dim_types() == DTTuple{DT::Scalar});
     REQUIRE(view->strides() == StrideTuple{1});
@@ -621,7 +621,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing constant tensors works",
   }
   SECTION("Operator-style views work")
   {
-    TensorType* view = tensor({DRng(1, 3), ALL});
+    TensorType* view = tensor({IRng(1, 3), ALL});
     REQUIRE(view->shape() == ShapeTuple{2, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -664,7 +664,7 @@ TEMPLATE_LIST_TEST_CASE("Empty views work", "[tensor]", AllDevList)
 
   SECTION("View with one coordinate empty works")
   {
-    TensorType* view = tensor.view({DRng(0, 1), DRng()});
+    TensorType* view = tensor.view({IRng(0, 1), IRng()});
     REQUIRE(view->shape() == ShapeTuple{});
     REQUIRE(view->dim_types() == DTTuple{});
     REQUIRE(view->strides() == StrideTuple{});
@@ -701,7 +701,7 @@ TEMPLATE_LIST_TEST_CASE("Making tensors contiguous works",
   }
   SECTION("Making non-contiguous tensors contiguous work")
   {
-    TensorType* view = tensor.view({DRng(1, 2), ALL});
+    TensorType* view = tensor.view({IRng(1, 2), ALL});
     REQUIRE_FALSE(view->is_contiguous());
 
     TensorType* contig = view->contiguous();

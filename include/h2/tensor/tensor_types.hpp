@@ -293,42 +293,42 @@ private:
 };
 
 /** Equality for ranges. */
-inline constexpr bool operator==(const IndexRange& dr1,
-                                 const IndexRange& dr2)
+inline constexpr bool operator==(const IndexRange& ir1,
+                                 const IndexRange& ir2)
 {
-  return dr1.start() == dr2.start() && dr1.end() == dr2.end();
+  return ir1.start() == ir2.start() && ir1.end() == ir2.end();
 }
 
 /** Inequality for ranges. */
-inline constexpr bool operator!=(const IndexRange& dr1,
-                                 const IndexRange& dr2)
+inline constexpr bool operator!=(const IndexRange& ir1,
+                                 const IndexRange& ir2)
 {
-  return dr1.start() != dr2.start() || dr1.end() != dr2.end();
+  return ir1.start() != ir2.start() || ir1.end() != ir2.end();
 }
 
-using DRng = IndexRange;  // Alias to save you some typing.
+using IRng = IndexRange;  // Alias to save you some typing.
 
-/** Special DimensionRange that represents a entire range. */
+/** Special IndexRange that represents a entire range. */
 static constexpr IndexRange ALL(0, std::numeric_limits<DimType>::max());
 
-/** Support printing DimensionRange. */
-inline std::ostream& operator<<(std::ostream& os, const IndexRange& dr)
+/** Support printing IndexRange. */
+inline std::ostream& operator<<(std::ostream& os, const IndexRange& ir)
 {
-  if (dr == ALL)
+  if (ir == ALL)
   {
     os << "[ALL]";
   }
-  else if (dr.is_scalar())
+  else if (ir.is_scalar())
   {
-    os << "[" << dr.start() << "]";
+    os << "[" << ir.start() << "]";
   }
-  else if (dr.is_empty())
+  else if (ir.is_empty())
   {
     os << "[empty]";
   }
   else
   {
-    os << "[" << dr.start() << ", " << dr.end() << ")";
+    os << "[" << ir.start() << ", " << ir.end() << ")";
   }
   return os;
 }

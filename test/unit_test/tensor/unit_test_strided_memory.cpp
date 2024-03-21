@@ -234,7 +234,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
 
   SECTION("Viewing a subtensor with all three dimensions nontrivial")
   {
-    MemType mem = MemType(base_mem, {DRng(1, 3), ALL, DRng(1, 3)});
+    MemType mem = MemType(base_mem, {IRng(1, 3), ALL, IRng(1, 3)});
     REQUIRE(mem.strides() == StrideTuple{1, 3, 21});
     REQUIRE(mem.shape() == ShapeTuple{2, 7, 2});
     REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({1, 0, 1})));
@@ -278,7 +278,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
   }
   SECTION("Viewing a subtensor with a scalar dimension works")
   {
-    MemType mem = MemType(base_mem, {DRng(1), ALL, DRng(1, 3)});
+    MemType mem = MemType(base_mem, {IRng(1), ALL, IRng(1, 3)});
     REQUIRE(mem.strides() == StrideTuple{3, 21});
     REQUIRE(mem.shape() == ShapeTuple{7, 2});
     REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({1, 0, 1})));
@@ -294,7 +294,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
   }
   SECTION("Viewing a subtensor with a range of length 1 works")
   {
-    MemType mem = MemType(base_mem, {DRng(0, 2), DRng(1, 2), ALL});
+    MemType mem = MemType(base_mem, {IRng(0, 2), IRng(1, 2), ALL});
     REQUIRE(mem.strides() == StrideTuple{1, 3, 21});
     REQUIRE(mem.shape() == ShapeTuple{2, 1, 3});
     REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({0, 1, 0})));
@@ -310,7 +310,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
   }
   SECTION("Viewing with all scalar coordinates works")
   {
-    MemType mem = MemType(base_mem, {DRng(1), DRng(0), DRng(0)});
+    MemType mem = MemType(base_mem, {IRng(1), IRng(0), IRng(0)});
     REQUIRE(mem.strides() == StrideTuple{1});
     REQUIRE(mem.shape() == ShapeTuple{1});
     REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({1, 0, 0})));
@@ -326,7 +326,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
   }
   SECTION("Views with empty coordinates work")
   {
-    MemType mem = MemType(base_mem, {DRng(0, 1), DRng(), ALL});
+    MemType mem = MemType(base_mem, {IRng(0, 1), IRng(), ALL});
     REQUIRE(mem.strides() == StrideTuple{});
     REQUIRE(mem.shape() == ShapeTuple{});
     REQUIRE(mem.data() == nullptr);

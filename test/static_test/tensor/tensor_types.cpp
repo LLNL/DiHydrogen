@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2022 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -15,10 +15,10 @@ namespace scalar2range_tuple_tests
 static_assert(scalar2range_tuple(ScalarIndexTuple{}) == IndexRangeTuple{},
               "scalar2range_tuple is wrong");
 static_assert(scalar2range_tuple(ScalarIndexTuple{0})
-                  == IndexRangeTuple{DRng{0}},
+                  == IndexRangeTuple{IRng{0}},
               "scalar2range_tuple is wrong");
 static_assert(scalar2range_tuple(ScalarIndexTuple{0, 3})
-                  == IndexRangeTuple{DRng{0}, DRng{3}},
+                  == IndexRangeTuple{IRng{0}, IRng{3}},
               "scalar2range_tuple is wrong");
 }  // namespace scalar2range_tuple_tests
 
@@ -37,7 +37,7 @@ static_assert(coords1_range_start[0] == 1,
 static_assert(coords1_range_start[1] == 2,
               "get_index_range_start returned wrong start");
 
-constexpr IndexRangeTuple coords2(DRng{1, 4}, ALL);
+constexpr IndexRangeTuple coords2(IRng{1, 4}, ALL);
 constexpr auto coords2_range_start = get_index_range_start(coords2);
 static_assert(coords2_range_start.size() == 2,
               "get_index_range_start returned wrong size");
@@ -51,13 +51,13 @@ namespace is_index_range_empty_tests
 {
 static_assert(is_index_range_empty(IndexRangeTuple{}),
               "is_index_range_empty is wrong");
-static_assert(is_index_range_empty(IndexRangeTuple{DRng{}}),
+static_assert(is_index_range_empty(IndexRangeTuple{IRng{}}),
               "is_index_range_empty is wrong");
-static_assert(is_index_range_empty(IndexRangeTuple{DRng{0, 2}, DRng{}}),
+static_assert(is_index_range_empty(IndexRangeTuple{IRng{0, 2}, IRng{}}),
               "is_index_range_empty is wrong");
-static_assert(!is_index_range_empty(IndexRangeTuple{DRng{0}}),
+static_assert(!is_index_range_empty(IndexRangeTuple{IRng{0}}),
               "is_index_range_empty is wrong");
-static_assert(!is_index_range_empty(IndexRangeTuple{DRng{0, 2}, ALL}),
+static_assert(!is_index_range_empty(IndexRangeTuple{IRng{0, 2}, ALL}),
               "is_index_range_empty is wrong");
 static_assert(!is_index_range_empty(IndexRangeTuple{ALL}),
               "is_index_range_empty is wrong");
@@ -72,7 +72,7 @@ static_assert(empty_range_shape.size() == 0,
               "get_index_range_shape not empty");
 
 constexpr ShapeTuple shape1(8, 8);
-constexpr IndexRangeTuple coord1(DRng(0, 2), DRng(0, 3));
+constexpr IndexRangeTuple coord1(IRng(0, 2), IRng(0, 3));
 constexpr auto range_shape1 = get_index_range_shape(coord1, shape1);
 static_assert(range_shape1.size() == 2,
               "get_index_range_shape returned wrong size");
@@ -81,7 +81,7 @@ static_assert(range_shape1[0] == 2,
 static_assert(range_shape1[1] == 3,
               "get_index_range_shape index 1 is wrong");
 
-constexpr IndexRangeTuple coord2(DRng(0, 2), ALL);
+constexpr IndexRangeTuple coord2(IRng(0, 2), ALL);
 constexpr auto range_shape2 = get_index_range_shape(coord2, shape1);
 static_assert(range_shape2.size() == 2,
               "get_index_range_shape returned wrong size");
@@ -99,19 +99,19 @@ static_assert(range_shape3[0] == 8,
 static_assert(range_shape3[1] == 8,
               "get_index_range_shape index 1 is wrong");
 
-constexpr IndexRangeTuple coord4(DRng(0));
+constexpr IndexRangeTuple coord4(IRng(0));
 constexpr auto range_shape4 = get_index_range_shape(coord4, shape1);
 static_assert(range_shape4.size() == 1,
               "get_index_range_shape returned wrong size");
 static_assert(range_shape4[0] == 8,
               "get_index_range_shape index 0 is wrong");
 
-constexpr IndexRangeTuple coord5(DRng(0), DRng(2));
+constexpr IndexRangeTuple coord5(IRng(0), IRng(2));
 constexpr auto range_shape5 = get_index_range_shape(coord5, shape1);
 static_assert(range_shape5.size() == 0,
               "get_index_range_shape returned wrong size");
 
-constexpr IndexRangeTuple coord6(DRng(0), DRng(2, 4));
+constexpr IndexRangeTuple coord6(IRng(0), IRng(2, 4));
 constexpr auto range_shape6 = get_index_range_shape(coord6, shape1);
 static_assert(range_shape6.size() == 1,
               "get_index_range_shape returned wrong size");
@@ -126,19 +126,19 @@ constexpr IndexRangeTuple coord1(ALL, ALL, ALL);
 static_assert(is_index_range_contained(coord1, shape),
               "is_index_range_contained is wrong");
 
-constexpr IndexRangeTuple coord2(DRng(0, 3), DRng(0, 2), DRng(0, 1));
+constexpr IndexRangeTuple coord2(IRng(0, 3), IRng(0, 2), IRng(0, 1));
 static_assert(is_index_range_contained(coord2, shape),
               "is_index_range_contained is wrong");
 
-constexpr IndexRangeTuple coord3(DRng(0, 4), ALL, ALL);
+constexpr IndexRangeTuple coord3(IRng(0, 4), ALL, ALL);
 static_assert(!is_index_range_contained(coord3, shape),
               "is_index_range_contained is wrong");
 
-constexpr IndexRangeTuple coord4(ALL, ALL, DRng(1, 2));
+constexpr IndexRangeTuple coord4(ALL, ALL, IRng(1, 2));
 static_assert(!is_index_range_contained(coord4, shape),
               "is_index_range_contained is wrong");
 
-constexpr IndexRangeTuple coord5(DRng(1, 3), ALL);
+constexpr IndexRangeTuple coord5(IRng(1, 3), ALL);
 static_assert(is_index_range_contained(coord5, shape),
               "is_index_range_contained is wrong");
 }
