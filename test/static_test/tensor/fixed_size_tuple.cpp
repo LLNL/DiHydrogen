@@ -39,6 +39,12 @@ static_assert(h2::all_of(test_tuple,
 static_assert(h2::map(test_tuple, [](TestFixedSizeTuple::type x) { return x; })
                   == TestFixedSizeTuple{},
               "Map for empty tuples is wrong");
+static_assert(h2::map_index(test_tuple,
+                            [](TestFixedSizeTuple::size_type x) {
+                              return test_tuple[x];
+                            })
+                  == TestFixedSizeTuple{},
+              "Map index for empty tuples is wrong");
 static_assert(h2::filter(test_tuple,
                          [](TestFixedSizeTuple::type x) { return x == 0; })
                   == TestFixedSizeTuple{},
@@ -129,6 +135,21 @@ static_assert(h2::map<bool>(test_tuple,
                                         TestFixedSizeTuple::max_size>(true,
                                                                       false),
               "Map with type change for fixed size tuples is wrong");
+static_assert(h2::map_index(test_tuple,
+                            [](TestFixedSizeTuple::size_type x) {
+                              return test_tuple[x] + 1;
+                            })
+                  == TestFixedSizeTuple{2, 3},
+              "Map index for fixed sized tuples is wrong");
+static_assert(h2::map_index<bool>(test_tuple,
+                                  [](TestFixedSizeTuple::size_type x) {
+                                    return test_tuple[x] == 1;
+                                  })
+                  == h2::FixedSizeTuple<bool,
+                                        typename TestFixedSizeTuple::size_type,
+                                        TestFixedSizeTuple::max_size>(true,
+                                                                      false),
+              "Map index with type change for fixed size tuples is wrong");
 static_assert(h2::filter(test_tuple,
                          [](TestFixedSizeTuple::type x) { return x == 1; })
                   == TestFixedSizeTuple{1},
