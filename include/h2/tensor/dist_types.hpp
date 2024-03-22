@@ -68,4 +68,7 @@ using DistributionTypeTuple = NDimTuple<Distribution>;
 
 using DistTTuple = DistributionTypeTuple;  // Alias to save some typing.
 
+/** Type used for representing ranks in communicators/grids. */
+using RankType = std::int32_t;
+
 }  // namespace h2

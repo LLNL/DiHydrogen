@@ -91,7 +91,7 @@ TEST_CASE("Processor grid coordinates and ranks are sane",
     for_grid_shapes(
       [&](ShapeTuple shape) {
         ProcessorGrid grid = ProcessorGrid(comm, shape);
-        for (DataIndexType rank = 0; rank < comm.Size(); ++rank)
+        for (RankType rank = 0; rank < comm.Size(); ++rank)
         {
           auto coord = grid.coords(rank);
           REQUIRE(grid.rank(coord) == rank);

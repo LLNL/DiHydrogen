@@ -41,6 +41,9 @@ namespace h2
  */
 class ProcessorGrid
 {
+private:
+  /** Strides on the grid. */
+  using GridStrideTuple = NDimTuple<RankType>;
 public:
 
   /**
@@ -48,12 +51,12 @@ public:
    */
   ProcessorGrid(const Comm& comm_, ShapeTuple shape_)
   {
-    H2_ASSERT_ALWAYS(comm_.Size() == product<std::size_t>(shape_),
+    H2_ASSERT_ALWAYS(comm_.Size() == product<RankType>(shape_),
                      "Grid size must match communicator size");
     grid_comm = std::make_shared<Comm>(comm_.GetMPIComm());
     grid_shape = shape_;
     // Currently fix a column-major ordering.
-    grid_strides = prefix_product<typename StrideTuple::type>(shape_);
+    grid_strides = prefix_product<typename GridStrideTuple::type>(shape_);
   }
 
   /** Construct a null processor grid. */
@@ -84,22 +87,22 @@ public:
   }
 
   /** Return the number of processors in the grid. */
-  DataIndexType size() const H2_NOEXCEPT { return grid_comm->Size(); }
+  RankType size() const H2_NOEXCEPT { return grid_comm->Size(); }
 
   /** Return the rank of the calling process in the grid. */
-  DataIndexType rank() const H2_NOEXCEPT
+  RankType rank() const H2_NOEXCEPT
   {
     return grid_comm->Rank();
   }
 
   /** Return the rank of the process at a given grid coordinate. */
-  DataIndexType rank(ScalarIndexTuple coord) const H2_NOEXCEPT
+  RankType rank(ScalarIndexTuple coord) const H2_NOEXCEPT
   {
-    return inner_product<DataIndexType>(coord, grid_strides);
+    return inner_product<RankType>(coord, grid_strides);
   }
 
   /** Return the coordinates on the grid of a given rank in the grid. */
-  ScalarIndexTuple coords(DataIndexType rank) const H2_NOEXCEPT
+  ScalarIndexTuple coords(RankType rank) const H2_NOEXCEPT
   {
     ScalarIndexTuple coord(TuplePad<ScalarIndexTuple>(ndim()));
     for (typename ShapeTuple::size_type i = 0; i < grid_shape.size(); ++i)
@@ -123,8 +126,8 @@ public:
    * coords(grid_rank)[i]
    * ```
    */
-  DataIndexType get_dimension_rank(typename ShapeTuple::size_type dim,
-                                   DataIndexType grid_rank) const H2_NOEXCEPT
+  RankType get_dimension_rank(typename ShapeTuple::size_type dim,
+                              RankType grid_rank) const H2_NOEXCEPT
   {
     return (grid_rank / grid_strides[dim]) % grid_shape[dim];
   }
@@ -132,7 +135,7 @@ public:
   /**
    * Return the rank in a particular dimension of the calling process.
    */
-  DataIndexType
+  RankType
   get_dimension_rank(typename ShapeTuple::size_type dim) const H2_NOEXCEPT
   {
     return get_dimension_rank(dim, rank());
@@ -142,7 +145,7 @@ public:
    * Return true if rank in the provided communicator (default is the
    * world) is part of this grid.
    */
-  bool participating(DataIndexType rank,
+  bool participating(RankType rank,
                      const Comm& comm = El::mpi::COMM_WORLD) const H2_NOEXCEPT
   {
     MPI_Group this_group;
@@ -159,7 +162,7 @@ private:
   /** Underlying communicator for the grid. */
   std::shared_ptr<Comm> grid_comm;
   ShapeTuple grid_shape;  /**< Shape of the grid. */
-  StrideTuple grid_strides;  /**< Strides for computing indices. */
+  GridStrideTuple grid_strides;  /**< Strides for computing indices. */
 };
 
 /**
