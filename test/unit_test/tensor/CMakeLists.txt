@@ -6,6 +6,7 @@
 ################################################################################
 
 target_sources(SeqCatchTests PRIVATE
+  unit_test_dist_utils_nompi.cpp
   unit_test_raw_buffer.cpp
   unit_test_strided_memory.cpp
   unit_test_tensor.cpp

@@ -14,6 +14,7 @@ h2_add_sources_to_target_and_install(
   INSTALL_PREFIX "${H2_CURRENT_INSTALL_PREFIX}"
   SOURCES
   dist_types.hpp
+  dist_utils.hpp
   fixed_size_tuple.hpp
   hydrogen_interop.hpp
   proc_grid.hpp
