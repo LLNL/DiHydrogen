@@ -265,8 +265,8 @@ struct IndexRange
       : index_start(start_),
         index_end(end_)
   {
-    H2_ASSERT_DEBUG(start_ <= end_,
-                    "IndexRange with end < start not supported, you probably "
+    H2_ASSERT_DEBUG(start_ < end_,
+                    "IndexRange with end <= start not supported, you probably "
                     "have a bug or want an empty IndexRange");
   }
 
