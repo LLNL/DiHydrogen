@@ -320,7 +320,8 @@ public:
    * must be of contiguous subsets of the tensor (i.e., no strides).
    *
    * The `coords` given may omit dimensions on the right. In this case,
-   * they are assumed to have their full range.
+   * they are assumed to have their full range. However, if `coords` is
+   * fully empty, the view will be empty.
    *
    * No entries of `coords` may be scalar: Dimensions cannot be
    * eliminated from a distributed tensor, unless the entire view is

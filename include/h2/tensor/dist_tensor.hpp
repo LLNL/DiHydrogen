@@ -328,17 +328,7 @@ private:
         !any_of(index_range,
                 [](const IndexRangeTuple::type& x) { return x.is_scalar(); }),
         "Scalar indices are not permitted in global views");
-    // Standardize the indices to have all dimensions, adding any ALL
-    // dimensions on the right.
-    if (index_range.size() < this->tensor_shape.size())
-    {
-      for (typename IndexRangeTuple::size_type i = index_range.size();
-           i < this->tensor_shape.size();
-           ++i)
-      {
-        index_range.append(ALL);
-      }
-    }
+
     // We have three cases:
     // 1. The indices are empty, so we have a globally empty view.
     // 2. The indices result in a valid global view, but an empty local
@@ -358,6 +348,18 @@ private:
           DimensionTypeTuple{},
           this->tensor_grid,
           DistributionTypeTuple{});
+    }
+
+    // Standardize the indices to have all dimensions, adding any ALL
+    // dimensions on the right.
+    if (index_range.size() < this->tensor_shape.size())
+    {
+      for (typename IndexRangeTuple::size_type i = index_range.size();
+           i < this->tensor_shape.size();
+           ++i)
+      {
+        index_range.append(ALL);
+      }
     }
 
     // Get the global shape of the view.

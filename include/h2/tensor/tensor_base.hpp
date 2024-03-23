@@ -232,7 +232,8 @@ public:
    * must be of contiguous subsets of the tensor (i.e., no strides).
    *
    * The `coords` given may omit dimensions on the right. In this case,
-   * they are assumed to have their full range.
+   * they are assumed to have their full range. However, if `coords` is
+   * fully empty, the view iwll be empty.
    *
    * If dimensions in `coords` are given as scalars, these dimensions
    * are eliminated from the tensor. If all dimensions are eliminated,
