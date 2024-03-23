@@ -118,7 +118,7 @@ static_assert(range_shape6.size() == 1,
 static_assert(range_shape6[0] == 2, "get_index_range_shape index 0 is wrong");
 }  // get_index_range_shape_tests
 
-namespace is_shape_contained_tests
+namespace is_index_range_contained_tests
 {
 constexpr ShapeTuple shape(3, 2, 1);
 
@@ -141,4 +141,57 @@ static_assert(!is_index_range_contained(coord4, shape),
 constexpr IndexRangeTuple coord5(IRng(1, 3), ALL);
 static_assert(is_index_range_contained(coord5, shape),
               "is_index_range_contained is wrong");
-}
+}  // namespace is_index_range_contained_tests
+
+namespace do_index_ranges_intersect_tests
+{
+static_assert(do_index_ranges_intersect(IRng(0, 1), IRng(0, 2)),
+              "do_index_ranges_intersect is wrong");
+static_assert(do_index_ranges_intersect(IRng(3, 5), IRng(0, 4)),
+              "do_index_ranges_intersect is wrong");
+static_assert(do_index_ranges_intersect(IRng(0, 1), IRng(0, 1)),
+              "do_index_ranges_intersect is wrong");
+static_assert(!do_index_ranges_intersect(IRng(0, 2), IRng(2, 4)),
+              "do_index_ranges_intersect is wrong");
+static_assert(do_index_ranges_intersect(IRng(0, 1), ALL),
+              "do_index_ranges_intersect is wrong");
+static_assert(do_index_ranges_intersect(ALL, ALL),
+              "do_index_ranges_intersect is wrong");
+static_assert(!do_index_ranges_intersect(IRng(), IRng(0, 4)),
+              "do_index_ranges_intersect is wrong");
+
+static_assert(do_index_ranges_intersect(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
+                                        IndexRangeTuple(IRng(0, 2),
+                                                        IRng(0, 1))),
+              "do_index_ranges_intersect is wrong");
+static_assert(
+    !do_index_ranges_intersect(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
+                               IndexRangeTuple(IRng(1, 2), IRng(0, 2))),
+    "do_index_ranges_intersect is wrong");
+static_assert(do_index_ranges_intersect(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
+                                        IndexRangeTuple(IRng(0, 1), ALL)),
+              "do_index_ranges_intersect is wrong");
+}  // namespace do_index_ranges_intersect_tests
+
+namespace intersect_index_ranges_tests
+{
+static_assert(intersect_index_ranges(IRng(0, 1), IRng(0, 1)) == IRng(0, 1),
+              "intersect_index_ranges is wrong");
+static_assert(intersect_index_ranges(IRng(0, 1), IRng(0, 2)) == IRng(0, 1),
+              "intersect_index_ranges is wrong");
+static_assert(intersect_index_ranges(IRng(0, 2), IRng(1, 3)) == IRng(1, 2),
+              "intersect_index_ranges is wrong");
+static_assert(intersect_index_ranges(IRng(0, 2), ALL) == IRng(0, 2),
+              "intersect_index_ranges is wrong");
+static_assert(intersect_index_ranges(ALL, ALL) == ALL,
+              "intersect_index_ranges is wrong");
+
+static_assert(intersect_index_ranges(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
+                                     IndexRangeTuple(IRng(0, 2), IRng(0, 1)))
+                  == IndexRangeTuple(IRng(0, 1), IRng(0, 1)),
+              "intersect_index_rangess is wrong");
+static_assert(intersect_index_ranges(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
+                                     IndexRangeTuple(IRng(0, 1), ALL))
+                  == IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
+              "intersect_index_rangess is wrong");
+}  // namespace intersect_index_ranges_tests

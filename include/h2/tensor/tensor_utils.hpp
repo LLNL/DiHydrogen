@@ -114,6 +114,75 @@ constexpr inline bool is_index_range_contained(IndexRangeTuple coords,
 }
 
 /**
+ * Return true if two index ranges have a non-empty intersection.
+ *
+ * The index ranges may not be scalar.
+ */
+constexpr inline bool
+do_index_ranges_intersect(const IndexRange& ir1,
+                          const IndexRange& ir2) H2_NOEXCEPT
+{
+  H2_ASSERT_DEBUG(!ir1.is_scalar() && !ir2.is_scalar(),
+                  "Cannot intersect scalar index ranges");
+  return !ir1.is_empty() && !ir2.is_empty()
+         && ((ir1 == ALL) || (ir2 == ALL)
+             || (ir1.start() < ir2.end() && ir2.start() < ir1.end()));
+}
+
+/**
+ * Return true if two index ranges have a non-empty intersection.
+ *
+ * The index ranges may not have scalar entries.
+ */
+constexpr inline bool
+do_index_ranges_intersect(const IndexRangeTuple& ir1,
+                          const IndexRangeTuple& ir2) H2_NOEXCEPT
+{
+  H2_ASSERT_DEBUG(ir1.size() == ir2.size(),
+                  "Index ranges must be the same size to intersect");
+  for (typename IndexRangeTuple::size_type i = 0; i < ir1.size(); ++i)
+  {
+    if (!do_index_ranges_intersect(ir1[i], ir2[i]))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Return the intersection of of two index ranges.
+ *
+ * The index ranges must have a non-empty intersection.
+ */
+constexpr inline IndexRange
+intersect_index_ranges(const IndexRange& ir1, const IndexRange& ir2) H2_NOEXCEPT
+{
+  H2_ASSERT_DEBUG(do_index_ranges_intersect(ir1, ir2),
+                  "Index ranges must intersect");
+  return IndexRange(std::max(ir1.start(), ir2.start()),
+                    std::min(ir1.end(), ir2.end()));
+}
+
+/**
+ * Return the intersection of of two index ranges.
+ *
+ * The index ranges must have a non-empty intersection.
+ */
+constexpr inline IndexRangeTuple
+intersect_index_ranges(const IndexRangeTuple& ir1,
+                       const IndexRangeTuple& ir2) H2_NOEXCEPT
+{
+  H2_ASSERT_DEBUG(ir1.size() == ir2.size(),
+                  "Index ranges must be the same size to intersect");
+  H2_ASSERT_DEBUG(do_index_ranges_intersect(ir1, ir2),
+                  "Index ranges must intersect");
+  return map_index(ir1, [&ir1, &ir2](IndexRangeTuple::size_type i) {
+    return intersect_index_ranges(ir1[i], ir2[i]);
+  });
+}
+
+/**
  * Iterate over an n-dimensional region.
  *
  * The given function f will be called with a `SingleCoordTuple` for

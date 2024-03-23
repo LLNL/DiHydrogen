@@ -16,10 +16,12 @@
 #include "h2/tensor/strided_memory.hpp"
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/tensor/tensor_utils.hpp"
-#include "tensor_types.hpp"
 
 namespace h2
 {
+
+// Forward-declaration:
+template <typename T, Device Dev> class DistTensor;
 
 /** Tensor class for arbitrary types and devices. */
 template <typename T, Device Dev>
@@ -299,6 +301,9 @@ private:
                               filtered_dim_types,
                               coords);
   }
+
+  // DistTensor needs to poke in here for some view stuff.
+  friend class DistTensor<T, Dev>;
 };
 
 }  // namespace h2
