@@ -53,10 +53,10 @@ public:
    * Construct a tensor with the given shape and dimension types,
    * distributed over the given processor grid.
    */
-  BaseDistTensor(ShapeTuple shape_,
-                 DimensionTypeTuple dim_types_,
+  BaseDistTensor(const ShapeTuple& shape_,
+                 const DimensionTypeTuple& dim_types_,
                  ProcessorGrid grid_,
-                 DistributionTypeTuple dist_types_)
+                 const DistributionTypeTuple& dist_types_)
       : tensor_shape(shape_),
         tensor_dim_types(dim_types_),
         tensor_grid(grid_),
@@ -210,7 +210,7 @@ public:
    *
    * It is an error to call this on a view.
    */
-  virtual void resize(ShapeTuple new_shape) = 0;
+  virtual void resize(const ShapeTuple& new_shape) = 0;
 
   /**
    * Resize the tensor to a new shape and change its dimension types.
@@ -220,8 +220,8 @@ public:
    *
    * It is an error to call this on a view.
    */
-  virtual void resize(ShapeTuple new_shape,
-                      DimensionTypeTuple new_dim_types) = 0;
+  virtual void resize(const ShapeTuple& new_shape,
+                      const DimensionTypeTuple& new_dim_types) = 0;
 
   /**
    * Resize the tensor to a new shape and change its dimension types
@@ -232,9 +232,9 @@ public:
    *
    * It is an error to call this on a view.
    */
-  virtual void resize(ShapeTuple new_shape,
-                      DimensionTypeTuple new_dim_types,
-                      DistributionTypeTuple new_dist_types) = 0;
+  virtual void resize(const ShapeTuple& new_shape,
+                      const DimensionTypeTuple& new_dim_types,
+                      const DistributionTypeTuple& new_dist_types) = 0;
 
   /**
    * Return a raw pointer to the underlying local storage.
@@ -327,12 +327,12 @@ public:
    * eliminated from a distributed tensor, unless the entire view is
    * empty.
    */
-  virtual BaseDistTensor<T>* view(IndexRangeTuple coords) = 0;
+  virtual BaseDistTensor<T>* view(const IndexRangeTuple& coords) = 0;
 
   /**
    * Return a constant view of a subtensor of this tensor.
    */
-  virtual BaseDistTensor<T>* view(IndexRangeTuple coords) const = 0;
+  virtual BaseDistTensor<T>* view(const IndexRangeTuple& coords) const = 0;
 
   /**
    * If this tensor is a view, stop viewing.
@@ -347,16 +347,18 @@ public:
   // view(coords) because we need to covariant return type.
 
   /** Convenience wrapper for view(coords). */
-  virtual BaseDistTensor<T>* operator()(IndexRangeTuple coords) = 0;
+  virtual BaseDistTensor<T>* operator()(const IndexRangeTuple& coords) = 0;
 
   /** Return a constant view of this tensor. */
   virtual BaseDistTensor<T>* const_view() const = 0;
 
   /** Return a constant view of a subtensor of this tensor. */
-  virtual BaseDistTensor<T>* const_view(IndexRangeTuple coords) const = 0;
+  virtual BaseDistTensor<T>*
+  const_view(const IndexRangeTuple& coords) const = 0;
 
   /** Convenience wrapper for const_view(coords). */
-  virtual BaseDistTensor<T>* operator()(IndexRangeTuple coords) const = 0;
+  virtual BaseDistTensor<T>*
+  operator()(const IndexRangeTuple& coords) const = 0;
 
 protected:
   ShapeTuple tensor_shape;  /**< Global shape of the tensor. */
@@ -376,11 +378,11 @@ protected:
 
   /** Construct a tensor with the given view type. */
   BaseDistTensor(ViewType view_type_,
-                 ShapeTuple shape_,
-                 DimensionTypeTuple dim_types_,
+                 const ShapeTuple& shape_,
+                 const DimensionTypeTuple& dim_types_,
                  ProcessorGrid grid_,
-                 DistributionTypeTuple dist_types_,
-                 ShapeTuple local_shape_)
+                 const DistributionTypeTuple& dist_types_,
+                 const ShapeTuple& local_shape_)
       : tensor_shape(shape_),
         tensor_dim_types(dim_types_),
         tensor_grid(grid_),

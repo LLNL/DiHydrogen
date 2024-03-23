@@ -34,18 +34,18 @@ public:
   using local_tensor_type = Tensor<T, Dev>;
   static constexpr Device device = Dev;
 
-  DistTensor(ShapeTuple shape_,
-             DimensionTypeTuple dim_types_,
+  DistTensor(const ShapeTuple& shape_,
+             const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
-             DistributionTypeTuple dist_types_,
+             const DistributionTypeTuple& dist_types_,
              const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
       : DistTensor(shape_, dim_types_, grid_, dist_types_, UnlazyAlloc, sync)
   {}
 
-  DistTensor(ShapeTuple shape_,
-             DimensionTypeTuple dim_types_,
+  DistTensor(const ShapeTuple& shape_,
+             const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
-             DistributionTypeTuple dist_types_,
+             const DistributionTypeTuple& dist_types_,
              lazy_alloc_t,
              const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
       : BaseDistTensor<T>(shape_, dim_types_, grid_, dist_types_),
@@ -55,10 +55,10 @@ public:
                      sync)
   {}
 
-  DistTensor(ShapeTuple shape_,
-             DimensionTypeTuple dim_types_,
+  DistTensor(const ShapeTuple& shape_,
+             const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
-             DistributionTypeTuple dist_types_,
+             const DistributionTypeTuple& dist_types_,
              unlazy_alloc_t,
              const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
       : BaseDistTensor<T>(shape_, dim_types_, grid_, dist_types_),
@@ -100,12 +100,12 @@ public:
   {}
 
   DistTensor(T* buffer,
-             ShapeTuple global_shape_,
-             DimensionTypeTuple dim_types_,
+             const ShapeTuple& global_shape_,
+             const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
-             DistributionTypeTuple dist_types_,
-             ShapeTuple local_shape_,
-             StrideTuple local_strides_,
+             const DistributionTypeTuple& dist_types_,
+             const ShapeTuple& local_shape_,
+             const StrideTuple& local_strides_,
              const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
       : BaseDistTensor<T>(ViewType::Mutable,
                           global_shape_,
@@ -117,12 +117,12 @@ public:
   {}
 
   DistTensor(const T* buffer,
-             ShapeTuple global_shape_,
-             DimensionTypeTuple dim_types_,
+             const ShapeTuple& global_shape_,
+             const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
-             DistributionTypeTuple dist_types_,
-             ShapeTuple local_shape_,
-             StrideTuple local_strides_,
+             const DistributionTypeTuple& dist_types_,
+             const ShapeTuple& local_shape_,
+             const StrideTuple& local_strides_,
              const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
       : BaseDistTensor<T>(ViewType::Const,
                           global_shape_,
@@ -148,19 +148,20 @@ public:
     }
   }
 
-  void resize(ShapeTuple new_shape) override
+  void resize(const ShapeTuple& new_shape) override
   {
     resize(new_shape, this->tensor_dim_types, this->tensor_dist_types);
   }
 
-  void resize(ShapeTuple new_shape, DimensionTypeTuple new_dim_types) override
+  void resize(const ShapeTuple& new_shape,
+              const DimensionTypeTuple& new_dim_types) override
   {
     resize(new_shape, new_dim_types, this->tensor_dist_types);
   }
 
-  void resize(ShapeTuple new_shape,
-              DimensionTypeTuple new_dim_types,
-              DistributionTypeTuple new_dist_types) override
+  void resize(const ShapeTuple& new_shape,
+              const DimensionTypeTuple& new_dim_types,
+              const DistributionTypeTuple& new_dist_types) override
   {
     H2_ASSERT_ALWAYS(!this->is_view(), "Cannot resize a view");
     H2_ASSERT_ALWAYS(new_shape.size() == this->tensor_grid.ndim(),
@@ -241,17 +242,17 @@ public:
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  DistTensor<T, Dev>* view(IndexRangeTuple coords) override
+  DistTensor<T, Dev>* view(const IndexRangeTuple& coords) override
   {
     return make_view(coords, ViewType::Mutable);
   }
 
-  DistTensor<T, Dev>* view(IndexRangeTuple coords) const override
+  DistTensor<T, Dev>* view(const IndexRangeTuple& coords) const override
   {
     return make_view(coords, ViewType::Const);
   }
 
-  DistTensor<T, Dev>* operator()(IndexRangeTuple coords) override
+  DistTensor<T, Dev>* operator()(const IndexRangeTuple& coords) override
   {
     return view(coords);
   }
@@ -268,12 +269,12 @@ public:
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  DistTensor<T, Dev>* const_view(IndexRangeTuple coords) const override
+  DistTensor<T, Dev>* const_view(const IndexRangeTuple& coords) const override
   {
     return make_view(coords, ViewType::Const);
   }
 
-  DistTensor<T, Dev>* operator()(IndexRangeTuple coords) const override
+  DistTensor<T, Dev>* operator()(const IndexRangeTuple& coords) const override
   {
     return const_view(coords);
   }
@@ -300,12 +301,12 @@ private:
   /** Private constructor for views. */
   DistTensor(ViewType view_type_,
              const Tensor<T, Dev>& orig_tensor_local_,
-             ShapeTuple local_shape_,
-             IndexRangeTuple local_coords_,
-             ShapeTuple shape_,
-             DimensionTypeTuple dim_types_,
+             const ShapeTuple& local_shape_,
+             const IndexRangeTuple& local_coords_,
+             const ShapeTuple& shape_,
+             const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
-             DistributionTypeTuple dist_types_)
+             const DistributionTypeTuple& dist_types_)
       : BaseDistTensor<T>(
           view_type_, shape_, dim_types_, grid_, dist_types_, local_shape_),
         tensor_local(view_type_,

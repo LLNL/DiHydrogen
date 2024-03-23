@@ -38,7 +38,7 @@ scalar2range_tuple(const ScalarIndexTuple& tuple) H2_NOEXCEPT
  * This is the starting point of each index range in the tuple.
  */
 constexpr inline ScalarIndexTuple
-get_index_range_start(IndexRangeTuple coords) H2_NOEXCEPT
+get_index_range_start(const IndexRangeTuple& coords) H2_NOEXCEPT
 {
   ScalarIndexTuple coords_start(TuplePad<ScalarIndexTuple>(coords.size()));
   for (typename IndexRangeTuple::size_type i = 0; i < coords.size(); ++i) {
@@ -54,7 +54,8 @@ get_index_range_start(IndexRangeTuple coords) H2_NOEXCEPT
  * This occurs when at least one entry in the range is empty or the
  * range itself is empty.
  */
-constexpr inline bool is_index_range_empty(IndexRangeTuple coords) H2_NOEXCEPT
+constexpr inline bool
+is_index_range_empty(const IndexRangeTuple& coords) H2_NOEXCEPT
 {
   return coords.is_empty()
          || any_of(coords, [](const typename IndexRangeTuple::type& c) {
@@ -70,8 +71,9 @@ constexpr inline bool is_index_range_empty(IndexRangeTuple coords) H2_NOEXCEPT
  * undefined. (However, `coords` itself may be empty, which yields an
  * empty shape.)
  */
-constexpr inline ShapeTuple get_index_range_shape(IndexRangeTuple coords,
-                                                  ShapeTuple shape) H2_NOEXCEPT
+constexpr inline ShapeTuple
+get_index_range_shape(const IndexRangeTuple& coords,
+                      const ShapeTuple& shape) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(coords.size() <= shape.size(),
                   "coords size not compatible with shape size");
@@ -95,8 +97,9 @@ constexpr inline ShapeTuple get_index_range_shape(IndexRangeTuple coords,
 /**
  * Return true if an index range is contained within a given shape.
  */
-constexpr inline bool is_index_range_contained(IndexRangeTuple coords,
-                                               ShapeTuple shape) H2_NOEXCEPT
+constexpr inline bool
+is_index_range_contained(const IndexRangeTuple& coords,
+                         const ShapeTuple& shape) H2_NOEXCEPT
 {
   if (coords.size() > shape.size())
   {
@@ -191,7 +194,7 @@ intersect_index_ranges(const IndexRangeTuple& ir1,
  * @todo In the future, we could specialize for specific dimensions.
  */
 template <typename Func>
-void for_ndim(ShapeTuple shape, Func f)
+void for_ndim(const ShapeTuple& shape, Func f)
 {
   if (shape.is_empty())
   {
