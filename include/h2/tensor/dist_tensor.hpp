@@ -211,22 +211,22 @@ public:
 
   void ensure() override
   {
-    // TODO
+    ensure(TensorAttemptRecovery);
   }
 
   void ensure(tensor_no_recovery_t) override
   {
-    // TODO
+    tensor_local.ensure(TensorNoRecovery);
   }
 
   void ensure(tensor_attempt_recovery_t) override
   {
-    // TODO
+    tensor_local.ensure(TensorAttemptRecovery);
   }
 
   void release() override
   {
-    // TODO
+    tensor_local.release();
   }
 
   DistTensor<T, Dev>* view() override
