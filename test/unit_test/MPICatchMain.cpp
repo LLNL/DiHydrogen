@@ -88,6 +88,20 @@ h2::Comm& get_comm(int size)
   return comm_manager->get_comm(size);
 }
 
+h2::Comm& get_comm_or_skip(int size)
+{
+  H2_ASSERT_ALWAYS(comm_manager != nullptr, "CommManager not initialized");
+  try
+  {
+    return comm_manager->get_comm(size);
+  }
+  catch (const internal::NotParticipatingException&)
+  {
+    SKIP();
+    throw;
+  }
+}
+
 int main(int argc, char** argv)
 {
   // Initialize Catch2.

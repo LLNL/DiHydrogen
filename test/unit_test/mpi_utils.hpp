@@ -21,7 +21,11 @@ namespace internal
 {
 // Thrown by CommManager::get_comm if the rank is not participating.
 struct NotParticipatingException {};
-}
+
+void start_for_comms();
+void end_for_comms();
+
+}  // namespace internal
 
 /**
  * Manages instances of communicators for testing.
@@ -94,6 +98,9 @@ private:
 h2::Comm& get_comm(int size = -1);
 // Implemented in MPICatchMain.cpp.
 
+/** Like get_comm, but skip rather than throw if not participating. */
+h2::Comm& get_comm_or_skip(int size = -1);
+
 /**
  * Invoke a test case with communicators of every size between the
  * specified minimum and maximum.
@@ -138,6 +145,8 @@ void for_comms(Test t, int min_size = 1, int max_size = -1)
     return;
   }
 
+  internal::start_for_comms();
+
   for (int i = min_size; i <= max_size; ++i)
   {
     try
@@ -145,7 +154,27 @@ void for_comms(Test t, int min_size = 1, int max_size = -1)
       h2::Comm& comm = get_comm(i);
       t(comm);
     }
-    catch (const internal::NotParticipatingException&) {}
-    El::mpi::Barrier(El::mpi::COMM_WORLD);
+    catch (const internal::NotParticipatingException&)
+    {}
+    // If all the assertions in t pass, or we do not participate, we
+    // reach this point. If there is a failure, we will not reach here.
+    // We perform an allreduce on a single integer to determine whether
+    // the test case succeeded. In the case of failure, the allreduce
+    // will be joined within a Catch2 event handler.
+    int test_result = 1;
+    El::mpi::AllReduce(&test_result,
+                       1,
+                       // Because Elemental does not support LOGICAL_AND. :(
+                       El::mpi::MIN,
+                       El::mpi::COMM_WORLD,
+                       El::SyncInfo<El::Device::CPU>{});
+    if (test_result == 0)
+    {
+      internal::end_for_comms();  // Indicate we are done.
+      FAIL(std::to_string(El::mpi::Rank())
+           + ": Failure detected on another rank");
+    }
   }
+
+  internal::end_for_comms();
 }
