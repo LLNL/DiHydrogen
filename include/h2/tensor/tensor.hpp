@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2022 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -9,19 +9,17 @@
 
 /** @file
  *
- * Local tensors that live on CPUs.
+ * Local tensors that live on a device.
  */
 
 #include "h2/tensor/tensor_base.hpp"
 #include "h2/tensor/strided_memory.hpp"
 #include "h2/tensor/tensor_types.hpp"
-#include "strided_memory.hpp"
+#include "h2/tensor/tensor_utils.hpp"
 #include "tensor_types.hpp"
 
-namespace h2 {
-
-static constexpr struct lazy_alloc_t {} LazyAlloc;
-static constexpr struct unlazy_alloc_t {} UnlazyAlloc;
+namespace h2
+{
 
 /** Tensor class for arbitrary types and devices. */
 template <typename T, Device Dev>
@@ -33,7 +31,8 @@ public:
   Tensor(ShapeTuple shape_,
          DimensionTypeTuple dim_types_,
          const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : Tensor(shape_, dim_types_, UnlazyAlloc, sync) {}
+      : Tensor(shape_, dim_types_, UnlazyAlloc, sync)
+  {}
 
   Tensor(ShapeTuple shape_,
          DimensionTypeTuple dim_types_,
@@ -121,6 +120,8 @@ public:
     if (this->is_view()) {
       throw H2Exception("Cannot resize a view");
     }
+    H2_ASSERT_ALWAYS(new_dim_types.size() == new_shape.size(),
+                     "New shape and dimension types must have the same size");
     auto sync = tensor_memory.get_sync_info();
     tensor_memory = StridedMemory<T, Dev>(
       new_shape, tensor_memory.is_lazy(), sync);
@@ -173,25 +174,25 @@ public:
   }
 
   Tensor<T, Dev>* view() override {
-    return view(CoordTuple(TuplePad<CoordTuple>(this->tensor_shape.size(), ALL)));
+    return view(IndexRangeTuple(TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
   Tensor<T, Dev>* view() const override
   {
-    return view(CoordTuple(TuplePad<CoordTuple>(this->tensor_shape.size(), ALL)));
+    return view(IndexRangeTuple(TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  Tensor<T, Dev>* view(CoordTuple coords) override
+  Tensor<T, Dev>* view(IndexRangeTuple coords) override
   {
     return make_view(coords, ViewType::Mutable);
   }
 
-  Tensor<T, Dev>* view(CoordTuple coords) const override
+  Tensor<T, Dev>* view(IndexRangeTuple coords) const override
   {
     return make_view(coords, ViewType::Const);
   }
 
-  Tensor<T, Dev>* operator()(CoordTuple coords) override
+  Tensor<T, Dev>* operator()(IndexRangeTuple coords) override
   {
     return view(coords);
   }
@@ -202,24 +203,24 @@ public:
   }
 
   Tensor<T, Dev>* const_view() const override {
-    return const_view(CoordTuple(TuplePad<CoordTuple>(this->tensor_shape.size(), ALL)));
+    return const_view(IndexRangeTuple(TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  Tensor<T, Dev>* const_view(CoordTuple coords) const override
+  Tensor<T, Dev>* const_view(IndexRangeTuple coords) const override
   {
     return make_view(coords, ViewType::Const);
   }
 
-  Tensor<T, Dev>* operator()(CoordTuple coords) const override {
+  Tensor<T, Dev>* operator()(IndexRangeTuple coords) const override {
     return const_view(coords);
   }
 
-  T* get(SingleCoordTuple coords) override
+  T* get(ScalarIndexTuple coords) override
   {
     return tensor_memory.get(coords);
   }
 
-  const T* get(SingleCoordTuple coords) const override
+  const T* get(ScalarIndexTuple coords) const override
   {
     return tensor_memory.get(coords);
   }
@@ -252,24 +253,51 @@ private:
 
   /** Private constructor for views. */
   Tensor(ViewType view_type_, const StridedMemory<T, Dev>& mem_,
-         ShapeTuple shape_, DimensionTypeTuple dim_types_, CoordTuple coords) :
+         ShapeTuple shape_, DimensionTypeTuple dim_types_, IndexRangeTuple coords) :
     BaseTensor<T>(view_type_, shape_, dim_types_),
     tensor_memory(mem_, coords)
   {}
 
   /** Helper for constructing views. */
-  Tensor<T, Dev>* make_view(CoordTuple coords, ViewType view_type) const
+  Tensor<T, Dev>* make_view(IndexRangeTuple coords, ViewType view_type) const
   {
-    if (!is_shape_contained(coords, this->tensor_shape))
+    if (!is_index_range_contained(coords, this->tensor_shape))
     {
       throw H2Exception("Attempting to construct an out-of-range view");
     }
-    return new Tensor<T, Dev>(
-        view_type,
-        tensor_memory,
-        get_range_shape(coords, this->tensor_shape),
-        filter_by_trivial(coords, this->tensor_dim_types),
-        coords);
+    // We need an explicit check here because specific coordinates may
+    // be empty. We can handle empty IndexRangeTuples, but not empty
+    // IndexRanges.
+    if (is_index_range_empty(coords))
+    {
+      return new Tensor<T, Dev>(view_type,
+                                tensor_memory,
+                                ShapeTuple{},
+                                DimensionTypeTuple{},
+                                IndexRangeTuple{});
+    }
+    ShapeTuple view_shape = get_index_range_shape(coords, this->tensor_shape);
+    // Eliminate dimension types from dimensions that have been
+    // eliminated.
+    // If we would eliminate all dimensions (i.e., use scalars for all
+    // coordinates), decay to a shape of 1 with a Scalar dimension.
+    DimensionTypeTuple filtered_dim_types;
+    if (!coords.is_empty() && view_shape.is_empty())
+    {
+      view_shape = ShapeTuple(1);
+      filtered_dim_types = DimensionTypeTuple(DimensionType::Scalar);
+    }
+    else
+    {
+      filtered_dim_types = filter_index(
+          this->tensor_dim_types,
+          [&](IndexRangeTuple::size_type i) { return !coords[i].is_scalar(); });
+    }
+    return new Tensor<T, Dev>(view_type,
+                              tensor_memory,
+                              view_shape,
+                              filtered_dim_types,
+                              coords);
   }
 };
 

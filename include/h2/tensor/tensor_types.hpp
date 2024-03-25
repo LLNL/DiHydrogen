@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2022 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -7,13 +7,17 @@
 
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
+#include <limits>
 #include <ostream>
+#include <type_traits>
 
 #include <El.hpp>
 
 #include "h2/tensor/fixed_size_tuple.hpp"
+#include "h2/tensor/tuple_utils.hpp"
 
 /** @file
  *
@@ -32,13 +36,15 @@ namespace h2 {
  *
  * These are not used for other sorts of correctness checking.
  */
-enum class DimensionType {
-  Any,  /**< Catch-all, does not ascribe particular semantics. */
+enum class DimensionType
+{
+  Any,     /**< Catch-all, does not ascribe particular semantics. */
+  Scalar,  /** Internal use for views that eliminate all dimension. */
   Sample,  /**< The sample ("batch") dimension. */
-  Channel,  /**< The channel ("feature") dimension in convolutions. */
+  Channel, /**< The channel ("feature") dimension in convolutions. */
   Filter,  /**< The filter dimension in convolutions. */
-  Spatial,  /**< The spatial (height, width, depth, etc.) dimension(s). */
-  Sequence  /**< The sequence dimension (e.g., in textual data). */
+  Spatial, /**< The spatial (height, width, depth, etc.) dimension(s). */
+  Sequence /**< The sequence dimension (e.g., in textual data). */
 };
 
 using DT = DimensionType;  // Alias to save you some typing.
@@ -50,6 +56,9 @@ inline std::ostream& operator<<(std::ostream& os, const DimensionType& dim_type)
   {
   case DT::Any:
     os << "Any";
+    break;
+  case DT::Scalar:
+    os << "Scalar";
     break;
   case DT::Sample:
     os << "Sample";
@@ -195,7 +204,7 @@ inline std::ostream& operator<<(std::ostream& os,
 using NDimType = std::int32_t;
 
 /**
- * Integer type used for storing dimensions.
+ * Integer type used for storing the size of a dimension.
  */
 using DimType = std::int32_t;
 
@@ -234,130 +243,125 @@ using DTTuple = DimensionTypeTuple;  // Alias to save you some typing.
 using StrideTuple = NDimTuple<DataIndexType>;
 
 /**
- * Represents a contiguous range [start, end).
+ * Represents a range of indices.
+ *
+ * This is either a single scalar index or a half-open range containing
+ * [start, stop).
+ *
+ * If the range is a scalar, both start and end will have the same
+ * value.
+ *
+ * The range may also be empty, in which case the values of `start` and
+ * `stop` are undefined.
  */
-struct DimensionRange {
-  DimType start;  /**< Start of a range. */
-  DimType end;  /**< End of a range. */
-  constexpr DimensionRange() : start(0), end(0) {}
-  constexpr DimensionRange(DimType i) : start(i), end(i+1) {}
-  constexpr DimensionRange(DimType start_, DimType end_) : start(start_), end(end_) {}
-
-  constexpr bool operator==(const DimensionRange& other) H2_NOEXCEPT {
-    return start == other.start && end == other.end;
+struct IndexRange
+{
+  /** Construct an empty IndexRange. */
+  constexpr IndexRange() : index_start(0), index_end(-1) {}
+  /** Construct a scalar IndexRange. */
+  constexpr IndexRange(DimType i) : index_start(i), index_end(i) {}
+  /** Construct a half-open IndexRange. */
+  constexpr IndexRange(DimType start_, DimType end_)
+      : index_start(start_),
+        index_end(end_)
+  {
+    H2_ASSERT_DEBUG(start_ <= end_,
+                    "IndexRange with end < start not supported, you probably "
+                    "have a bug or want an empty IndexRange");
   }
+
+  constexpr inline DimType start() const H2_NOEXCEPT { return index_start; }
+  constexpr inline DimType end() const H2_NOEXCEPT { return index_end; }
+  constexpr inline bool is_scalar() const H2_NOEXCEPT
+  {
+    return index_start == index_end;
+  }
+  constexpr inline bool is_empty() const H2_NOEXCEPT
+  {
+    return index_end < index_start;
+  }
+
+private:
+  // Implementation detail: index_end < index_start is used to denote
+  // an empty range. To prevent "gotchas" if DimType changes, enforce
+  // that is be signed so this holds.
+  static_assert(std::is_signed_v<DimType>,
+                "Underlying dimension type for IndexRange must be signed");
+
+  DimType index_start;  /**< Start of a range. */
+  DimType index_end;    /**< End of a range. */
 };
 
-using DRng = DimensionRange;  // Alias to save you some typing.
-
-/** Support printing DimensionRange. */
-inline std::ostream& operator<<(std::ostream& os, const DimensionRange& dr)
+/** Equality for ranges. */
+inline constexpr bool operator==(const IndexRange& ir1,
+                                 const IndexRange& ir2)
 {
-  os << "[" << dr.start << ", " << dr.end << ")";
+  return ir1.start() == ir2.start() && ir1.end() == ir2.end();
+}
+
+/** Inequality for ranges. */
+inline constexpr bool operator!=(const IndexRange& ir1,
+                                 const IndexRange& ir2)
+{
+  return ir1.start() != ir2.start() || ir1.end() != ir2.end();
+}
+
+using IRng = IndexRange;  // Alias to save you some typing.
+
+/** Special IndexRange that represents a entire range. */
+static constexpr IndexRange ALL(0, std::numeric_limits<DimType>::max());
+
+/** Support printing IndexRange. */
+inline std::ostream& operator<<(std::ostream& os, const IndexRange& ir)
+{
+  if (ir == ALL)
+  {
+    os << "[ALL]";
+  }
+  else if (ir.is_scalar())
+  {
+    os << "[" << ir.start() << "]";
+  }
+  else if (ir.is_empty())
+  {
+    os << "[empty]";
+  }
+  else
+  {
+    os << "[" << ir.start() << ", " << ir.end() << ")";
+  }
   return os;
 }
 
 /**
- * Tuple of dimension ranges.
+ * Tuple of IndexRanges, which represent a region.
  */
-using CoordTuple = NDimTuple<DimensionRange>;
-
-/** Special DimensionRange that represents a entire range. */
-static constexpr DimensionRange ALL(0, -1);
+using IndexRangeTuple = NDimTuple<IndexRange>;
 
 /**
- * Tuple of exact coordinates.
+ * Tuple of scalar indices, which represent a point.
  */
-using SingleCoordTuple = NDimTuple<DimType>;
-
-/**
- * Return the coordinates of the initial point of coordinate range.
- */
-constexpr inline SingleCoordTuple get_range_start(CoordTuple coords) H2_NOEXCEPT {
-  SingleCoordTuple coords_start(TuplePad<SingleCoordTuple>(coords.size()));
-  for (typename CoordTuple::size_type i = 0; i < coords.size(); ++i) {
-    // Abuse the fact that ALL.start = 0.
-    coords_start[i] = coords[i].start;
-  }
-  return coords_start;
-}
-
-/**
- * Return true if the DimensionRange is trivial.
- */
-constexpr inline bool is_coord_trivial(DimensionRange coord) H2_NOEXCEPT {
-  return coord.start + 1 == coord.end;
-}
-
-/**
- * Return the shape defined by a coordinate range within a larger shape,
- * eliminating trivial dimensions.
- */
-constexpr inline ShapeTuple get_range_shape(CoordTuple coords, ShapeTuple shape) H2_NOEXCEPT {
-  H2_ASSERT_DEBUG(coords.size() <= shape.size(),
-                  "coords size not compatible with shape size");
-  ShapeTuple new_shape(TuplePad<ShapeTuple>(shape.size()));
-  typename ShapeTuple::size_type j = 0;
-  for (typename ShapeTuple::size_type i = 0; i < shape.size(); ++i) {
-    if (i >= coords.size() || coords[i] == ALL) {
-      new_shape[j] = shape[i];
-      ++j;
-    } else if (!is_coord_trivial(coords[i])) {
-      new_shape[j] = coords[i].end - coords[i].start;
-      ++j;
-    }
-  }
-  new_shape.set_size(j);
-  return new_shape;
-}
-
-/**
- * Return true if a coordinate range is contained within a given shape.
- */
-constexpr inline bool is_shape_contained(CoordTuple coords,
-                                         ShapeTuple shape) H2_NOEXCEPT
-{
-  if (coords.size() > shape.size())
-  {
-    return false;
-  }
-  for (typename CoordTuple::size_type i = 0; i < coords.size(); ++i)
-  {
-    if (coords[i].start > shape[i] || coords[i].end > shape[i])
-    {
-      return false;
-    }
-  }
-  return true;
-}
-
-/**
- * Return a new tuple that consists of the entries in the original at
- * indices where coords is not trivial.
- */
-template <typename T, typename SizeType, SizeType N>
-constexpr inline FixedSizeTuple<T, SizeType, N> filter_by_trivial(
-  CoordTuple coords, FixedSizeTuple<T, SizeType, N> tuple) H2_NOEXCEPT {
-  FixedSizeTuple<T, SizeType, N> new_tuple(
-    FixedSizeTuplePadding<T, SizeType>(tuple.size(), T{}));
-  SizeType j = 0;
-  for (SizeType i = 0; i < tuple.size(); ++i) {
-    if (i >= coords.size() || !is_coord_trivial(coords[i])) {
-      new_tuple[j] = tuple[i];
-      ++j;
-    }
-  }
-  new_tuple.set_size(j);
-  return new_tuple;
-}
+using ScalarIndexTuple = NDimTuple<DimType>;
 
 /**
  * Specifies the type of view.
  */
-enum class ViewType {
-  None,  /**< Not a view. */
-  Mutable,  /**< A view that can modify the original. */
-  Const  /**< A view that cannot modify the original. */
+enum class ViewType
+{
+  None,    /**< Not a view. */
+  Mutable, /**< A view that can modify the original. */
+  Const    /**< A view that cannot modify the original. */
 };
+
+// These are used by local and distributed tensors for memory recovery.
+/** Do not attempt recovery in `BaseTensor::ensure`. */
+static constexpr struct tensor_no_recovery_t {} TensorNoRecovery;
+/** Attempt recovery in `BaseTensor::ensure`. */
+static constexpr struct tensor_attempt_recovery_t {} TensorAttemptRecovery;
+
+/** Tag to indicate a tensor should allocate lazily. */
+static constexpr struct lazy_alloc_t {} LazyAlloc;
+/** Tag to indicate a tensor should not allocate lazily. */
+static constexpr struct unlazy_alloc_t {} UnlazyAlloc;
 
 }  // namespace h2

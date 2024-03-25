@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2022 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -16,7 +16,7 @@
 
 /** @file
  *
- * Defines fixed-size tuples and associated functions.
+ * Defines fixed-size tuples.
  */
 
 namespace h2 {
@@ -42,7 +42,7 @@ TuplePad(typename TupleType::size_type size, typename TupleType::type pad_value 
 template <typename T, typename SizeType, SizeType N>
 struct FixedSizeTuple {
   std::array<T, N> data_;  /**< Fixed size data buffer. */
-  SizeType size_; /**< Number of valid elements in the tuple. */
+  SizeType size_;          /**< Number of valid elements in the tuple. */
 
   using type = T;
   using size_type = SizeType;
@@ -84,7 +84,7 @@ struct FixedSizeTuple {
   constexpr SizeType size() const H2_NOEXCEPT { return size_; }
 
   /** Return true when there are no valid elements in the tuple. */
-  constexpr bool empty() const H2_NOEXCEPT { return size_ == 0; }
+  constexpr bool is_empty() const H2_NOEXCEPT { return size_ == 0; }
 
   /** Return a raw pointer to the tuple. */
   T* data() H2_NOEXCEPT { return data_.data(); }
@@ -198,6 +198,20 @@ struct FixedSizeTuple {
   }
 
   /**
+   * Add a value to the end of the tuple and increase the number of
+   * valid entries by one.
+   *
+   * It is an error to call this if this would exceed the maximum size
+   * of the tuple.
+   */
+  constexpr void append(T v) H2_NOEXCEPT
+  {
+    H2_ASSERT_DEBUG(size_ < N - 1, "Append would exceed tuple size");
+    data_[size_] = v;
+    ++size_;
+  }
+
+  /**
    * Compare two tuples for equaltiy.
    *
    * Tuples are equal if they have the same size and all valid elements
@@ -249,70 +263,29 @@ inline std::ostream& operator<<(std::ostream& os, const FixedSizeTuple<T, SizeTy
   return os;
 }
 
-/**
- * Product reduction for a FixedSizeTuple.
- *
- * If the tuple is empty, returns start (default 1).
- */
-template <typename AccT, typename T, typename SizeType, SizeType N>
-constexpr AccT product(const FixedSizeTuple<T, SizeType, N>& tuple, const AccT start = AccT{1}) H2_NOEXCEPT {
-  AccT r = start;
-  for (SizeType i = 0; i < tuple.size(); ++i) {
-    r *= static_cast<AccT>(tuple[i]);
-  }
-  return r;
-}
-
-/** Inner product for two FixedSizeTuples. */
-template <typename AccT,
-  typename T1, typename SizeType1, SizeType1 N1,
-  typename T2, typename SizeType2, SizeType2 N2>
-constexpr AccT inner_product(const FixedSizeTuple<T1, SizeType1, N1>& a,
-                             const FixedSizeTuple<T2, SizeType2, N2>& b) H2_NOEXCEPT {
-  static_assert(std::is_convertible<SizeType2, SizeType1>::value,
-                "Incompatible SizeTypes");
-  H2_ASSERT_DEBUG(a.size() == b.size(), "Mismatched tuple sizes");
-  AccT r = AccT{0};
-  for (SizeType1 i = 0; i < a.size(); ++i) {
-    r += static_cast<AccT>(a[i]) * static_cast<AccT>(b[i]);
-  }
-  return r;
-}
-
-/**
- * Return true if the predicate returns true for any entry in a
- * FixedSizeTuple; otherwise return false.
- */
-template <typename T, typename SizeType, SizeType N, typename Predicate>
-constexpr bool any_of(const FixedSizeTuple<T, SizeType, N>& tuple,
-                      Predicate p) {
-  for (SizeType i = 0; i < tuple.size(); ++i) {
-    if (p(tuple[i])) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/** @brief Get all but the last element of the input tuple */
-template <typename T, typename SizeType, SizeType N>
-constexpr h2::FixedSizeTuple<T, SizeType, N>
-init(h2::FixedSizeTuple<T, SizeType, N> const& in)
-{
-  if (in.empty())
-    throw std::runtime_error("cannot get init of empty FixedSizeTuple");
-  h2::FixedSizeTuple<T, SizeType, N> out{in};
-  out.set_size(in.size() - 1);
-  return out;
-}
-
-/** @brief Get the last element of the input tuple */
-template <typename T, typename SizeType, SizeType N>
-constexpr T last(h2::FixedSizeTuple<T, SizeType, N> const& in)
-{
-  if (in.empty())
-    throw std::runtime_error("cannot get last of empty FixedSizeTuple");
-  return in[in.size() - 1];
-}
-
 }  // namespace h2
+
+namespace std
+{
+
+// Inject hash specializations for tuples.
+
+template <typename T, typename SizeType, SizeType N>
+struct hash<h2::FixedSizeTuple<T, SizeType, N>>
+{
+  size_t
+  operator()(const h2::FixedSizeTuple<T, SizeType, N>& tuple) const noexcept
+  {
+    // Mixing adapted from Boost.
+    // Hash both the size and elements.
+    size_t seed = hash<SizeType>()(tuple.size());
+    auto hasher = hash<T>();
+    for (SizeType i = 0; i < tuple.size(); ++i)
+    {
+      seed ^= hasher(tuple[i]) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+    }
+    return seed;
+  }
+};
+
+}  // namespace std

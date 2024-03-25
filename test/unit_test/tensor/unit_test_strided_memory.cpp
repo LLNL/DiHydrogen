@@ -1,5 +1,5 @@
- ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+////////////////////////////////////////////////////////////////////////////////
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
@@ -183,7 +183,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory indexing works",
       for (DimType i = 0; i < mem.shape(0); ++i)
       {
         REQUIRE(mem.get_index({i, j, k}) == idx);
-        REQUIRE(mem.get_coord(idx) == SingleCoordTuple{i, j, k});
+        REQUIRE(mem.get_coord(idx) == ScalarIndexTuple{i, j, k});
         ++idx;
       }
     }
@@ -234,7 +234,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
 
   SECTION("Viewing a subtensor with all three dimensions nontrivial")
   {
-    MemType mem = MemType(base_mem, {DRng(1, 3), ALL, DRng(1, 3)});
+    MemType mem = MemType(base_mem, {IRng(1, 3), ALL, IRng(1, 3)});
     REQUIRE(mem.strides() == StrideTuple{1, 3, 21});
     REQUIRE(mem.shape() == ShapeTuple{2, 7, 2});
     REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({1, 0, 1})));
@@ -276,9 +276,9 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
       }
     }
   }
-  SECTION("Viewing a subtensor with a trivial dimension")
+  SECTION("Viewing a subtensor with a scalar dimension works")
   {
-    MemType mem = MemType(base_mem, {DRng(1), ALL, DRng(1, 3)});
+    MemType mem = MemType(base_mem, {IRng(1), ALL, IRng(1, 3)});
     REQUIRE(mem.strides() == StrideTuple{3, 21});
     REQUIRE(mem.shape() == ShapeTuple{7, 2});
     REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({1, 0, 1})));
@@ -291,6 +291,45 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
                 == base_mem.get_index({1, j, k + 1}));
       }
     }
+  }
+  SECTION("Viewing a subtensor with a range of length 1 works")
+  {
+    MemType mem = MemType(base_mem, {IRng(0, 2), IRng(1, 2), ALL});
+    REQUIRE(mem.strides() == StrideTuple{1, 3, 21});
+    REQUIRE(mem.shape() == ShapeTuple{2, 1, 3});
+    REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({0, 1, 0})));
+    REQUIRE_FALSE(mem.is_lazy());
+    for (DimType k = 0; k < mem.shape(2); ++k)
+    {
+      for (DimType i = 0; i < mem.shape(0); ++i)
+      {
+        REQUIRE(read_ele<Dev>(mem.get({i, 0, k}))
+                              == base_mem.get_index({i, 1, k}));
+      }
+    }
+  }
+  SECTION("Viewing with all scalar coordinates works")
+  {
+    MemType mem = MemType(base_mem, {IRng(1), IRng(0), IRng(0)});
+    REQUIRE(mem.strides() == StrideTuple{1});
+    REQUIRE(mem.shape() == ShapeTuple{1});
+    REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({1, 0, 0})));
+    REQUIRE_FALSE(mem.is_lazy());
+    REQUIRE(read_ele<Dev>(mem.get({0})) == base_mem.get_index({1, 0, 0}));
+  }
+  SECTION("Views with totally empty coordinates work")
+  {
+    MemType mem = MemType(base_mem, IndexRangeTuple{});
+    REQUIRE(mem.strides() == StrideTuple{});
+    REQUIRE(mem.shape() == ShapeTuple{});
+    REQUIRE(mem.data() == nullptr);
+  }
+  SECTION("Views with empty coordinates work")
+  {
+    MemType mem = MemType(base_mem, {IRng(0, 1), IRng(), ALL});
+    REQUIRE(mem.strides() == StrideTuple{});
+    REQUIRE(mem.shape() == ShapeTuple{});
+    REQUIRE(mem.data() == nullptr);
   }
 }
 

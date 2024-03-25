@@ -18,7 +18,9 @@ h2_add_sources_to_target_and_install(
   hydrogen_interop.hpp
   raw_buffer.hpp
   strided_memory.hpp
-  tensor_types.hpp
   tensor_base.hpp
+  tensor_types.hpp
+  tensor_utils.hpp
   tensor.hpp
+  tuple_utils.hpp
   )
