@@ -7,11 +7,12 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_template_test_macros.hpp>
-#include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <type_traits>
 
 #include "h2/tensor/strided_memory.hpp"
+#include "h2/utils/typename.hpp"
 #include "utils.hpp"
 
 using namespace h2;
@@ -502,5 +503,41 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory with external buffers works",
     REQUIRE(mem2.const_data() != nullptr);
     REQUIRE(mem.data() != mem2.data());
     REQUIRE(mem.const_data() != mem2.const_data());
+  }
+}
+
+TEMPLATE_LIST_TEST_CASE("StridedMemory is printable",
+                        "[tensor][strided_memory]",
+                        AllDevList)
+{
+  using MemType = StridedMemory<DataType, TestType::value>;
+
+  std::stringstream dev_ss;
+  dev_ss << TestType::value;
+
+  std::stringstream ss;
+
+  SECTION("Lazy")
+  {
+    MemType mem({3, 5}, true);
+    ss << mem;
+
+    REQUIRE_THAT(ss.str(),
+                 Catch::Matchers::StartsWith(std::string("StridedMemory<")
+                                             + TypeName<DataType>() + ", "
+                                             + dev_ss.str() + ">(lazy"));
+    REQUIRE_THAT(ss.str(), Catch::Matchers::EndsWith("{3, 5})"));
+  }
+
+  SECTION("Unlazy")
+  {
+    MemType mem({3, 5}, false);
+    ss << mem;
+
+    REQUIRE_THAT(ss.str(),
+                 Catch::Matchers::StartsWith(std::string("StridedMemory<")
+                                             + TypeName<DataType>() + ", "
+                                             + dev_ss.str() + ">(not lazy"));
+    REQUIRE_THAT(ss.str(), Catch::Matchers::EndsWith("{3, 5})"));
   }
 }
