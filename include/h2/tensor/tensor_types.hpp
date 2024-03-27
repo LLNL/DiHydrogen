@@ -353,6 +353,26 @@ enum class ViewType
   Const    /**< A view that cannot modify the original. */
 };
 
+/** Support printing ViewType. */
+inline std::ostream& operator<<(std::ostream& os, const ViewType& vt)
+{
+  switch (vt)
+  {
+  case ViewType::None:
+    os << "None";
+    break;
+  case ViewType::Mutable:
+    os << "View";
+    break;
+  case ViewType::Const:
+    os << "Const View";
+    break;
+  default:
+    os << "Unknown";
+  }
+  return os;
+}
+
 // These are used by local and distributed tensors for memory recovery.
 /** Do not attempt recovery in `BaseTensor::ensure`. */
 static constexpr struct tensor_no_recovery_t {} TensorNoRecovery;

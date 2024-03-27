@@ -16,10 +16,12 @@
 
 #include <El.hpp>
 
-#include "h2/utils/As.hpp"
-#include "h2/utils/Error.hpp"
 #include "h2/tensor/dist_types.hpp"
 #include "h2/tensor/tensor_types.hpp"
+#include "h2/utils/As.hpp"
+#include "h2/utils/Describable.hpp"
+#include "h2/utils/Error.hpp"
+
 
 namespace h2
 {
@@ -42,7 +44,7 @@ namespace h2
  * \note There is no attempt at "topology-aware" mapping here (e.g., `MPI_Cart_create`).
  *       Users should manually manage this on the input communicator if desired.
  */
-class ProcessorGrid
+class ProcessorGrid : public Describable
 {
 private:
   /** Strides on the grid. */
@@ -87,6 +89,13 @@ public:
   typename ShapeTuple::size_type ndim() const H2_NOEXCEPT
   {
     return grid_shape.size();
+  }
+
+  /** Output a short description of the processor grid. */
+  void short_describe(std::ostream& os) const override
+  {
+    os << "Grid";
+    print_tuple(os, shape(), "(", ")", " x ");
   }
 
   /** Return the number of processors in the grid. */

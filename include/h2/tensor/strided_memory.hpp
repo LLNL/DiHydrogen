@@ -15,11 +15,11 @@
 #include <memory>
 #include <utility>
 #include <cstddef>
-#include "tensor_types.hpp"
 
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/tensor/tensor_utils.hpp"
 #include "h2/tensor/raw_buffer.hpp"
+#include "h2/utils/typename.hpp"
 
 namespace h2 {
 
@@ -339,8 +339,7 @@ template <typename T, Device Dev>
 inline std::ostream& operator<<(std::ostream& os,
                                 const StridedMemory<T, Dev>& mem)
 {
-  // TODO: Print the type along with the device.
-  os << "StridedMemory<" << Dev << ">("
+  os << "StridedMemory<" << TypeName<T>() << ", " << Dev << ">("
      << (mem.is_lazy() ? "lazy" : "not lazy") << ", "
      << mem.data() << ", " << mem.strides()
      << ", " << mem.shape() << ")";

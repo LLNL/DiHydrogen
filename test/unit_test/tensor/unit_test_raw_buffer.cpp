@@ -6,11 +6,12 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <catch2/catch_template_test_macros.hpp>
-#include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include <type_traits>
 
 #include "h2/tensor/raw_buffer.hpp"
+#include "h2/utils/typename.hpp"
 #include "utils.hpp"
 
 using namespace h2;
@@ -195,4 +196,26 @@ TEMPLATE_LIST_TEST_CASE("Raw buffers are writable",
   {
     write_ele<Dev>(raw_buf, i, static_cast<DataType>(i));
   }
+}
+
+TEMPLATE_LIST_TEST_CASE("Raw buffers are printable",
+                        "[tensor][raw_buffer]",
+                        AllDevList)
+{
+  using BufType = RawBuffer<DataType, TestType::value>;
+  constexpr std::size_t buf_size = 32;
+
+  std::stringstream dev_ss;
+  dev_ss << TestType::value;
+
+  std::stringstream ss;
+  BufType buf(buf_size);
+  ss << buf;
+
+  REQUIRE_THAT(ss.str(),
+               Catch::Matchers::StartsWith(std::string("RawBuffer<")
+                                           + TypeName<DataType>() + ", "
+                                           + dev_ss.str() + ">"));
+  REQUIRE_THAT(ss.str(),
+               Catch::Matchers::EndsWith(std::to_string(buf_size) + ")"));
 }

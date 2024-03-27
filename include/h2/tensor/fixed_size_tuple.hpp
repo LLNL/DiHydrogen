@@ -248,18 +248,31 @@ struct FixedSizeTuple {
   }
 };
 
-/** Operator overload for printing tuples (when the type is printable). */
+/** Print a tuple with some support for customization. */
 template <typename T, typename SizeType, SizeType N>
-inline std::ostream& operator<<(std::ostream& os, const FixedSizeTuple<T, SizeType, N>& tuple) {
-  os << "{";
+inline void print_tuple(std::ostream& os,
+                        const FixedSizeTuple<T, SizeType, N>& tuple,
+                        const std::string start_brace = "{",
+                        const std::string end_brace = "}",
+                        const std::string separator = ", ")
+{
+  os << start_brace;
   for (SizeType i = 0; i < tuple.size(); ++i) {
     os << tuple[i];
     // Note: tuple.size() must be >= 1 for us to be here.
     if (i < tuple.size() - 1) {
-      os << ", ";
+      os << separator;
     }
   }
-  os << "}";
+  os << end_brace;
+}
+
+/** Operator overload for printing tuples (when the type is printable). */
+template <typename T, typename SizeType, SizeType N>
+inline std::ostream& operator<<(std::ostream& os,
+                                const FixedSizeTuple<T, SizeType, N>& tuple)
+{
+  print_tuple(os, tuple);
   return os;
 }
 

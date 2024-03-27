@@ -7,9 +7,9 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_template_test_macros.hpp>
-#include <catch2/generators/catch_generators.hpp>
 
 #include "h2/tensor/tensor.hpp"
+#include "h2/utils/typename.hpp"
 #include "utils.hpp"
 
 using namespace h2;
@@ -717,5 +717,34 @@ TEMPLATE_LIST_TEST_CASE("Making tensors contiguous works",
     {
       REQUIRE(read_ele<Dev>(contig->get({i})) == (1 + 4*i));
     }
+  }
+}
+
+TEMPLATE_LIST_TEST_CASE("Tensors are printable", "[tensor]", AllDevList)
+{
+  using TensorType = Tensor<DataType, TestType::value>;
+
+  std::stringstream dev_ss;
+  dev_ss << TestType::value;
+
+  std::stringstream ss;
+
+  TensorType tensor({3, 5}, {DT::Sample, DT::Any});
+
+  SECTION("No view")
+  {
+    ss << tensor;
+    REQUIRE(ss.str()
+            == std::string("Tensor<") + TypeName<DataType>() + ", "
+                   + dev_ss.str() + ">(Sample:3 x Any:5)");
+  }
+
+  SECTION("View")
+  {
+    TensorType* view = tensor.view();
+    ss << *view;
+    REQUIRE(ss.str()
+            == std::string("Tensor<") + TypeName<DataType>() + ", "
+                   + dev_ss.str() + ">(View of Sample:3 x Any:5)");
   }
 }

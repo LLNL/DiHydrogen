@@ -18,6 +18,7 @@
 #include <cstddef>
 
 #include "h2/tensor/tensor_types.hpp"
+#include "h2/utils/typename.hpp"
 
 #ifdef H2_HAS_GPU
 #include "h2/gpu/memory_utils.hpp"
@@ -206,8 +207,8 @@ private:
 template <typename T, Device Dev>
 inline std::ostream& operator<<(std::ostream& os, const RawBuffer<T, Dev>& buf)
 {
-  // TODO: Print the type along with the device.
-  os << "RawBuffer<" << Dev << ">(" << buf.data() << ", " << buf.size() << ")";
+  os << "RawBuffer<" << TypeName<T>() << ", " << Dev << ">(" << buf.data()
+     << ", " << buf.size() << ")";
   return os;
 }
 

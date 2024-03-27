@@ -1,5 +1,5 @@
 ################################################################################
-## Copyright 2019-2023 Lawrence Livermore National Security, LLC and other
+## Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 ## DiHydrogen Project Developers. See the top-level LICENSE file for details.
 ##
 ## SPDX-License-Identifier: Apache-2.0
@@ -18,4 +18,5 @@ h2_add_sources_to_target_and_install(
   Error.hpp
   IntegerMath.hpp
   Logger.hpp
+  typename.hpp
   )
