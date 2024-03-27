@@ -1,9 +1,10 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2022 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
+
 #include "h2/gpu/runtime.hpp"
 
 #include "h2/gpu/logger.hpp"
@@ -158,6 +159,8 @@ static char const* rsmi_status_to_string(rsmi_status_t const status)
 // We should have reasonable behavior for all cases (which might just
 // be to raise an error).
 bool initialized_ = false;
+
+bool is_integrated_ = false;
 
 static int guess_local_rank() noexcept
 {
@@ -354,6 +357,13 @@ void h2::gpu::init_runtime()
         H2_GPU_TRACE("found {} devices", num_gpus());
         set_reasonable_default_gpu();
         initialized_ = true;
+
+        // TODO: Currently broken, but this check should handle this in
+        // the future.
+        //hipDeviceProp_t props;
+        //H2_CHECK_HIP(hipGetDevicePropertieee(&props, current_gpu()));
+        //is_integrated_ = props.integrated;
+        is_integrated_ = false;
     }
     else
     {
@@ -379,6 +389,11 @@ bool h2::gpu::runtime_is_initialized()
 bool h2::gpu::runtime_is_finalized()
 {
     return !initialized_;
+}
+
+bool h2::gpu::is_integrated()
+{
+  return is_integrated_;
 }
 
 hipStream_t h2::gpu::make_stream()

@@ -1,9 +1,10 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2022 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
+
 #include "h2/gpu/runtime.hpp"
 
 #include "h2/gpu/logger.hpp"
@@ -237,6 +238,12 @@ bool h2::gpu::runtime_is_initialized()
 bool h2::gpu::runtime_is_finalized()
 {
     return !initialized_;
+}
+
+bool h2::gpu::is_integrated()
+{
+  // Currently no Nvidia system offers this.
+  return false;
 }
 
 cudaStream_t h2::gpu::make_stream()
