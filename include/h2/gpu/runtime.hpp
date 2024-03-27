@@ -1,12 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2022 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
-#ifndef H2_INCLUDE_H2_GPU_RUNTIME_HPP_INCLUDED
-#define H2_INCLUDE_H2_GPU_RUNTIME_HPP_INCLUDED
 
 /** @file
  *
@@ -25,6 +24,7 @@
  *  void finalize_runtime();
  *  bool runtime_is_initialized();
  *  bool runtime_is_finalized();
+ *  bool is_integrated();
  *
  *  bool ok(DeviceError) noexcept;
  *
@@ -65,6 +65,9 @@ void finalize_runtime();
 bool runtime_is_initialized();
 bool runtime_is_finalized();
 
+/** True if the CPU and GPU are one integrated platform (like an APU) */
+bool is_integrated();
+
 DeviceStream make_stream();
 DeviceStream make_stream_nonblocking();
 void destroy(DeviceStream);
@@ -79,5 +82,3 @@ void sync(DeviceStream); // Sync on stream.
 
 } // namespace gpu
 } // namespace h2
-
-#endif // H2_INCLUDE_H2_GPU_RUNTIME_HPP_INCLUDED
