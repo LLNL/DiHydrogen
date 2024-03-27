@@ -354,7 +354,7 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor metadata is sane",
   });
 }
 
-TEMPLATE_LIST_TEST_CASE("Lazy and unlazy distributed tensors are sane",
+TEMPLATE_LIST_TEST_CASE("Lazy and strict distributed tensors are sane",
                         "[dist-tensor]",
                         AllDevList)
 {
@@ -364,11 +364,11 @@ TEMPLATE_LIST_TEST_CASE("Lazy and unlazy distributed tensors are sane",
   ProcessorGrid grid(comm, ShapeTuple{1});
 
   REQUIRE_FALSE(DistTensorType(grid).is_lazy());
-  REQUIRE_FALSE(DistTensorType(grid, UnlazyAlloc).is_lazy());
+  REQUIRE_FALSE(DistTensorType(grid, StrictAlloc).is_lazy());
   REQUIRE(DistTensorType(grid, LazyAlloc).is_lazy());
 
   REQUIRE_FALSE(
-      DistTensorType({4}, {DT::Any}, grid, {Distribution::Block}, UnlazyAlloc)
+      DistTensorType({4}, {DT::Any}, grid, {Distribution::Block}, StrictAlloc)
           .is_lazy());
   REQUIRE(DistTensorType({4}, {DT::Any}, grid, {Distribution::Block}, LazyAlloc)
               .is_lazy());

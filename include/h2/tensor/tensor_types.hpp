@@ -362,6 +362,6 @@ static constexpr struct tensor_attempt_recovery_t {} TensorAttemptRecovery;
 /** Tag to indicate a tensor should allocate lazily. */
 static constexpr struct lazy_alloc_t {} LazyAlloc;
 /** Tag to indicate a tensor should not allocate lazily. */
-static constexpr struct unlazy_alloc_t {} UnlazyAlloc;
+static constexpr struct strict_alloc_t {} StrictAlloc;
 
 }  // namespace h2

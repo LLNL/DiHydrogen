@@ -232,17 +232,17 @@ TEMPLATE_LIST_TEST_CASE("Single element tensor metadata is sane",
   REQUIRE_FALSE(tensor.is_lazy());
 }
 
-TEMPLATE_LIST_TEST_CASE("Lazy and unlazy tensors are sane",
+TEMPLATE_LIST_TEST_CASE("Lazy and strict tensors are sane",
                         "[tensor]",
                         AllDevList)
 {
   using TensorType = Tensor<DataType, TestType::value>;
 
   REQUIRE_FALSE(TensorType().is_lazy());
-  REQUIRE_FALSE(TensorType(UnlazyAlloc).is_lazy());
+  REQUIRE_FALSE(TensorType(StrictAlloc).is_lazy());
   REQUIRE(TensorType(LazyAlloc).is_lazy());
 
-  REQUIRE_FALSE(TensorType({4, 6}, {DT::Sample, DT::Any}, UnlazyAlloc).is_lazy());
+  REQUIRE_FALSE(TensorType({4, 6}, {DT::Sample, DT::Any}, StrictAlloc).is_lazy());
   REQUIRE(TensorType({4, 6}, {DT::Sample, DT::Any}, LazyAlloc).is_lazy());
 }
 

@@ -39,7 +39,7 @@ public:
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
              const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-      : DistTensor(shape_, dim_types_, grid_, dist_types_, UnlazyAlloc, sync)
+      : DistTensor(shape_, dim_types_, grid_, dist_types_, StrictAlloc, sync)
   {}
 
   DistTensor(const ShapeTuple& shape_,
@@ -59,12 +59,12 @@ public:
              const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
-             unlazy_alloc_t,
+             strict_alloc_t,
              const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
       : BaseDistTensor<T>(shape_, dim_types_, grid_, dist_types_),
         tensor_local(this->tensor_local_shape,
                      init_n(dim_types_, this->tensor_local_shape.size()),
-                     UnlazyAlloc,
+                     StrictAlloc,
                      sync)
   {}
 
@@ -73,7 +73,7 @@ public:
                    DimensionTypeTuple(),
                    grid_,
                    DistributionTypeTuple(),
-                   UnlazyAlloc,
+                   StrictAlloc,
                    sync)
   {}
 
@@ -89,13 +89,13 @@ public:
   {}
 
   DistTensor(ProcessorGrid grid_,
-             unlazy_alloc_t,
+             strict_alloc_t,
              const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
       : DistTensor(ShapeTuple(),
                    DimensionTypeTuple(),
                    grid_,
                    DistributionTypeTuple(),
-                   UnlazyAlloc,
+                   StrictAlloc,
                    sync)
   {}
 

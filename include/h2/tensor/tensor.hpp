@@ -33,7 +33,7 @@ public:
   Tensor(const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
          const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-      : Tensor(shape_, dim_types_, UnlazyAlloc, sync)
+      : Tensor(shape_, dim_types_, StrictAlloc, sync)
   {}
 
   Tensor(const ShapeTuple& shape_,
@@ -46,20 +46,20 @@ public:
 
   Tensor(const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
-         unlazy_alloc_t,
+         strict_alloc_t,
          const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
     BaseTensor<T>(shape_, dim_types_),
     tensor_memory(shape_, false, sync)
   {}
 
   Tensor(const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : Tensor(ShapeTuple(), DimensionTypeTuple(), UnlazyAlloc, sync) {}
+    : Tensor(ShapeTuple(), DimensionTypeTuple(), StrictAlloc, sync) {}
 
   Tensor(lazy_alloc_t, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : Tensor(ShapeTuple(), DimensionTypeTuple(), LazyAlloc, sync) {}
 
-  Tensor(unlazy_alloc_t, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : Tensor(ShapeTuple(), DimensionTypeTuple(), UnlazyAlloc, sync) {}
+  Tensor(strict_alloc_t, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : Tensor(ShapeTuple(), DimensionTypeTuple(), StrictAlloc, sync) {}
 
   Tensor(T* buffer,
          const ShapeTuple& shape_,
