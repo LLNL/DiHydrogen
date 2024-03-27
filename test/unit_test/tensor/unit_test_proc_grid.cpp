@@ -7,7 +7,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_template_test_macros.hpp>
-#include <catch2/generators/catch_generators.hpp>
 
 #include "h2/tensor/proc_grid.hpp"
 #include "utils.hpp"
@@ -19,7 +18,7 @@ using namespace h2;
 
 TEST_CASE("get_unique_factors works", "[dist-tensor][misc]")
 {
-  using internal::get_unique_factors;
+  using ::internal::get_unique_factors;
   REQUIRE(get_unique_factors(1) == std::vector<int>{1});
   REQUIRE(get_unique_factors(2) == std::vector<int>{1, 2});
   REQUIRE(get_unique_factors(3) == std::vector<int>{1, 3});
@@ -34,7 +33,7 @@ TEST_CASE("get_unique_factors works", "[dist-tensor][misc]")
 
 TEST_CASE("all_grid_shapes works", "[dist-tensor][misc]")
 {
-  using internal::all_grid_shapes;
+  using ::internal::all_grid_shapes;
   using ST = ShapeTuple;
   using rt = std::unordered_set<ShapeTuple>;
 
@@ -133,4 +132,18 @@ TEST_CASE("Processor grid equality works", "[dist-tensor][proc-grid]")
     REQUIRE(grid1 == grid3);
     REQUIRE_FALSE(grid1 != grid3);
   }
+}
+
+TEST_CASE("Processor grids are printable", "[dist-tensor][proc-grid]")
+{
+  for_comms([&](Comm& comm) {
+    for_grid_shapes([&](ShapeTuple shape) {
+      ProcessorGrid grid = ProcessorGrid(comm, shape);
+      std::stringstream ss;
+      std::stringstream shape_ss;
+      print_tuple(shape_ss, shape, "(", ")", " x ");
+      ss << grid;
+      REQUIRE(ss.str() == std::string("Grid") + shape_ss.str());
+    }, comm);
+  });
 }

@@ -13,6 +13,8 @@
  */
 
 #include "h2/tensor/tensor_types.hpp"
+#include "h2/utils/Describable.hpp"
+#include "h2/utils/typename.hpp"
 
 namespace h2
 {
@@ -41,7 +43,7 @@ namespace h2
  * This only happens when the tensor is not const.
  */
 template <typename T>
-class BaseTensor {
+class BaseTensor : public Describable {
 public:
 
   using value_type = T;
@@ -103,8 +105,25 @@ public:
   }
 
   /** Return true if the tensor is empty (all dimensions size 0). */
-  bool is_empty() const H2_NOEXCEPT {
-    return numel() == 0;
+  bool is_empty() const H2_NOEXCEPT { return numel() == 0; }
+
+  /** Output a short description of the tensor. */
+  void short_describe(std::ostream& os) const override
+  {
+    os << "Tensor<" << TypeName<T>() << ", " << get_device() << ">(";
+    if (is_view())
+    {
+      os << get_view_type() << " of ";
+    }
+    for (ShapeTuple::size_type i = 0; i < ndim(); ++i)
+    {
+      os << dim_type(i) << ":" << shape(i);
+      if (i < ndim() - 1)
+      {
+        os << " x ";
+      }
+    }
+    os << ")";
   }
 
   /** Return true if the tensor's underlying memory is contiguous. */
