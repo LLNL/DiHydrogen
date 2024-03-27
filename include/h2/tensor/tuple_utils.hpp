@@ -109,10 +109,11 @@ template <typename T,
 constexpr FixedSizeTuple<T, SizeType, N>
 map(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
 {
-  FixedSizeTuple<T, SizeType, N> mapped_tuple;
-  for (const auto& v : tuple)
+  FixedSizeTuple<T, SizeType, N> mapped_tuple(
+      TuplePad<FixedSizeTuple<T, SizeType, N>>(tuple.size()));
+  for (SizeType i = 0; i < tuple.size(); ++i)
   {
-    mapped_tuple.append(p(v));
+    mapped_tuple[i] = p(tuple[i]);
   }
   return mapped_tuple;
 }
@@ -126,10 +127,52 @@ template <typename NewT,
 constexpr FixedSizeTuple<NewT, SizeType, N>
 map(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
 {
-  FixedSizeTuple<NewT, SizeType, N> mapped_tuple;
-  for (const auto& v : tuple)
+  FixedSizeTuple<NewT, SizeType, N> mapped_tuple(
+      TuplePad<FixedSizeTuple<NewT, SizeType, N>>(tuple.size()));
+  for (SizeType i = 0; i < tuple.size(); ++i)
   {
-    mapped_tuple.append(p(v));
+    mapped_tuple[i] = p(tuple[i]);
+  }
+  return mapped_tuple;
+}
+
+/**
+ * Like map, except passes the index of each entry in tuple to the
+ * given predicate, rather than the value.
+ *
+ * This is primarily useful when your predicate can capture some other
+ * object that it needs to interact with.
+ */
+template <typename T,
+          typename SizeType,
+          SizeType N,
+          typename Predicate>
+constexpr FixedSizeTuple<T, SizeType, N>
+map_index(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
+{
+  FixedSizeTuple<T, SizeType, N> mapped_tuple(
+      TuplePad<FixedSizeTuple<T, SizeType, N>>(tuple.size()));
+  for (SizeType i = 0; i < tuple.size(); ++i)
+  {
+    mapped_tuple[i] = p(i);
+  }
+  return mapped_tuple;
+}
+
+/** map_index with a different FixedSizeTuple return type. */
+template <typename NewT,
+          typename T,
+          typename SizeType,
+          SizeType N,
+          typename Predicate>
+constexpr FixedSizeTuple<NewT, SizeType, N>
+map_index(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
+{
+  FixedSizeTuple<NewT, SizeType, N> mapped_tuple(
+      TuplePad<FixedSizeTuple<NewT, SizeType, N>>(tuple.size()));
+  for (SizeType i = 0; i < tuple.size(); ++i)
+  {
+    mapped_tuple[i] = p(i);
   }
   return mapped_tuple;
 }

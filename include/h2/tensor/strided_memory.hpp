@@ -82,7 +82,7 @@ public:
   {}
 
   /** Allocate memory for shape, with unit strides. */
-  StridedMemory(ShapeTuple shape, bool lazy = false,
+  StridedMemory(const ShapeTuple& shape, bool lazy = false,
                 const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : StridedMemory(lazy, sync)
   {
@@ -96,7 +96,8 @@ public:
   }
 
   /** View a subregion of an existing memory region. */
-  StridedMemory(const StridedMemory<T, Dev>& base, IndexRangeTuple coords)
+  StridedMemory(const StridedMemory<T, Dev>& base,
+                const IndexRangeTuple& coords)
       : raw_buffer(base.raw_buffer),
         mem_offset(INVALID_OFFSET),
         // mem_shape and mem_strides are set below.
@@ -145,8 +146,8 @@ public:
 
   /** Wrap an existing memory buffer. */
   StridedMemory(T* buffer,
-                ShapeTuple shape,
-                StrideTuple strides,
+                const ShapeTuple& shape,
+                const StrideTuple& strides,
                 const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : raw_buffer(nullptr),
       mem_offset(0),
@@ -259,17 +260,17 @@ public:
   }
 
   /** Return a pointer to the memory at the given coordinates. */
-  T* get(ScalarIndexTuple coords) H2_NOEXCEPT {
+  T* get(const ScalarIndexTuple& coords) H2_NOEXCEPT {
     H2_ASSERT_DEBUG(data(), "No memory");
     return &(data()[get_index(coords)]);
   }
 
-  const T* get(ScalarIndexTuple coords) const H2_NOEXCEPT {
+  const T* get(const ScalarIndexTuple& coords) const H2_NOEXCEPT {
     H2_ASSERT_DEBUG(data(), "No memory");
     return &(data()[get_index(coords)]);
   }
 
-  const T* const_get(ScalarIndexTuple coords) const H2_NOEXCEPT {
+  const T* const_get(const ScalarIndexTuple& coords) const H2_NOEXCEPT {
     H2_ASSERT_DEBUG(const_data(), "No memory");
     return &(const_data()[get_index(coords)]);
   }

@@ -38,7 +38,7 @@ scalar2range_tuple(const ScalarIndexTuple& tuple) H2_NOEXCEPT
  * This is the starting point of each index range in the tuple.
  */
 constexpr inline ScalarIndexTuple
-get_index_range_start(IndexRangeTuple coords) H2_NOEXCEPT
+get_index_range_start(const IndexRangeTuple& coords) H2_NOEXCEPT
 {
   ScalarIndexTuple coords_start(TuplePad<ScalarIndexTuple>(coords.size()));
   for (typename IndexRangeTuple::size_type i = 0; i < coords.size(); ++i) {
@@ -54,7 +54,8 @@ get_index_range_start(IndexRangeTuple coords) H2_NOEXCEPT
  * This occurs when at least one entry in the range is empty or the
  * range itself is empty.
  */
-constexpr inline bool is_index_range_empty(IndexRangeTuple coords) H2_NOEXCEPT
+constexpr inline bool
+is_index_range_empty(const IndexRangeTuple& coords) H2_NOEXCEPT
 {
   return coords.is_empty()
          || any_of(coords, [](const typename IndexRangeTuple::type& c) {
@@ -70,8 +71,9 @@ constexpr inline bool is_index_range_empty(IndexRangeTuple coords) H2_NOEXCEPT
  * undefined. (However, `coords` itself may be empty, which yields an
  * empty shape.)
  */
-constexpr inline ShapeTuple get_index_range_shape(IndexRangeTuple coords,
-                                                  ShapeTuple shape) H2_NOEXCEPT
+constexpr inline ShapeTuple
+get_index_range_shape(const IndexRangeTuple& coords,
+                      const ShapeTuple& shape) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(coords.size() <= shape.size(),
                   "coords size not compatible with shape size");
@@ -95,8 +97,9 @@ constexpr inline ShapeTuple get_index_range_shape(IndexRangeTuple coords,
 /**
  * Return true if an index range is contained within a given shape.
  */
-constexpr inline bool is_index_range_contained(IndexRangeTuple coords,
-                                               ShapeTuple shape) H2_NOEXCEPT
+constexpr inline bool
+is_index_range_contained(const IndexRangeTuple& coords,
+                         const ShapeTuple& shape) H2_NOEXCEPT
 {
   if (coords.size() > shape.size())
   {
@@ -114,6 +117,75 @@ constexpr inline bool is_index_range_contained(IndexRangeTuple coords,
 }
 
 /**
+ * Return true if two index ranges have a non-empty intersection.
+ *
+ * The index ranges may not be scalar.
+ */
+constexpr inline bool
+do_index_ranges_intersect(const IndexRange& ir1,
+                          const IndexRange& ir2) H2_NOEXCEPT
+{
+  H2_ASSERT_DEBUG(!ir1.is_scalar() && !ir2.is_scalar(),
+                  "Cannot intersect scalar index ranges");
+  return !ir1.is_empty() && !ir2.is_empty()
+         && ((ir1 == ALL) || (ir2 == ALL)
+             || (ir1.start() < ir2.end() && ir2.start() < ir1.end()));
+}
+
+/**
+ * Return true if two index ranges have a non-empty intersection.
+ *
+ * The index ranges may not have scalar entries.
+ */
+constexpr inline bool
+do_index_ranges_intersect(const IndexRangeTuple& ir1,
+                          const IndexRangeTuple& ir2) H2_NOEXCEPT
+{
+  H2_ASSERT_DEBUG(ir1.size() == ir2.size(),
+                  "Index ranges must be the same size to intersect");
+  for (typename IndexRangeTuple::size_type i = 0; i < ir1.size(); ++i)
+  {
+    if (!do_index_ranges_intersect(ir1[i], ir2[i]))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Return the intersection of of two index ranges.
+ *
+ * The index ranges must have a non-empty intersection.
+ */
+constexpr inline IndexRange
+intersect_index_ranges(const IndexRange& ir1, const IndexRange& ir2) H2_NOEXCEPT
+{
+  H2_ASSERT_DEBUG(do_index_ranges_intersect(ir1, ir2),
+                  "Index ranges must intersect");
+  return IndexRange(std::max(ir1.start(), ir2.start()),
+                    std::min(ir1.end(), ir2.end()));
+}
+
+/**
+ * Return the intersection of of two index ranges.
+ *
+ * The index ranges must have a non-empty intersection.
+ */
+constexpr inline IndexRangeTuple
+intersect_index_ranges(const IndexRangeTuple& ir1,
+                       const IndexRangeTuple& ir2) H2_NOEXCEPT
+{
+  H2_ASSERT_DEBUG(ir1.size() == ir2.size(),
+                  "Index ranges must be the same size to intersect");
+  H2_ASSERT_DEBUG(do_index_ranges_intersect(ir1, ir2),
+                  "Index ranges must intersect");
+  return map_index(ir1, [&ir1, &ir2](IndexRangeTuple::size_type i) {
+    return intersect_index_ranges(ir1[i], ir2[i]);
+  });
+}
+
+/**
  * Iterate over an n-dimensional region.
  *
  * The given function f will be called with a `SingleCoordTuple` for
@@ -122,7 +194,7 @@ constexpr inline bool is_index_range_contained(IndexRangeTuple coords,
  * @todo In the future, we could specialize for specific dimensions.
  */
 template <typename Func>
-void for_ndim(ShapeTuple shape, Func f)
+void for_ndim(const ShapeTuple& shape, Func f)
 {
   if (shape.is_empty())
   {

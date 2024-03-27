@@ -7,13 +7,17 @@
 
 #include <algorithm>
 #include <memory>
+#include <stack>
 #include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/generators/catch_generators_adapters.hpp>
 
 #include "h2/tensor/dist_types.hpp"
+#include "h2/tensor/tensor_types.hpp"
 #include "h2/utils/Error.hpp"
 
 
@@ -177,4 +181,144 @@ void for_comms(Test t, int min_size = 1, int max_size = -1)
   }
 
   internal::end_for_comms();
+}
+
+namespace internal
+{
+
+/** Return all unique factors of x in sorted order. */
+template <typename T>
+inline std::vector<T> get_unique_factors(T x, bool with_trivial = true)
+{
+  // This could be more efficient, but we shouldn't use it for large
+  // inputs anyway.
+  std::vector<T> factors = {};
+  if (with_trivial)
+  {
+    factors.push_back(1);
+  }
+  for (T i = 2; i <= x / 2; ++i)
+  {
+    if (x % i == 0)
+    {
+      factors.push_back(i);
+    }
+  }
+  if (x != 1 && with_trivial)
+  {
+    factors.push_back(x);
+  }
+
+  return factors;
+}
+
+inline std::unordered_set<h2::ShapeTuple>
+all_grid_shapes(h2::ShapeTuple::type size,
+                h2::ShapeTuple::type min_size,
+                h2::ShapeTuple::size_type max_size)
+{
+  // For convenience.
+  using ShapeTuple = h2::ShapeTuple;
+  using type = ShapeTuple::type;
+  using size_type = ShapeTuple::size_type;
+
+  if (size == 1 && min_size <= 1)
+  {
+    return {ShapeTuple{1}};
+  }
+
+  std::unordered_set<ShapeTuple> shapes;
+  if (min_size <= 1)
+  {
+    shapes.insert(ShapeTuple{size});
+  }
+
+  // Handle case where we cannot expand further.
+  if (max_size == 1)
+  {
+    return shapes;
+  }
+
+  std::vector<type> factors = get_unique_factors(size, false);
+  // Precompute the factorizations of all of the factors.
+  std::unordered_map<type, std::vector<type>> factorizations;
+  for (const auto& factor : factors)
+  {
+    factorizations[factor] = get_unique_factors(factor, false);
+  }
+  factorizations[size] = factors;
+
+  // Set of shapes to expand.
+  std::stack<ShapeTuple> to_expand;
+  to_expand.push(ShapeTuple{size});
+  while (!to_expand.empty())
+  {
+    ShapeTuple cur_shape = to_expand.top();
+    to_expand.pop();
+    for (size_type i = 0; i < cur_shape.size(); ++i)
+    {
+      type cur_val = cur_shape[i];
+      // Sanity-check:
+      H2_ASSERT_ALWAYS(factorizations.count(cur_val),
+                       "No factorizations for " + std::to_string(cur_val));
+      for (const auto& factor : factorizations.at(cur_val))
+      {
+        ShapeTuple new_shape;
+        new_shape.set_size(cur_shape.size() + 1);
+        // Copy preceeding elements.
+        for (size_type j = 0; j < i; ++j)
+        {
+          new_shape[j] = cur_shape[j];
+        }
+        // Insert expanded value.
+        new_shape[i] = factor;
+        new_shape[i + 1] = cur_val / factor;
+        // Copy remaining elements.
+        for (size_type j = i + 1; j < cur_shape.size(); ++j)
+        {
+          new_shape[j + 1] = cur_shape[j];
+        }
+        if (new_shape.size() < max_size)
+        {
+          to_expand.push(new_shape);
+        }
+        // Add the new shape and all its permutations.
+        if (new_shape.size() >= min_size)
+        {
+          do
+          {
+            shapes.insert(new_shape);
+          } while (std::next_permutation(new_shape.begin(), new_shape.end()));
+        }
+      }
+    }
+  }
+
+  return shapes;
+}
+
+}  // namespace internal
+
+/**
+ * Invoke a test case with every possible grid shape between a minimum
+ * and maximum number of dimensions (both inclusive), excluding (most)
+ * trivial grid shapes.
+ */
+template <typename Test>
+void for_grid_shapes(
+    Test t,
+    h2::Comm& comm,
+    h2::ShapeTuple::size_type min_size = 0,
+    h2::ShapeTuple::size_type max_size = h2::ShapeTuple::max_size)
+{
+  H2_ASSERT_ALWAYS(max_size <= h2::ShapeTuple::max_size,
+                   "Requested maximum grid dimensions are too large");
+  H2_ASSERT_ALWAYS(max_size >= 1, "Must have at least one grid dimension");
+
+  auto shapes = internal::all_grid_shapes(comm.Size(), min_size, max_size);
+
+  for (const auto& shape : shapes)
+  {
+    t(shape);
+  }
 }

@@ -16,10 +16,12 @@
 #include "h2/tensor/strided_memory.hpp"
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/tensor/tensor_utils.hpp"
-#include "tensor_types.hpp"
 
 namespace h2
 {
+
+// Forward-declaration:
+template <typename T, Device Dev> class DistTensor;
 
 /** Tensor class for arbitrary types and devices. */
 template <typename T, Device Dev>
@@ -28,50 +30,50 @@ public:
   using value_type = T;
   static constexpr Device device = Dev;
 
-  Tensor(ShapeTuple shape_,
-         DimensionTypeTuple dim_types_,
+  Tensor(const ShapeTuple& shape_,
+         const DimensionTypeTuple& dim_types_,
          const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-      : Tensor(shape_, dim_types_, UnlazyAlloc, sync)
+      : Tensor(shape_, dim_types_, StrictAlloc, sync)
   {}
 
-  Tensor(ShapeTuple shape_,
-         DimensionTypeTuple dim_types_,
+  Tensor(const ShapeTuple& shape_,
+         const DimensionTypeTuple& dim_types_,
          lazy_alloc_t,
          const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
     BaseTensor<T>(shape_, dim_types_),
     tensor_memory(shape_, true, sync)
   {}
 
-  Tensor(ShapeTuple shape_,
-         DimensionTypeTuple dim_types_,
-         unlazy_alloc_t,
+  Tensor(const ShapeTuple& shape_,
+         const DimensionTypeTuple& dim_types_,
+         strict_alloc_t,
          const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
     BaseTensor<T>(shape_, dim_types_),
     tensor_memory(shape_, false, sync)
   {}
 
   Tensor(const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : Tensor(ShapeTuple(), DimensionTypeTuple(), UnlazyAlloc, sync) {}
+    : Tensor(ShapeTuple(), DimensionTypeTuple(), StrictAlloc, sync) {}
 
   Tensor(lazy_alloc_t, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
     : Tensor(ShapeTuple(), DimensionTypeTuple(), LazyAlloc, sync) {}
 
-  Tensor(unlazy_alloc_t, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : Tensor(ShapeTuple(), DimensionTypeTuple(), UnlazyAlloc, sync) {}
+  Tensor(strict_alloc_t, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    : Tensor(ShapeTuple(), DimensionTypeTuple(), StrictAlloc, sync) {}
 
   Tensor(T* buffer,
-         ShapeTuple shape_,
-         DimensionTypeTuple dim_types_,
-         StrideTuple strides_,
+         const ShapeTuple& shape_,
+         const DimensionTypeTuple& dim_types_,
+         const StrideTuple& strides_,
          const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
     BaseTensor<T>(ViewType::Mutable, shape_, dim_types_),
     tensor_memory(buffer, shape_, strides_, sync)
   {}
 
   Tensor(const T* buffer,
-         ShapeTuple shape_,
-         DimensionTypeTuple dim_types_,
-         StrideTuple strides_,
+         const ShapeTuple& shape_,
+         const DimensionTypeTuple& dim_types_,
+         const StrideTuple& strides_,
          const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
     BaseTensor<T>(ViewType::Const, shape_, dim_types_),
     tensor_memory(const_cast<T*>(buffer), shape_, strides_, sync)
@@ -102,7 +104,7 @@ public:
     }
   }
 
-  void resize(ShapeTuple new_shape) override {
+  void resize(const ShapeTuple& new_shape) override {
     if (this->is_view()) {
       throw H2Exception("Cannot resize a view");
     }
@@ -116,7 +118,9 @@ public:
     this->tensor_dim_types.set_size(new_shape.size());
   }
 
-  void resize(ShapeTuple new_shape, DimensionTypeTuple new_dim_types) override {
+  void resize(const ShapeTuple& new_shape,
+              const DimensionTypeTuple& new_dim_types) override
+  {
     if (this->is_view()) {
       throw H2Exception("Cannot resize a view");
     }
@@ -174,25 +178,27 @@ public:
   }
 
   Tensor<T, Dev>* view() override {
-    return view(IndexRangeTuple(TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
+    return view(IndexRangeTuple(
+        TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
   Tensor<T, Dev>* view() const override
   {
-    return view(IndexRangeTuple(TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
+    return view(IndexRangeTuple(
+        TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  Tensor<T, Dev>* view(IndexRangeTuple coords) override
+  Tensor<T, Dev>* view(const IndexRangeTuple& coords) override
   {
     return make_view(coords, ViewType::Mutable);
   }
 
-  Tensor<T, Dev>* view(IndexRangeTuple coords) const override
+  Tensor<T, Dev>* view(const IndexRangeTuple& coords) const override
   {
     return make_view(coords, ViewType::Const);
   }
 
-  Tensor<T, Dev>* operator()(IndexRangeTuple coords) override
+  Tensor<T, Dev>* operator()(const IndexRangeTuple& coords) override
   {
     return view(coords);
   }
@@ -203,24 +209,25 @@ public:
   }
 
   Tensor<T, Dev>* const_view() const override {
-    return const_view(IndexRangeTuple(TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
+    return const_view(IndexRangeTuple(
+        TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  Tensor<T, Dev>* const_view(IndexRangeTuple coords) const override
+  Tensor<T, Dev>* const_view(const IndexRangeTuple& coords) const override
   {
     return make_view(coords, ViewType::Const);
   }
 
-  Tensor<T, Dev>* operator()(IndexRangeTuple coords) const override {
+  Tensor<T, Dev>* operator()(const IndexRangeTuple& coords) const override {
     return const_view(coords);
   }
 
-  T* get(ScalarIndexTuple coords) override
+  T* get(const ScalarIndexTuple& coords) override
   {
     return tensor_memory.get(coords);
   }
 
-  const T* get(ScalarIndexTuple coords) const override
+  const T* get(const ScalarIndexTuple& coords) const override
   {
     return tensor_memory.get(coords);
   }
@@ -252,14 +259,19 @@ private:
   StridedMemory<T, Dev> tensor_memory;
 
   /** Private constructor for views. */
-  Tensor(ViewType view_type_, const StridedMemory<T, Dev>& mem_,
-         ShapeTuple shape_, DimensionTypeTuple dim_types_, IndexRangeTuple coords) :
+  Tensor(ViewType view_type_,
+         const StridedMemory<T, Dev>& mem_,
+         const ShapeTuple& shape_,
+         const DimensionTypeTuple& dim_types_,
+         const IndexRangeTuple& coords)
+      :
     BaseTensor<T>(view_type_, shape_, dim_types_),
     tensor_memory(mem_, coords)
   {}
 
   /** Helper for constructing views. */
-  Tensor<T, Dev>* make_view(IndexRangeTuple coords, ViewType view_type) const
+  Tensor<T, Dev>* make_view(const IndexRangeTuple& coords,
+                            ViewType view_type) const
   {
     if (!is_index_range_contained(coords, this->tensor_shape))
     {
@@ -299,6 +311,9 @@ private:
                               filtered_dim_types,
                               coords);
   }
+
+  // DistTensor needs to poke in here for some view stuff.
+  friend class DistTensor<T, Dev>;
 };
 
 }  // namespace h2

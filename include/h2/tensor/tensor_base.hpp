@@ -49,7 +49,7 @@ public:
   /**
    * Construct a tensor with the given shape and dimension types.
    */
-  BaseTensor(ShapeTuple shape_, DimensionTypeTuple dim_types_) :
+  BaseTensor(const ShapeTuple& shape_, const DimensionTypeTuple& dim_types_) :
     tensor_shape(shape_),
     tensor_dim_types(dim_types_),
     tensor_view_type(ViewType::None)
@@ -138,14 +138,15 @@ public:
    *
    * It is an error to call this on a view.
    */
-  virtual void resize(ShapeTuple new_shape) = 0;
+  virtual void resize(const ShapeTuple& new_shape) = 0;
 
   /**
    * Resize the tensor to a new shape, also changing dimension types.
    *
    * It is an error to call this on a view.
    */
-  virtual void resize(ShapeTuple new_shape, DimensionTypeTuple new_dim_types) = 0;
+  virtual void resize(const ShapeTuple& new_shape,
+                      const DimensionTypeTuple& new_dim_types) = 0;
 
   /**
    * Return a raw pointer to the underlying storage.
@@ -232,19 +233,20 @@ public:
    * must be of contiguous subsets of the tensor (i.e., no strides).
    *
    * The `coords` given may omit dimensions on the right. In this case,
-   * they are assumed to have their full range.
+   * they are assumed to have their full range. However, if `coords` is
+   * fully empty, the view iwll be empty.
    *
    * If dimensions in `coords` are given as scalars, these dimensions
    * are eliminated from the tensor. If all dimensions are eliminated,
    * i.e., you access a specific element, the resulting view will have
    * one dimension with dimension-type `Scalar`.
    */
-  virtual BaseTensor<T>* view(IndexRangeTuple coords) = 0;
+  virtual BaseTensor<T>* view(const IndexRangeTuple& coords) = 0;
 
   /**
    * Return a constant view of a subtensor of this tensor.
    */
-  virtual BaseTensor<T>* view(IndexRangeTuple coords) const = 0;
+  virtual BaseTensor<T>* view(const IndexRangeTuple& coords) const = 0;
 
   /**
    * If this tensor is a view, stop viewing.
@@ -259,24 +261,24 @@ public:
   // view(coords) because we need to covariant return type.
 
   /** Convenience wrapper for view(coords). */
-  virtual BaseTensor<T>* operator()(IndexRangeTuple coords) = 0;
+  virtual BaseTensor<T>* operator()(const IndexRangeTuple& coords) = 0;
 
   /** Return a constant view of this tensor. */
   virtual BaseTensor<T>* const_view() const = 0;
 
   /** Return a constant view of a subtensor of this tensor. */
-  virtual BaseTensor<T>* const_view(IndexRangeTuple coords) const = 0;
+  virtual BaseTensor<T>* const_view(const IndexRangeTuple& coords) const = 0;
 
   /** Convenience wrapper for const_view(coords). */
-  virtual BaseTensor<T>* operator()(IndexRangeTuple coords) const = 0;
+  virtual BaseTensor<T>* operator()(const IndexRangeTuple& coords) const = 0;
 
   /** Return a pointer to the tensor at a particular coordinate. */
-  virtual T* get(ScalarIndexTuple coords) = 0;
+  virtual T* get(const ScalarIndexTuple& coords) = 0;
 
   /**
    * Return a constant pointer to the tensor at a particular coordinate.
    */
-  virtual const T* get(ScalarIndexTuple coords) const = 0;
+  virtual const T* get(const ScalarIndexTuple& coords) const = 0;
 
 protected:
   ShapeTuple tensor_shape;  /**< Shape of the tensor. */
@@ -285,8 +287,8 @@ protected:
 
   /** Construct a tensor with the given view type, shape, and dimension types. */
   BaseTensor(ViewType view_type_,
-             ShapeTuple shape_,
-             DimensionTypeTuple dim_types_)
+             const ShapeTuple& shape_,
+             const DimensionTypeTuple& dim_types_)
       : tensor_shape(shape_),
         tensor_dim_types(dim_types_),
         tensor_view_type(view_type_)

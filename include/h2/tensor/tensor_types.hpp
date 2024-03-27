@@ -265,8 +265,8 @@ struct IndexRange
       : index_start(start_),
         index_end(end_)
   {
-    H2_ASSERT_DEBUG(start_ <= end_,
-                    "IndexRange with end < start not supported, you probably "
+    H2_ASSERT_DEBUG(start_ < end_,
+                    "IndexRange with end <= start not supported, you probably "
                     "have a bug or want an empty IndexRange");
   }
 
@@ -362,6 +362,6 @@ static constexpr struct tensor_attempt_recovery_t {} TensorAttemptRecovery;
 /** Tag to indicate a tensor should allocate lazily. */
 static constexpr struct lazy_alloc_t {} LazyAlloc;
 /** Tag to indicate a tensor should not allocate lazily. */
-static constexpr struct unlazy_alloc_t {} UnlazyAlloc;
+static constexpr struct strict_alloc_t {} StrictAlloc;
 
 }  // namespace h2
