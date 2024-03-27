@@ -38,6 +38,9 @@ namespace h2
  * Grids also provide a notion of a rank in each dimension.
  *
  * The underlying communicator will be duplicated.
+ *
+ * \note There is no attempt at "topology-aware" mapping here (e.g., `MPI_Cart_create`).
+ *       Users should manually manage this on the input communicator if desired.
  */
 class ProcessorGrid
 {
