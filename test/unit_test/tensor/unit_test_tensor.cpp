@@ -277,6 +277,18 @@ TEMPLATE_LIST_TEST_CASE("Resizing tensors works", "[tensor]", AllDevList)
   SECTION("Resizing while adding dimensions requires dim types") {
     REQUIRE_THROWS(tensor.resize({2, 3, 4}));
   }
+  SECTION("Resizing while changing strides works")
+  {
+    tensor.resize({4, 6}, {DT::Sample, DT::Any}, {1, 8});
+    REQUIRE(tensor.shape() == ShapeTuple{4, 6});
+    REQUIRE(tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
+    REQUIRE(tensor.strides() == StrideTuple{1, 8});
+    REQUIRE(tensor.ndim() == 2);
+    REQUIRE(tensor.numel() == 4*6);
+    REQUIRE_FALSE(tensor.is_contiguous());
+    REQUIRE(tensor.data() != nullptr);
+    REQUIRE(tensor.const_data() != nullptr);
+  }
   SECTION("Emptying tensors") {
     tensor.empty();
     REQUIRE(tensor.shape() == ShapeTuple{});
