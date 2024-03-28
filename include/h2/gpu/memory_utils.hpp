@@ -1,12 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2022 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
-#ifndef H2_INCLUDE_H2_MEMORY_GPU_MEMORY_UTILS_HPP_INCLUDED
-#define H2_INCLUDE_H2_MEMORY_GPU_MEMORY_UTILS_HPP_INCLUDED
 
 /** @file
  *
@@ -171,4 +170,3 @@ inline void mem_zero(T* mem, size_t n_elmts, DeviceStream stream)
 
 } // namespace gpu
 } // namespace h2
-#endif // H2_INCLUDE_H2_MEMORY_GPU_MEMORY_UTILS_HPP_INCLUDED
