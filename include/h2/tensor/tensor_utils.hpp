@@ -188,8 +188,8 @@ intersect_index_ranges(const IndexRangeTuple& ir1,
 /**
  * Iterate over an n-dimensional region.
  *
- * The given function f will be called with a `SingleCoordTuple` for
- * each coordinate position.
+ * The given function f will be called with a `ScalarIndexTuple` for
+ * each index position.
  *
  * @todo In the future, we could specialize for specific dimensions.
  */
