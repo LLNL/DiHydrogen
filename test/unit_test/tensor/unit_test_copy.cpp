@@ -45,3 +45,126 @@ TEMPLATE_LIST_TEST_CASE("Buffer copy works", "[tensor][copy]", AllDevPairsList)
     REQUIRE(read_ele<DstDev>(dst.buf, i) == src_val);
   }
 }
+
+TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
+                        "[tensor][copy]",
+                        AllDevPairsList)
+{
+  constexpr Device SrcDev = meta::tlist::At<TestType, 0>::value;
+  constexpr Device DstDev = meta::tlist::At<TestType, 1>::value;
+  using SrcTensorType = Tensor<DataType, SrcDev>;
+  using DstTensorType = Tensor<DataType, DstDev>;
+  constexpr DataType src_val = static_cast<DataType>(1);
+  constexpr DataType dst_val = static_cast<DataType>(2);
+
+  SECTION("Copying into existing tensor works without resizing")
+  {
+    SrcTensorType src_tensor({4, 6}, {DT::Sample, DT::Any});
+    DstTensorType dst_tensor({4, 6}, {DT::Any, DT::Any});
+
+    DataType* dst_orig_data = dst_tensor.data();
+
+    for (std::size_t i = 0; i < src_tensor.numel(); ++i)
+    {
+      write_ele<SrcDev>(src_tensor.data(), i, src_val);
+      write_ele<DstDev>(dst_tensor.data(), i, dst_val);
+    }
+
+    REQUIRE_NOTHROW(Copy(dst_tensor, src_tensor));
+
+    REQUIRE(dst_tensor.shape() == ShapeTuple{4, 6});
+    REQUIRE(dst_tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
+    REQUIRE(dst_tensor.strides() == StrideTuple{1, 4});
+    REQUIRE(dst_tensor.numel() == 4 * 6);
+    REQUIRE_FALSE(dst_tensor.is_empty());
+    REQUIRE(dst_tensor.is_contiguous());
+    REQUIRE_FALSE(dst_tensor.is_view());
+    REQUIRE(src_tensor.data() != dst_tensor.data());
+    REQUIRE(dst_tensor.data() == dst_orig_data);
+
+    for (std::size_t i = 0; i < src_tensor.numel(); ++i)
+    {
+      REQUIRE(read_ele<SrcDev>(src_tensor.data(), i) == src_val);
+      REQUIRE(read_ele<DstDev>(dst_tensor.data(), i) == src_val);
+    }
+  }
+
+  SECTION("Copying into different-sized tensor works")
+  {
+    SrcTensorType src_tensor({4, 6}, {DT::Sample, DT::Any});
+    DstTensorType dst_tensor({2, 2}, {DT::Any, DT::Any});
+
+    for (std::size_t i = 0; i < src_tensor.numel(); ++i)
+    {
+      write_ele<SrcDev>(src_tensor.data(), i, src_val);
+    }
+    for (std::size_t i = 0; i < dst_tensor.numel(); ++i)
+    {
+      write_ele<DstDev>(dst_tensor.data(), i, dst_val);
+    }
+
+    REQUIRE_NOTHROW(Copy(dst_tensor, src_tensor));
+
+    REQUIRE(dst_tensor.shape() == ShapeTuple{4, 6});
+    REQUIRE(dst_tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
+    REQUIRE(dst_tensor.strides() == StrideTuple{1, 4});
+    REQUIRE(dst_tensor.numel() == 4 * 6);
+    REQUIRE_FALSE(dst_tensor.is_empty());
+    REQUIRE(dst_tensor.is_contiguous());
+    REQUIRE_FALSE(dst_tensor.is_view());
+    REQUIRE(src_tensor.data() != dst_tensor.data());
+
+    for (std::size_t i = 0; i < src_tensor.numel(); ++i)
+    {
+      REQUIRE(read_ele<SrcDev>(src_tensor.data(), i) == src_val);
+    }
+    for (std::size_t i = 0; i < src_tensor.numel(); ++i)
+    {
+      REQUIRE(read_ele<DstDev>(dst_tensor.data(), i) == src_val);
+    }
+  }
+
+  SECTION("Copying an empty tensor works")
+  {
+    SrcTensorType src_tensor;
+    DstTensorType dst_tensor({2, 4}, {DT::Any, DT::Any});
+
+    REQUIRE_NOTHROW(Copy(dst_tensor, src_tensor));
+
+    REQUIRE(dst_tensor.is_empty());
+  }
+
+  SECTION("Copying non-contiguous tensors works")
+  {
+    SrcTensorType src_tensor({4, 6}, {DT::Sample, DT::Any});
+    DstTensorType dst_tensor({4, 6}, {DT::Any, DT::Any});
+
+    // Resize to be non-contiguous.
+    src_tensor.resize(
+        src_tensor.shape(), src_tensor.dim_types(), StrideTuple{2, 4});
+
+    for (std::size_t i = 0; i < src_tensor.numel(); ++i)
+    {
+      write_ele<DstDev>(dst_tensor.data(), i, dst_val);
+    }
+    for_ndim(src_tensor.shape(), [&](const ScalarIndexTuple& i) {
+      write_ele<SrcDev>(src_tensor.get(i), 0, src_val);
+    });
+
+    REQUIRE_NOTHROW(Copy(dst_tensor, src_tensor));
+
+    REQUIRE(dst_tensor.shape() == ShapeTuple{4, 6});
+    REQUIRE(dst_tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
+    REQUIRE(dst_tensor.strides() == StrideTuple{2, 4});
+    REQUIRE(dst_tensor.numel() == 4 * 6);
+    REQUIRE_FALSE(dst_tensor.is_empty());
+    REQUIRE_FALSE(dst_tensor.is_contiguous());
+    REQUIRE_FALSE(dst_tensor.is_view());
+    REQUIRE(src_tensor.data() != dst_tensor.data());
+
+    for_ndim(src_tensor.shape(), [&](const ScalarIndexTuple& i) {
+      REQUIRE(read_ele<SrcDev>(src_tensor.get(i)) == src_val);
+      REQUIRE(read_ele<DstDev>(dst_tensor.get(i)) == src_val);
+    });
+  }
+}
