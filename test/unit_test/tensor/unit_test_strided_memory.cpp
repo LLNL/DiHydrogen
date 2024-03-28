@@ -58,12 +58,30 @@ TEST_CASE("get_contiguous_strides and are_strides_contiguous are compatible",
                                get_contiguous_strides(ShapeTuple{13, 3, 7})));
 }
 
+TEST_CASE("get_extent_from_strides works", "[tensor][strided_memor]")
+{
+  // Contiguous:
+  REQUIRE(get_extent_from_strides(ShapeTuple{}, StrideTuple{}) == 0);
+  REQUIRE(get_extent_from_strides(ShapeTuple{1}, StrideTuple{1}) == 1);
+  REQUIRE(get_extent_from_strides(ShapeTuple{13}, StrideTuple{1}) == 13);
+  REQUIRE(get_extent_from_strides(ShapeTuple{13, 1}, StrideTuple{1, 13}) == 13);
+  REQUIRE(get_extent_from_strides(ShapeTuple{13, 3, 7}, StrideTuple{1, 13, 39})
+          == 273);
+
+  // Non-contiguous:
+  REQUIRE(get_extent_from_strides(ShapeTuple{1}, StrideTuple{2}) == 1);
+  REQUIRE(get_extent_from_strides(ShapeTuple{13}, StrideTuple{2}) == 25);
+  REQUIRE(get_extent_from_strides(ShapeTuple{13, 3}, StrideTuple{1, 15}) == 43);
+  REQUIRE(get_extent_from_strides(ShapeTuple{13, 3, 7}, StrideTuple{2, 13, 50}) == 351);
+}
+
 TEMPLATE_LIST_TEST_CASE("StridedMemory is sane",
                         "[tensor][strided_memory]",
                         AllDevList) {
   using MemType = StridedMemory<DataType, TestType::value>;
 
   MemType mem = MemType(ShapeTuple{3, 7});
+  REQUIRE(mem.size() == 21);
   REQUIRE(mem.data() != nullptr);
   REQUIRE(mem.const_data() != nullptr);
   REQUIRE(mem.strides() == StrideTuple{1, 3});
@@ -78,27 +96,34 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory is sane",
   {
     DataType* orig_data = mem.data();
     mem.ensure();
+    REQUIRE(mem.size() == 21);
     REQUIRE(mem.data() == orig_data);
     REQUIRE(mem.const_data() == orig_data);
     mem.ensure();
+    REQUIRE(mem.size() == 21);
     REQUIRE(mem.data() == orig_data);
     REQUIRE(mem.const_data() == orig_data);
     mem.release();
+    REQUIRE(mem.size() == 0);
     REQUIRE(mem.data() == nullptr);
     REQUIRE(mem.const_data() == nullptr);
     mem.release();
+    REQUIRE(mem.size() == 0);
     REQUIRE(mem.data() == nullptr);
     REQUIRE(mem.const_data() == nullptr);
     mem.ensure();
+    REQUIRE(mem.size() == 21);
     REQUIRE(mem.data() != nullptr);
     REQUIRE(mem.const_data() != nullptr);
   }
   SECTION("Release then ensure works")
   {
     mem.release();
+    REQUIRE(mem.size() == 0);
     REQUIRE(mem.data() == nullptr);
     REQUIRE(mem.const_data() == nullptr);
     mem.ensure();
+    REQUIRE(mem.size() == 21);
     REQUIRE(mem.data() != nullptr);
     REQUIRE(mem.const_data() != nullptr);
   }
@@ -111,6 +136,7 @@ TEMPLATE_LIST_TEST_CASE("Empty StridedMemory is sane",
   using MemType = StridedMemory<DataType, TestType::value>;
 
   MemType mem;
+  REQUIRE(mem.size() == 0);
   REQUIRE(mem.data() == nullptr);
   REQUIRE(mem.const_data() == nullptr);
   REQUIRE(mem.strides() == StrideTuple{});
@@ -120,21 +146,26 @@ TEMPLATE_LIST_TEST_CASE("Empty StridedMemory is sane",
   SECTION("Ensure then release works")
   {
     mem.ensure();
+    REQUIRE(mem.size() == 0);
     REQUIRE(mem.data() == nullptr);
     REQUIRE(mem.const_data() == nullptr);
     mem.release();
+    REQUIRE(mem.size() == 0);
     REQUIRE(mem.data() == nullptr);
     REQUIRE(mem.const_data() == nullptr);
     mem.ensure();
+    REQUIRE(mem.size() == 0);
     REQUIRE(mem.data() == nullptr);
     REQUIRE(mem.const_data() == nullptr);
   }
   SECTION("Release then ensure works")
   {
     mem.release();
+    REQUIRE(mem.size() == 0);
     REQUIRE(mem.data() == nullptr);
     REQUIRE(mem.const_data() == nullptr);
     mem.ensure();
+    REQUIRE(mem.size() == 0);
     REQUIRE(mem.data() == nullptr);
     REQUIRE(mem.const_data() == nullptr);
   }
@@ -147,6 +178,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory with empty shape is sane",
   using MemType = StridedMemory<DataType, TestType::value>;
 
   MemType mem = MemType(ShapeTuple{});
+  REQUIRE(mem.size() == 0);
   REQUIRE(mem.data() == nullptr);
   REQUIRE(mem.const_data() == nullptr);
   REQUIRE(mem.strides() == StrideTuple{});
@@ -161,6 +193,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory with zero in shape is sane",
   using MemType = StridedMemory<DataType, TestType::value>;
 
   MemType mem = MemType(ShapeTuple{7, 0});
+  REQUIRE(mem.size() == 0);
   REQUIRE(mem.data() == nullptr);
   REQUIRE(mem.const_data() == nullptr);
   REQUIRE(mem.shape() == ShapeTuple{7, 0});
@@ -220,6 +253,23 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory writing works",
   }
 }
 
+TEMPLATE_LIST_TEST_CASE("StridedMemory with non-contiguous strides is sane",
+                        "[tensor][strided_memory]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType, TestType::value>;
+
+  MemType mem(ShapeTuple{3, 7, 2}, StrideTuple{2, 4, 21});
+
+  REQUIRE(mem.size() == 50);
+  REQUIRE(mem.data() != nullptr);
+  REQUIRE(mem.const_data() != nullptr);
+  REQUIRE(mem.strides() == StrideTuple{2, 4, 21});
+  REQUIRE(mem.shape() == ShapeTuple{3, 7, 2});
+  REQUIRE_FALSE(mem.is_lazy());
+}
+
 TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
                         "[tensor][strided_memory]",
                         AllDevList)
@@ -227,7 +277,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
   constexpr Device Dev = TestType::value;
   using MemType = StridedMemory<DataType, TestType::value>;
 
-  MemType base_mem = MemType({3, 7, 3});
+  MemType base_mem = MemType(ShapeTuple{3, 7, 3});
   for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
   {
     write_ele<Dev>(base_mem.data(), i, static_cast<DataType>(i));
@@ -238,6 +288,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
     MemType mem = MemType(base_mem, {IRng(1, 3), ALL, IRng(1, 3)});
     REQUIRE(mem.strides() == StrideTuple{1, 3, 21});
     REQUIRE(mem.shape() == ShapeTuple{2, 7, 2});
+    REQUIRE(mem.size() == base_mem.size());
     REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({1, 0, 1})));
     REQUIRE_FALSE(mem.is_lazy());
     for (DimType k = 0; k < mem.shape(2); ++k)
@@ -282,6 +333,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
     MemType mem = MemType(base_mem, {IRng(1), ALL, IRng(1, 3)});
     REQUIRE(mem.strides() == StrideTuple{3, 21});
     REQUIRE(mem.shape() == ShapeTuple{7, 2});
+    REQUIRE(mem.size() == base_mem.size());
     REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({1, 0, 1})));
     REQUIRE_FALSE(mem.is_lazy());
     for (DimType k = 0; k < mem.shape(1); ++k)
@@ -298,6 +350,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
     MemType mem = MemType(base_mem, {IRng(0, 2), IRng(1, 2), ALL});
     REQUIRE(mem.strides() == StrideTuple{1, 3, 21});
     REQUIRE(mem.shape() == ShapeTuple{2, 1, 3});
+    REQUIRE(mem.size() == base_mem.size());
     REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({0, 1, 0})));
     REQUIRE_FALSE(mem.is_lazy());
     for (DimType k = 0; k < mem.shape(2); ++k)
@@ -314,6 +367,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
     MemType mem = MemType(base_mem, {IRng(1), IRng(0), IRng(0)});
     REQUIRE(mem.strides() == StrideTuple{1});
     REQUIRE(mem.shape() == ShapeTuple{1});
+    REQUIRE(mem.size() == base_mem.size());
     REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({1, 0, 0})));
     REQUIRE_FALSE(mem.is_lazy());
     REQUIRE(read_ele<Dev>(mem.get({0})) == base_mem.get_index({1, 0, 0}));
@@ -323,6 +377,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
     MemType mem = MemType(base_mem, IndexRangeTuple{});
     REQUIRE(mem.strides() == StrideTuple{});
     REQUIRE(mem.shape() == ShapeTuple{});
+    REQUIRE(mem.size() == base_mem.size());
     REQUIRE(mem.data() == nullptr);
   }
   SECTION("Views with empty coordinates work")
@@ -330,6 +385,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
     MemType mem = MemType(base_mem, {IRng(0, 1), IRng(), ALL});
     REQUIRE(mem.strides() == StrideTuple{});
     REQUIRE(mem.shape() == ShapeTuple{});
+    REQUIRE(mem.size() == base_mem.size());
     REQUIRE(mem.data() == nullptr);
   }
 }
