@@ -170,6 +170,16 @@ public:
                       const DimensionTypeTuple& new_dim_types) = 0;
 
   /**
+   * Resize the tensor to a new shape, also changing dimension types
+   * and specifying new strides.
+   *
+   * It is an error to call this on a view.
+   */
+  virtual void resize(const ShapeTuple& new_shape,
+                      const DimensionTypeTuple& new_dim_types,
+                      const StrideTuple& new_strides) = 0;
+
+  /**
    * Return a raw pointer to the underlying storage.
    *
    * @note Remember to account for the strides when accessing this.
