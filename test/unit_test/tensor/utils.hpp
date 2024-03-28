@@ -23,8 +23,13 @@ using CPUDev_t = std::integral_constant<h2::Device, h2::Device::CPU>;
 #ifdef H2_TEST_WITH_GPU
 using GPUDev_t = std::integral_constant<h2::Device, h2::Device::GPU>;
 using AllDevList = h2::meta::TL<CPUDev_t, GPUDev_t>;
+using AllDevPairsList = h2::meta::TL<h2::meta::TL<CPUDev_t, CPUDev_t>,
+                                     h2::meta::TL<GPUDev_t, GPUDev_t>,
+                                     h2::meta::TL<CPUDev_t, GPUDev_t>,
+                                     h2::meta::TL<GPUDev_t, CPUDev_t>>;
 #else
 using AllDevList = h2::meta::TL<CPUDev_t>;
+using AllDevPairsList = h2::meta::TL<h2::meta::TL<CPUDev_t, CPUDev_t>>;
 #endif
 
 // Standard datatype to be used when testing.
