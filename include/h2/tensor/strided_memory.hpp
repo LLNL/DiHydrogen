@@ -27,7 +27,9 @@ namespace h2 {
  * Return the strides needed for a tensor of the given shape to be
  * contiguous.
  */
-constexpr inline StrideTuple get_contiguous_strides(ShapeTuple shape) {
+constexpr inline StrideTuple
+get_contiguous_strides(const ShapeTuple& shape) H2_NOEXCEPT
+{
   StrideTuple strides(TuplePad<StrideTuple>(shape.size(), 1));
   // Just need a prefix-product.
   for (typename ShapeTuple::size_type i = 1; i < shape.size(); ++i) {
@@ -40,8 +42,8 @@ constexpr inline StrideTuple get_contiguous_strides(ShapeTuple shape) {
  * Return true if the given strides are contiguous.
  */
 constexpr inline bool are_strides_contiguous(
-  ShapeTuple shape,
-  StrideTuple strides) {
+  const ShapeTuple& shape,
+  const StrideTuple& strides) H2_NOEXCEPT {
   H2_ASSERT_DEBUG(shape.size() == strides.size(),
                   "Shape and strides must be the same size");
   // Contiguous strides should follow the prefix-product.
@@ -57,6 +59,27 @@ constexpr inline bool are_strides_contiguous(
   }
   // Check the last entry and handle empty tuples.
   return (strides.size() == 0) || (prod == strides[i-1]);
+}
+
+/**
+ * Return the extent of a buffer implied by a shape and strides.
+ *
+ * This is in elements, not bytes.
+ */
+constexpr inline std::size_t
+get_extent_from_strides(const ShapeTuple& shape,
+                        const StrideTuple& strides) H2_NOEXCEPT
+{
+  if (shape.is_empty())
+  {
+    return 0;
+  }
+  // Implementation note:
+  // Think of this as getting the offset of the last index in shape,
+  // then adding 1 to account for the last element.
+  return inner_product<std::size_t>(
+             map(shape, [](ShapeTuple::type x) { return x - 1; }), strides)
+         + 1;
 }
 
 /**
@@ -84,11 +107,24 @@ public:
   /** Allocate memory for shape, with unit strides. */
   StridedMemory(const ShapeTuple& shape, bool lazy = false,
                 const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : StridedMemory(lazy, sync)
+    : StridedMemory(shape, get_contiguous_strides(shape), lazy, sync)
+  {}
+
+  /** Allocate memory for shape with the given strides. */
+  StridedMemory(const ShapeTuple& shape,
+                const StrideTuple& strides,
+                bool lazy = false,
+                const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+      : StridedMemory(lazy, sync)
   {
+    H2_ASSERT_DEBUG(shape.size() == strides.size(),
+                    "Shape and strides must be the same size");
     if (!shape.is_empty())
     {
-      mem_strides = get_contiguous_strides(shape);
+      H2_ASSERT_DEBUG(
+        get_extent_from_strides(shape, strides) >= product<std::size_t>(shape),
+        "Provided strides are not sane");
+      mem_strides = strides;
       mem_shape = shape;
       make_raw_buffer(lazy);
       mem_offset = 0;
@@ -160,7 +196,11 @@ public:
                     || shape.is_empty()
                     || any_of(shape, [](ShapeTuple::type x) { return x == 0; }),
                     "Null buffer but non-zero shape provided to StridedMemory");
-    std::size_t size = product<std::size_t>(shape);
+    H2_ASSERT_DEBUG(shape.is_empty()
+                        || get_extent_from_strides(shape, strides)
+                               >= product<std::size_t>(shape),
+                    "Provided strides are not sane");
+    std::size_t size = get_extent_from_strides(shape, strides);
     raw_buffer = std::make_shared<raw_buffer_t>(buffer, size, sync);
   }
 
@@ -202,6 +242,23 @@ public:
       old_raw_buffer = raw_buffer;
       raw_buffer.reset();
     }
+  }
+
+  /**
+   * Return the size of the memory, in bytes.
+   *
+   * This gives the size of the entire underlying buffer. It may be
+   * larger than expected due to views or non-contiguous strides.
+   *
+   * This is mainly for internal use.
+   */
+  std::size_t size() const H2_NOEXCEPT
+  {
+    if (raw_buffer)
+    {
+      return raw_buffer->size();
+    }
+    return 0;
   }
 
   T* data() H2_NOEXCEPT
@@ -326,7 +383,7 @@ private:
     // Do not allocate a RawBuffer for empty memory.
     if (!mem_shape.is_empty())
     {
-      const std::size_t size = product<std::size_t>(mem_shape);
+      const std::size_t size = get_extent_from_strides(mem_shape, mem_strides);
       if (size) {
         raw_buffer = std::make_shared<raw_buffer_t>(size, lazy, sync_info);
       }
