@@ -58,7 +58,7 @@ TEST_CASE("Processor grids can be created", "[dist-tensor][proc-grid]")
     for_grid_shapes([&](ShapeTuple shape) {
       REQUIRE_NOTHROW([&] {
         ProcessorGrid grid = ProcessorGrid(comm, {comm.Size()});
-      });
+      }());
     }, comm);
   });
 }

@@ -17,6 +17,8 @@ h2_add_sources_to_target_and_install(
   Version.hpp
 )
 
+add_subdirectory(core)
+
 add_subdirectory(gpu)
 
 add_subdirectory(tensor)

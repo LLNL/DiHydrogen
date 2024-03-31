@@ -17,6 +17,7 @@ h2_add_sources_to_target_and_install(
   logger.hpp
   memory_utils.hpp
   runtime.hpp
+  sync.hpp
   )
 
 # Get other directories' files
