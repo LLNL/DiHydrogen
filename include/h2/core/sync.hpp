@@ -234,6 +234,20 @@ public:
   void wait_for_this() const override {}
 };
 
+/** Equality for CPU events. */
+inline bool operator==(const SyncEvent<Device::CPU>&,
+                       const SyncEvent<Device::CPU>) H2_NOEXCEPT
+{
+  return true;
+}
+
+/** Inequality for CPU events. */
+inline bool operator!=(const SyncEvent<Device::CPU>&,
+                       const SyncEvent<Device::CPU>&) H2_NOEXCEPT
+{
+  return false;
+}
+
 template <>
 class ComputeStream<Device::CPU> final : public ComputeStreamBase
 {
@@ -281,6 +295,20 @@ public:
   void wait_for_this() const override {}
 };
 
+/** Equality for CPU streams. */
+inline bool operator==(const ComputeStream<Device::CPU>&,
+                       const ComputeStream<Device::CPU>&) H2_NOEXCEPT
+{
+  return true;
+}
+
+/** Inequality for CPU streams. */
+inline bool operator!=(const ComputeStream<Device::CPU>&,
+                       const ComputeStream<Device::CPU>&) H2_NOEXCEPT
+{
+  return false;
+}
+
 template <>
 inline ComputeStream<Device::CPU> create_new_compute_stream<Device::CPU>()
 {
@@ -300,3 +328,28 @@ template <>
 inline void destroy_sync_event<Device::CPU>(SyncEvent<Device::CPU>&) {}
 
 }  // namespace h2
+
+namespace std
+{
+
+// Inject hash specialization for CPU sync objects.
+
+template <>
+struct hash<h2::SyncEvent<h2::Device::CPU>>
+{
+  size_t operator()(const h2::SyncEvent<h2::Device::CPU>&) const noexcept
+  {
+    return 0;  // CPU syncs are all the same.
+  }
+};
+
+template <>
+struct hash<h2::ComputeStream<h2::Device::CPU>>
+{
+  size_t operator()(const h2::ComputeStream<h2::Device::CPU>&) const noexcept
+  {
+    return 0;  // CPU streams are all the same.
+  }
+};
+
+}  // namespace std

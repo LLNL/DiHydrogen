@@ -8,6 +8,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_template_test_macros.hpp>
 
+#include <unordered_map>
+
 #include <El.hpp>
 
 #include "h2/core/sync.hpp"
@@ -59,6 +61,36 @@ TEST_CASE("CPU sync helpers work", "[sync]")
 
   REQUIRE_NOTHROW(all_wait_on_stream(stream1, stream2, stream3));
   REQUIRE_NOTHROW(stream_wait_on_all(stream1, stream2, stream3));
+}
+
+TEST_CASE("CPU stream equality works", "[sync]")
+{
+  ComputeStream<Device::CPU> stream1 = create_new_compute_stream<Device::CPU>();
+  ComputeStream<Device::CPU> stream2 = create_new_compute_stream<Device::CPU>();
+
+  REQUIRE(stream1 == stream1);
+  REQUIRE(stream1 == stream2);
+  REQUIRE_FALSE(stream1 != stream2);
+
+  std::unordered_map<ComputeStream<Device::CPU>, int> map;
+  map[stream1] = 1;
+  REQUIRE(map.count(stream1) > 0);
+  REQUIRE(map.count(stream2) > 0);
+}
+
+TEST_CASE("CPU event equality works", "[sync]")
+{
+  SyncEvent<Device::CPU> event1 = create_new_sync_event<Device::CPU>();
+  SyncEvent<Device::CPU> event2 = create_new_sync_event<Device::CPU>();
+
+  REQUIRE(event1 == event2);
+  REQUIRE(event1 == event2);
+  REQUIRE_FALSE(event1 != event2);
+
+  std::unordered_map<SyncEvent<Device::CPU>, int> map;
+  map[event1] = 1;
+  REQUIRE(map.count(event1) > 0);
+  REQUIRE(map.count(event2) > 0);
 }
 
 TEST_CASE("CPU sync El::SyncInfo conversion works", "[sync]")

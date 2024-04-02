@@ -8,6 +8,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_template_test_macros.hpp>
 
+#include <unordered_map>
+
 #include "h2/gpu/sync.hpp"
 
 using namespace h2;
@@ -67,6 +69,46 @@ TEST_CASE("GPU sync helpers work", "[sync]")
 
   REQUIRE_NOTHROW(all_wait_on_stream(stream1, stream2, stream3, stream4));
   REQUIRE_NOTHROW(stream_wait_on_all(stream1, stream2, stream3, stream4));
+}
+
+TEST_CASE("GPU stream equality works", "[sync]")
+{
+  ComputeStream<Device::GPU> stream1 = create_new_compute_stream<Device::GPU>();
+  ComputeStream<Device::GPU> stream2 = create_new_compute_stream<Device::GPU>();
+  ComputeStream<Device::GPU> stream3 = stream1;
+
+  REQUIRE(stream1 == stream1);
+  REQUIRE(stream1 == stream3);
+  REQUIRE(stream1 != stream2);
+
+  std::unordered_map<ComputeStream<Device::GPU>, int> map;
+  map[stream1] = 1;
+  map[stream2] = 2;
+  REQUIRE(map.count(stream1) > 0);
+  REQUIRE(map.count(stream2) > 0);
+  REQUIRE(map[stream1] == 1);
+  REQUIRE(map[stream3] == 1);
+  REQUIRE(map[stream2] == 2);
+}
+
+TEST_CASE("GPU event equality works", "[sync]")
+{
+  SyncEvent<Device::GPU> event1 = create_new_sync_event<Device::GPU>();
+  SyncEvent<Device::GPU> event2 = create_new_sync_event<Device::GPU>();
+  SyncEvent<Device::GPU> event3 = event1;
+
+  REQUIRE(event1 == event1);
+  REQUIRE(event1 == event3);
+  REQUIRE(event1 != event2);
+
+  std::unordered_map<SyncEvent<Device::GPU>, int> map;
+  map[event1] = 1;
+  map[event2] = 2;
+  REQUIRE(map.count(event1) > 0);
+  REQUIRE(map.count(event2) > 0);
+  REQUIRE(map[event1] == 1);
+  REQUIRE(map[event3] == 1);
+  REQUIRE(map[event2] == 2);
 }
 
 TEST_CASE("GPU and CPU syncs interoperate", "[sync]")
