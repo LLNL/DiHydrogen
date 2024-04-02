@@ -240,6 +240,7 @@ public:
   {
     if (raw_buffer)
     {
+      raw_buffer->register_release(stream);
       old_raw_buffer = raw_buffer;
       raw_buffer.reset();
     }
