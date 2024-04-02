@@ -86,6 +86,13 @@ public:
   virtual void wait_for_this() const = 0;
 };
 
+inline std::ostream& operator<<(std::ostream& os,
+                                const ComputeStreamBase& stream)
+{
+  os << stream.get_device() << " compute stream";
+  return os;
+}
+
 template <Device Dev>
 class ComputeStream {};
 
@@ -111,6 +118,12 @@ public:
    */
   virtual void wait_for_this() const = 0;
 };
+
+inline std::ostream& operator<<(std::ostream& os, const SyncEventBase& event)
+{
+  os << event.get_device() << " sync event";
+  return os;
+}
 
 template <Device Dev>
 class SyncEvent {};

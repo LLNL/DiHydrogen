@@ -19,3 +19,25 @@
 #elif H2_HAS_ROCM
 #include "rocm/sync.hpp"
 #endif
+
+
+namespace h2
+{
+
+// Define these here to avoid duplication.
+
+inline std::ostream& operator<<(std::ostream& os,
+                                const ComputeStream<Device::GPU>& stream)
+{
+  os << "GPU compute stream (" << ((void*) stream.get_stream()) << ")";
+  return os;
+}
+
+inline std::ostream& operator<<(std::ostream& os,
+                                const SyncEvent<Device::GPU>& event)
+{
+  os << "GPU sync event (" << ((void*) event.get_event()) << ")";
+  return os;
+}
+
+}  // namespace h2
