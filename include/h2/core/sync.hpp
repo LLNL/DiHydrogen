@@ -23,6 +23,75 @@
 namespace h2
 {
 
+/**
+ * Manage device-specific synchronization.
+ *
+ * A note on how Tensors deal with synchronization (here because there
+ * isn't a great place to write this since it touches many classes):
+ *
+ * When a Tensor is created, the creator may either specify the
+ * ComputeStream for the Tensor to use, or the Tensor will create one
+ * with the default ComputeStream constructor for the appropriate
+ * Device. This ComputeStream is passed through to the underlying
+ * StridedMemory and RawBuffer. The RawBuffer will allocate any memory
+ * using that ComputeStream. Any Tensor operation that changes the
+ * underlying RawBuffer (e.g., `empty`, `resize`) will continue to use
+ * the ComputeStream associated with the Tensor. As a special case of
+ * this, an empty Tensor, which has no RawBuffer, will use the Tensor's
+ * ComputeStream should it construct a RawBuffer (e.g., due to being
+ * resized).
+ *
+ * When a view of a Tensor is created, the viewing Tensor will default
+ * to the same ComputeStream as the original Tensor.
+ *
+ * When a Tensor wraps external memory (by providing a raw pointer),
+ * there is again no RawBuffer created and the Tensor's ComputeStream
+ * will be used for all operations.
+ *
+ * The get/set_stream methods may be used on Tensors and RawBuffers
+ * to retrieve or change the associated ComputeStream. get_stream on a
+ * Tensor always returns the Tensor's ComputeStream, which may be
+ * different from the ComputeStream  associated with the RawBuffer
+ * underlying the Tensor (due to set_stream).
+ *
+ * If the ComputeStream on a Tensor is changed (via set_stream), the
+ * semantics depend on whether the Tensor is a view. If the Tensor is
+ * not a view, this will also change the stream of the underlying
+ * RawBuffer. If the Tensor is a view, only the Tensor's stream will
+ * be changed. (This is how a Tensor's stream may differ from its
+ * RawBuffer's.) This enables views of the same Tensor to enqueue
+ * operations on multiple compute streams concurrently; it is up to the
+ * user to ensure the appropriate synchronization in such uses.
+ *
+ * This requires careful handling of destruction in the RawBuffer, as
+ * there may be operations on multiple compute streams accessing the
+ * data, yet the RawBuffer is only (directly) associated with one
+ * ComputeStream. In particular, consider the case where an initial
+ * Tensor A is created with ComputeStream SA, and then a view, B, of
+ * that Tensor is created and associated with ComputeStream SB. The
+ * underlying RawBuffer will be associated with SA. If A is deleted,
+ * the RawBuffer will still exist, as B still has a reference to it.
+ * Now suppose B launches some operations on SB, then is itself
+ * deleted. The operations should continue to run fine, due to the
+ * stream ordering. However, the RawBuffer's deletion will be
+ * synchronized only to SA, potentially leading to a race with
+ * operations on SB. To avoid this, whenever a Tensor discards a
+ * reference to a RawBuffer, it informs the RawBuffer it is doing so,
+ * along with its current ComputeStream. If the stream differs from the
+ * RawBuffer's, it will record an event on the Tensor's ComputeStream
+ *  and keep a reference to it. When the RawBuffer is deleted, it will
+ * synchronize with all recorded events before enqueuing the delete, to
+ * avoid races.
+ *
+ * Another situation to be aware of: If you change a Tensor's
+ * ComputeStream, it is up to you to provide any needed synchronization
+ * between the original ComputeStream and the new one.
+ *
+ * An implementation note (separate from the above semantics):
+ * ComputeStream objects are stored in StridedMemory, rather than
+ * directly in a Tensor. This is just to simplify implementation.
+ */
+
 // Forward-declaration.
 class SyncEventBase;
 
