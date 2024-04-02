@@ -38,8 +38,8 @@ public:
              const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
-             const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-      : DistTensor(shape_, dim_types_, grid_, dist_types_, StrictAlloc, sync)
+             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+      : DistTensor(shape_, dim_types_, grid_, dist_types_, StrictAlloc, stream)
   {}
 
   DistTensor(const ShapeTuple& shape_,
@@ -47,12 +47,12 @@ public:
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
              lazy_alloc_t,
-             const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
       : BaseDistTensor<T>(shape_, dim_types_, grid_, dist_types_),
         tensor_local(this->tensor_local_shape,
                      init_n(dim_types_, this->tensor_local_shape.size()),
                      LazyAlloc,
-                     sync)
+                     stream)
   {}
 
   DistTensor(const ShapeTuple& shape_,
@@ -60,43 +60,44 @@ public:
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
              strict_alloc_t,
-             const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
       : BaseDistTensor<T>(shape_, dim_types_, grid_, dist_types_),
         tensor_local(this->tensor_local_shape,
                      init_n(dim_types_, this->tensor_local_shape.size()),
                      StrictAlloc,
-                     sync)
+                     stream)
   {}
 
-  DistTensor(ProcessorGrid grid_, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+  DistTensor(ProcessorGrid grid_,
+             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
       : DistTensor(ShapeTuple(),
                    DimensionTypeTuple(),
                    grid_,
                    DistributionTypeTuple(),
                    StrictAlloc,
-                   sync)
+                   stream)
   {}
 
   DistTensor(ProcessorGrid grid_,
              lazy_alloc_t,
-             const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
       : DistTensor(ShapeTuple(),
                    DimensionTypeTuple(),
                    grid_,
                    DistributionTypeTuple(),
                    LazyAlloc,
-                   sync)
+                   stream)
   {}
 
   DistTensor(ProcessorGrid grid_,
              strict_alloc_t,
-             const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
       : DistTensor(ShapeTuple(),
                    DimensionTypeTuple(),
                    grid_,
                    DistributionTypeTuple(),
                    StrictAlloc,
-                   sync)
+                   stream)
   {}
 
   DistTensor(T* buffer,
@@ -106,14 +107,14 @@ public:
              const DistributionTypeTuple& dist_types_,
              const ShapeTuple& local_shape_,
              const StrideTuple& local_strides_,
-             const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
       : BaseDistTensor<T>(ViewType::Mutable,
                           global_shape_,
                           dim_types_,
                           grid_,
                           dist_types_,
                           local_shape_),
-        tensor_local(buffer, local_shape_, dim_types_, local_strides_, sync)
+        tensor_local(buffer, local_shape_, dim_types_, local_strides_, stream)
   {}
 
   DistTensor(const T* buffer,
@@ -123,14 +124,14 @@ public:
              const DistributionTypeTuple& dist_types_,
              const ShapeTuple& local_shape_,
              const StrideTuple& local_strides_,
-             const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
       : BaseDistTensor<T>(ViewType::Const,
                           global_shape_,
                           dim_types_,
                           grid_,
                           dist_types_,
                           local_shape_),
-        tensor_local(buffer, local_shape_, dim_types_, local_strides_, sync)
+        tensor_local(buffer, local_shape_, dim_types_, local_strides_, stream)
   {}
 
   Device get_device() const H2_NOEXCEPT override { return device; }
@@ -279,14 +280,14 @@ public:
     return const_view(coords);
   }
 
-  SyncInfo<Dev> get_sync_info() const H2_NOEXCEPT
+  ComputeStream<Dev> get_stream() const H2_NOEXCEPT
   {
-    return tensor_local.get_sync_info();
+    return tensor_local.get_stream();
   }
 
-  void set_sync_info(const SyncInfo<Dev>& sync)
+  void set_stream(const ComputeStream<Dev>& stream)
   {
-    tensor_local.set_sync_info(sync);
+    tensor_local.set_stream(stream);
   }
 
   bool is_lazy() const H2_NOEXCEPT

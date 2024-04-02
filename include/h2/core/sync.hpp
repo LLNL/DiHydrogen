@@ -221,6 +221,36 @@ create_multi_sync(const ComputeStream<Dev>& main,
   return MultiSync(main, other_streams...);
 }
 
+/**
+ * RAII manager for events.
+ */
+template <Device Dev>
+class SyncEventRAII
+{
+public:
+  SyncEventRAII() : event(create_new_sync_event<Dev>()) {}
+
+  ~SyncEventRAII() { destroy_sync_event(event); }
+
+  // Prevent copying.
+  SyncEventRAII(const SyncEventRAII&) = delete;
+  SyncEventRAII<Dev>& operator=(const SyncEventRAII<Dev>&) = delete;
+
+  SyncEventRAII(SyncEventRAII<Dev>&& other) { event = std::move(other.event); }
+  SyncEventRAII<Dev>& operator=(SyncEventRAII<Dev>&& other)
+  {
+    event = std::move(other.event);
+  }
+
+  /** Allow conversion to a regular SyncEvent. */
+  operator SyncEvent<Dev>() const H2_NOEXCEPT
+  {
+    return event;
+  }
+
+  SyncEvent<Dev> event;
+};
+
 // CPU compute streams and events:
 
 template <>

@@ -40,9 +40,9 @@ namespace h2
  */
 template <Device DstDev, Device SrcDev, typename T>
 void CopyBuffer(T* dst,
-                const SyncInfo<DstDev>& dst_sync,
+                const ComputeStream<DstDev>& dst_stream,
                 const T* src,
-                const SyncInfo<SrcDev>& src_sync,
+                const ComputeStream<SrcDev>& src_stream,
                 std::size_t count)
 {
   H2_ASSERT_DEBUG(count == 0 || (dst != nullptr && src != nullptr),
@@ -54,19 +54,19 @@ void CopyBuffer(T* dst,
 #ifdef H2_HAS_GPU
   else if constexpr (SrcDev == Device::GPU && DstDev == Device::GPU)
   {
-    auto sync = El::MakeMultiSync(dst_sync, src_sync);
-    gpu::mem_copy<T>(dst, src, count, dst_sync.Stream());
+    auto stream = create_multi_sync(dst_stream, src_stream);
+    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream());
   }
   else if constexpr (SrcDev == Device::CPU && DstDev == Device::GPU)
   {
     // No sync needed in this case: The CPU is always synchronized and
     // the copy will be enqueued on the destination GPU stream.
-    gpu::mem_copy<T>(dst, src, count, dst_sync.Stream());
+    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream());
   }
   else if constexpr (SrcDev == Device::GPU && DstDev == Device::CPU)
   {
     // No sync needed: Ditto.
-    gpu::mem_copy<T>(dst, src, count, src_sync.Stream());
+    gpu::mem_copy<T>(dst, src, count, src_stream.get_stream());
   }
 #endif
   else
@@ -78,12 +78,12 @@ void CopyBuffer(T* dst,
 /** Special case where both buffers are on the same device. */
 template <Device Dev, typename T>
 void CopyBuffer(T* dst,
-                const SyncInfo<Dev>& dst_sync,
+                const ComputeStream<Dev>& dst_stream,
                 const T* src,
-                const SyncInfo<Dev>& src_sync,
+                const ComputeStream<Dev>& src_stream,
                 std::size_t count)
 {
-  CopyBuffer<Dev, Dev, T>(src, src_sync, dst, dst_sync, count);
+  CopyBuffer<Dev, Dev, T>(src, src_stream, dst, dst_stream, count);
 }
 
 // General copy routines:
@@ -99,9 +99,9 @@ void CopySameT(Tensor<T, DstDev>& dst, const Tensor<T, SrcDev>& src)
   if (src.is_contiguous())
   {
     CopyBuffer<DstDev, SrcDev, T>(dst.data(),
-                                  dst.get_sync_info(),
+                                  dst.get_stream(),
                                   src.const_data(),
-                                  src.get_sync_info(),
+                                  src.get_stream(),
                                   src.numel());
   }
   else
@@ -110,9 +110,9 @@ void CopySameT(Tensor<T, DstDev>& dst, const Tensor<T, SrcDev>& src)
     // For now, we just copy the entire buffer.
     CopyBuffer<DstDev, SrcDev, T>(
         dst.data(),
-        dst.get_sync_info(),
+        dst.get_stream(),
         src.const_data(),
-        src.get_sync_info(),
+        src.get_stream(),
         get_extent_from_strides(src.shape(), src.strides()));
   }
 }

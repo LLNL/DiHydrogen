@@ -32,58 +32,61 @@ public:
 
   Tensor(const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
-         const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-      : Tensor(shape_, dim_types_, StrictAlloc, sync)
+         const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+      : Tensor(shape_, dim_types_, StrictAlloc, stream)
   {}
 
   Tensor(const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
          lazy_alloc_t,
-         const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
+         const ComputeStream<Dev>& stream = ComputeStream<Dev>{}) :
     BaseTensor<T>(shape_, dim_types_),
-    tensor_memory(shape_, true, sync)
+    tensor_memory(shape_, true, stream)
   {}
 
   Tensor(const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
          strict_alloc_t,
-         const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
+         const ComputeStream<Dev>& stream = ComputeStream<Dev>{}) :
     BaseTensor<T>(shape_, dim_types_),
-    tensor_memory(shape_, false, sync)
+    tensor_memory(shape_, false, stream)
   {}
 
-  Tensor(const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : Tensor(ShapeTuple(), DimensionTypeTuple(), StrictAlloc, sync) {}
+  Tensor(const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+    : Tensor(ShapeTuple(), DimensionTypeTuple(), StrictAlloc, stream) {}
 
-  Tensor(lazy_alloc_t, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : Tensor(ShapeTuple(), DimensionTypeTuple(), LazyAlloc, sync) {}
+  Tensor(lazy_alloc_t, const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+    : Tensor(ShapeTuple(), DimensionTypeTuple(), LazyAlloc, stream) {}
 
-  Tensor(strict_alloc_t, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : Tensor(ShapeTuple(), DimensionTypeTuple(), StrictAlloc, sync) {}
+  Tensor(strict_alloc_t,
+         const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+    : Tensor(ShapeTuple(), DimensionTypeTuple(), StrictAlloc, stream) {}
 
   Tensor(T* buffer,
          const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
          const StrideTuple& strides_,
-         const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
+         const ComputeStream<Dev>& stream = ComputeStream<Dev>{}) :
     BaseTensor<T>(ViewType::Mutable, shape_, dim_types_),
-    tensor_memory(buffer, shape_, strides_, sync)
+    tensor_memory(buffer, shape_, strides_, stream)
   {}
 
   Tensor(const T* buffer,
          const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
          const StrideTuple& strides_,
-         const SyncInfo<Dev>& sync = SyncInfo<Dev>{}) :
+         const ComputeStream<Dev>& stream = ComputeStream<Dev>{}) :
     BaseTensor<T>(ViewType::Const, shape_, dim_types_),
-    tensor_memory(const_cast<T*>(buffer), shape_, strides_, sync)
+    tensor_memory(const_cast<T*>(buffer), shape_, strides_, stream)
   {}
 
   StrideTuple strides() const H2_NOEXCEPT override {
     return tensor_memory.strides();
   }
 
-  typename StrideTuple::type stride(typename StrideTuple::size_type i) const H2_NOEXCEPT override {
+  typename StrideTuple::type
+  stride(typename StrideTuple::size_type i) const H2_NOEXCEPT override
+  {
     return tensor_memory.strides()[i];
   }
 
@@ -95,8 +98,8 @@ public:
 
   void empty() override
   {
-    auto sync = tensor_memory.get_sync_info();
-    tensor_memory = StridedMemory<T, Dev>(tensor_memory.is_lazy(), sync);
+    auto stream = tensor_memory.get_stream();
+    tensor_memory = StridedMemory<T, Dev>(tensor_memory.is_lazy(), stream);
     this->tensor_shape = ShapeTuple();
     this->tensor_dim_types = DimensionTypeTuple();
     if (this->is_view()) {
@@ -126,9 +129,9 @@ public:
       this->tensor_dim_types = new_dim_types;
       return;
     }
-    auto sync = tensor_memory.get_sync_info();
+    auto stream = tensor_memory.get_stream();
     tensor_memory = StridedMemory<T, Dev>(
-      new_shape, tensor_memory.is_lazy(), sync);
+      new_shape, tensor_memory.is_lazy(), stream);
     this->tensor_shape = new_shape;
     this->tensor_dim_types = new_dim_types;
   }
@@ -150,9 +153,9 @@ public:
       this->tensor_dim_types = new_dim_types;
       return;
     }
-    auto sync = tensor_memory.get_sync_info();
+    auto stream = tensor_memory.get_stream();
     tensor_memory = StridedMemory<T, Dev>(
-      new_shape, new_strides, tensor_memory.is_lazy(), sync);
+      new_shape, new_strides, tensor_memory.is_lazy(), stream);
     this->tensor_shape = new_shape;
     this->tensor_dim_types = new_dim_types;
   }
@@ -256,20 +259,20 @@ public:
     return tensor_memory.get(coords);
   }
 
-  SyncInfo<Dev> get_sync_info() const H2_NOEXCEPT
+  ComputeStream<Dev> get_stream() const H2_NOEXCEPT
   {
-    return tensor_memory.get_sync_info();
+    return tensor_memory.get_stream();
   }
 
-  void set_sync_info(const SyncInfo<Dev>& sync)
+  void set_stream(const ComputeStream<Dev>& stream)
   {
     if (this->is_view())
     {
-      tensor_memory.set_sync_info(sync);
+      tensor_memory.set_stream(stream);
     }
     else
     {
-      tensor_memory.set_sync_info(sync, true);
+      tensor_memory.set_stream(stream, true);
     }
   }
 

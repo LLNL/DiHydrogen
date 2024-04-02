@@ -95,27 +95,28 @@ private:
 public:
 
   /** Allocate empty memory. */
-  StridedMemory(bool lazy = false, const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+    StridedMemory(bool lazy = false,
+                  const ComputeStream<Dev>& stream_ = ComputeStream<Dev>{})
     : raw_buffer(nullptr),
       mem_offset(INVALID_OFFSET),
       mem_strides{},
       mem_shape{},
-      sync_info(sync),
+      stream(stream_),
       is_mem_lazy(lazy)
   {}
 
   /** Allocate memory for shape, with unit strides. */
   StridedMemory(const ShapeTuple& shape, bool lazy = false,
-                const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-    : StridedMemory(shape, get_contiguous_strides(shape), lazy, sync)
+                const ComputeStream<Dev>& stream_ = ComputeStream<Dev>{})
+    : StridedMemory(shape, get_contiguous_strides(shape), lazy, stream_)
   {}
 
   /** Allocate memory for shape with the given strides. */
   StridedMemory(const ShapeTuple& shape,
                 const StrideTuple& strides,
                 bool lazy = false,
-                const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
-      : StridedMemory(lazy, sync)
+                const ComputeStream<Dev>& stream_ = ComputeStream<Dev>{})
+      : StridedMemory(lazy, stream_)
   {
     H2_ASSERT_DEBUG(shape.size() == strides.size(),
                     "Shape and strides must be the same size");
@@ -137,7 +138,7 @@ public:
       : raw_buffer(base.raw_buffer),
         mem_offset(INVALID_OFFSET),
         // mem_shape and mem_strides are set below.
-        sync_info(base.sync_info),
+        stream(base.stream),
         is_mem_lazy(base.is_lazy())
   {
     H2_ASSERT_DEBUG(coords.size() <= base.mem_strides.size(),
@@ -184,12 +185,12 @@ public:
   StridedMemory(T* buffer,
                 const ShapeTuple& shape,
                 const StrideTuple& strides,
-                const SyncInfo<Dev>& sync = SyncInfo<Dev>{})
+                const ComputeStream<Dev>& stream_ = ComputeStream<Dev>{})
     : raw_buffer(nullptr),
       mem_offset(0),
       mem_strides(strides),
       mem_shape(shape),
-      sync_info(sync),
+      stream(stream_),
       is_mem_lazy(false)
   {
     H2_ASSERT_DEBUG(buffer
@@ -201,14 +202,14 @@ public:
                                >= product<std::size_t>(shape),
                     "Provided strides are not sane");
     std::size_t size = get_extent_from_strides(shape, strides);
-    raw_buffer = std::make_shared<raw_buffer_t>(buffer, size, sync);
+    raw_buffer = std::make_shared<raw_buffer_t>(buffer, size, stream);
   }
 
   ~StridedMemory()
   {
     if (raw_buffer)
     {
-      raw_buffer->register_release(sync_info);
+      raw_buffer->register_release(stream);
     }
   }
 
@@ -332,17 +333,17 @@ public:
     return &(const_data()[get_index(coords)]);
   }
 
-  SyncInfo<Dev> get_sync_info() const H2_NOEXCEPT
+  ComputeStream<Dev> get_stream() const H2_NOEXCEPT
   {
-    return sync_info;
+    return stream;
   }
 
-  void set_sync_info(const SyncInfo<Dev>& sync, bool set_raw = false)
+  void set_stream(const ComputeStream<Dev>& stream, bool set_raw = false)
   {
-    sync_info = sync;
+    stream = stream;
     if (raw_buffer && set_raw)
     {
-      raw_buffer->set_sync_info(sync);
+      raw_buffer->set_stream(stream);
     }
   }
 
@@ -374,7 +375,7 @@ private:
   std::weak_ptr<raw_buffer_t> old_raw_buffer;
   StrideTuple mem_strides;  /**< Strides associated with the memory. */
   ShapeTuple mem_shape;  /**< Shape describing the extent of the memory. */
-  SyncInfo<Dev> sync_info;  /**< Synchronization info for operations. */
+  ComputeStream<Dev> stream;  /**< Compute stream for operations. */
   bool is_mem_lazy;  /**< Whether allocation is lazy. */
 
   /** Helper to create a raw buffer if size is non-empty. */
@@ -385,7 +386,7 @@ private:
     {
       const std::size_t size = get_extent_from_strides(mem_shape, mem_strides);
       if (size) {
-        raw_buffer = std::make_shared<raw_buffer_t>(size, lazy, sync_info);
+        raw_buffer = std::make_shared<raw_buffer_t>(size, lazy, stream);
       }
     }
   }

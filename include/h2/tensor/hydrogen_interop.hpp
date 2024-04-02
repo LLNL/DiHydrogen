@@ -135,18 +135,25 @@ auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
     auto const ldim = safe_as<DataIndexType>(matrix.LDim());
     if (n == DimType{1}) // Column vector
     {
-        return TensorType{
-            buf, {m}, {DT::Any}, {as<DataIndexType>(1)}, get_sync_info(matrix)};
+        return TensorType{buf,
+                          {m},
+                          {DT::Any},
+                          {as<DataIndexType>(1)},
+                          ComputeStream<H2Device<D>>(get_sync_info(matrix))};
     }
     else if (m == DimType{1}) // Row vector
     {
-        return TensorType{buf, {n}, {DT::Any}, {ldim}, get_sync_info(matrix)};
+        return TensorType{buf,
+                          {n},
+                          {DT::Any},
+                          {ldim},
+                          ComputeStream<H2Device<D>>(get_sync_info(matrix))};
     }
     return TensorType{buf,
                       {m, n},
                       {DT::Any, DT::Any},
                       {as<DataIndexType>(1), ldim},
-                      get_sync_info(matrix)};
+                      ComputeStream<H2Device<D>>(get_sync_info(matrix))};
 }
 } // namespace internal
 
