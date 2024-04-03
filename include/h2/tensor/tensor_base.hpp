@@ -65,6 +65,8 @@ public:
   /** Construct an empty tensor. */
   BaseTensor() : BaseTensor(ShapeTuple(), DimensionTypeTuple()) {}
 
+  virtual ~BaseTensor() = default;
+
   /** Return the shape of the tensor. */
   ShapeTuple shape() const H2_NOEXCEPT {
     return tensor_shape;

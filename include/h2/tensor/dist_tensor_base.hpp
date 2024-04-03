@@ -85,6 +85,8 @@ public:
                        DistributionTypeTuple{})
   {}
 
+  virtual ~BaseDistTensor() = default;
+
   /** Return the shape of the tensor. */
   ShapeTuple shape() const H2_NOEXCEPT
   {
@@ -183,7 +185,7 @@ public:
   void short_describe(std::ostream& os) const override
   {
     os << "DistTensor<" << TypeName<T>() << ", " << get_device() << ">(";
-    proc_grid().short_describe(os);
+    tensor_grid.short_describe(os);
     os << ": ";
     if (is_view())
     {

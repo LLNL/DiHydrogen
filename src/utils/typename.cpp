@@ -25,7 +25,7 @@ std::string safe_demangle(const char* mangled)
   H2_ASSERT_ALWAYS(mangled != nullptr, "Attempt to demangle a null pointer");
 
   using c_str_ptr = std::unique_ptr<char, void (*)(void*)>;
-  const std::unordered_map<int, const char*> demangle_errors = {
+  static const std::unordered_map<int, const char*> demangle_errors = {
     {-1, "Memory allocation failure"},
     {-2, "Mangled name is invalid"},
     {-3, "Invalid arguments"}
