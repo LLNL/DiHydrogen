@@ -7,9 +7,10 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_template_test_macros.hpp>
-#include <catch2/generators/catch_generators.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "h2/tensor/dist_tensor.hpp"
+#include "h2/utils/typename.hpp"
 #include "utils.hpp"
 #include "../mpi_utils.hpp"
 
@@ -1156,4 +1157,41 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor views work",
       }, comm, 0, 3);
     });
   }
+}
+
+TEMPLATE_LIST_TEST_CASE("Distributed tensors are printable",
+                        "[dist-tensor]",
+                        AllDevList)
+{
+  using DistTensorType = DistTensor<DataType, TestType::value>;
+
+  std::stringstream dev_ss;
+  dev_ss << TestType::value;
+
+  for_comms([&](Comm& comm) {
+    for_grid_shapes([&](ShapeTuple grid_shape) {
+      for (Distribution dist : {Distribution::Block,
+                                Distribution::Replicated,
+                                Distribution::Single})
+      {
+        ProcessorGrid grid = ProcessorGrid(comm, grid_shape);
+
+        ShapeTuple tensor_shape(8, 5, 12);
+        tensor_shape.set_size(grid.ndim());
+        DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
+        DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
+        DistTensorType tensor =
+            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+
+        std::stringstream ss;
+        ss << tensor;
+
+        // Not testing this exactly since the output gets complicated.
+        REQUIRE_THAT(ss.str(),
+                     Catch::Matchers::StartsWith(std::string("DistTensor<")
+                                                 + TypeName<DataType>() + ", "
+                                                 + dev_ss.str() + ">"));
+      }
+    }, comm, 0, 3);
+  });
 }

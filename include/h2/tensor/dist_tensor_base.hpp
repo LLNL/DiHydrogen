@@ -17,6 +17,8 @@
 #include "h2/tensor/proc_grid.hpp"
 #include "h2/tensor/tensor_base.hpp"
 #include "h2/tensor/tensor_types.hpp"
+#include "h2/utils/Describable.hpp"
+#include "h2/utils/typename.hpp"
 
 
 namespace h2
@@ -43,7 +45,7 @@ namespace h2
  * eliminate any dimensions.
  */
 template <typename T>
-class BaseDistTensor
+class BaseDistTensor : public Describable
 {
 public:
 
@@ -82,6 +84,8 @@ public:
                        ProcessorGrid{},
                        DistributionTypeTuple{})
   {}
+
+  virtual ~BaseDistTensor() = default;
 
   /** Return the shape of the tensor. */
   ShapeTuple shape() const H2_NOEXCEPT
@@ -176,6 +180,27 @@ public:
    * Return true if the local tensor is empty (all dimensions size 0).
    */
   bool is_local_empty() const H2_NOEXCEPT { return local_numel() == 0; }
+
+  /** Output a short description of the tensor. */
+  void short_describe(std::ostream& os) const override
+  {
+    os << "DistTensor<" << TypeName<T>() << ", " << get_device() << ">(";
+    tensor_grid.short_describe(os);
+    os << ": ";
+    if (is_view())
+    {
+      os << get_view_type() << " of ";
+    }
+    for (ShapeTuple::size_type i = 0; i < ndim(); ++i)
+    {
+      os << distribution(i) << ":" << dim_type(i) << ":" << shape(i);
+      if (i < ndim() - 1)
+      {
+        os << " x ";
+      }
+    }
+    os << ")";
+  }
 
   /** Return true if this tensor is a view (i.e., does not own its storage). */
   bool is_view() const H2_NOEXCEPT
