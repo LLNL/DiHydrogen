@@ -104,31 +104,55 @@ public:
     }
   }
 
-  void resize(const ShapeTuple& new_shape) override {
-    if (this->is_view()) {
-      throw H2Exception("Cannot resize a view");
-    }
-    if (new_shape.size() > this->tensor_shape.size()) {
-      throw H2Exception("Must provide dimension types to resize larger");
-    }
-    auto sync = tensor_memory.get_sync_info();
-    tensor_memory = StridedMemory<T, Dev>(
-      new_shape, tensor_memory.is_lazy(), sync);
-    this->tensor_shape = new_shape;
-    this->tensor_dim_types.set_size(new_shape.size());
+  void resize(const ShapeTuple& new_shape) override
+  {
+    H2_ASSERT_ALWAYS(new_shape.size() <= this->tensor_shape.size(),
+                     "Must provide dimension types to resize larger");
+    resize(new_shape, init_n(this->tensor_dim_types, new_shape.size()));
   }
 
   void resize(const ShapeTuple& new_shape,
               const DimensionTypeTuple& new_dim_types) override
   {
-    if (this->is_view()) {
-      throw H2Exception("Cannot resize a view");
-    }
+    // We do not call the resize-with-new-strides version so we do not
+    // have to compute the strides manually.
+    H2_ASSERT_ALWAYS(!this->is_view(), "Cannot resize a view");
     H2_ASSERT_ALWAYS(new_dim_types.size() == new_shape.size(),
                      "New shape and dimension types must have the same size");
+    // Don't reallocate if we would not change the size.
+    if (this->tensor_shape == new_shape)
+    {
+      // May still change the dimension types.
+      this->tensor_dim_types = new_dim_types;
+      return;
+    }
     auto sync = tensor_memory.get_sync_info();
     tensor_memory = StridedMemory<T, Dev>(
       new_shape, tensor_memory.is_lazy(), sync);
+    this->tensor_shape = new_shape;
+    this->tensor_dim_types = new_dim_types;
+  }
+
+  void resize(const ShapeTuple& new_shape,
+              const DimensionTypeTuple& new_dim_types,
+              const StrideTuple& new_strides) override
+  {
+    H2_ASSERT_ALWAYS(!this->is_view(), "Cannot resize a view");
+    H2_ASSERT_ALWAYS(new_dim_types.size() == new_shape.size(),
+                     "New shape and dimension types must have the same size");
+    H2_ASSERT_ALWAYS(new_strides.is_empty()
+                         || new_strides.size() == new_shape.size(),
+                     "New shape and strides must have the same size");
+    // Don't reallocate if we would not change the size.
+    if (this->tensor_shape == new_shape && strides() == new_strides)
+    {
+      // May still change the dimension types.
+      this->tensor_dim_types = new_dim_types;
+      return;
+    }
+    auto sync = tensor_memory.get_sync_info();
+    tensor_memory = StridedMemory<T, Dev>(
+      new_shape, new_strides, tensor_memory.is_lazy(), sync);
     this->tensor_shape = new_shape;
     this->tensor_dim_types = new_dim_types;
   }
