@@ -187,8 +187,4 @@ void Copy(BaseTensor<DstT>& dst, const BaseTensor<SrcT>& src)
   }
 }
 
-// ToDevice routines:
-
-
-
 }
