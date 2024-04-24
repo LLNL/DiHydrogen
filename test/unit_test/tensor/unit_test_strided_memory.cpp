@@ -77,11 +77,14 @@ TEST_CASE("get_extent_from_strides works", "[tensor][strided_memor]")
 
 TEMPLATE_LIST_TEST_CASE("StridedMemory is sane",
                         "[tensor][strided_memory]",
-                        AllDevList) {
-  using MemType = StridedMemory<DataType, TestType::value>;
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
 
-  MemType mem = MemType(ShapeTuple{3, 7});
+  MemType mem = MemType(Dev, ShapeTuple{3, 7}, false, ComputeStream{Dev});
   REQUIRE(mem.size() == 21);
+  REQUIRE(mem.get_device() == Dev);
   REQUIRE(mem.data() != nullptr);
   REQUIRE(mem.const_data() != nullptr);
   REQUIRE(mem.strides() == StrideTuple{1, 3});
@@ -133,10 +136,12 @@ TEMPLATE_LIST_TEST_CASE("Empty StridedMemory is sane",
                         "[tensor][strided_memory]",
                         AllDevList)
 {
-  using MemType = StridedMemory<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
 
-  MemType mem;
+  MemType mem{Dev, false, ComputeStream{Dev}};
   REQUIRE(mem.size() == 0);
+  REQUIRE(mem.get_device() == Dev);
   REQUIRE(mem.data() == nullptr);
   REQUIRE(mem.const_data() == nullptr);
   REQUIRE(mem.strides() == StrideTuple{});
@@ -175,10 +180,12 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory with empty shape is sane",
                         "[tensor][strided_memory]",
                         AllDevList)
 {
-  using MemType = StridedMemory<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
 
-  MemType mem = MemType(ShapeTuple{});
+  MemType mem = MemType(Dev, ShapeTuple{}, false, ComputeStream{Dev});
   REQUIRE(mem.size() == 0);
+  REQUIRE(mem.get_device() == Dev);
   REQUIRE(mem.data() == nullptr);
   REQUIRE(mem.const_data() == nullptr);
   REQUIRE(mem.strides() == StrideTuple{});
@@ -190,10 +197,12 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory with zero in shape is sane",
                         "[tensor][strided_memory]",
                         AllDevList)
 {
-  using MemType = StridedMemory<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
 
-  MemType mem = MemType(ShapeTuple{7, 0});
+  MemType mem = MemType(Dev, ShapeTuple{7, 0}, false, ComputeStream{Dev});
   REQUIRE(mem.size() == 0);
+  REQUIRE(mem.get_device() == Dev);
   REQUIRE(mem.data() == nullptr);
   REQUIRE(mem.const_data() == nullptr);
   REQUIRE(mem.shape() == ShapeTuple{7, 0});
@@ -204,9 +213,10 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory indexing works",
                         "[tensor][strided_memory]",
                         AllDevList)
 {
-  using MemType = StridedMemory<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
 
-  MemType mem = MemType(ShapeTuple{3, 7, 2});
+  MemType mem = MemType(Dev, ShapeTuple{3, 7, 2}, false, ComputeStream{Dev});
   // This should iterate in exactly the generalized column-major order
   // data is stored in.
   DataIndexType idx = 0;
@@ -229,9 +239,9 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory writing works",
                         AllDevList)
 {
   constexpr Device Dev = TestType::value;
-  using MemType = StridedMemory<DataType, TestType::value>;
+  using MemType = StridedMemory<DataType>;
 
-  MemType mem = MemType(ShapeTuple{3, 7, 2});
+  MemType mem = MemType(Dev, ShapeTuple{3, 7, 2}, false, ComputeStream{Dev});
   DataType* buf = mem.data();
   for (std::size_t i = 0; i < product<std::size_t>(mem.shape()); ++i)
   {
@@ -258,11 +268,16 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory with non-contiguous strides is sane",
                         AllDevList)
 {
   constexpr Device Dev = TestType::value;
-  using MemType = StridedMemory<DataType, TestType::value>;
+  using MemType = StridedMemory<DataType>;
 
-  MemType mem(ShapeTuple{3, 7, 2}, StrideTuple{2, 4, 21});
+  MemType mem(Dev,
+              ShapeTuple{3, 7, 2},
+              StrideTuple{2, 4, 21},
+              false,
+              ComputeStream{Dev});
 
   REQUIRE(mem.size() == 50);
+  REQUIRE(mem.get_device() == Dev);
   REQUIRE(mem.data() != nullptr);
   REQUIRE(mem.const_data() != nullptr);
   REQUIRE(mem.strides() == StrideTuple{2, 4, 21});
@@ -275,9 +290,10 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
                         AllDevList)
 {
   constexpr Device Dev = TestType::value;
-  using MemType = StridedMemory<DataType, TestType::value>;
+  using MemType = StridedMemory<DataType>;
 
-  MemType base_mem = MemType(ShapeTuple{3, 7, 3});
+  MemType base_mem =
+      MemType(Dev, ShapeTuple{3, 7, 3}, false, ComputeStream{Dev});
   for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
   {
     write_ele<Dev>(base_mem.data(), i, static_cast<DataType>(i));
@@ -394,9 +410,10 @@ TEMPLATE_LIST_TEST_CASE("Lazy StridedMemory works",
                         "[tensor][strided_memory]",
                         AllDevList)
 {
-  using MemType = StridedMemory<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
 
-  MemType mem = MemType(ShapeTuple{3, 7}, true);
+  MemType mem = MemType(Dev, ShapeTuple{3, 7}, true, ComputeStream{Dev});
   REQUIRE(mem.is_lazy());
   REQUIRE(mem.data() == nullptr);
   REQUIRE(mem.const_data() == nullptr);
@@ -485,9 +502,10 @@ TEMPLATE_LIST_TEST_CASE("Empty lazy StridedMemory works",
                         "[tensor][strided_memory]",
                         AllDevList)
 {
-  using MemType = StridedMemory<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
 
-  MemType mem = MemType(true);
+  MemType mem = MemType(Dev, true, ComputeStream{Dev});
   REQUIRE(mem.is_lazy());
   REQUIRE(mem.data() == nullptr);
   REQUIRE(mem.const_data() == nullptr);
@@ -509,11 +527,14 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory with external buffers works",
                         "[tensor][strided_memory]",
                         AllDevList)
 {
-  using MemType = StridedMemory<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
 
   DataType test_data[] = {0, 0, 0, 0};
-  MemType mem = MemType(test_data, ShapeTuple{2, 2}, StrideTuple{1, 2});
+  MemType mem = MemType(
+      Dev, test_data, ShapeTuple{2, 2}, StrideTuple{1, 2}, ComputeStream{Dev});
 
+  REQUIRE(mem.get_device() == Dev);
   REQUIRE(mem.data() == test_data);
   REQUIRE(mem.const_data() == test_data);
   REQUIRE(mem.shape() == ShapeTuple{2, 2});
@@ -566,7 +587,8 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory is printable",
                         "[tensor][strided_memory]",
                         AllDevList)
 {
-  using MemType = StridedMemory<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
 
   std::stringstream dev_ss;
   dev_ss << TestType::value;
@@ -575,7 +597,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory is printable",
 
   SECTION("Lazy")
   {
-    MemType mem({3, 5}, true);
+    MemType mem(Dev, {3, 5}, true, ComputeStream{Dev});
     ss << mem;
 
     REQUIRE_THAT(ss.str(),
@@ -587,7 +609,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory is printable",
 
   SECTION("Unlazy")
   {
-    MemType mem({3, 5}, false);
+    MemType mem(Dev, {3, 5}, false, ComputeStream{Dev});
     ss << mem;
 
     REQUIRE_THAT(ss.str(),
