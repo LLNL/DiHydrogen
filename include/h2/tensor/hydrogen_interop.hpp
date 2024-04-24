@@ -56,8 +56,8 @@ struct H2DeviceT<hydrogen::Device::GPU>
 template <Device D>
 inline constexpr auto H2Device = H2DeviceT<D>::value;
 
-template <typename T, Device D>
-bool is_chw_packed(Tensor<T, D> const& tensor)
+template <typename T>
+bool is_chw_packed(Tensor<T> const& tensor)
 {
     if (tensor.is_empty())
         return true;
@@ -83,8 +83,8 @@ hydrogen::SyncInfo<D> get_sync_info(El::Matrix<T, D> const& m)
 namespace internal
 {
 
-template <typename BufferT, typename T, Device D>
-auto as_h_mat_impl(BufferT buf, Tensor<T, D> const& tensor)
+template <Device D, typename BufferT, typename T>
+auto as_h_mat_impl(BufferT buf, Tensor<T> const& tensor)
     -> El::Matrix<T, HydrogenDevice<D>>
 {
     // Enforce usage constraint
@@ -126,7 +126,7 @@ auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
         std::is_same_v<std::decay_t<std::remove_pointer_t<BufferT>>, T>,
         "BufferT must be T* or T const*");
 
-    using TensorType = Tensor<T, H2Device<D>>;
+    using TensorType = Tensor<T>;
     if (matrix.IsEmpty())
         throw std::runtime_error("Cannot convert empty matrix to Tensor");
 
@@ -135,7 +135,8 @@ auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
     auto const ldim = safe_as<DataIndexType>(matrix.LDim());
     if (n == DimType{1}) // Column vector
     {
-        return TensorType{buf,
+        return TensorType{H2Device<D>,
+                          buf,
                           {m},
                           {DT::Any},
                           {as<DataIndexType>(1)},
@@ -143,13 +144,15 @@ auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
     }
     else if (m == DimType{1}) // Row vector
     {
-        return TensorType{buf,
+        return TensorType{H2Device<D>,
+                          buf,
                           {n},
                           {DT::Any},
                           {ldim},
                           ComputeStream(get_sync_info(matrix))};
     }
-    return TensorType{buf,
+    return TensorType{H2Device<D>,
+                      buf,
                       {m, n},
                       {DT::Any, DT::Any},
                       {as<DataIndexType>(1), ldim},
@@ -194,10 +197,10 @@ auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
  *  @throws std::runtime_error Thrown when the source tensor cannot be
  *                             viewed in Hydrogen format.
  */
-template <typename T, Device D>
-auto as_h_mat(Tensor<T, D> const& tensor) -> El::Matrix<T, HydrogenDevice<D>>
+template <Device D, typename T>
+auto as_h_mat(Tensor<T> const& tensor) -> El::Matrix<T, HydrogenDevice<D>>
 {
-    return internal::as_h_mat_impl(tensor.const_data(), tensor);
+  return internal::as_h_mat_impl<D>(tensor.const_data(), tensor);
 }
 
 /** @brief View an H2 Tensor as a Hydrogen matrix.
@@ -237,10 +240,10 @@ auto as_h_mat(Tensor<T, D> const& tensor) -> El::Matrix<T, HydrogenDevice<D>>
  *  @throws std::runtime_error Thrown when the source tensor cannot be
  *                             viewed in Hydrogen format.
  */
-template <typename T, Device D>
-auto as_h_mat(Tensor<T, D>& tensor) -> El::Matrix<T, HydrogenDevice<D>>
+template <Device D, typename T>
+auto as_h_mat(Tensor<T>& tensor) -> El::Matrix<T, HydrogenDevice<D>>
 {
-    return internal::as_h_mat_impl(tensor.data(), tensor);
+  return internal::as_h_mat_impl<D>(tensor.data(), tensor);
 }
 
 /** @brief View a Hydrogen matrix as an H2 Tensor
@@ -270,7 +273,7 @@ auto as_h_mat(Tensor<T, D>& tensor) -> El::Matrix<T, HydrogenDevice<D>>
  *                             viewed in H2 tensor format.
  */
 template <typename T, hydrogen::Device D>
-auto as_h2_tensor(El::Matrix<T, D> const& matrix) -> Tensor<T, H2Device<D>>
+auto as_h2_tensor(El::Matrix<T, D> const& matrix) -> Tensor<T>
 {
     return internal::as_h2_tensor_impl(matrix.LockedBuffer(), matrix);
 }
@@ -302,7 +305,7 @@ auto as_h2_tensor(El::Matrix<T, D> const& matrix) -> Tensor<T, H2Device<D>>
  *                             viewed in H2 tensor format.
  */
 template <typename T, hydrogen::Device D>
-auto as_h2_tensor(El::Matrix<T, D>& matrix) -> Tensor<T, H2Device<D>>
+auto as_h2_tensor(El::Matrix<T, D>& matrix) -> Tensor<T>
 {
     return internal::as_h2_tensor_impl(matrix.Buffer(), matrix);
 }

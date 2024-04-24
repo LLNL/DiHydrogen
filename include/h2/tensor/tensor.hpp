@@ -21,63 +21,98 @@ namespace h2
 {
 
 // Forward-declaration:
-template <typename T, Device Dev> class DistTensor;
+template <typename T> class DistTensor;
 
 /** Tensor class for arbitrary types and devices. */
-template <typename T, Device Dev>
+template <typename T>
 class Tensor : public BaseTensor<T> {
 public:
   using value_type = T;
-  static constexpr Device device = Dev;
 
-  Tensor(const ShapeTuple& shape_,
+  Tensor(Device device,
+         const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
-         const ComputeStream& stream = ComputeStream{Dev})
-      : Tensor(shape_, dim_types_, StrictAlloc, stream)
+         const ComputeStream& stream)
+    : Tensor(device, shape_, dim_types_, StrictAlloc, stream)
   {}
 
-  Tensor(const ShapeTuple& shape_,
+  Tensor(Device device,
+         const ShapeTuple& shape_,
+         const DimensionTypeTuple& dim_types_)
+    : Tensor(device, shape_, dim_types_, ComputeStream{device}) {}
+
+  Tensor(Device device,
+         const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
          lazy_alloc_t,
-         const ComputeStream& stream = ComputeStream{Dev}) :
+         const ComputeStream& stream) :
     BaseTensor<T>(shape_, dim_types_),
-    tensor_memory(Dev, shape_, true, stream)
+    tensor_memory(device, shape_, true, stream)
   {}
 
-  Tensor(const ShapeTuple& shape_,
+  Tensor(Device device,
+         const ShapeTuple& shape_,
+         const DimensionTypeTuple& dim_types_,
+         lazy_alloc_t)
+      : Tensor(device, shape_, dim_types_, LazyAlloc, ComputeStream{device})
+  {}
+
+  Tensor(Device device,
+         const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
          strict_alloc_t,
-         const ComputeStream& stream = ComputeStream{Dev}) :
+         const ComputeStream& stream) :
     BaseTensor<T>(shape_, dim_types_),
-    tensor_memory(Dev, shape_, false, stream)
+    tensor_memory(device, shape_, false, stream)
   {}
 
-  Tensor(const ComputeStream& stream = ComputeStream{Dev})
-    : Tensor(ShapeTuple(), DimensionTypeTuple(), StrictAlloc, stream) {}
+  Tensor(Device device,
+         const ShapeTuple& shape_,
+         const DimensionTypeTuple& dim_types_,
+         strict_alloc_t)
+      : Tensor(device, shape_, dim_types_, StrictAlloc, ComputeStream{device})
+  {}
 
-  Tensor(lazy_alloc_t, const ComputeStream& stream = ComputeStream{Dev})
-    : Tensor(ShapeTuple(), DimensionTypeTuple(), LazyAlloc, stream) {}
+  Tensor(Device device, const ComputeStream& stream)
+      : Tensor(device, ShapeTuple(), DimensionTypeTuple(), StrictAlloc, stream)
+  {}
 
-  Tensor(strict_alloc_t,
-         const ComputeStream& stream = ComputeStream{Dev})
-    : Tensor(ShapeTuple(), DimensionTypeTuple(), StrictAlloc, stream) {}
+  Tensor(Device device) : Tensor(device, ComputeStream{device}) {}
 
-  Tensor(T* buffer,
+  Tensor(Device device, lazy_alloc_t, const ComputeStream& stream)
+      : Tensor(device, ShapeTuple(), DimensionTypeTuple(), LazyAlloc, stream)
+  {}
+
+  Tensor(Device device, lazy_alloc_t)
+      : Tensor(device, LazyAlloc, ComputeStream{device})
+  {}
+
+  Tensor(Device device, strict_alloc_t, const ComputeStream& stream)
+      : Tensor(device, ShapeTuple(), DimensionTypeTuple(), StrictAlloc, stream)
+  {}
+
+  Tensor(Device device, strict_alloc_t)
+      : Tensor(device, StrictAlloc, ComputeStream{device})
+  {}
+
+  Tensor(Device device,
+         T* buffer,
          const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
          const StrideTuple& strides_,
-         const ComputeStream& stream = ComputeStream{Dev}) :
+         const ComputeStream& stream) :
     BaseTensor<T>(ViewType::Mutable, shape_, dim_types_),
-    tensor_memory(Dev, buffer, shape_, strides_, stream)
+    tensor_memory(device, buffer, shape_, strides_, stream)
   {}
 
-  Tensor(const T* buffer,
+  Tensor(Device device,
+         const T* buffer,
          const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
          const StrideTuple& strides_,
-         const ComputeStream& stream = ComputeStream{Dev}) :
+         const ComputeStream& stream) :
     BaseTensor<T>(ViewType::Const, shape_, dim_types_),
-    tensor_memory(Dev, const_cast<T*>(buffer), shape_, strides_, stream)
+    tensor_memory(device, const_cast<T*>(buffer), shape_, strides_, stream)
   {}
 
   StrideTuple strides() const H2_NOEXCEPT override {
@@ -94,12 +129,16 @@ public:
     return are_strides_contiguous(this->tensor_shape, tensor_memory.strides());
   }
 
-  Device get_device() const H2_NOEXCEPT override { return device; }
+  Device get_device() const H2_NOEXCEPT override
+  {
+    return tensor_memory.get_device();
+  }
 
   void empty() override
   {
     auto stream = tensor_memory.get_stream();
-    tensor_memory = StridedMemory<T>(Dev, tensor_memory.is_lazy(), stream);
+    tensor_memory =
+        StridedMemory<T>(get_device(), tensor_memory.is_lazy(), stream);
     this->tensor_shape = ShapeTuple();
     this->tensor_dim_types = DimensionTypeTuple();
     if (this->is_view()) {
@@ -131,7 +170,7 @@ public:
     }
     auto stream = tensor_memory.get_stream();
     tensor_memory = StridedMemory<T>(
-      Dev, new_shape, tensor_memory.is_lazy(), stream);
+      get_device(), new_shape, tensor_memory.is_lazy(), stream);
     this->tensor_shape = new_shape;
     this->tensor_dim_types = new_dim_types;
   }
@@ -155,7 +194,7 @@ public:
     }
     auto stream = tensor_memory.get_stream();
     tensor_memory = StridedMemory<T>(
-      Dev, new_shape, new_strides, tensor_memory.is_lazy(), stream);
+      get_device(), new_shape, new_strides, tensor_memory.is_lazy(), stream);
     this->tensor_shape = new_shape;
     this->tensor_dim_types = new_dim_types;
   }
@@ -197,35 +236,35 @@ public:
     tensor_memory.release();
   }
 
-  Tensor<T, Dev>* contiguous() override {
+  Tensor<T>* contiguous() override {
     if (is_contiguous()) {
       return view();
     }
     throw H2Exception("contiguous() not implemented");
   }
 
-  Tensor<T, Dev>* view() override {
+  Tensor<T>* view() override {
     return view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  Tensor<T, Dev>* view() const override
+  Tensor<T>* view() const override
   {
     return view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  Tensor<T, Dev>* view(const IndexRangeTuple& coords) override
+  Tensor<T>* view(const IndexRangeTuple& coords) override
   {
     return make_view(coords, ViewType::Mutable);
   }
 
-  Tensor<T, Dev>* view(const IndexRangeTuple& coords) const override
+  Tensor<T>* view(const IndexRangeTuple& coords) const override
   {
     return make_view(coords, ViewType::Const);
   }
 
-  Tensor<T, Dev>* operator()(const IndexRangeTuple& coords) override
+  Tensor<T>* operator()(const IndexRangeTuple& coords) override
   {
     return view(coords);
   }
@@ -235,17 +274,17 @@ public:
     empty();  // Emptying a view is equivalent to unviewing.
   }
 
-  Tensor<T, Dev>* const_view() const override {
+  Tensor<T>* const_view() const override {
     return const_view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  Tensor<T, Dev>* const_view(const IndexRangeTuple& coords) const override
+  Tensor<T>* const_view(const IndexRangeTuple& coords) const override
   {
     return make_view(coords, ViewType::Const);
   }
 
-  Tensor<T, Dev>* operator()(const IndexRangeTuple& coords) const override {
+  Tensor<T>* operator()(const IndexRangeTuple& coords) const override {
     return const_view(coords);
   }
 
@@ -276,10 +315,7 @@ public:
     }
   }
 
-  bool is_lazy() const H2_NOEXCEPT
-  {
-    return tensor_memory.is_lazy();
-  }
+  bool is_lazy() const H2_NOEXCEPT { return tensor_memory.is_lazy(); }
 
 private:
   /** Underlying memory buffer for the tensor. */
@@ -297,8 +333,8 @@ private:
   {}
 
   /** Helper for constructing views. */
-  Tensor<T, Dev>* make_view(const IndexRangeTuple& coords,
-                            ViewType view_type) const
+  Tensor<T>* make_view(const IndexRangeTuple& coords,
+                       ViewType view_type) const
   {
     if (!is_index_range_contained(coords, this->tensor_shape))
     {
@@ -309,11 +345,11 @@ private:
     // IndexRanges.
     if (is_index_range_empty(coords))
     {
-      return new Tensor<T, Dev>(view_type,
-                                tensor_memory,
-                                ShapeTuple{},
-                                DimensionTypeTuple{},
-                                IndexRangeTuple{});
+      return new Tensor<T>(view_type,
+                           tensor_memory,
+                           ShapeTuple{},
+                           DimensionTypeTuple{},
+                           IndexRangeTuple{});
     }
     ShapeTuple view_shape = get_index_range_shape(coords, this->tensor_shape);
     // Eliminate dimension types from dimensions that have been
@@ -332,15 +368,15 @@ private:
           this->tensor_dim_types,
           [&](IndexRangeTuple::size_type i) { return !coords[i].is_scalar(); });
     }
-    return new Tensor<T, Dev>(view_type,
-                              tensor_memory,
-                              view_shape,
-                              filtered_dim_types,
-                              coords);
+    return new Tensor<T>(view_type,
+                         tensor_memory,
+                         view_shape,
+                         filtered_dim_types,
+                         coords);
   }
 
   // DistTensor needs to poke in here for some view stuff.
-  friend class DistTensor<T, Dev>;
+  friend class DistTensor<T>;
 };
 
 }  // namespace h2

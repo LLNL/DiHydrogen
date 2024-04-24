@@ -25,63 +25,113 @@ namespace h2
 {
 
 /** Distributed tensor class for arbitrary types and devices. */
-template <typename T, Device Dev>
+template <typename T>
 class DistTensor : public BaseDistTensor<T>
 {
 public:
 
   using value_type = T;
-  using local_tensor_type = Tensor<T, Dev>;
-  static constexpr Device device = Dev;
+  using local_tensor_type = Tensor<T>;
 
-  DistTensor(const ShapeTuple& shape_,
+  DistTensor(Device device,
+             const ShapeTuple& shape_,
              const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
-             const ComputeStream& stream = ComputeStream{Dev})
-      : DistTensor(shape_, dim_types_, grid_, dist_types_, StrictAlloc, stream)
+             const ComputeStream& stream)
+      : DistTensor(
+          device, shape_, dim_types_, grid_, dist_types_, StrictAlloc, stream)
   {}
 
-  DistTensor(const ShapeTuple& shape_,
+  DistTensor(Device device,
+             const ShapeTuple& shape_,
+             const DimensionTypeTuple& dim_types_,
+             ProcessorGrid grid_,
+             const DistributionTypeTuple& dist_types_)
+      : DistTensor(
+          device, shape_, dim_types_, grid_, dist_types_, ComputeStream{device})
+  {}
+
+  DistTensor(Device device,
+             const ShapeTuple& shape_,
              const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
              lazy_alloc_t,
-             const ComputeStream& stream = ComputeStream{Dev})
+             const ComputeStream& stream)
       : BaseDistTensor<T>(shape_, dim_types_, grid_, dist_types_),
-        tensor_local(this->tensor_local_shape,
+        tensor_local(device,
+                     this->tensor_local_shape,
                      init_n(dim_types_, this->tensor_local_shape.size()),
                      LazyAlloc,
                      stream)
   {}
 
-  DistTensor(const ShapeTuple& shape_,
+  DistTensor(Device device,
+             const ShapeTuple& shape_,
+             const DimensionTypeTuple& dim_types_,
+             ProcessorGrid grid_,
+             const DistributionTypeTuple& dist_types_,
+             lazy_alloc_t)
+      : DistTensor(device,
+                   shape_,
+                   dim_types_,
+                   grid_,
+                   dist_types_,
+                   LazyAlloc,
+                   ComputeStream{device})
+  {}
+
+  DistTensor(Device device,
+             const ShapeTuple& shape_,
              const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
              strict_alloc_t,
-             const ComputeStream& stream = ComputeStream{Dev})
+             const ComputeStream& stream)
       : BaseDistTensor<T>(shape_, dim_types_, grid_, dist_types_),
-        tensor_local(this->tensor_local_shape,
+        tensor_local(device,
+                     this->tensor_local_shape,
                      init_n(dim_types_, this->tensor_local_shape.size()),
                      StrictAlloc,
                      stream)
   {}
 
-  DistTensor(ProcessorGrid grid_,
-             const ComputeStream& stream = ComputeStream{Dev})
-      : DistTensor(ShapeTuple(),
-                   DimensionTypeTuple(),
+  DistTensor(Device device,
+             const ShapeTuple& shape_,
+             const DimensionTypeTuple& dim_types_,
+             ProcessorGrid grid_,
+             const DistributionTypeTuple& dist_types_,
+             strict_alloc_t)
+      : DistTensor(device,
+                   shape_,
+                   dim_types_,
                    grid_,
-                   DistributionTypeTuple(),
+                   dist_types_,
                    StrictAlloc,
-                   stream)
+                   ComputeStream{device})
   {}
 
-  DistTensor(ProcessorGrid grid_,
+  DistTensor(Device device, ProcessorGrid grid_, const ComputeStream& stream)
+    : DistTensor(device,
+                 ShapeTuple(),
+                 DimensionTypeTuple(),
+                 grid_,
+                 DistributionTypeTuple(),
+                 StrictAlloc,
+                 stream)
+  {}
+
+  DistTensor(Device device, ProcessorGrid grid_)
+      : DistTensor(device, grid_, ComputeStream{device})
+  {}
+
+  DistTensor(Device device,
+             ProcessorGrid grid_,
              lazy_alloc_t,
-             const ComputeStream& stream = ComputeStream{Dev})
-      : DistTensor(ShapeTuple(),
+             const ComputeStream& stream)
+      : DistTensor(device,
+                   ShapeTuple(),
                    DimensionTypeTuple(),
                    grid_,
                    DistributionTypeTuple(),
@@ -89,10 +139,16 @@ public:
                    stream)
   {}
 
-  DistTensor(ProcessorGrid grid_,
+  DistTensor(Device device, ProcessorGrid grid_, lazy_alloc_t)
+      : DistTensor(device, grid_, LazyAlloc, ComputeStream{device})
+  {}
+
+  DistTensor(Device device,
+             ProcessorGrid grid_,
              strict_alloc_t,
-             const ComputeStream& stream = ComputeStream{Dev})
-      : DistTensor(ShapeTuple(),
+             const ComputeStream& stream)
+      : DistTensor(device,
+                   ShapeTuple(),
                    DimensionTypeTuple(),
                    grid_,
                    DistributionTypeTuple(),
@@ -100,41 +156,52 @@ public:
                    stream)
   {}
 
-  DistTensor(T* buffer,
+  DistTensor(Device device, ProcessorGrid grid_, strict_alloc_t)
+      : DistTensor(device, grid_, StrictAlloc, ComputeStream{device})
+  {}
+
+  DistTensor(Device device,
+             T* buffer,
              const ShapeTuple& global_shape_,
              const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
              const ShapeTuple& local_shape_,
              const StrideTuple& local_strides_,
-             const ComputeStream& stream = ComputeStream{Dev})
+             const ComputeStream& stream)
       : BaseDistTensor<T>(ViewType::Mutable,
                           global_shape_,
                           dim_types_,
                           grid_,
                           dist_types_,
                           local_shape_),
-        tensor_local(buffer, local_shape_, dim_types_, local_strides_, stream)
+        tensor_local(
+            device, buffer, local_shape_, dim_types_, local_strides_, stream)
   {}
 
-  DistTensor(const T* buffer,
+  DistTensor(Device device,
+             const T* buffer,
              const ShapeTuple& global_shape_,
              const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
              const ShapeTuple& local_shape_,
              const StrideTuple& local_strides_,
-             const ComputeStream& stream = ComputeStream{Dev})
+             const ComputeStream& stream)
       : BaseDistTensor<T>(ViewType::Const,
                           global_shape_,
                           dim_types_,
                           grid_,
                           dist_types_,
                           local_shape_),
-        tensor_local(buffer, local_shape_, dim_types_, local_strides_, stream)
+        tensor_local(
+            device, buffer, local_shape_, dim_types_, local_strides_, stream)
   {}
 
-  Device get_device() const H2_NOEXCEPT override { return device; }
+  Device get_device() const H2_NOEXCEPT override
+  {
+    return tensor_local.get_device();
+  }
 
   void empty() override
   {
@@ -196,17 +263,17 @@ public:
     return tensor_local.const_data();
   }
 
-  Tensor<T, Dev>& local_tensor() override
+  Tensor<T>& local_tensor() override
   {
     return tensor_local;
   }
 
-  const Tensor<T, Dev>& local_tensor() const override
+  const Tensor<T>& local_tensor() const override
   {
     return tensor_local;
   }
 
-  const Tensor<T, Dev>& const_local_tensor() const override
+  const Tensor<T>& const_local_tensor() const override
   {
     return tensor_local;
   }
@@ -231,29 +298,29 @@ public:
     tensor_local.release();
   }
 
-  DistTensor<T, Dev>* view() override
+  DistTensor<T>* view() override
   {
     return view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  DistTensor<T, Dev>* view() const override
+  DistTensor<T>* view() const override
   {
     return view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  DistTensor<T, Dev>* view(const IndexRangeTuple& coords) override
+  DistTensor<T>* view(const IndexRangeTuple& coords) override
   {
     return make_view(coords, ViewType::Mutable);
   }
 
-  DistTensor<T, Dev>* view(const IndexRangeTuple& coords) const override
+  DistTensor<T>* view(const IndexRangeTuple& coords) const override
   {
     return make_view(coords, ViewType::Const);
   }
 
-  DistTensor<T, Dev>* operator()(const IndexRangeTuple& coords) override
+  DistTensor<T>* operator()(const IndexRangeTuple& coords) override
   {
     return view(coords);
   }
@@ -264,18 +331,18 @@ public:
     empty();  // Emptying a view is equivalent to unviewing.
   }
 
-  DistTensor<T, Dev>* const_view() const override
+  DistTensor<T>* const_view() const override
   {
     return const_view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  DistTensor<T, Dev>* const_view(const IndexRangeTuple& coords) const override
+  DistTensor<T>* const_view(const IndexRangeTuple& coords) const override
   {
     return make_view(coords, ViewType::Const);
   }
 
-  DistTensor<T, Dev>* operator()(const IndexRangeTuple& coords) const override
+  DistTensor<T>* operator()(const IndexRangeTuple& coords) const override
   {
     return const_view(coords);
   }
@@ -297,11 +364,11 @@ public:
 
 private:
   /** Local tensor used for storage. */
-  Tensor<T, Dev> tensor_local;
+  Tensor<T> tensor_local;
 
   /** Private constructor for views. */
   DistTensor(ViewType view_type_,
-             const Tensor<T, Dev>& orig_tensor_local_,
+             const Tensor<T>& orig_tensor_local_,
              const ShapeTuple& local_shape_,
              const IndexRangeTuple& local_coords_,
              const ShapeTuple& shape_,
@@ -321,8 +388,8 @@ private:
   {}
 
   /** Helper for constructing views. */
-  DistTensor<T, Dev>* make_view(IndexRangeTuple index_range,
-                                ViewType view_type) const
+  DistTensor<T>* make_view(IndexRangeTuple index_range,
+                           ViewType view_type) const
   {
     H2_ASSERT_ALWAYS(is_index_range_contained(index_range, this->tensor_shape),
                      "Cannot construct an out-of-range view");
@@ -341,7 +408,7 @@ private:
     if (is_index_range_empty(index_range))
     {
       // Globally empty view.
-      return new DistTensor<T, Dev>(
+      return new DistTensor<T>(
           view_type,
           tensor_local,
           ShapeTuple{},
@@ -375,14 +442,14 @@ private:
     if (!do_index_ranges_intersect(index_range, global_indices))
     {
       // This rank has no local data in the view.
-      return new DistTensor<T, Dev>(view_type,
-                                    tensor_local,
-                                    ShapeTuple{},
-                                    IndexRangeTuple{},
-                                    view_global_shape,
-                                    this->tensor_dim_types,
-                                    this->tensor_grid,
-                                    this->tensor_dist_types);
+      return new DistTensor<T>(view_type,
+                               tensor_local,
+                               ShapeTuple{},
+                               IndexRangeTuple{},
+                               view_global_shape,
+                               this->tensor_dim_types,
+                               this->tensor_grid,
+                               this->tensor_dist_types);
     }
 
     // Determine this rank's indices in the view by intersecting
@@ -397,14 +464,14 @@ private:
                                       present_global_indices);
     ShapeTuple view_local_shape =
         get_index_range_shape(local_indices, this->tensor_local_shape);
-    return new DistTensor<T, Dev>(view_type,
-                                  tensor_local,
-                                  view_local_shape,
-                                  local_indices,
-                                  view_global_shape,
-                                  this->tensor_dim_types,
-                                  this->tensor_grid,
-                                  this->tensor_dist_types);
+    return new DistTensor<T>(view_type,
+                             tensor_local,
+                             view_local_shape,
+                             local_indices,
+                             view_global_shape,
+                             this->tensor_dim_types,
+                             this->tensor_grid,
+                             this->tensor_dist_types);
   }
 
 };

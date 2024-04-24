@@ -34,11 +34,11 @@ namespace h2
 // Low-level copy routines operating on buffers (raw pointers):
 
 /**
- * Copy count elements on Dev from src to dst.
+ * Copy count elements from src to dst.
  *
  * If GPU buffers are involved, this will be asynchronous.
  */
-template <Device DstDev, Device SrcDev, typename T>
+template <typename T>
 void CopyBuffer(T* dst,
                 const ComputeStream& dst_stream,
                 const T* src,
@@ -47,26 +47,28 @@ void CopyBuffer(T* dst,
 {
   H2_ASSERT_DEBUG(count == 0 || (dst != nullptr && src != nullptr),
                   "Null buffers");
-  if constexpr (SrcDev == Device::CPU && DstDev == Device::CPU)
+  const Device src_dev = src_stream.get_device();
+  const Device dst_dev = dst_stream.get_device();
+  if (src_dev == Device::CPU && dst_dev == Device::CPU)
   {
     std::memcpy(dst, src, count * sizeof(T));
   }
 #ifdef H2_HAS_GPU
-  else if constexpr (SrcDev == Device::GPU && DstDev == Device::GPU)
+  else if (src_dev == Device::GPU && dst_dev == Device::GPU)
   {
     auto stream = create_multi_sync(dst_stream, src_stream);
-    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream<DstDev>());
+    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream<Device::GPU>());
   }
-  else if constexpr (SrcDev == Device::CPU && DstDev == Device::GPU)
+  else if (src_dev == Device::CPU && dst_dev == Device::GPU)
   {
     // No sync needed in this case: The CPU is always synchronized and
     // the copy will be enqueued on the destination GPU stream.
-    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream<DstDev>());
+    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream<Device::GPU>());
   }
-  else if constexpr (SrcDev == Device::GPU && DstDev == Device::CPU)
+  else if (src_dev == Device::GPU && dst_dev == Device::CPU)
   {
     // No sync needed: Ditto.
-    gpu::mem_copy<T>(dst, src, count, src_stream.get_stream<SrcDev>());
+    gpu::mem_copy<T>(dst, src, count, src_stream.get_stream<Device::GPU>());
   }
 #endif
   else
@@ -75,45 +77,34 @@ void CopyBuffer(T* dst,
   }
 }
 
-/** Special case where both buffers are on the same device. */
-template <Device Dev, typename T>
-void CopyBuffer(T* dst,
-                const ComputeStream& dst_stream,
-                const T* src,
-                const ComputeStream& src_stream,
-                std::size_t count)
-{
-  CopyBuffer<Dev, Dev, T>(src, src_stream, dst, dst_stream, count);
-}
-
 // General copy routines:
 
 namespace internal
 {
 
-template <Device DstDev, Device SrcDev, typename T>
-void CopySameT(Tensor<T, DstDev>& dst, const Tensor<T, SrcDev>& src)
+template <typename T>
+void CopySameT(Tensor<T>& dst, const Tensor<T>& src)
 {
   dst.resize(src.shape(), src.dim_types(), src.strides());
   dst.ensure();
   if (src.is_contiguous())
   {
-    CopyBuffer<DstDev, SrcDev, T>(dst.data(),
-                                  dst.get_stream(),
-                                  src.const_data(),
-                                  src.get_stream(),
-                                  src.numel());
+    CopyBuffer<T>(dst.data(),
+                  dst.get_stream(),
+                  src.const_data(),
+                  src.get_stream(),
+                  src.numel());
   }
   else
   {
     // TODO: We may be able to optimize the non-contiguous case.
     // For now, we just copy the entire buffer.
-    CopyBuffer<DstDev, SrcDev, T>(
-        dst.data(),
-        dst.get_stream(),
-        src.const_data(),
-        src.get_stream(),
-        get_extent_from_strides(src.shape(), src.strides()));
+    CopyBuffer<T>(
+      dst.data(),
+      dst.get_stream(),
+      src.const_data(),
+      src.get_stream(),
+      get_extent_from_strides(src.shape(), src.strides()));
   }
 }
 
@@ -129,8 +120,8 @@ void CopySameT(Tensor<T, DstDev>& dst, const Tensor<T, SrcDev>& src)
  *
  * If GPU buffers are involved, this will be asynchronous.
  */
-template <typename DstT, Device DstDev, typename SrcT, Device SrcDev>
-void Copy(Tensor<DstT, DstDev>& dst, const Tensor<SrcT, SrcDev>& src)
+template <typename DstT, typename SrcT>
+void Copy(Tensor<DstT>& dst, const Tensor<SrcT>& src)
 {
   // Copying an empty tensor is permitted, but you cannot copy a lazy
   // tensor that has not been ensure'd.
@@ -143,47 +134,11 @@ void Copy(Tensor<DstT, DstDev>& dst, const Tensor<SrcT, SrcDev>& src)
                    "Cannot copy a non-empty tensor with no data");
   if constexpr (std::is_same_v<SrcT, DstT>)
   {
-    internal::CopySameT<DstDev, SrcDev, DstT>(dst, src);
+    internal::CopySameT<DstT>(dst, src);
   }
   else
   {
     throw H2Exception("Data type conversion in Copy not currently supported");
-  }
-}
-
-/** Runtime dispatch on device type for tensors. */
-template <typename DstT, typename SrcT>
-void Copy(BaseTensor<DstT>& dst, const BaseTensor<SrcT>& src)
-{
-  if (src.get_device() == Device::CPU && dst.get_device() == Device::CPU)
-  {
-    Copy<DstT, Device::CPU, SrcT, Device::CPU>(
-        static_cast<Tensor<DstT, Device::CPU>>(dst),
-        static_cast<Tensor<SrcT, Device::CPU>>(src));
-  }
-#ifdef H2_HAS_GPU
-  else if (src.get_device() == Device::GPU && dst.get_device() == Device::GPU)
-  {
-    Copy<DstT, Device::GPU, SrcT, Device::GPU>(
-        static_cast<Tensor<DstT, Device::GPU>>(dst),
-        static_cast<Tensor<SrcT, Device::GPU>>(src));
-  }
-  else if (src.get_device() == Device::CPU && dst.get_device() == Device::GPU)
-  {
-    Copy<DstT, Device::GPU, SrcT, Device::CPU>(
-        static_cast<Tensor<DstT, Device::GPU>>(dst),
-        static_cast<Tensor<SrcT, Device::CPU>>(src));
-  }
-  else if (src.get_device() == Device::GPU && dst.get_device() == Device::CPU)
-  {
-    Copy<DstT, Device::CPU, SrcT, Device::GPU>(
-        static_cast<Tensor<DstT, Device::CPU>>(dst),
-        static_cast<Tensor<SrcT, Device::GPU>>(src));
-  }
-#endif
-  else
-  {
-    throw H2Exception("Unknown device combination");
   }
 }
 

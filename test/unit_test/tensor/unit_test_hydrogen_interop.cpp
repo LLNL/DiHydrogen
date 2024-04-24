@@ -28,7 +28,8 @@ make_matrix(El::Int height, El::Int width, El::Int ldim = 0)
 TEST_CASE("is_chw_packed predicate", "[tensor][utilities]")
 {
     // This is all metadata, so just test the CPU type
-    using TensorType = h2::Tensor<DataType, h2::Device::CPU>;
+    constexpr h2::Device Dev = h2::Device::CPU;
+    using TensorType = h2::Tensor<DataType>;
 
     // This is simply a pointer that can be used to construct a tensor
     // using the "pointer-attach" constructors. The data is never read
@@ -39,43 +40,52 @@ TEST_CASE("is_chw_packed predicate", "[tensor][utilities]")
 
     SECTION("Empty tensor is considered trivially packed.")
     {
-        TensorType tensor;
+        TensorType tensor{Dev};
         CHECK(is_chw_packed(tensor));
     }
 
     SECTION("Rank one, unit stride tensor")
     {
-        TensorType tensor{{6}, {h2::DT::Any}};
+        TensorType tensor{Dev, {6}, {h2::DT::Any}};
         CHECK(tensor.is_contiguous());
         CHECK(is_chw_packed(tensor));
     }
 
     SECTION("Rank one, non-unit stride tensor")
     {
-        TensorType tensor{mock_data, {6}, {h2::DT::Any}, {2}};
+        TensorType tensor{
+            Dev, mock_data, {6}, {h2::DT::Any}, {2}, h2::ComputeStream{Dev}};
         CHECK_FALSE(tensor.is_contiguous());
         CHECK_FALSE(is_chw_packed(tensor));
     }
 
     SECTION("Rank two, fully packed tensor")
     {
-        TensorType tensor{{6, 4}, {h2::DT::Any, h2::DT::Any}};
+        TensorType tensor{Dev, {6, 4}, {h2::DT::Any, h2::DT::Any}};
         CHECK(tensor.is_contiguous());
         CHECK(is_chw_packed(tensor));
     }
 
     SECTION("Rank two, partially packed tensor")
     {
-        TensorType tensor{
-            mock_data, {6, 4}, {h2::DT::Any, h2::DT::Any}, {1, 8}};
+        TensorType tensor{Dev,
+                          mock_data,
+                          {6, 4},
+                          {h2::DT::Any, h2::DT::Any},
+                          {1, 8},
+                          h2::ComputeStream{Dev}};
         CHECK_FALSE(tensor.is_contiguous());
         CHECK(is_chw_packed(tensor));
     }
 
     SECTION("Rank two, non-packed tensor")
     {
-        TensorType tensor{
-            mock_data, {6, 4}, {h2::DT::Any, h2::DT::Any}, {2, 12}};
+        TensorType tensor{Dev,
+                          mock_data,
+                          {6, 4},
+                          {h2::DT::Any, h2::DT::Any},
+                          {2, 12},
+                          h2::ComputeStream{Dev}};
         CHECK_FALSE(tensor.is_contiguous());
         CHECK_FALSE(is_chw_packed(tensor));
     }
@@ -83,6 +93,7 @@ TEST_CASE("is_chw_packed predicate", "[tensor][utilities]")
     SECTION("Rank 5, fully-packed tensor")
     {
         TensorType tensor{
+            Dev,
             {7, 6, 5, 4, 3},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any}};
         CHECK(tensor.is_contiguous());
@@ -92,10 +103,12 @@ TEST_CASE("is_chw_packed predicate", "[tensor][utilities]")
     SECTION("Rank 5, chw-packed tensor")
     {
         TensorType tensor{
+            Dev,
             mock_data,
             {7, 6, 5, 4, 3},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any},
-            {1, 7, 42, 210, 900}};
+            {1, 7, 42, 210, 900},
+            h2::ComputeStream{Dev}};
         CHECK_FALSE(tensor.is_contiguous());
         CHECK(is_chw_packed(tensor));
     }
@@ -103,34 +116,42 @@ TEST_CASE("is_chw_packed predicate", "[tensor][utilities]")
     SECTION("Rank 5, non-packed tensor")
     {
         TensorType tensor{
+            Dev,
             mock_data,
             {7, 6, 5, 4, 3},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any},
-            {2, 14, 84, 420, 1680}};
+            {2, 14, 84, 420, 1680},
+            h2::ComputeStream{Dev}};
         CHECK_FALSE(tensor.is_contiguous());
         CHECK_FALSE(is_chw_packed(tensor));
 
         tensor = TensorType{
+            Dev,
             mock_data,
             {7, 6, 5, 4, 3},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any},
-            {1, 8, 48, 240, 960}};
+            {1, 8, 48, 240, 960},
+            h2::ComputeStream{Dev}};
         CHECK_FALSE(tensor.is_contiguous());
         CHECK_FALSE(is_chw_packed(tensor));
 
         tensor = TensorType{
+            Dev,
             mock_data,
             {7, 6, 5, 4, 3},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any},
-            {1, 7, 43, 215, 860}};
+            {1, 7, 43, 215, 860},
+            h2::ComputeStream{Dev}};
         CHECK_FALSE(tensor.is_contiguous());
         CHECK_FALSE(is_chw_packed(tensor));
 
         tensor = TensorType{
+            Dev,
             mock_data,
             {7, 6, 5, 4, 3},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any},
-            {1, 7, 42, 211, 844}};
+            {1, 7, 42, 211, 844},
+            h2::ComputeStream{Dev}};
         CHECK_FALSE(tensor.is_contiguous());
         CHECK_FALSE(is_chw_packed(tensor));
     }
@@ -142,7 +163,7 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
 {
     constexpr h2::Device Dev = TestType::value;
     constexpr hydrogen::Device HDev = h2::HydrogenDevice<Dev>;
-    using TensorType = h2::Tensor<DataType, Dev>;
+    using TensorType = h2::Tensor<DataType>;
     using MatrixType = El::Matrix<DataType, HDev>;
 
     // Shapes to use, when needed
@@ -277,7 +298,7 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
 {
     constexpr h2::Device Dev = TestType::value;
     constexpr hydrogen::Device HDev = h2::HydrogenDevice<Dev>;
-    using TensorType = h2::Tensor<DataType, Dev>;
+    using TensorType = h2::Tensor<DataType>;
     using MatrixType = El::Matrix<DataType, HDev>;
 
     // Metadata checks ONLY
@@ -286,8 +307,8 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
 
     SECTION("Rank-1 contiguous tensor")
     {
-        auto tensor = TensorType{{9}, {h2::DT::Any}};
-        auto mat = h2::as_h_mat(tensor);
+        auto tensor = TensorType{Dev, {9}, {h2::DT::Any}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{9});
         CHECK(mat.Width() == El::Int{1});
@@ -299,8 +320,8 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
 
     SECTION("Rank-1 const contiguous tensor")
     {
-        auto const tensor = TensorType{{9}, {h2::DT::Any}};
-        auto mat = h2::as_h_mat(tensor);
+        auto const tensor = TensorType{Dev, {9}, {h2::DT::Any}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{9});
         CHECK(mat.Width() == El::Int{1});
@@ -312,8 +333,9 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
 
     SECTION("Rank-1 non-contiguous tensor")
     {
-        auto tensor = TensorType{mock_data, {9}, {h2::DT::Any}, {2}};
-        auto mat = h2::as_h_mat(tensor);
+        auto tensor = TensorType{
+            Dev, mock_data, {9}, {h2::DT::Any}, {2}, h2::ComputeStream{Dev}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{1});
         CHECK(mat.Width() == El::Int{9});
@@ -325,9 +347,13 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
 
     SECTION("Rank-1 const non-contiguous tensor")
     {
-        auto const tensor =
-            TensorType{mock_const_data, {9}, {h2::DT::Any}, {7}};
-        auto mat = h2::as_h_mat(tensor);
+        auto const tensor = TensorType{Dev,
+                                       mock_const_data,
+                                       {9},
+                                       {h2::DT::Any},
+                                       {7},
+                                       h2::ComputeStream{Dev}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{1});
         CHECK(mat.Width() == El::Int{9});
@@ -339,8 +365,8 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
 
     SECTION("Rank-2 contiguous tensor")
     {
-        auto tensor = TensorType{{3, 9}, {h2::DT::Any, h2::DT::Any}};
-        auto mat = h2::as_h_mat(tensor);
+        auto tensor = TensorType{Dev, {3, 9}, {h2::DT::Any, h2::DT::Any}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{3});
         CHECK(mat.Width() == El::Int{9});
@@ -352,8 +378,8 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
 
     SECTION("Rank-2 const contiguous tensor")
     {
-        auto const tensor = TensorType{{4, 8}, {h2::DT::Any, h2::DT::Any}};
-        auto mat = h2::as_h_mat(tensor);
+        auto const tensor = TensorType{Dev, {4, 8}, {h2::DT::Any, h2::DT::Any}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{4});
         CHECK(mat.Width() == El::Int{8});
@@ -365,9 +391,13 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
 
     SECTION("Rank-2 CHW-packed tensor")
     {
-        auto tensor =
-            TensorType{mock_data, {4, 8}, {h2::DT::Any, h2::DT::Any}, {1, 6}};
-        auto mat = h2::as_h_mat(tensor);
+        auto tensor = TensorType{Dev,
+                                 mock_data,
+                                 {4, 8},
+                                 {h2::DT::Any, h2::DT::Any},
+                                 {1, 6},
+                                 h2::ComputeStream{Dev}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{4});
         CHECK(mat.Width() == El::Int{8});
@@ -379,9 +409,13 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
 
     SECTION("Rank-2 const CHW-packed tensor")
     {
-        auto const tensor = TensorType{
-            mock_const_data, {4, 8}, {h2::DT::Any, h2::DT::Any}, {1, 7}};
-        auto mat = h2::as_h_mat(tensor);
+        auto const tensor = TensorType{Dev,
+                                       mock_const_data,
+                                       {4, 8},
+                                       {h2::DT::Any, h2::DT::Any},
+                                       {1, 7},
+                                       h2::ComputeStream{Dev}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{4});
         CHECK(mat.Width() == El::Int{8});
@@ -393,23 +427,31 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
 
     SECTION("Rank-2 non-CHW-packed tensor")
     {
-        auto tensor =
-            TensorType{mock_data, {4, 8}, {h2::DT::Any, h2::DT::Any}, {2, 10}};
-        CHECK_THROWS(h2::as_h_mat(tensor));
+        auto tensor = TensorType{Dev,
+                                 mock_data,
+                                 {4, 8},
+                                 {h2::DT::Any, h2::DT::Any},
+                                 {2, 10},
+                                 h2::ComputeStream{Dev}};
+        CHECK_THROWS(h2::as_h_mat<Dev>(tensor));
     }
 
     SECTION("Rank-2 non-CHW-packed const tensor")
     {
-        auto const tensor = TensorType{
-            mock_const_data, {4, 8}, {h2::DT::Any, h2::DT::Any}, {3, 15}};
-        CHECK_THROWS(h2::as_h_mat(tensor));
+        auto const tensor = TensorType{Dev,
+                                       mock_const_data,
+                                       {4, 8},
+                                       {h2::DT::Any, h2::DT::Any},
+                                       {3, 15},
+                                       h2::ComputeStream{Dev}};
+        CHECK_THROWS(h2::as_h_mat<Dev>(tensor));
     }
 
     SECTION("Rank-3 fully-packed tensor")
     {
         auto tensor =
-            TensorType{{3, 4, 5}, {h2::DT::Any, h2::DT::Any, h2::DT::Any}};
-        auto mat = h2::as_h_mat(tensor);
+          TensorType{Dev, {3, 4, 5}, {h2::DT::Any, h2::DT::Any, h2::DT::Any}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{12});
         CHECK(mat.Width() == El::Int{5});
@@ -422,8 +464,8 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
     SECTION("Rank-3 fully-packed const tensor")
     {
         auto const tensor =
-            TensorType{{3, 4, 5}, {h2::DT::Any, h2::DT::Any, h2::DT::Any}};
-        auto mat = h2::as_h_mat(tensor);
+          TensorType{Dev, {3, 4, 5}, {h2::DT::Any, h2::DT::Any, h2::DT::Any}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{12});
         CHECK(mat.Width() == El::Int{5});
@@ -435,11 +477,13 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
 
     SECTION("Rank-3 CHW-packed tensor")
     {
-        auto tensor = TensorType{mock_data,
+        auto tensor = TensorType{Dev,
+                                 mock_data,
                                  {3, 4, 5},
                                  {h2::DT::Any, h2::DT::Any, h2::DT::Any},
-                                 {1, 3, 20}};
-        auto mat = h2::as_h_mat(tensor);
+                                 {1, 3, 20},
+                                 h2::ComputeStream{Dev}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{12});
         CHECK(mat.Width() == El::Int{5});
@@ -451,11 +495,13 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
 
     SECTION("Rank-3 CHW-packed const tensor")
     {
-        auto const tensor = TensorType{mock_const_data,
+        auto const tensor = TensorType{Dev,
+                                       mock_const_data,
                                        {3, 4, 5},
                                        {h2::DT::Any, h2::DT::Any, h2::DT::Any},
-                                       {1, 3, 13}};
-        auto mat = h2::as_h_mat(tensor);
+                                       {1, 3, 13},
+                                       h2::ComputeStream{Dev}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{12});
         CHECK(mat.Width() == El::Int{5});
@@ -467,28 +513,31 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
 
     SECTION("Rank-3 non-packed tensor")
     {
-        auto tensor = TensorType{mock_data,
+        auto tensor = TensorType{Dev,
+                                 mock_data,
                                  {3, 4, 5},
                                  {h2::DT::Any, h2::DT::Any, h2::DT::Any},
-                                 {2, 7, 40}};
-        CHECK_THROWS(h2::as_h_mat(tensor));
+                                 {2, 7, 40},
+                                 h2::ComputeStream{Dev}};
+        CHECK_THROWS(h2::as_h_mat<Dev>(tensor));
     }
 
     SECTION("Rank-3 non-packed const tensor")
     {
-        auto const tensor = TensorType{mock_const_data,
+        auto const tensor = TensorType{Dev, mock_const_data,
                                        {3, 4, 5},
                                        {h2::DT::Any, h2::DT::Any, h2::DT::Any},
-                                       {1, 8, 33}};
-        CHECK_THROWS(h2::as_h_mat(tensor));
+                                       {1, 8, 33}, h2::ComputeStream{Dev}};
+        CHECK_THROWS(h2::as_h_mat<Dev>(tensor));
     }
 
     SECTION("Rank-5 fully-packed tensor")
     {
         auto tensor = TensorType{
+            Dev,
             {2, 3, 4, 5, 6},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any}};
-        auto mat = h2::as_h_mat(tensor);
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{120});
         CHECK(mat.Width() == El::Int{6});
@@ -501,9 +550,10 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
     SECTION("Rank-5 fully-packed const tensor")
     {
         auto const tensor = TensorType{
-            {2, 3, 4, 5, 6},
-            {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any}};
-        auto mat = h2::as_h_mat(tensor);
+          Dev,
+          {2, 3, 4, 5, 6},
+          {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{120});
         CHECK(mat.Width() == El::Int{6});
@@ -516,11 +566,13 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
     SECTION("Rank-5 CHW-packed tensor")
     {
         auto tensor = TensorType{
+            Dev,
             mock_data,
             {2, 3, 4, 5, 6},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any},
-            {1, 2, 6, 24, 123}};
-        auto mat = h2::as_h_mat(tensor);
+            {1, 2, 6, 24, 123},
+            h2::ComputeStream{Dev}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{120});
         CHECK(mat.Width() == El::Int{6});
@@ -533,11 +585,13 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
     SECTION("Rank-5 CHW-packed const tensor")
     {
         auto const tensor = TensorType{
+            Dev,
             mock_const_data,
             {2, 3, 4, 5, 6},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any},
-            {1, 2, 6, 24, 121}};
-        auto mat = h2::as_h_mat(tensor);
+            {1, 2, 6, 24, 121},
+            h2::ComputeStream{Dev}};
+        auto mat = h2::as_h_mat<Dev>(tensor);
 
         CHECK(mat.Height() == El::Int{120});
         CHECK(mat.Width() == El::Int{6});
@@ -550,20 +604,24 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
     SECTION("Rank-5 non-packed tensor")
     {
         auto tensor = TensorType{
+            Dev,
             mock_data,
             {2, 3, 4, 5, 6},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any},
-            {3, 6, 18, 72, 360}};
-        CHECK_THROWS(h2::as_h_mat(tensor));
+            {3, 6, 18, 72, 360},
+            h2::ComputeStream{Dev}};
+        CHECK_THROWS(h2::as_h_mat<Dev>(tensor));
     }
 
     SECTION("Rank-5 non-packed const tensor")
     {
         auto const tensor = TensorType{
+            Dev,
             mock_const_data,
             {2, 3, 4, 5, 6},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any},
-            {1, 2, 6, 25, 240}};
-        CHECK_THROWS(h2::as_h_mat(tensor));
+            {1, 2, 6, 25, 240},
+            h2::ComputeStream{Dev}};
+        CHECK_THROWS(h2::as_h_mat<Dev>(tensor));
     }
 }
