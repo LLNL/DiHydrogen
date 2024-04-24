@@ -32,14 +32,14 @@ public:
 
   Tensor(const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
-         const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+         const ComputeStream& stream = ComputeStream{Dev})
       : Tensor(shape_, dim_types_, StrictAlloc, stream)
   {}
 
   Tensor(const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
          lazy_alloc_t,
-         const ComputeStream<Dev>& stream = ComputeStream<Dev>{}) :
+         const ComputeStream& stream = ComputeStream{Dev}) :
     BaseTensor<T>(shape_, dim_types_),
     tensor_memory(shape_, true, stream)
   {}
@@ -47,26 +47,26 @@ public:
   Tensor(const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
          strict_alloc_t,
-         const ComputeStream<Dev>& stream = ComputeStream<Dev>{}) :
+         const ComputeStream& stream = ComputeStream{Dev}) :
     BaseTensor<T>(shape_, dim_types_),
     tensor_memory(shape_, false, stream)
   {}
 
-  Tensor(const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+  Tensor(const ComputeStream& stream = ComputeStream{Dev})
     : Tensor(ShapeTuple(), DimensionTypeTuple(), StrictAlloc, stream) {}
 
-  Tensor(lazy_alloc_t, const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+  Tensor(lazy_alloc_t, const ComputeStream& stream = ComputeStream{Dev})
     : Tensor(ShapeTuple(), DimensionTypeTuple(), LazyAlloc, stream) {}
 
   Tensor(strict_alloc_t,
-         const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+         const ComputeStream& stream = ComputeStream{Dev})
     : Tensor(ShapeTuple(), DimensionTypeTuple(), StrictAlloc, stream) {}
 
   Tensor(T* buffer,
          const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
          const StrideTuple& strides_,
-         const ComputeStream<Dev>& stream = ComputeStream<Dev>{}) :
+         const ComputeStream& stream = ComputeStream{Dev}) :
     BaseTensor<T>(ViewType::Mutable, shape_, dim_types_),
     tensor_memory(buffer, shape_, strides_, stream)
   {}
@@ -75,7 +75,7 @@ public:
          const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
          const StrideTuple& strides_,
-         const ComputeStream<Dev>& stream = ComputeStream<Dev>{}) :
+         const ComputeStream& stream = ComputeStream{Dev}) :
     BaseTensor<T>(ViewType::Const, shape_, dim_types_),
     tensor_memory(const_cast<T*>(buffer), shape_, strides_, stream)
   {}
@@ -259,12 +259,12 @@ public:
     return tensor_memory.get(coords);
   }
 
-  ComputeStream<Dev> get_stream() const H2_NOEXCEPT
+  ComputeStream get_stream() const H2_NOEXCEPT
   {
     return tensor_memory.get_stream();
   }
 
-  void set_stream(const ComputeStream<Dev>& stream)
+  void set_stream(const ComputeStream& stream)
   {
     if (this->is_view())
     {

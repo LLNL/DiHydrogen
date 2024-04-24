@@ -91,12 +91,11 @@ class StridedMemory
 private:
   static constexpr std::size_t INVALID_OFFSET = static_cast<std::size_t>(-1);
 
-  using raw_buffer_t = RawBuffer<T, Dev>;
 public:
 
   /** Allocate empty memory. */
-    StridedMemory(bool lazy = false,
-                  const ComputeStream<Dev>& stream_ = ComputeStream<Dev>{})
+  StridedMemory(bool lazy = false,
+                const ComputeStream& stream_ = ComputeStream{Dev})
     : raw_buffer(nullptr),
       mem_offset(INVALID_OFFSET),
       mem_strides{},
@@ -107,7 +106,7 @@ public:
 
   /** Allocate memory for shape, with unit strides. */
   StridedMemory(const ShapeTuple& shape, bool lazy = false,
-                const ComputeStream<Dev>& stream_ = ComputeStream<Dev>{})
+                const ComputeStream& stream_ = ComputeStream{Dev})
     : StridedMemory(shape, get_contiguous_strides(shape), lazy, stream_)
   {}
 
@@ -115,7 +114,7 @@ public:
   StridedMemory(const ShapeTuple& shape,
                 const StrideTuple& strides,
                 bool lazy = false,
-                const ComputeStream<Dev>& stream_ = ComputeStream<Dev>{})
+                const ComputeStream& stream_ = ComputeStream{Dev})
       : StridedMemory(lazy, stream_)
   {
     H2_ASSERT_DEBUG(shape.size() == strides.size(),
@@ -185,7 +184,7 @@ public:
   StridedMemory(T* buffer,
                 const ShapeTuple& shape,
                 const StrideTuple& strides,
-                const ComputeStream<Dev>& stream_ = ComputeStream<Dev>{})
+                const ComputeStream& stream_ = ComputeStream{Dev})
     : raw_buffer(nullptr),
       mem_offset(0),
       mem_strides(strides),
@@ -202,7 +201,7 @@ public:
                                >= product<std::size_t>(shape),
                     "Provided strides are not sane");
     std::size_t size = get_extent_from_strides(shape, strides);
-    raw_buffer = std::make_shared<raw_buffer_t>(buffer, size, stream);
+    raw_buffer = std::make_shared<RawBuffer<T>>(Dev, buffer, size, stream);
   }
 
   ~StridedMemory()
@@ -334,17 +333,17 @@ public:
     return &(const_data()[get_index(coords)]);
   }
 
-  ComputeStream<Dev> get_stream() const H2_NOEXCEPT
+  ComputeStream get_stream() const H2_NOEXCEPT
   {
     return stream;
   }
 
-  void set_stream(const ComputeStream<Dev>& stream, bool set_raw = false)
+  void set_stream(const ComputeStream& new_stream, bool set_raw = false)
   {
-    stream = stream;
+    stream = new_stream;
     if (raw_buffer && set_raw)
     {
-      raw_buffer->set_stream(stream);
+      raw_buffer->set_stream(new_stream);
     }
   }
 
@@ -367,16 +366,16 @@ private:
    * As `RawBuffer` may change the underlying memory, when using one,
    * we work with offsets instead of direct pointers into it.
    */
-  std::shared_ptr<raw_buffer_t> raw_buffer;
+  std::shared_ptr<RawBuffer<T>> raw_buffer;
   std::size_t mem_offset;  /**< Offset to start of raw_buffer. */
   /**
    * Reference to the prior `raw_buffer`, which may be used when
    * recovering existing memory from views using `ensure`.
    */
-  std::weak_ptr<raw_buffer_t> old_raw_buffer;
+  std::weak_ptr<RawBuffer<T>> old_raw_buffer;
   StrideTuple mem_strides;  /**< Strides associated with the memory. */
   ShapeTuple mem_shape;  /**< Shape describing the extent of the memory. */
-  ComputeStream<Dev> stream;  /**< Compute stream for operations. */
+  ComputeStream stream;  /**< Compute stream for operations. */
   bool is_mem_lazy;  /**< Whether allocation is lazy. */
 
   /** Helper to create a raw buffer if size is non-empty. */
@@ -387,7 +386,7 @@ private:
     {
       const std::size_t size = get_extent_from_strides(mem_shape, mem_strides);
       if (size) {
-        raw_buffer = std::make_shared<raw_buffer_t>(size, lazy, stream);
+        raw_buffer = std::make_shared<RawBuffer<T>>(Dev, size, lazy, stream);
       }
     }
   }

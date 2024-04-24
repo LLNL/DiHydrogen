@@ -18,6 +18,8 @@
 
 #include "h2/tensor/fixed_size_tuple.hpp"
 #include "h2/tensor/tuple_utils.hpp"
+#include "h2/core/device.hpp"
+#include "h2/core/sync.hpp"
 
 /** @file
  *
@@ -75,31 +77,6 @@ inline std::ostream& operator<<(std::ostream& os, const DimensionType& dim_type)
   case DT::Sequence:
     os << "Sequence";
     break;
-  default:
-    os << "Unknown";
-    break;
-  }
-  return os;
-}
-
-/**
- * Compute device type (e.g., CPU, GPU).
- */
-using Device = El::Device;  // Leverage Hydrogen's device typing.
-
-/** Support printing Device. */
-inline std::ostream& operator<<(std::ostream& os, const Device& dev)
-{
-  switch (dev)
-  {
-  case Device::CPU:
-    os << "CPU";
-    break;
-#ifdef H2_HAS_GPU
-  case Device::GPU:
-    os << "GPU";
-    break;
-#endif
   default:
     os << "Unknown";
     break;

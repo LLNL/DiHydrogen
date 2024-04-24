@@ -38,7 +38,7 @@ public:
              const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
-             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+             const ComputeStream& stream = ComputeStream{Dev})
       : DistTensor(shape_, dim_types_, grid_, dist_types_, StrictAlloc, stream)
   {}
 
@@ -47,7 +47,7 @@ public:
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
              lazy_alloc_t,
-             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+             const ComputeStream& stream = ComputeStream{Dev})
       : BaseDistTensor<T>(shape_, dim_types_, grid_, dist_types_),
         tensor_local(this->tensor_local_shape,
                      init_n(dim_types_, this->tensor_local_shape.size()),
@@ -60,7 +60,7 @@ public:
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
              strict_alloc_t,
-             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+             const ComputeStream& stream = ComputeStream{Dev})
       : BaseDistTensor<T>(shape_, dim_types_, grid_, dist_types_),
         tensor_local(this->tensor_local_shape,
                      init_n(dim_types_, this->tensor_local_shape.size()),
@@ -69,7 +69,7 @@ public:
   {}
 
   DistTensor(ProcessorGrid grid_,
-             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+             const ComputeStream& stream = ComputeStream{Dev})
       : DistTensor(ShapeTuple(),
                    DimensionTypeTuple(),
                    grid_,
@@ -80,7 +80,7 @@ public:
 
   DistTensor(ProcessorGrid grid_,
              lazy_alloc_t,
-             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+             const ComputeStream& stream = ComputeStream{Dev})
       : DistTensor(ShapeTuple(),
                    DimensionTypeTuple(),
                    grid_,
@@ -91,7 +91,7 @@ public:
 
   DistTensor(ProcessorGrid grid_,
              strict_alloc_t,
-             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+             const ComputeStream& stream = ComputeStream{Dev})
       : DistTensor(ShapeTuple(),
                    DimensionTypeTuple(),
                    grid_,
@@ -107,7 +107,7 @@ public:
              const DistributionTypeTuple& dist_types_,
              const ShapeTuple& local_shape_,
              const StrideTuple& local_strides_,
-             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+             const ComputeStream& stream = ComputeStream{Dev})
       : BaseDistTensor<T>(ViewType::Mutable,
                           global_shape_,
                           dim_types_,
@@ -124,7 +124,7 @@ public:
              const DistributionTypeTuple& dist_types_,
              const ShapeTuple& local_shape_,
              const StrideTuple& local_strides_,
-             const ComputeStream<Dev>& stream = ComputeStream<Dev>{})
+             const ComputeStream& stream = ComputeStream{Dev})
       : BaseDistTensor<T>(ViewType::Const,
                           global_shape_,
                           dim_types_,
@@ -280,12 +280,12 @@ public:
     return const_view(coords);
   }
 
-  ComputeStream<Dev> get_stream() const H2_NOEXCEPT
+  ComputeStream get_stream() const H2_NOEXCEPT
   {
     return tensor_local.get_stream();
   }
 
-  void set_stream(const ComputeStream<Dev>& stream)
+  void set_stream(const ComputeStream& stream)
   {
     tensor_local.set_stream(stream);
   }

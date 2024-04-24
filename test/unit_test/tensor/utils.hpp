@@ -10,18 +10,18 @@
 #include <type_traits>
 
 #include "h2/tensor/tensor_types.hpp"
+#include "h2/core/device.hpp"
 #include "h2/meta/TypeList.hpp"
 
 #ifdef H2_HAS_GPU
 #include "h2/gpu/memory_utils.hpp"
 #endif
 
-// List of device types that will be tested by Catch2.
-// The raw CPU/GPUDev_t can be used in TEMPLATE_TEST_CASE and the
-// AllDevList can be used in TEMPLATE_LIST_TEST_CASE.
-using CPUDev_t = std::integral_constant<h2::Device, h2::Device::CPU>;
+// The core device types can be used in TEMPLATE_TEST_CASE and the
+// typelists can be used in TEMPLATE_LIST_TEST_CASE.
+using h2::CPUDev_t;
 #ifdef H2_TEST_WITH_GPU
-using GPUDev_t = std::integral_constant<h2::Device, h2::Device::GPU>;
+using h2::GPUDev_t;
 using AllDevList = h2::meta::TL<CPUDev_t, GPUDev_t>;
 using AllDevPairsList = h2::meta::TL<h2::meta::TL<CPUDev_t, CPUDev_t>,
                                      h2::meta::TL<GPUDev_t, GPUDev_t>,

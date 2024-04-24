@@ -22,8 +22,8 @@ TEMPLATE_LIST_TEST_CASE("Buffer copy works", "[tensor][copy]", AllDevPairsList)
   constexpr DataType src_val = static_cast<DataType>(1);
   constexpr DataType dst_val = static_cast<DataType>(2);
 
-  auto src_stream = ComputeStream<SrcDev>{};
-  auto dst_stream = ComputeStream<DstDev>{};
+  auto src_stream = ComputeStream{SrcDev};
+  auto dst_stream = ComputeStream{DstDev};
 
   DeviceBuf<DataType, SrcDev> src(buf_size);
   DeviceBuf<DataType, DstDev> dst(buf_size);

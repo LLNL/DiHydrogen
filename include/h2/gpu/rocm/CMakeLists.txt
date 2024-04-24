@@ -15,5 +15,4 @@ h2_add_sources_to_target_and_install(
   SOURCES
   memory_utils.hpp
   runtime.hpp
-  sync.hpp
   )

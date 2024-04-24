@@ -139,7 +139,7 @@ auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
                           {m},
                           {DT::Any},
                           {as<DataIndexType>(1)},
-                          ComputeStream<H2Device<D>>(get_sync_info(matrix))};
+                          ComputeStream(get_sync_info(matrix))};
     }
     else if (m == DimType{1}) // Row vector
     {
@@ -147,13 +147,13 @@ auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
                           {n},
                           {DT::Any},
                           {ldim},
-                          ComputeStream<H2Device<D>>(get_sync_info(matrix))};
+                          ComputeStream(get_sync_info(matrix))};
     }
     return TensorType{buf,
                       {m, n},
                       {DT::Any, DT::Any},
                       {as<DataIndexType>(1), ldim},
-                      ComputeStream<H2Device<D>>(get_sync_info(matrix))};
+                      ComputeStream(get_sync_info(matrix))};
 }
 } // namespace internal
 

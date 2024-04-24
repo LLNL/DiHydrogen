@@ -40,9 +40,9 @@ namespace h2
  */
 template <Device DstDev, Device SrcDev, typename T>
 void CopyBuffer(T* dst,
-                const ComputeStream<DstDev>& dst_stream,
+                const ComputeStream& dst_stream,
                 const T* src,
-                const ComputeStream<SrcDev>& src_stream,
+                const ComputeStream& src_stream,
                 std::size_t count)
 {
   H2_ASSERT_DEBUG(count == 0 || (dst != nullptr && src != nullptr),
@@ -55,18 +55,18 @@ void CopyBuffer(T* dst,
   else if constexpr (SrcDev == Device::GPU && DstDev == Device::GPU)
   {
     auto stream = create_multi_sync(dst_stream, src_stream);
-    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream());
+    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream<DstDev>());
   }
   else if constexpr (SrcDev == Device::CPU && DstDev == Device::GPU)
   {
     // No sync needed in this case: The CPU is always synchronized and
     // the copy will be enqueued on the destination GPU stream.
-    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream());
+    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream<DstDev>());
   }
   else if constexpr (SrcDev == Device::GPU && DstDev == Device::CPU)
   {
     // No sync needed: Ditto.
-    gpu::mem_copy<T>(dst, src, count, src_stream.get_stream());
+    gpu::mem_copy<T>(dst, src, count, src_stream.get_stream<SrcDev>());
   }
 #endif
   else
@@ -78,9 +78,9 @@ void CopyBuffer(T* dst,
 /** Special case where both buffers are on the same device. */
 template <Device Dev, typename T>
 void CopyBuffer(T* dst,
-                const ComputeStream<Dev>& dst_stream,
+                const ComputeStream& dst_stream,
                 const T* src,
-                const ComputeStream<Dev>& src_stream,
+                const ComputeStream& src_stream,
                 std::size_t count)
 {
   CopyBuffer<Dev, Dev, T>(src, src_stream, dst, dst_stream, count);

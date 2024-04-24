@@ -449,6 +449,14 @@ void h2::gpu::destroy(hipEvent_t const event)
     H2_CHECK_HIP(hipEventDestroy(event));
 }
 
+void h2::gpu::record_event(const hipEvent_t event, const hipStream_t stream)
+{
+  H2_GPU_TRACE("recording event {} on stream {}",
+               (void*) event,
+               (void*) stream);
+  H2_CHECK_HIP(hipEventRecord(event, stream));
+}
+
 void h2::gpu::sync()
 {
     H2_GPU_TRACE("synchronizing gpu");
@@ -465,4 +473,10 @@ void h2::gpu::sync(hipStream_t stream)
 {
     H2_GPU_TRACE("synchronizing stream {}", (void*) stream);
     H2_CHECK_HIP(hipStreamSynchronize(stream));
+}
+
+void h2::gpu::sync(hipStream_t stream, hipEvent_t event)
+{
+  H2_GPU_TRACE("stream {} waiting for event {}", (void*) stream, (void*) event);
+  H2_CHECK_HIP(hipStreamWaitEvent(stream, event, 0));
 }
