@@ -266,7 +266,7 @@ static constexpr struct tensor_no_recovery_t {} TensorNoRecovery;
 static constexpr struct tensor_attempt_recovery_t {} TensorAttemptRecovery;
 
 /** Control whether tensors allocate data lazily or not. */
-enum TensorAllocation
+enum TensorAllocationStrategy
 {
   LazyAlloc,  /**< Tensor data should be allocated lazily. */
   StrictAlloc  /**< Tensor data should not be allocated lazily. */

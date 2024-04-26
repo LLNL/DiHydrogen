@@ -39,7 +39,7 @@ public:
              const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
-             TensorAllocation alloc_type = StrictAlloc,
+             TensorAllocationStrategy alloc_type = StrictAlloc,
              const std::optional<ComputeStream> stream = std::nullopt)
       : BaseDistTensor(shape_, dim_types_, grid_, dist_types_),
         tensor_local(device,
@@ -51,7 +51,7 @@ public:
 
   DistTensor(Device device,
              ProcessorGrid grid_,
-             TensorAllocation alloc_type = StrictAlloc,
+             TensorAllocationStrategy alloc_type = StrictAlloc,
              const std::optional<ComputeStream> stream = std::nullopt)
       : DistTensor(device,
                    ShapeTuple(),

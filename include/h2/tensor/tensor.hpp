@@ -36,7 +36,7 @@ public:
   Tensor(Device device,
          const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
-         TensorAllocation alloc_type = StrictAlloc,
+         TensorAllocationStrategy alloc_type = StrictAlloc,
          const std::optional<ComputeStream> stream = std::nullopt)
       : BaseTensor(shape_, dim_types_),
         tensor_memory(device,
@@ -46,7 +46,7 @@ public:
   {}
 
   Tensor(Device device,
-         TensorAllocation alloc_type = StrictAlloc,
+         TensorAllocationStrategy alloc_type = StrictAlloc,
          const std::optional<ComputeStream> stream = std::nullopt)
       : Tensor(device, ShapeTuple(), DimensionTypeTuple(), alloc_type, stream)
   {}
