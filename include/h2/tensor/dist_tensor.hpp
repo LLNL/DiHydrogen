@@ -12,6 +12,7 @@
  * Distributed tensors that live on a device.
  */
 
+#include <memory>
 #include <optional>
 
 #include "h2/tensor/dist_tensor_base.hpp"
@@ -19,6 +20,7 @@
 #include "h2/tensor/proc_grid.hpp"
 #include "h2/tensor/tensor.hpp"
 #include "h2/tensor/tensor_types.hpp"
+#include "h2/utils/passkey.hpp"
 
 namespace h2
 {
@@ -96,6 +98,29 @@ public:
                           local_shape_),
         tensor_local(
             device, buffer, local_shape_, dim_types_, local_strides_, stream)
+  {}
+
+  /** Private constructor for views. */
+  DistTensor(ViewType view_type_,
+             const Tensor<T>& orig_tensor_local_,
+             const ShapeTuple& local_shape_,
+             const IndexRangeTuple& local_coords_,
+             const ShapeTuple& shape_,
+             const DimensionTypeTuple& dim_types_,
+             ProcessorGrid grid_,
+             const DistributionTypeTuple& dist_types_,
+             Passkey<DistTensor<T>>)
+      : BaseDistTensor(
+          view_type_, shape_, dim_types_, grid_, dist_types_, local_shape_),
+        tensor_local(view_type_,
+                     orig_tensor_local_.tensor_memory,
+                     local_shape_,
+                     // Local shape may be empty depending on the view
+                     // coordinates and distribution (e.g., Single).
+                     local_shape_.is_empty() ? DimensionTypeTuple{}
+                                             : dim_types_,
+                     local_coords_,
+                     Passkey<DistTensor<T>>{})
   {}
 
   virtual ~DistTensor() = default;
@@ -303,14 +328,14 @@ public:
    * will throw an exception. Other operations have special semantics
    * when the tensor is a view (e.g., `contiguous`, `empty`).
    */
-  DistTensor<T>* view()
+  std::unique_ptr<DistTensor<T>> view()
   {
     return view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
   /** Return a constant view of this tensor. */
-  DistTensor<T>* view() const
+  std::unique_ptr<DistTensor<T>> view() const
   {
     return view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
@@ -330,7 +355,7 @@ public:
    * eliminated from a distributed tensor, unless the entire view is
    * empty.
    */
-  DistTensor<T>* view(const IndexRangeTuple& coords)
+  std::unique_ptr<DistTensor<T>> view(const IndexRangeTuple& coords)
   {
     return make_view(coords, ViewType::Mutable);
   }
@@ -338,13 +363,13 @@ public:
   /**
    * Return a constant view of a subtensor of this tensor.
    */
-  DistTensor<T>* view(const IndexRangeTuple& coords) const
+  std::unique_ptr<DistTensor<T>> view(const IndexRangeTuple& coords) const
   {
     return make_view(coords, ViewType::Const);
   }
 
   /** Convenience wrapper for view(coords). */
-  DistTensor<T>* operator()(const IndexRangeTuple& coords)
+  std::unique_ptr<DistTensor<T>> operator()(const IndexRangeTuple& coords)
   {
     return view(coords);
   }
@@ -363,20 +388,20 @@ public:
   }
 
   /** Return a constant view of this tensor. */
-  DistTensor<T>* const_view() const
+  std::unique_ptr<DistTensor<T>> const_view() const
   {
     return const_view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
   /** Return a constant view of a subtensor of this tensor. */
-  DistTensor<T>* const_view(const IndexRangeTuple& coords) const
+  std::unique_ptr<DistTensor<T>> const_view(const IndexRangeTuple& coords) const
   {
     return make_view(coords, ViewType::Const);
   }
 
   /** Convenience wrapper for const_view(coords). */
-  DistTensor<T>* operator()(const IndexRangeTuple& coords) const
+  std::unique_ptr<DistTensor<T>> operator()(const IndexRangeTuple& coords) const
   {
     return const_view(coords);
   }
@@ -400,30 +425,9 @@ private:
   /** Local tensor used for storage. */
   Tensor<T> tensor_local;
 
-  /** Private constructor for views. */
-  DistTensor(ViewType view_type_,
-             const Tensor<T>& orig_tensor_local_,
-             const ShapeTuple& local_shape_,
-             const IndexRangeTuple& local_coords_,
-             const ShapeTuple& shape_,
-             const DimensionTypeTuple& dim_types_,
-             ProcessorGrid grid_,
-             const DistributionTypeTuple& dist_types_)
-      : BaseDistTensor(
-          view_type_, shape_, dim_types_, grid_, dist_types_, local_shape_),
-        tensor_local(view_type_,
-                     orig_tensor_local_.tensor_memory,
-                     local_shape_,
-                     // Local shape may be empty depending on the view
-                     // coordinates and distribution (e.g., Single).
-                     local_shape_.is_empty() ? DimensionTypeTuple{}
-                                             : dim_types_,
-                     local_coords_)
-  {}
-
   /** Helper for constructing views. */
-  DistTensor<T>* make_view(IndexRangeTuple index_range,
-                           ViewType view_type) const
+  std::unique_ptr<DistTensor<T>> make_view(IndexRangeTuple index_range,
+                                           ViewType view_type) const
   {
     H2_ASSERT_ALWAYS(is_index_range_contained(index_range, this->tensor_shape),
                      "Cannot construct an out-of-range view");
@@ -442,15 +446,15 @@ private:
     if (is_index_range_empty(index_range))
     {
       // Globally empty view.
-      return new DistTensor<T>(
-          view_type,
-          tensor_local,
-          ShapeTuple{},
-          IndexRangeTuple{},
-          ShapeTuple{},
-          DimensionTypeTuple{},
-          this->tensor_grid,
-          DistributionTypeTuple{});
+      return std::make_unique<DistTensor<T>>(view_type,
+                                             tensor_local,
+                                             ShapeTuple{},
+                                             IndexRangeTuple{},
+                                             ShapeTuple{},
+                                             DimensionTypeTuple{},
+                                             this->tensor_grid,
+                                             DistributionTypeTuple{},
+                                             Passkey<DistTensor<T>>{});
     }
 
     // Standardize the indices to have all dimensions, adding any ALL
@@ -476,14 +480,15 @@ private:
     if (!do_index_ranges_intersect(index_range, global_indices))
     {
       // This rank has no local data in the view.
-      return new DistTensor<T>(view_type,
-                               tensor_local,
-                               ShapeTuple{},
-                               IndexRangeTuple{},
-                               view_global_shape,
-                               this->tensor_dim_types,
-                               this->tensor_grid,
-                               this->tensor_dist_types);
+      return std::make_unique<DistTensor<T>>(view_type,
+                                             tensor_local,
+                                             ShapeTuple{},
+                                             IndexRangeTuple{},
+                                             view_global_shape,
+                                             this->tensor_dim_types,
+                                             this->tensor_grid,
+                                             this->tensor_dist_types,
+                                             Passkey<DistTensor<T>>{});
     }
 
     // Determine this rank's indices in the view by intersecting
@@ -498,14 +503,15 @@ private:
                                       present_global_indices);
     ShapeTuple view_local_shape =
         get_index_range_shape(local_indices, this->tensor_local_shape);
-    return new DistTensor<T>(view_type,
-                             tensor_local,
-                             view_local_shape,
-                             local_indices,
-                             view_global_shape,
-                             this->tensor_dim_types,
-                             this->tensor_grid,
-                             this->tensor_dist_types);
+    return std::make_unique<DistTensor<T>>(view_type,
+                                           tensor_local,
+                                           view_local_shape,
+                                           local_indices,
+                                           view_global_shape,
+                                           this->tensor_dim_types,
+                                           this->tensor_grid,
+                                           this->tensor_dist_types,
+                                           Passkey<DistTensor<T>>{});
   }
 
 };

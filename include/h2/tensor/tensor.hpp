@@ -12,12 +12,14 @@
  * Local tensors that live on a device.
  */
 
+#include <memory>
 #include <optional>
 
 #include "h2/tensor/tensor_base.hpp"
 #include "h2/tensor/strided_memory.hpp"
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/tensor/tensor_utils.hpp"
+#include "h2/utils/passkey.hpp"
 
 namespace h2
 {
@@ -67,6 +69,18 @@ public:
          const ComputeStream& stream) :
     BaseTensor(ViewType::Const, shape_, dim_types_),
     tensor_memory(device, const_cast<T*>(buffer), shape_, strides_, stream)
+  {}
+
+  /** Private constructor for views. */
+  Tensor(ViewType view_type_,
+         const StridedMemory<T>& mem_,
+         const ShapeTuple& shape_,
+         const DimensionTypeTuple& dim_types_,
+         const IndexRangeTuple& coords,
+         Passkey2<Tensor<T>, DistTensor<T>>)
+      :
+    BaseTensor(view_type_, shape_, dim_types_),
+    tensor_memory(mem_, coords)
   {}
 
   virtual ~Tensor() = default;
@@ -273,7 +287,7 @@ public:
    * from the viewed tensor. Any views of this tensor will still be
    * viewing the original tensor, not the contiguous tensor.
    */
-  Tensor<T>* contiguous() {
+  std::unique_ptr<Tensor<T>> contiguous() {
     if (is_contiguous()) {
       return view();
     }
@@ -296,13 +310,13 @@ public:
    * will throw an exception. Other operations have special semantics
    * when the tensor is a view (e.g., `contiguous`, `empty`).
    */
-  Tensor<T>* view() {
+  std::unique_ptr<Tensor<T>> view() {
     return view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
   /** Return a constant view of this tensor. */
-  Tensor<T>* view() const
+  std::unique_ptr<Tensor<T>> view() const
   {
     return view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
@@ -323,7 +337,7 @@ public:
    * i.e., you access a specific element, the resulting view will have
    * one dimension with dimension-type `Scalar`.
    */
-  Tensor<T>* view(const IndexRangeTuple& coords)
+  std::unique_ptr<Tensor<T>> view(const IndexRangeTuple& coords)
   {
     return make_view(coords, ViewType::Mutable);
   }
@@ -331,13 +345,13 @@ public:
   /**
    * Return a constant view of a subtensor of this tensor.
    */
-  Tensor<T>* view(const IndexRangeTuple& coords) const
+  std::unique_ptr<Tensor<T>> view(const IndexRangeTuple& coords) const
   {
     return make_view(coords, ViewType::Const);
   }
 
   /** Convenience wrapper for view(coords). */
-  Tensor<T>* operator()(const IndexRangeTuple& coords)
+  std::unique_ptr<Tensor<T>> operator()(const IndexRangeTuple& coords)
   {
     return view(coords);
   }
@@ -355,19 +369,19 @@ public:
   }
 
   /** Return a constant view of this tensor. */
-  Tensor<T>* const_view() const {
+  std::unique_ptr<Tensor<T>> const_view() const {
     return const_view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
   /** Return a constant view of a subtensor of this tensor. */
-  Tensor<T>* const_view(const IndexRangeTuple& coords) const
+  std::unique_ptr<Tensor<T>> const_view(const IndexRangeTuple& coords) const
   {
     return make_view(coords, ViewType::Const);
   }
 
   /** Convenience wrapper for const_view(coords). */
-  Tensor<T>* operator()(const IndexRangeTuple& coords) const {
+  std::unique_ptr<Tensor<T>> operator()(const IndexRangeTuple& coords) const {
     return const_view(coords);
   }
 
@@ -408,20 +422,9 @@ private:
   /** Underlying memory buffer for the tensor. */
   StridedMemory<T> tensor_memory;
 
-  /** Private constructor for views. */
-  Tensor(ViewType view_type_,
-         const StridedMemory<T>& mem_,
-         const ShapeTuple& shape_,
-         const DimensionTypeTuple& dim_types_,
-         const IndexRangeTuple& coords)
-      :
-    BaseTensor(view_type_, shape_, dim_types_),
-    tensor_memory(mem_, coords)
-  {}
-
   /** Helper for constructing views. */
-  Tensor<T>* make_view(const IndexRangeTuple& coords,
-                       ViewType view_type) const
+  std::unique_ptr<Tensor<T>> make_view(const IndexRangeTuple& coords,
+                                       ViewType view_type) const
   {
     if (!is_index_range_contained(coords, this->tensor_shape))
     {
@@ -432,11 +435,12 @@ private:
     // IndexRanges.
     if (is_index_range_empty(coords))
     {
-      return new Tensor<T>(view_type,
-                           tensor_memory,
-                           ShapeTuple{},
-                           DimensionTypeTuple{},
-                           IndexRangeTuple{});
+      return std::make_unique<Tensor<T>>(view_type,
+                                         tensor_memory,
+                                         ShapeTuple{},
+                                         DimensionTypeTuple{},
+                                         IndexRangeTuple{},
+                                         Passkey<Tensor<T>>{});
     }
     ShapeTuple view_shape = get_index_range_shape(coords, this->tensor_shape);
     // Eliminate dimension types from dimensions that have been
@@ -455,11 +459,12 @@ private:
           this->tensor_dim_types,
           [&](IndexRangeTuple::size_type i) { return !coords[i].is_scalar(); });
     }
-    return new Tensor<T>(view_type,
-                         tensor_memory,
-                         view_shape,
-                         filtered_dim_types,
-                         coords);
+    return std::make_unique<Tensor<T>>(view_type,
+                                       tensor_memory,
+                                       view_shape,
+                                       filtered_dim_types,
+                                       coords,
+                                       Passkey<Tensor<T>>{});
   }
 
   // DistTensor needs to poke in here for some view stuff.

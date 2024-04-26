@@ -685,7 +685,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
             write_ele<Dev>(buf, i, static_cast<DataType>(i));
           }
 
-          DistTensorType* view = tensor.view();
+          std::unique_ptr<DistTensorType> view = tensor.view();
           REQUIRE(view->shape() == tensor_shape);
           REQUIRE(view->local_shape() == tensor.local_shape());
           REQUIRE(view->dim_types() == tensor_dim_types);
@@ -741,7 +741,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
             write_ele<Dev>(buf, i, static_cast<DataType>(i));
           }
 
-          DistTensorType* view = tensor.const_view();
+          std::unique_ptr<DistTensorType> view = tensor.const_view();
           REQUIRE(view->shape() == tensor_shape);
           REQUIRE(view->local_shape() == tensor.local_shape());
           REQUIRE(view->dim_types() == tensor_dim_types);
@@ -848,7 +848,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
             local_start = get_index_range_start(local_view_indices);
           }
 
-          DistTensorType* view = tensor.view(view_indices);
+          std::unique_ptr<DistTensorType> view = tensor.view(view_indices);
           REQUIRE(view->shape() == view_shape);
           REQUIRE(view->local_shape() == local_shape);
           REQUIRE(view->dim_types() == tensor_dim_types);
@@ -953,8 +953,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
             write_ele<Dev>(buf, i, static_cast<DataType>(i));
           }
 
-          DistTensorType* orig_view = tensor.view();
-          DistTensorType* view = orig_view->view();
+          std::unique_ptr<DistTensorType> orig_view = tensor.view();
+          std::unique_ptr<DistTensorType> view = orig_view->view();
           REQUIRE(view->shape() == tensor_shape);
           REQUIRE(view->local_shape() == tensor.local_shape());
           REQUIRE(view->dim_types() == tensor_dim_types);
@@ -1010,7 +1010,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
             write_ele<Dev>(buf, i, static_cast<DataType>(i));
           }
 
-          DistTensorType* view = tensor.view();
+          std::unique_ptr<DistTensorType> view = tensor.view();
           REQUIRE(view->is_view());
           view->unview();
           REQUIRE_FALSE(view->is_view());
@@ -1052,7 +1052,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
             write_ele<Dev>(buf, i, static_cast<DataType>(i));
           }
 
-          DistTensorType* view = tensor.view();
+          std::unique_ptr<DistTensorType> view = tensor.view();
           REQUIRE(view->is_view());
           view->empty();
           REQUIRE_FALSE(view->is_view());
@@ -1094,7 +1094,7 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor views work",
           DistTensorType tensor = DistTensorType(
               Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
 
-          DistTensorType* view = tensor.view(IndexRangeTuple{});
+          std::unique_ptr<DistTensorType> view = tensor.view(IndexRangeTuple{});
           REQUIRE(view->shape() == ShapeTuple{});
           REQUIRE(view->local_shape() == ShapeTuple{});
           REQUIRE(view->dim_types() == DTTuple{});
@@ -1140,7 +1140,7 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor views work",
           IndexRangeTuple view_indices({IRng(), IRng(2, 3), IRng(1, 2)});
           view_indices.set_size(grid.ndim());
 
-          DistTensorType* view = tensor.view(view_indices);
+          std::unique_ptr<DistTensorType> view = tensor.view(view_indices);
           REQUIRE(view->shape() == ShapeTuple{});
           REQUIRE(view->local_shape() == ShapeTuple{});
           REQUIRE(view->dim_types() == DTTuple{});

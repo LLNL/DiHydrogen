@@ -406,7 +406,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
 
   SECTION("Basic views work")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     REQUIRE(view->shape() == ShapeTuple{4, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -425,7 +425,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Constant views work")
   {
-    TensorType* view = tensor.const_view();
+    std::unique_ptr<TensorType> view = tensor.const_view();
     REQUIRE(view->shape() == ShapeTuple{4, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -440,7 +440,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Viewing a subtensor works")
   {
-    TensorType* view = tensor.view({IRng(1), ALL});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(1), ALL});
     REQUIRE(view->shape() == ShapeTuple{6});
     REQUIRE(view->dim_types() == DTTuple{DT::Any});
     REQUIRE(view->strides() == StrideTuple{4});
@@ -457,7 +457,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Operator-style views work")
   {
-    TensorType* view = tensor({IRng(1, 3), ALL});
+    std::unique_ptr<TensorType> view = tensor({IRng(1, 3), ALL});
     REQUIRE(view->shape() == ShapeTuple{2, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -477,7 +477,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("View of a single element works")
   {
-    TensorType* view = tensor.view({IRng(1, 2), IRng(0, 1)});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(1, 2), IRng(0, 1)});
     REQUIRE(view->shape() == ShapeTuple{1, 1});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 1});
@@ -491,7 +491,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("View of a single element, eliminating dimensions, works")
   {
-    TensorType* view = tensor.view({IRng(1), IRng(0)});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(1), IRng(0)});
     REQUIRE(view->shape() == ShapeTuple{1});
     REQUIRE(view->dim_types() == DTTuple{DT::Scalar});
     REQUIRE(view->strides() == StrideTuple{1});
@@ -505,8 +505,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Viewing a view works")
   {
-    TensorType* view_orig = tensor.view();
-    TensorType* view = view_orig->view();
+    std::unique_ptr<TensorType> view_orig = tensor.view();
+    std::unique_ptr<TensorType> view = view_orig->view();
     REQUIRE(view->shape() == ShapeTuple{4, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -523,7 +523,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Unviewing a view works")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     REQUIRE(view->is_view());
     view->unview();
     REQUIRE_FALSE(view->is_view());
@@ -537,7 +537,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Emptying a view unviews")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     view->empty();
     REQUIRE_FALSE(view->is_view());
     REQUIRE(view->shape() == ShapeTuple{});
@@ -556,7 +556,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
 #endif
   SECTION("Resizing a view fails")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     REQUIRE_THROWS(view->resize(ShapeTuple{2, 3}));
     REQUIRE_THROWS(view->resize(ShapeTuple{2, 3, 4},
                                 DTTuple{DT::Sample, DT::Any, DT::Any}));
@@ -579,7 +579,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
 
   SECTION("Basic views work")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     REQUIRE(view->shape() == ShapeTuple{1});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample});
     REQUIRE(view->strides() == StrideTuple{1});
@@ -595,7 +595,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
 
   SECTION("Manually-specified view range works")
   {
-    TensorType* view = tensor.view({IRng(0, 1)});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(0, 1)});
     REQUIRE(view->shape() == ShapeTuple{1});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample});
     REQUIRE(view->strides() == StrideTuple{1});
@@ -611,7 +611,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
 
   SECTION("View with a scalar index works")
   {
-    TensorType* view = tensor.view({IRng(0)});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(0)});
     REQUIRE(view->shape() == ShapeTuple{1});
     REQUIRE(view->dim_types() == DTTuple{DT::Scalar});
     REQUIRE(view->strides() == StrideTuple{1});
@@ -637,7 +637,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing constant tensors works",
 
   SECTION("Basic views work")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     REQUIRE(view->shape() == ShapeTuple{4, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -652,7 +652,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing constant tensors works",
   }
   SECTION("Operator-style views work")
   {
-    TensorType* view = tensor({IRng(1, 3), ALL});
+    std::unique_ptr<TensorType> view = tensor({IRng(1, 3), ALL});
     REQUIRE(view->shape() == ShapeTuple{2, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -680,7 +680,7 @@ TEMPLATE_LIST_TEST_CASE("Empty views work", "[tensor]", AllDevList)
 
   SECTION("View with fully empty coordinates work")
   {
-    TensorType* view = tensor.view(IndexRangeTuple{});
+    std::unique_ptr<TensorType> view = tensor.view(IndexRangeTuple{});
     REQUIRE(view->shape() == ShapeTuple{});
     REQUIRE(view->dim_types() == DTTuple{});
     REQUIRE(view->strides() == StrideTuple{});
@@ -695,7 +695,7 @@ TEMPLATE_LIST_TEST_CASE("Empty views work", "[tensor]", AllDevList)
 
   SECTION("View with one coordinate empty works")
   {
-    TensorType* view = tensor.view({IRng(0, 1), IRng()});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(0, 1), IRng()});
     REQUIRE(view->shape() == ShapeTuple{});
     REQUIRE(view->dim_types() == DTTuple{});
     REQUIRE(view->strides() == StrideTuple{});
@@ -726,16 +726,16 @@ TEMPLATE_LIST_TEST_CASE("Making tensors contiguous works",
   SECTION("Making contiguous tensors contiguous works")
   {
     REQUIRE(tensor.is_contiguous());
-    TensorType* contig = tensor.contiguous();
+    std::unique_ptr<TensorType> contig = tensor.contiguous();
     REQUIRE(contig->is_view());
     REQUIRE(contig->data() == tensor.data());
   }
   SECTION("Making non-contiguous tensors contiguous work")
   {
-    TensorType* view = tensor.view({IRng(1, 2), ALL});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(1, 2), ALL});
     REQUIRE_FALSE(view->is_contiguous());
 
-    TensorType* contig = view->contiguous();
+    std::unique_ptr<TensorType> contig = view->contiguous();
     REQUIRE(contig->is_contiguous());
     REQUIRE(contig->data() != view->data());
     REQUIRE(contig->shape() == ShapeTuple{6});
@@ -769,7 +769,7 @@ TEMPLATE_LIST_TEST_CASE("Tensors are printable", "[tensor]", AllDevList)
 
   SECTION("View")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     ss << *view;
     REQUIRE(ss.str()
             == std::string("Tensor<") + TypeName<DataType>() + ", "
