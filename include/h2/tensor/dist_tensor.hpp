@@ -12,14 +12,13 @@
  * Distributed tensors that live on a device.
  */
 
+#include <optional>
+
 #include "h2/tensor/dist_tensor_base.hpp"
 #include "h2/tensor/dist_types.hpp"
 #include "h2/tensor/proc_grid.hpp"
 #include "h2/tensor/tensor.hpp"
 #include "h2/tensor/tensor_types.hpp"
-#include "dist_types.hpp"
-#include "dist_utils.hpp"
-#include "tensor_types.hpp"
 
 namespace h2
 {
@@ -38,126 +37,27 @@ public:
              const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
-             const ComputeStream& stream)
-      : DistTensor(
-          device, shape_, dim_types_, grid_, dist_types_, StrictAlloc, stream)
-  {}
-
-  DistTensor(Device device,
-             const ShapeTuple& shape_,
-             const DimensionTypeTuple& dim_types_,
-             ProcessorGrid grid_,
-             const DistributionTypeTuple& dist_types_)
-      : DistTensor(
-          device, shape_, dim_types_, grid_, dist_types_, ComputeStream{device})
-  {}
-
-  DistTensor(Device device,
-             const ShapeTuple& shape_,
-             const DimensionTypeTuple& dim_types_,
-             ProcessorGrid grid_,
-             const DistributionTypeTuple& dist_types_,
-             lazy_alloc_t,
-             const ComputeStream& stream)
+             TensorAllocation alloc_type = StrictAlloc,
+             const std::optional<ComputeStream> stream = std::nullopt)
       : BaseDistTensor<T>(shape_, dim_types_, grid_, dist_types_),
         tensor_local(device,
                      this->tensor_local_shape,
                      init_n(dim_types_, this->tensor_local_shape.size()),
-                     LazyAlloc,
-                     stream)
-  {}
-
-  DistTensor(Device device,
-             const ShapeTuple& shape_,
-             const DimensionTypeTuple& dim_types_,
-             ProcessorGrid grid_,
-             const DistributionTypeTuple& dist_types_,
-             lazy_alloc_t)
-      : DistTensor(device,
-                   shape_,
-                   dim_types_,
-                   grid_,
-                   dist_types_,
-                   LazyAlloc,
-                   ComputeStream{device})
-  {}
-
-  DistTensor(Device device,
-             const ShapeTuple& shape_,
-             const DimensionTypeTuple& dim_types_,
-             ProcessorGrid grid_,
-             const DistributionTypeTuple& dist_types_,
-             strict_alloc_t,
-             const ComputeStream& stream)
-      : BaseDistTensor<T>(shape_, dim_types_, grid_, dist_types_),
-        tensor_local(device,
-                     this->tensor_local_shape,
-                     init_n(dim_types_, this->tensor_local_shape.size()),
-                     StrictAlloc,
-                     stream)
-  {}
-
-  DistTensor(Device device,
-             const ShapeTuple& shape_,
-             const DimensionTypeTuple& dim_types_,
-             ProcessorGrid grid_,
-             const DistributionTypeTuple& dist_types_,
-             strict_alloc_t)
-      : DistTensor(device,
-                   shape_,
-                   dim_types_,
-                   grid_,
-                   dist_types_,
-                   StrictAlloc,
-                   ComputeStream{device})
-  {}
-
-  DistTensor(Device device, ProcessorGrid grid_, const ComputeStream& stream)
-    : DistTensor(device,
-                 ShapeTuple(),
-                 DimensionTypeTuple(),
-                 grid_,
-                 DistributionTypeTuple(),
-                 StrictAlloc,
-                 stream)
-  {}
-
-  DistTensor(Device device, ProcessorGrid grid_)
-      : DistTensor(device, grid_, ComputeStream{device})
+                     alloc_type,
+                     stream.value_or(ComputeStream{device}))
   {}
 
   DistTensor(Device device,
              ProcessorGrid grid_,
-             lazy_alloc_t,
-             const ComputeStream& stream)
+             TensorAllocation alloc_type = StrictAlloc,
+             const std::optional<ComputeStream> stream = std::nullopt)
       : DistTensor(device,
                    ShapeTuple(),
                    DimensionTypeTuple(),
                    grid_,
                    DistributionTypeTuple(),
-                   LazyAlloc,
+                   alloc_type,
                    stream)
-  {}
-
-  DistTensor(Device device, ProcessorGrid grid_, lazy_alloc_t)
-      : DistTensor(device, grid_, LazyAlloc, ComputeStream{device})
-  {}
-
-  DistTensor(Device device,
-             ProcessorGrid grid_,
-             strict_alloc_t,
-             const ComputeStream& stream)
-      : DistTensor(device,
-                   ShapeTuple(),
-                   DimensionTypeTuple(),
-                   grid_,
-                   DistributionTypeTuple(),
-                   StrictAlloc,
-                   stream)
-  {}
-
-  DistTensor(Device device, ProcessorGrid grid_, strict_alloc_t)
-      : DistTensor(device, grid_, StrictAlloc, ComputeStream{device})
   {}
 
   DistTensor(Device device,

@@ -12,6 +12,8 @@
  * Local tensors that live on a device.
  */
 
+#include <optional>
+
 #include "h2/tensor/tensor_base.hpp"
 #include "h2/tensor/strided_memory.hpp"
 #include "h2/tensor/tensor_types.hpp"
@@ -32,67 +34,19 @@ public:
   Tensor(Device device,
          const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
-         const ComputeStream& stream)
-    : Tensor(device, shape_, dim_types_, StrictAlloc, stream)
+         TensorAllocation alloc_type = StrictAlloc,
+         const std::optional<ComputeStream> stream = std::nullopt)
+      : BaseTensor<T>(shape_, dim_types_),
+        tensor_memory(device,
+                      shape_,
+                      alloc_type == LazyAlloc,
+                      stream.value_or(ComputeStream{device}))
   {}
 
   Tensor(Device device,
-         const ShapeTuple& shape_,
-         const DimensionTypeTuple& dim_types_)
-    : Tensor(device, shape_, dim_types_, ComputeStream{device}) {}
-
-  Tensor(Device device,
-         const ShapeTuple& shape_,
-         const DimensionTypeTuple& dim_types_,
-         lazy_alloc_t,
-         const ComputeStream& stream) :
-    BaseTensor<T>(shape_, dim_types_),
-    tensor_memory(device, shape_, true, stream)
-  {}
-
-  Tensor(Device device,
-         const ShapeTuple& shape_,
-         const DimensionTypeTuple& dim_types_,
-         lazy_alloc_t)
-      : Tensor(device, shape_, dim_types_, LazyAlloc, ComputeStream{device})
-  {}
-
-  Tensor(Device device,
-         const ShapeTuple& shape_,
-         const DimensionTypeTuple& dim_types_,
-         strict_alloc_t,
-         const ComputeStream& stream) :
-    BaseTensor<T>(shape_, dim_types_),
-    tensor_memory(device, shape_, false, stream)
-  {}
-
-  Tensor(Device device,
-         const ShapeTuple& shape_,
-         const DimensionTypeTuple& dim_types_,
-         strict_alloc_t)
-      : Tensor(device, shape_, dim_types_, StrictAlloc, ComputeStream{device})
-  {}
-
-  Tensor(Device device, const ComputeStream& stream)
-      : Tensor(device, ShapeTuple(), DimensionTypeTuple(), StrictAlloc, stream)
-  {}
-
-  Tensor(Device device) : Tensor(device, ComputeStream{device}) {}
-
-  Tensor(Device device, lazy_alloc_t, const ComputeStream& stream)
-      : Tensor(device, ShapeTuple(), DimensionTypeTuple(), LazyAlloc, stream)
-  {}
-
-  Tensor(Device device, lazy_alloc_t)
-      : Tensor(device, LazyAlloc, ComputeStream{device})
-  {}
-
-  Tensor(Device device, strict_alloc_t, const ComputeStream& stream)
-      : Tensor(device, ShapeTuple(), DimensionTypeTuple(), StrictAlloc, stream)
-  {}
-
-  Tensor(Device device, strict_alloc_t)
-      : Tensor(device, StrictAlloc, ComputeStream{device})
+         TensorAllocation alloc_type = StrictAlloc,
+         const std::optional<ComputeStream> stream = std::nullopt)
+      : Tensor(device, ShapeTuple(), DimensionTypeTuple(), alloc_type, stream)
   {}
 
   Tensor(Device device,

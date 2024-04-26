@@ -265,9 +265,11 @@ static constexpr struct tensor_no_recovery_t {} TensorNoRecovery;
 /** Attempt recovery in `BaseTensor::ensure`. */
 static constexpr struct tensor_attempt_recovery_t {} TensorAttemptRecovery;
 
-/** Tag to indicate a tensor should allocate lazily. */
-static constexpr struct lazy_alloc_t {} LazyAlloc;
-/** Tag to indicate a tensor should not allocate lazily. */
-static constexpr struct strict_alloc_t {} StrictAlloc;
+/** Control whether tensors allocate data lazily or not. */
+enum TensorAllocation
+{
+  LazyAlloc,  /**< Tensor data should be allocated lazily. */
+  StrictAlloc  /**< Tensor data should not be allocated lazily. */
+};
 
 }  // namespace h2
