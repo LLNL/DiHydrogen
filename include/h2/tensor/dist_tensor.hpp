@@ -25,7 +25,7 @@ namespace h2
 
 /** Distributed tensor class for arbitrary types and devices. */
 template <typename T>
-class DistTensor : public BaseDistTensor<T>
+class DistTensor : public BaseDistTensor
 {
 public:
 
@@ -39,7 +39,7 @@ public:
              const DistributionTypeTuple& dist_types_,
              TensorAllocation alloc_type = StrictAlloc,
              const std::optional<ComputeStream> stream = std::nullopt)
-      : BaseDistTensor<T>(shape_, dim_types_, grid_, dist_types_),
+      : BaseDistTensor(shape_, dim_types_, grid_, dist_types_),
         tensor_local(device,
                      this->tensor_local_shape,
                      init_n(dim_types_, this->tensor_local_shape.size()),
@@ -69,12 +69,12 @@ public:
              const ShapeTuple& local_shape_,
              const StrideTuple& local_strides_,
              const ComputeStream& stream)
-      : BaseDistTensor<T>(ViewType::Mutable,
-                          global_shape_,
-                          dim_types_,
-                          grid_,
-                          dist_types_,
-                          local_shape_),
+      : BaseDistTensor(ViewType::Mutable,
+                       global_shape_,
+                       dim_types_,
+                       grid_,
+                       dist_types_,
+                       local_shape_),
         tensor_local(
             device, buffer, local_shape_, dim_types_, local_strides_, stream)
   {}
@@ -88,7 +88,7 @@ public:
              const ShapeTuple& local_shape_,
              const StrideTuple& local_strides_,
              const ComputeStream& stream)
-      : BaseDistTensor<T>(ViewType::Const,
+      : BaseDistTensor(ViewType::Const,
                           global_shape_,
                           dim_types_,
                           grid_,
@@ -98,12 +98,40 @@ public:
             device, buffer, local_shape_, dim_types_, local_strides_, stream)
   {}
 
+  virtual ~DistTensor() = default;
+
+  /** Output a short description of the tensor. */
+  void short_describe(std::ostream& os) const override
+  {
+    os << "DistTensor<" << TypeName<T>() << ", " << get_device() << ">(";
+    tensor_grid.short_describe(os);
+    os << ": ";
+    if (is_view())
+    {
+      os << get_view_type() << " of ";
+    }
+    for (ShapeTuple::size_type i = 0; i < ndim(); ++i)
+    {
+      os << distribution(i) << ":" << dim_type(i) << ":" << shape(i);
+      if (i < ndim() - 1)
+      {
+        os << " x ";
+      }
+    }
+    os << ")";
+  }
+
   Device get_device() const H2_NOEXCEPT override
   {
     return tensor_local.get_device();
   }
 
-  void empty() override
+  /**
+   * Clear the tensor and reset it to empty.
+   *
+   * If this is a view, this is equivalent to `unview`.
+   */
+  void empty()
   {
     this->tensor_local.empty();
     this->tensor_shape = ShapeTuple();
@@ -116,20 +144,45 @@ public:
     }
   }
 
-  void resize(const ShapeTuple& new_shape) override
+  /**
+   * Resize the tensor to a new shape.
+   *
+   * The number of dimensions must be the same as the existing tensor,
+   * or the existing tensor must be empty.
+   *
+   * It is an error to call this on a view.
+   */
+  void resize(const ShapeTuple& new_shape)
   {
     resize(new_shape, this->tensor_dim_types, this->tensor_dist_types);
   }
 
+  /**
+   * Resize the tensor to a new shape and change its dimension types.
+   *
+   * The number of dimensions must be the same as the existing tensor,
+   * or the existing tensor must be empty.
+   *
+   * It is an error to call this on a view.
+   */
   void resize(const ShapeTuple& new_shape,
-              const DimensionTypeTuple& new_dim_types) override
+              const DimensionTypeTuple& new_dim_types)
   {
     resize(new_shape, new_dim_types, this->tensor_dist_types);
   }
 
+  /**
+   * Resize the tensor to a new shape and change its dimension types
+   * and distribution.
+   *
+   * The number of dimensions must be the same as the existing tensor,
+   * or the existing tensor must be empty.
+   *
+   * It is an error to call this on a view.
+   */
   void resize(const ShapeTuple& new_shape,
               const DimensionTypeTuple& new_dim_types,
-              const DistributionTypeTuple& new_dist_types) override
+              const DistributionTypeTuple& new_dist_types)
   {
     H2_ASSERT_ALWAYS(!this->is_view(), "Cannot resize a view");
     H2_ASSERT_ALWAYS(new_shape.size() == this->tensor_grid.ndim(),
@@ -148,101 +201,182 @@ public:
                         init_n(new_dim_types, this->tensor_local_shape.size()));
   }
 
-  T* data() override
+  /**
+   * Return a raw pointer to the underlying local storage.
+   *
+   * @note Remember to account for the strides when accessing this.
+   * @note Just because a tensor is globally non-empty does not mean it
+   * has local data.
+   */
+  T* data()
   {
     return tensor_local.data();
   }
 
-  const T* data() const override
+  /** Return a raw constant pointer to the underlying local storage. */
+  const T* data() const
   {
     return tensor_local.data();
   }
 
-  const T* const_data() const override
+  /** Return a raw constant pointer to the underlying local storage. */
+  const T* const_data() const
   {
     return tensor_local.const_data();
   }
 
-  Tensor<T>& local_tensor() override
+  /** Return the underlying local tensor. */
+  Tensor<T>& local_tensor()
   {
     return tensor_local;
   }
 
-  const Tensor<T>& local_tensor() const override
+  /** Return a constant reference to the underlying local tensor. */
+  const Tensor<T>& local_tensor() const
   {
     return tensor_local;
   }
 
-  const Tensor<T>& const_local_tensor() const override
+  /** Return a constant reference to the underlying local tensor. */
+  const Tensor<T>& const_local_tensor() const
   {
     return tensor_local;
   }
 
-  void ensure() override
+  /**
+   * Ensure memory is backing this tensor, allocating if necessary.
+   *
+   * This attempts to reuse existing memory from still-extant views of
+   * this tensor.
+   */
+  void ensure()
   {
     ensure(TensorAttemptRecovery);
   }
 
-  void ensure(tensor_no_recovery_t) override
+  /**
+   * Ensure memory is backing this tensor, allocating if necessary.
+   *
+   * This does not attempt to reuse existing memory from still-extant
+   * views of this tensor.
+   */
+  void ensure(tensor_no_recovery_t)
   {
     tensor_local.ensure(TensorNoRecovery);
   }
 
-  void ensure(tensor_attempt_recovery_t) override
+  /**
+   * Ensure memory is backing this tensor, allocating if necessary.
+   *
+   * This attempts to reuse existing memory from still-extant views of
+   * this tensor.
+   */
+  void ensure(tensor_attempt_recovery_t)
   {
     tensor_local.ensure(TensorAttemptRecovery);
   }
 
-  void release() override
+  /**
+   * Release memory associated with this tensor.
+   *
+   * Note that if there are views, memory may not be deallocated
+   * immediately.
+   */
+  void release()
   {
     tensor_local.release();
   }
 
-  DistTensor<T>* view() override
+  /**
+   * Return a view of this tensor.
+   *
+   * A view will share the same underlying memory as the original tensor,
+   * and will therefore reflect any changes made to the data; likewise,
+   * changes made through the view will be reflected in the original
+   * tensor. Additionally, the memory will remain valid so long as the
+   * view exists, even if the original tensor no longer exists.
+   *
+   * However, changes to metadata (e.g., shape, stride, etc.) do not
+   * propagate to views. It is up to the caller to ensure views remain
+   * consistent. Certain operations that would require changes to the
+   * underlying memory (e.g., `resize`) are not permitted on views and
+   * will throw an exception. Other operations have special semantics
+   * when the tensor is a view (e.g., `contiguous`, `empty`).
+   */
+  DistTensor<T>* view()
   {
     return view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  DistTensor<T>* view() const override
+  /** Return a constant view of this tensor. */
+  DistTensor<T>* view() const
   {
     return view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  DistTensor<T>* view(const IndexRangeTuple& coords) override
+  /**
+   * Return a view of a subtensor of this tensor.
+   *
+   * Note that (inherent in the definition of `IndexRange`), views
+   * must be of contiguous subsets of the tensor (i.e., no strides).
+   *
+   * The `coords` given may omit dimensions on the right. In this case,
+   * they are assumed to have their full range. However, if `coords` is
+   * fully empty, the view will be empty.
+   *
+   * No entries of `coords` may be scalar: Dimensions cannot be
+   * eliminated from a distributed tensor, unless the entire view is
+   * empty.
+   */
+  DistTensor<T>* view(const IndexRangeTuple& coords)
   {
     return make_view(coords, ViewType::Mutable);
   }
 
-  DistTensor<T>* view(const IndexRangeTuple& coords) const override
+  /**
+   * Return a constant view of a subtensor of this tensor.
+   */
+  DistTensor<T>* view(const IndexRangeTuple& coords) const
   {
     return make_view(coords, ViewType::Const);
   }
 
-  DistTensor<T>* operator()(const IndexRangeTuple& coords) override
+  /** Convenience wrapper for view(coords). */
+  DistTensor<T>* operator()(const IndexRangeTuple& coords)
   {
     return view(coords);
   }
 
-  void unview() override
+  /**
+   * If this tensor is a view, stop viewing.
+   *
+   * The tensor will have empty dimensions after this.
+   *
+   * It is an error to call this if the tensor is not a view.
+   */
+  void unview()
   {
     H2_ASSERT_DEBUG(this->is_view(), "Must be a view to unview");
     empty();  // Emptying a view is equivalent to unviewing.
   }
 
-  DistTensor<T>* const_view() const override
+  /** Return a constant view of this tensor. */
+  DistTensor<T>* const_view() const
   {
     return const_view(IndexRangeTuple(
         TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
-  DistTensor<T>* const_view(const IndexRangeTuple& coords) const override
+  /** Return a constant view of a subtensor of this tensor. */
+  DistTensor<T>* const_view(const IndexRangeTuple& coords) const
   {
     return make_view(coords, ViewType::Const);
   }
 
-  DistTensor<T>* operator()(const IndexRangeTuple& coords) const override
+  /** Convenience wrapper for const_view(coords). */
+  DistTensor<T>* operator()(const IndexRangeTuple& coords) const
   {
     return const_view(coords);
   }
@@ -275,7 +409,7 @@ private:
              const DimensionTypeTuple& dim_types_,
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_)
-      : BaseDistTensor<T>(
+      : BaseDistTensor(
           view_type_, shape_, dim_types_, grid_, dist_types_, local_shape_),
         tensor_local(view_type_,
                      orig_tensor_local_.tensor_memory,
