@@ -31,6 +31,7 @@
  *  DeviceStream make_stream();
  *  DeviceStream make_stream_nonblocking();
  *  void destroy(DeviceStream);
+ *  void record_event(DeviceEvent, DeviceStream);
  *
  *  DeviceEvent make_event();
  *  DeviceEvent make_event_notiming();
@@ -75,10 +76,12 @@ void destroy(DeviceStream);
 DeviceEvent make_event();
 DeviceEvent make_event_notiming();
 void destroy(DeviceEvent);
+void record_event(DeviceEvent, DeviceStream);
 
 void sync();             // Device Sync
 void sync(DeviceEvent);  // Sync on event.
 void sync(DeviceStream); // Sync on stream.
+void sync(DeviceStream, DeviceEvent);  // Sync stream on event.
 
 } // namespace gpu
 } // namespace h2

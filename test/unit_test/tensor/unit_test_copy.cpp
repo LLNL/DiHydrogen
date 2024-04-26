@@ -22,8 +22,8 @@ TEMPLATE_LIST_TEST_CASE("Buffer copy works", "[tensor][copy]", AllDevPairsList)
   constexpr DataType src_val = static_cast<DataType>(1);
   constexpr DataType dst_val = static_cast<DataType>(2);
 
-  auto src_sync = SyncInfo<SrcDev>{};
-  auto dst_sync = SyncInfo<DstDev>{};
+  auto src_stream = ComputeStream{SrcDev};
+  auto dst_stream = ComputeStream{DstDev};
 
   DeviceBuf<DataType, SrcDev> src(buf_size);
   DeviceBuf<DataType, DstDev> dst(buf_size);
@@ -35,7 +35,7 @@ TEMPLATE_LIST_TEST_CASE("Buffer copy works", "[tensor][copy]", AllDevPairsList)
   }
 
   REQUIRE_NOTHROW(CopyBuffer<DstDev, SrcDev>(
-      dst.buf, dst_sync, src.buf, src_sync, buf_size));
+      dst.buf, dst_stream, src.buf, src_stream, buf_size));
 
   for (std::size_t i = 0; i < buf_size; ++i)
   {

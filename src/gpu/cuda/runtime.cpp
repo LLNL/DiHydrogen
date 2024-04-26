@@ -290,6 +290,14 @@ void h2::gpu::destroy(cudaEvent_t const event)
     H2_CHECK_CUDA(cudaEventDestroy(event));
 }
 
+void h2::gpu::record_event(const cudaEvent_t event, const cudaStream_t stream)
+{
+  H2_GPU_TRACE("recording event {} on stream {}",
+               (void*) event,
+               (void*) stream);
+  H2_CHECK_CUDA(cudaEventRecord(event, stream));
+}
+
 void h2::gpu::sync()
 {
     H2_GPU_TRACE("synchronizing gpu");
@@ -306,4 +314,10 @@ void h2::gpu::sync(cudaStream_t stream)
 {
     H2_GPU_TRACE("synchronizing stream {}", (void*) stream);
     H2_CHECK_CUDA(cudaStreamSynchronize(stream));
+}
+
+void h2::gpu::sync(cudaStream_t stream, cudaEvent_t event)
+{
+  H2_GPU_TRACE("stream {} waiting for event {}", (void*) stream, (void*) event);
+  H2_CHECK_CUDA(cudaStreamWaitEvent(stream, event, 0));
 }

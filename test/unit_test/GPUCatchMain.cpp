@@ -12,14 +12,16 @@
 
 struct GPUEnvironment
 {
-    GPUEnvironment()
+    GPUEnvironment(int argc, char** argv)
     {
         El::gpu::Initialize();
         h2::gpu::init_runtime();
+        Al::Initialize(argc, argv);
     }
 
     ~GPUEnvironment()
     {
+        Al::Finalize();
         h2::gpu::finalize_runtime();
         El::gpu::Finalize();
     }
@@ -39,7 +41,7 @@ int main(int argc, char** argv)
     }
 
     // Initialize the GPU environment.
-    GPUEnvironment env;
+    GPUEnvironment env(argc, argv);
 
     return session.run();
 }

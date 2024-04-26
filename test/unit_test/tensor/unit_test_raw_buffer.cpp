@@ -21,10 +21,11 @@ TEMPLATE_LIST_TEST_CASE("Raw buffers are sane",
                         "[tensor][raw_buffer]",
                         AllDevList)
 {
-  using BufType = RawBuffer<DataType, TestType::value>;
+  using BufType = RawBuffer<DataType>;
+  constexpr Device Dev = TestType::value;
   constexpr std::size_t buf_size = 32;
 
-  BufType buf = BufType(buf_size);
+  BufType buf = BufType(Dev, buf_size, false, ComputeStream{Dev});
 
   REQUIRE(buf.size() == buf_size);
   REQUIRE(buf.data() != nullptr);
@@ -61,9 +62,10 @@ TEMPLATE_LIST_TEST_CASE("Empty raw buffers are sane",
                         "[tensor][raw_buffer]",
                         AllDevList)
 {
-  using BufType = RawBuffer<DataType, TestType::value>;
+  using BufType = RawBuffer<DataType>;
+  constexpr Device Dev = TestType::value;
 
-  BufType buf;
+  BufType buf(Dev, ComputeStream{Dev});
 
   REQUIRE(buf.size() == 0);
   REQUIRE(buf.data() == nullptr);
@@ -97,9 +99,10 @@ TEMPLATE_LIST_TEST_CASE("Raw buffer with explicit size 0 is sane",
                         "[tensor][raw_buffer]",
                         AllDevList)
 {
-  using BufType = RawBuffer<DataType, TestType::value>;
+  using BufType = RawBuffer<DataType>;
+  constexpr Device Dev = TestType::value;
 
-  BufType buf(0);
+  BufType buf(Dev, 0, false, ComputeStream{Dev});
 
   REQUIRE(buf.size() == 0);
   REQUIRE(buf.data() == nullptr);
@@ -133,10 +136,11 @@ TEMPLATE_LIST_TEST_CASE("Raw buffer with external memory is sane",
                         "[tensor][raw_buffer]",
                         AllDevList)
 {
-  using BufType = RawBuffer<DataType, TestType::value>;
+  using BufType = RawBuffer<DataType>;
+  constexpr Device Dev = TestType::value;
 
   DataType test_data[] = {0, 0, 0, 0};
-  BufType buf = BufType(test_data, 4);
+  BufType buf = BufType(Dev, test_data, 4, ComputeStream{Dev});
 
   REQUIRE(buf.size() == 4);
   REQUIRE(buf.data() == test_data);
@@ -159,10 +163,10 @@ TEMPLATE_LIST_TEST_CASE("Raw buffers are writable",
                         AllDevList)
 {
   constexpr Device Dev = TestType::value;
-  using BufType = RawBuffer<DataType, TestType::value>;
+  using BufType = RawBuffer<DataType>;
   constexpr std::size_t buf_size = 32;
 
-  BufType buf = BufType(buf_size);
+  BufType buf = BufType(Dev, buf_size, false, ComputeStream{Dev});
   REQUIRE(buf.size() == buf_size);
   REQUIRE(buf.data() != nullptr);
 
@@ -202,20 +206,21 @@ TEMPLATE_LIST_TEST_CASE("Raw buffers are printable",
                         "[tensor][raw_buffer]",
                         AllDevList)
 {
-  using BufType = RawBuffer<DataType, TestType::value>;
+  using BufType = RawBuffer<DataType>;
+  constexpr Device Dev = TestType::value;
   constexpr std::size_t buf_size = 32;
 
   std::stringstream dev_ss;
   dev_ss << TestType::value;
 
   std::stringstream ss;
-  BufType buf(buf_size);
+  BufType buf(Dev, buf_size, false, ComputeStream{Dev});
   ss << buf;
 
   REQUIRE_THAT(ss.str(),
                Catch::Matchers::StartsWith(std::string("RawBuffer<")
                                            + TypeName<DataType>() + ", "
-                                           + dev_ss.str() + ">"));
+                                           + dev_ss.str() + ", "));
   REQUIRE_THAT(ss.str(),
                Catch::Matchers::EndsWith(std::to_string(buf_size) + ")"));
 }
