@@ -18,5 +18,6 @@ h2_add_sources_to_target_and_install(
   Error.hpp
   IntegerMath.hpp
   Logger.hpp
+  passkey.hpp
   typename.hpp
   )
