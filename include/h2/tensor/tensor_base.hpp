@@ -42,11 +42,8 @@ namespace h2
  * Certain operations may implicitly call `ensure` (e.g., `data`).
  * This only happens when the tensor is not const.
  */
-template <typename T>
 class BaseTensor : public Describable {
 public:
-
-  using value_type = T;
 
   /**
    * Construct a tensor with the given shape and dimension types.
@@ -109,25 +106,6 @@ public:
   /** Return true if the tensor is empty (all dimensions size 0). */
   bool is_empty() const H2_NOEXCEPT { return numel() == 0; }
 
-  /** Output a short description of the tensor. */
-  void short_describe(std::ostream& os) const override
-  {
-    os << "Tensor<" << TypeName<T>() << ", " << get_device() << ">(";
-    if (is_view())
-    {
-      os << get_view_type() << " of ";
-    }
-    for (ShapeTuple::size_type i = 0; i < ndim(); ++i)
-    {
-      os << dim_type(i) << ":" << shape(i);
-      if (i < ndim() - 1)
-      {
-        os << " x ";
-      }
-    }
-    os << ")";
-  }
-
   /** Return true if the tensor's underlying memory is contiguous. */
   virtual bool is_contiguous() const H2_NOEXCEPT = 0;
 
@@ -146,170 +124,6 @@ public:
 
   /** Return the type of device this tensor is on. */
   virtual Device get_device() const H2_NOEXCEPT = 0;
-
-  /**
-   * Clear the tensor and reset it to empty.
-   *
-   * If this is a view, this is equivalent to `unview`.
-   */
-  virtual void empty() = 0;
-
-  /**
-   * Resize the tensor to a new shape, keeping dimension types the same.
-   *
-   * It is an error to call this on a view.
-   */
-  virtual void resize(const ShapeTuple& new_shape) = 0;
-
-  /**
-   * Resize the tensor to a new shape, also changing dimension types.
-   *
-   * It is an error to call this on a view.
-   */
-  virtual void resize(const ShapeTuple& new_shape,
-                      const DimensionTypeTuple& new_dim_types) = 0;
-
-  /**
-   * Resize the tensor to a new shape, also changing dimension types
-   * and specifying new strides.
-   *
-   * It is an error to call this on a view.
-   */
-  virtual void resize(const ShapeTuple& new_shape,
-                      const DimensionTypeTuple& new_dim_types,
-                      const StrideTuple& new_strides) = 0;
-
-  /**
-   * Return a raw pointer to the underlying storage.
-   *
-   * @note Remember to account for the strides when accessing this.
-   */
-  virtual T* data() = 0;
-
-  /** Return a raw constant pointer to the underlying storage. */
-  virtual const T* data() const = 0;
-
-  /** Return a raw constant pointer to the underlying storage. */
-  virtual const T* const_data() const = 0;
-
-  /**
-   * Ensure memory is backing this tensor, allocating if necessary.
-   *
-   * This attempts to reuse existing memory from still-extant views of
-   * this tensor.
-   */
-  virtual void ensure() = 0;
-
-  /**
-   * Ensure memory is backing this tensor, allocating if necessary.
-   *
-   * This does not attempt to reuse existing memory from still-extant
-   * views of this tensor.
-   */
-  virtual void ensure(tensor_no_recovery_t) = 0;
-
-  /**
-   * Ensure memory is backing this tensor, allocating if necessary.
-   *
-   * This attempts to reuse existing memory from still-extant views of
-   * this tensor.
-   */
-  virtual void ensure(tensor_attempt_recovery_t) = 0;
-
-  /**
-   * Release memory associated with this tensor.
-   *
-   * Note that if there are views, memory may not be deallocated
-   * immediately.
-   */
-  virtual void release() = 0;
-
-  /**
-   * Return a contiguous version of this tensor.
-   *
-   * If the tensor is contiguous, a view of the original tensor is
-   * returned. Otherwise, a new tensor is allocated.
-   *
-   * If this tensor is a view, the returned tensor will be distinct
-   * from the viewed tensor. Any views of this tensor will still be
-   * viewing the original tensor, not the contiguous tensor.
-   */
-  virtual BaseTensor<T>* contiguous() = 0;
-
-  /**
-   * Return a view of this tensor.
-   *
-   * A view will share the same underlying memory as the original tensor,
-   * and will therefore reflect any changes made to the data; likewise,
-   * changes made through the view will be reflected in the original
-   * tensor. Additionally, the memory will remain valid so long as the
-   * view exists, even if the original tensor no longer exists.
-   *
-   * However, changes to metadata (e.g., shape, stride, etc.) do not
-   * propagate to views. It is up to the caller to ensure views remain
-   * consistent. Certain operations that would require changes to the
-   * underlying memory (e.g., `resize`) are not permitted on views and
-   * will throw an exception. Other operations have special semantics
-   * when the tensor is a view (e.g., `contiguous`, `empty`).
-   */
-  virtual BaseTensor<T>* view() = 0;
-
-  /** Return a constant view of this tensor. */
-  virtual BaseTensor<T>* view() const = 0;
-
-  /**
-   * Return a view of a subtensor of this tensor.
-   *
-   * Note that (inherent in the definition of `IndexRange`), views
-   * must be of contiguous subsets of the tensor (i.e., no strides).
-   *
-   * The `coords` given may omit dimensions on the right. In this case,
-   * they are assumed to have their full range. However, if `coords` is
-   * fully empty, the view iwll be empty.
-   *
-   * If dimensions in `coords` are given as scalars, these dimensions
-   * are eliminated from the tensor. If all dimensions are eliminated,
-   * i.e., you access a specific element, the resulting view will have
-   * one dimension with dimension-type `Scalar`.
-   */
-  virtual BaseTensor<T>* view(const IndexRangeTuple& coords) = 0;
-
-  /**
-   * Return a constant view of a subtensor of this tensor.
-   */
-  virtual BaseTensor<T>* view(const IndexRangeTuple& coords) const = 0;
-
-  /**
-   * If this tensor is a view, stop viewing.
-   *
-   * The tensor will have empty dimensions after this.
-   *
-   * It is an error to call this if the tensor is not a view.
-   */
-  virtual void unview() = 0;
-
-  // Note: The operator() is abstract rather than defaulting to
-  // view(coords) because we need to covariant return type.
-
-  /** Convenience wrapper for view(coords). */
-  virtual BaseTensor<T>* operator()(const IndexRangeTuple& coords) = 0;
-
-  /** Return a constant view of this tensor. */
-  virtual BaseTensor<T>* const_view() const = 0;
-
-  /** Return a constant view of a subtensor of this tensor. */
-  virtual BaseTensor<T>* const_view(const IndexRangeTuple& coords) const = 0;
-
-  /** Convenience wrapper for const_view(coords). */
-  virtual BaseTensor<T>* operator()(const IndexRangeTuple& coords) const = 0;
-
-  /** Return a pointer to the tensor at a particular coordinate. */
-  virtual T* get(const ScalarIndexTuple& coords) = 0;
-
-  /**
-   * Return a constant pointer to the tensor at a particular coordinate.
-   */
-  virtual const T* get(const ScalarIndexTuple& coords) const = 0;
 
 protected:
   ShapeTuple tensor_shape;  /**< Shape of the tensor. */

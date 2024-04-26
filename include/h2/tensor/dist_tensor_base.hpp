@@ -15,7 +15,7 @@
 #include "h2/tensor/dist_types.hpp"
 #include "h2/tensor/dist_utils.hpp"
 #include "h2/tensor/proc_grid.hpp"
-#include "h2/tensor/tensor_base.hpp"
+#include "h2/tensor/tensor.hpp"
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/utils/Describable.hpp"
 #include "h2/utils/typename.hpp"
@@ -277,13 +277,13 @@ public:
   virtual const T* const_data() const = 0;
 
   /** Return the underlying local tensor. */
-  virtual BaseTensor<T>& local_tensor() = 0;
+  virtual Tensor<T>& local_tensor() = 0;
 
   /** Return a constant reference to the underlying local tensor. */
-  virtual const BaseTensor<T>& local_tensor() const = 0;
+  virtual const Tensor<T>& local_tensor() const = 0;
 
   /** Return a constant reference to the underlying local tensor. */
-  virtual const BaseTensor<T>& const_local_tensor() const = 0;
+  virtual const Tensor<T>& const_local_tensor() const = 0;
 
   /**
    * Ensure memory is backing this tensor, allocating if necessary.
