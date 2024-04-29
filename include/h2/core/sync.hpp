@@ -175,7 +175,7 @@ inline typename RawSyncEvent<Device::GPU>::type get_default_event<Device::GPU>()
 #if H2_HAS_CUDA
   return El::cuda::GetDefaultEvent();
 #elif H2_HAS_ROCM
-  return El::hip::GetDefaultEvent();
+  return El::rocm::GetDefaultEvent();
 #endif
 }
 #endif
@@ -197,7 +197,7 @@ inline typename RawComputeStream<Device::GPU>::type get_default_compute_stream<D
 #if H2_HAS_CUDA
   return El::cuda::GetDefaultStream();
 #elif H2_HAS_ROCM
-  return El::hip::GetDefaultStream();
+  return El::rocm::GetDefaultStream();
 #endif
 }
 #endif
@@ -285,7 +285,8 @@ private:
   };
 
 #ifdef H2_HAS_GPU
-  friend void destroy_sync_event<Device::GPU>(SyncEvent&);
+  template <Device D>
+  friend void destroy_sync_event(SyncEvent&);
 #endif
 };
 
@@ -654,7 +655,8 @@ private:
   };
 
 #ifdef H2_HAS_GPU
-  friend void destroy_compute_stream<Device::GPU>(ComputeStream&);
+  template <Device D>
+  friend void destroy_compute_stream(ComputeStream&);
 #endif
 };
 
