@@ -239,6 +239,39 @@ public:
     : device(Device::GPU), gpu_event(raw_event) {}
 #endif
 
+  SyncEvent(const SyncEvent&) = default;
+  SyncEvent& operator=(const SyncEvent&) = default;
+
+  SyncEvent(SyncEvent&& other)
+    : device(other.device)
+  {
+    H2_DEVICE_DISPATCH(
+        device,
+        {
+          cpu_event = other.cpu_event;
+          other.cpu_event = 0;
+        },
+        {
+          gpu_event = other.gpu_event;
+          other.gpu_event = nullptr;
+        });
+  }
+  SyncEvent& operator=(SyncEvent&& other)
+  {
+    device = other.device;
+    H2_DEVICE_DISPATCH(
+        device,
+        {
+          cpu_event = other.cpu_event;
+          other.cpu_event = 0;
+        },
+        {
+          gpu_event = other.gpu_event;
+          other.gpu_event = nullptr;
+        });
+    return *this;
+  }
+
   /** Return the device type of the event. */
   Device get_device() const H2_NOEXCEPT { return device; }
 
@@ -256,6 +289,7 @@ public:
   template <Device Dev>
   void wait_for_this() const
   {
+    H2_ASSERT_DEBUG(Dev == device, "Incorrect device");
     H2_DEVICE_DISPATCH_CONST(
       Dev,
       (void) 0,
@@ -266,6 +300,7 @@ public:
   template <Device Dev>
   typename internal::RawSyncEvent<Dev>::type get_event() const H2_NOEXCEPT
   {
+    H2_ASSERT_DEBUG(Dev == device, "Attempt to get raw event for wrong device");
     H2_DEVICE_DISPATCH_CONST(
       Dev,
       return cpu_event,
@@ -348,8 +383,8 @@ inline void destroy_sync_event(SyncEvent& event)
   H2_DEVICE_DISPATCH_CONST(
     Dev,
     (void) event,
-    {
-      internal::release_device_event(event.get_event<Dev>());
+    if (event.gpu_event != nullptr) {
+      internal::release_device_event(event.gpu_event);
       event.gpu_event = nullptr;
     });
 }
@@ -464,6 +499,38 @@ public:
                                internal::get_default_event<Dev>()));
   }
 
+  ComputeStream(const ComputeStream&) = default;
+  ComputeStream& operator=(const ComputeStream&) = default;
+
+  ComputeStream(ComputeStream&& other) : device(other.device)
+  {
+    H2_DEVICE_DISPATCH(
+        device,
+        {
+          cpu_stream = other.cpu_stream;
+          other.cpu_stream = 0;
+        },
+        {
+          gpu_stream = other.gpu_stream;
+          other.gpu_stream = nullptr;
+        });
+  }
+  ComputeStream& operator=(ComputeStream&& other)
+  {
+    device = other.device;
+    H2_DEVICE_DISPATCH(
+        device,
+        {
+          cpu_stream = other.cpu_stream;
+          other.cpu_stream = 0;
+        },
+        {
+          gpu_stream = other.gpu_stream;
+          other.gpu_stream = nullptr;
+        });
+    return *this;
+  }
+
   /** Return the device type of the stream. */
   Device get_device() const H2_NOEXCEPT { return device; }
 
@@ -484,6 +551,7 @@ public:
   template <Device ThisDev, Device EventDev>
   void add_sync_point(const SyncEvent& event) const
   {
+    H2_ASSERT_DEBUG(ThisDev == device, "Incorrect device");
     if constexpr (ThisDev == Device::CPU)
     {
       if constexpr (EventDev == Device::CPU)
@@ -529,6 +597,7 @@ public:
   template <Device ThisDev, Device EventDev>
   void wait_for(const SyncEvent& event) const
   {
+    H2_ASSERT_DEBUG(ThisDev == device, "Incorrect device");
     if constexpr (ThisDev == Device::CPU)
     {
       if constexpr (EventDev == Device::CPU)
@@ -579,6 +648,7 @@ public:
   template <Device ThisDev, Device StreamDev>
   void wait_for(const ComputeStream& other_stream) const
   {
+    H2_ASSERT_DEBUG(ThisDev == device, "Incorrect device");
     if constexpr (ThisDev == Device::CPU)
     {
       if constexpr (StreamDev == Device::CPU)
@@ -626,6 +696,7 @@ public:
   template <Device ThisDev>
   void wait_for_this() const
   {
+    H2_ASSERT_DEBUG(ThisDev == device, "Incorrect device");
     H2_DEVICE_DISPATCH_CONST(
       ThisDev,
       (void) 0,
@@ -636,6 +707,8 @@ public:
   template <Device ThisDev>
   typename internal::RawComputeStream<ThisDev>::type get_stream() const H2_NOEXCEPT
   {
+    H2_ASSERT_DEBUG(ThisDev == device,
+                    "Attempt to get raw stream for wrong device");
     H2_DEVICE_DISPATCH_CONST(
       ThisDev,
       return cpu_stream,
@@ -719,8 +792,8 @@ inline void destroy_compute_stream(ComputeStream& stream)
   H2_DEVICE_DISPATCH_CONST(
     Dev,
     (void) stream,
-    {
-      gpu::destroy(stream.get_stream<Dev>());
+    if (stream.gpu_stream != nullptr) {
+      gpu::destroy(stream.gpu_stream);
       stream.gpu_stream = nullptr;
     });
 }
