@@ -583,6 +583,37 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory with external buffers works",
   }
 }
 
+#ifdef H2_TEST_WITH_GPU
+// Only makes sense when we have GPU support.
+
+TEMPLATE_LIST_TEST_CASE("StridedMemory views across devices work",
+                        "[tensor][strided_memory]",
+                        AllDevList)
+{
+  constexpr Device SrcDev = TestType::value;
+  constexpr Device DstDev = (SrcDev == Device::CPU) ? Device::GPU : Device::CPU;
+  using MemType = StridedMemory<DataType>;
+
+  ComputeStream src_stream{SrcDev};
+  ComputeStream dst_stream{DstDev};
+  MemType mem(SrcDev, {3, 5}, false, src_stream);
+
+  // Note:
+  // Do not attempt to access the data since we don't check if it is
+  // actually safe, just that the pointers are the same.
+  MemType mem_view(mem, DstDev, dst_stream);
+
+  REQUIRE(mem_view.get_device() == DstDev);
+  REQUIRE(mem_view.data() == mem.data());
+  REQUIRE(mem_view.const_data() == mem.const_data());
+  REQUIRE(mem_view.shape() == mem.shape());
+  REQUIRE(mem_view.strides() == mem.strides());
+  REQUIRE(mem_view.is_lazy() == mem.is_lazy());
+  REQUIRE(mem_view.get_stream() == dst_stream);
+}
+
+#endif  // H2_TEST_WITH_GPU
+
 TEMPLATE_LIST_TEST_CASE("StridedMemory is printable",
                         "[tensor][strided_memory]",
                         AllDevList)
