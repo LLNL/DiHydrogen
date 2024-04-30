@@ -183,6 +183,22 @@ public:
     }
   }
 
+  /**
+   * View an existing memory buffer but associate it with a different
+   * device and stream.
+   */
+  StridedMemory(const StridedMemory<T>& base,
+                Device device,
+                const ComputeStream& stream_)
+      : raw_buffer(base.raw_buffer),
+        mem_offset(base.mem_offset),
+        mem_strides(base.mem_strides),
+        mem_shape(base.mem_shape),
+        mem_device(device),
+        stream(stream_),
+        is_mem_lazy(base.is_lazy())
+  {}
+
   /** Wrap an existing memory buffer. */
   StridedMemory(Device device,
                 T* buffer,

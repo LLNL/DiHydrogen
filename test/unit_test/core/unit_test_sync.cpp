@@ -47,9 +47,9 @@ TEMPLATE_LIST_TEST_CASE("ComputeStream works", "[sync]", AllDevList)
   if constexpr (Dev == Device::GPU)
   {
 #if H2_HAS_CUDA
-    REQUIRE(stream.get_stream() == El::cuda::GetDefaultStream());
+    REQUIRE(stream.get_stream<Device::GPU>() == El::cuda::GetDefaultStream());
 #elif H2_HAS_ROCM
-    REQUIRE(stream.get_stream() == El::hip::GetDefaultStream());
+    REQUIRE(stream.get_stream<Device::GPU>() == El::rocm::GetDefaultStream());
 #endif
   }
 #endif
@@ -78,6 +78,34 @@ TEMPLATE_LIST_TEST_CASE("Sync creation routines work", "[sync]", AllDevList)
   REQUIRE_NOTHROW(destroy_sync_event<Dev>(event));
   REQUIRE_NOTHROW([&]() { event = create_new_sync_event(Dev); }());
   REQUIRE_NOTHROW(destroy_sync_event(event));
+}
+
+TEMPLATE_LIST_TEST_CASE("Copying syncs works", "[sync]", AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+
+  ComputeStream stream = create_new_compute_stream<Dev>();
+  ComputeStream stream_copy = stream;
+  REQUIRE(stream.get_stream<Dev>() == stream_copy.get_stream<Dev>());
+
+  SyncEvent event = create_new_sync_event<Dev>();
+  SyncEvent event_copy = event;
+  REQUIRE(event.get_event<Dev>() == event_copy.get_event<Dev>());
+}
+
+TEMPLATE_LIST_TEST_CASE("Self-moving syncs works", "[sync]", AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+
+  ComputeStream stream = create_new_compute_stream<Dev>();
+  auto raw_stream = stream.get_stream<Dev>();
+  stream = std::move(stream);
+  REQUIRE(stream.get_stream<Dev>() == raw_stream);
+
+  SyncEvent event = create_new_sync_event<Dev>();
+  auto raw_event = event.get_event<Dev>();
+  event = std::move(event);
+  REQUIRE(event.get_event<Dev>() == raw_event);
 }
 
 TEMPLATE_LIST_TEST_CASE("Sync helpers work", "[sync]", AllDevList)
@@ -187,14 +215,14 @@ TEST_CASE("GPU sync El::SyncInfo conversion works", "[sync]")
       El::CreateNewSyncInfo<Device::GPU>();
   ComputeStream stream{Device::GPU};
   REQUIRE_NOTHROW([&]() { stream = ComputeStream(sync_info); }());
-  REQUIRE(stream.get_stream() == sync_info.Stream());
+  REQUIRE(stream.get_stream<Device::GPU>() == sync_info.Stream());
   El::DestroySyncInfo(sync_info);
 
   // Conversion to El:
   REQUIRE_NOTHROW([&]() {
     sync_info = static_cast<El::SyncInfo<El::Device::GPU>>(stream);
   }());
-  REQUIRE(sync_info.Stream() == stream.get_stream());
+  REQUIRE(sync_info.Stream() == stream.get_stream<Device::GPU>());
 }
 
 TEST_CASE("GPU and CPU syncs interoperate", "[sync]")
@@ -218,6 +246,23 @@ TEST_CASE("GPU and CPU syncs interoperate", "[sync]")
   REQUIRE_NOTHROW([&]() {
     auto multi_sync = create_multi_sync(gpu_stream, cpu_stream);
   }());
+}
+
+TEST_CASE("Moving GPU syncs clears handles", "[sync]")
+{
+  ComputeStream stream = create_new_compute_stream<Device::GPU>();
+  auto raw_stream = stream.get_stream<Device::GPU>();
+  REQUIRE(raw_stream != nullptr);
+  ComputeStream stream2 = std::move(stream);
+  REQUIRE(stream2.get_stream<Device::GPU>() == raw_stream);
+  REQUIRE(stream.get_stream<Device::GPU>() == nullptr);
+
+  SyncEvent event = create_new_sync_event<Device::GPU>();
+  auto raw_event = event.get_event<Device::GPU>();
+  REQUIRE(raw_event != nullptr);
+  SyncEvent event2 = std::move(event);
+  REQUIRE(event2.get_event<Device::GPU>() == raw_event);
+  REQUIRE(event.get_event<Device::GPU>() == nullptr);
 }
 
 #endif  // H2_TEST_WITH_GPU

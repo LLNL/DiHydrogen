@@ -202,6 +202,24 @@ TEMPLATE_LIST_TEST_CASE("Raw buffers are writable",
   }
 }
 
+TEMPLATE_LIST_TEST_CASE("Raw buffer release registration works",
+                        "[tensor][raw_buffer]",
+                        AllDevPairsList)
+{
+  constexpr Device Dev1 = meta::tlist::At<TestType, 0>::value;
+  constexpr Device Dev2 = meta::tlist::At<TestType, 1>::value;
+  using BufType = RawBuffer<DataType>;
+  constexpr std::size_t buf_size = 32;
+
+  ComputeStream stream1{Dev1};
+  ComputeStream stream2{Dev2};
+
+  BufType buf(Dev1, stream1);
+  buf.register_release(stream2);
+
+  buf.release();
+}
+
 TEMPLATE_LIST_TEST_CASE("Raw buffers are printable",
                         "[tensor][raw_buffer]",
                         AllDevList)
