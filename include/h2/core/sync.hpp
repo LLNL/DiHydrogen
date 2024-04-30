@@ -17,6 +17,7 @@
 #include <El.hpp>
 
 #include <tuple>
+#include <utility>
 
 #include "h2/core/device.hpp"
 #include "h2/utils/Error.hpp"
@@ -248,12 +249,10 @@ public:
     H2_DEVICE_DISPATCH(
         device,
         {
-          cpu_event = other.cpu_event;
-          other.cpu_event = 0;
+          cpu_event = std::exchange(other.cpu_event, 0);
         },
         {
-          gpu_event = other.gpu_event;
-          other.gpu_event = nullptr;
+          gpu_event = std::exchange(other.gpu_event, nullptr);
         });
   }
   SyncEvent& operator=(SyncEvent&& other)
@@ -262,12 +261,10 @@ public:
     H2_DEVICE_DISPATCH(
         device,
         {
-          cpu_event = other.cpu_event;
-          other.cpu_event = 0;
+          cpu_event = std::exchange(other.cpu_event, 0);
         },
         {
-          gpu_event = other.gpu_event;
-          other.gpu_event = nullptr;
+          gpu_event = std::exchange(other.gpu_event, nullptr);
         });
     return *this;
   }
@@ -507,12 +504,10 @@ public:
     H2_DEVICE_DISPATCH(
         device,
         {
-          cpu_stream = other.cpu_stream;
-          other.cpu_stream = 0;
+          cpu_stream = std::exchange(other.cpu_stream, 0);
         },
         {
-          gpu_stream = other.gpu_stream;
-          other.gpu_stream = nullptr;
+          gpu_stream = std::exchange(other.gpu_stream, nullptr);
         });
   }
   ComputeStream& operator=(ComputeStream&& other)
@@ -521,12 +516,10 @@ public:
     H2_DEVICE_DISPATCH(
         device,
         {
-          cpu_stream = other.cpu_stream;
-          other.cpu_stream = 0;
+          cpu_stream = std::exchange(other.cpu_stream, 0);
         },
         {
-          gpu_stream = other.gpu_stream;
-          other.gpu_stream = nullptr;
+          gpu_stream = std::exchange(other.gpu_stream, nullptr);
         });
     return *this;
   }
