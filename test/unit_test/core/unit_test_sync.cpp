@@ -49,7 +49,7 @@ TEMPLATE_LIST_TEST_CASE("ComputeStream works", "[sync]", AllDevList)
 #if H2_HAS_CUDA
     REQUIRE(stream.get_stream<Device::GPU>() == El::cuda::GetDefaultStream());
 #elif H2_HAS_ROCM
-    REQUIRE(stream.get_stream<Device::GPU>() == El::hip::GetDefaultStream());
+    REQUIRE(stream.get_stream<Device::GPU>() == El::rocm::GetDefaultStream());
 #endif
   }
 #endif
