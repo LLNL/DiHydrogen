@@ -39,11 +39,11 @@ namespace h2
  * If GPU buffers are involved, this will be asynchronous.
  */
 template <typename T>
-void CopyBuffer(T* dst,
-                const ComputeStream& dst_stream,
-                const T* src,
-                const ComputeStream& src_stream,
-                std::size_t count)
+void copy_buffer(T* dst,
+                 const ComputeStream& dst_stream,
+                 const T* src,
+                 const ComputeStream& src_stream,
+                 std::size_t count)
 {
   H2_ASSERT_DEBUG(count == 0 || (dst != nullptr && src != nullptr),
                   "Null buffers");
@@ -83,23 +83,23 @@ namespace internal
 {
 
 template <typename T>
-void CopySameT(Tensor<T>& dst, const Tensor<T>& src)
+void copy_same_type(Tensor<T>& dst, const Tensor<T>& src)
 {
   dst.resize(src.shape(), src.dim_types(), src.strides());
   dst.ensure();
   if (src.is_contiguous())
   {
-    CopyBuffer<T>(dst.data(),
-                  dst.get_stream(),
-                  src.const_data(),
-                  src.get_stream(),
-                  src.numel());
+    copy_buffer<T>(dst.data(),
+                   dst.get_stream(),
+                   src.const_data(),
+                   src.get_stream(),
+                   src.numel());
   }
   else
   {
     // TODO: We may be able to optimize the non-contiguous case.
     // For now, we just copy the entire buffer.
-    CopyBuffer<T>(
+    copy_buffer<T>(
       dst.data(),
       dst.get_stream(),
       src.const_data(),
@@ -121,7 +121,7 @@ void CopySameT(Tensor<T>& dst, const Tensor<T>& src)
  * If GPU buffers are involved, this will be asynchronous.
  */
 template <typename DstT, typename SrcT>
-void Copy(Tensor<DstT>& dst, const Tensor<SrcT>& src)
+void copy(Tensor<DstT>& dst, const Tensor<SrcT>& src)
 {
   // Copying an empty tensor is permitted, but you cannot copy a lazy
   // tensor that has not been ensure'd.
@@ -134,7 +134,7 @@ void Copy(Tensor<DstT>& dst, const Tensor<SrcT>& src)
                    "Cannot copy a non-empty tensor with no data");
   if constexpr (std::is_same_v<SrcT, DstT>)
   {
-    internal::CopySameT<DstT>(dst, src);
+    internal::copy_same_type<DstT>(dst, src);
   }
   else
   {
@@ -161,10 +161,10 @@ void Copy(Tensor<DstT>& dst, const Tensor<SrcT>& src)
  * - Otherwise, `dev`'s default stream will be used.
  */
 template <typename T>
-std::unique_ptr<Tensor<T>>
-MakeAccessibleOnDevice(Tensor<T>& src,
-                       Device dev,
-                       const std::optional<ComputeStream> stream = std::nullopt)
+std::unique_ptr<Tensor<T>> make_accessible_on_device(
+    Tensor<T>& src,
+    Device dev,
+    const std::optional<ComputeStream> stream = std::nullopt)
 {
   if (src.get_device() == dev)
   {
@@ -189,7 +189,7 @@ MakeAccessibleOnDevice(Tensor<T>& src,
     // Create a new tensor on `dev` that has the same size.
     auto dst = std::make_unique<Tensor<T>>(
         dev, src.shape(), src.dim_types(), StrictAlloc, real_stream);
-    Copy(*dst, src);
+    copy(*dst, src);
     return dst;
   }
 #else  // H2_HAS_GPU

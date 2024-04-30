@@ -34,7 +34,7 @@ TEMPLATE_LIST_TEST_CASE("Buffer copy works", "[tensor][copy]", AllDevPairsList)
     write_ele<DstDev>(dst.buf, i, dst_val);
   }
 
-  REQUIRE_NOTHROW(CopyBuffer(
+  REQUIRE_NOTHROW(copy_buffer(
       dst.buf, dst_stream, src.buf, src_stream, buf_size));
 
   for (std::size_t i = 0; i < buf_size; ++i)
@@ -70,7 +70,7 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
       write_ele<DstDev>(dst_tensor.data(), i, dst_val);
     }
 
-    REQUIRE_NOTHROW(Copy(dst_tensor, src_tensor));
+    REQUIRE_NOTHROW(copy(dst_tensor, src_tensor));
 
     REQUIRE(dst_tensor.shape() == ShapeTuple{4, 6});
     REQUIRE(dst_tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
@@ -103,7 +103,7 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
       write_ele<DstDev>(dst_tensor.data(), i, dst_val);
     }
 
-    REQUIRE_NOTHROW(Copy(dst_tensor, src_tensor));
+    REQUIRE_NOTHROW(copy(dst_tensor, src_tensor));
 
     REQUIRE(dst_tensor.shape() == ShapeTuple{4, 6});
     REQUIRE(dst_tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
@@ -129,7 +129,7 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
     SrcTensorType src_tensor(SrcDev);
     DstTensorType dst_tensor(DstDev, {2, 4}, {DT::Any, DT::Any});
 
-    REQUIRE_NOTHROW(Copy(dst_tensor, src_tensor));
+    REQUIRE_NOTHROW(copy(dst_tensor, src_tensor));
 
     REQUIRE(dst_tensor.is_empty());
   }
@@ -151,7 +151,7 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
       write_ele<SrcDev>(src_tensor.get(i), 0, src_val);
     });
 
-    REQUIRE_NOTHROW(Copy(dst_tensor, src_tensor));
+    REQUIRE_NOTHROW(copy(dst_tensor, src_tensor));
 
     REQUIRE(dst_tensor.shape() == ShapeTuple{4, 6});
     REQUIRE(dst_tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
@@ -180,7 +180,7 @@ TEMPLATE_LIST_TEST_CASE("MakeAccessibleOnDevice works",
 
   SrcTensorType src_tensor(SrcDev, {4, 6}, {DT::Sample, DT::Any});
 
-  auto dst_tensor = MakeAccessibleOnDevice(src_tensor, DstDev);
+  auto dst_tensor = make_accessible_on_device(src_tensor, DstDev);
 
   REQUIRE(dst_tensor->shape() == src_tensor.shape());
   REQUIRE(dst_tensor->dim_types() == src_tensor.dim_types());
