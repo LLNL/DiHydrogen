@@ -17,6 +17,7 @@ h2_add_sources_to_target_and_install(
   At.hpp
   Expand.hpp
   Find.hpp
+  Flatten.hpp
   HaskellAccessors.hpp
   Length.hpp
   LispAccessors.hpp
