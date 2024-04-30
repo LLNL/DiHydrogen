@@ -83,6 +83,16 @@ public:
     tensor_memory(mem_, coords)
   {}
 
+  /**
+   * Private constructor for views from different devices.
+   *
+   * Not protected by a passkey because we use it from a free function.
+   */
+  Tensor(Tensor<T>& other, Device new_device, const ComputeStream& new_stream)
+      : BaseTensor(ViewType::Mutable, other.shape(), other.dim_types()),
+        tensor_memory(other.tensor_memory, new_device, new_stream)
+  {}
+
   virtual ~Tensor() = default;
 
   /** Output a short description of the tensor. */

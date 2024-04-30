@@ -168,3 +168,42 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
     });
   }
 }
+
+TEMPLATE_LIST_TEST_CASE("MakeAccessibleOnDevice works",
+                        "[tensor][copy]",
+                        AllDevPairsList)
+{
+  constexpr Device SrcDev = meta::tlist::At<TestType, 0>::value;
+  constexpr Device DstDev = meta::tlist::At<TestType, 1>::value;
+  using SrcTensorType = Tensor<DataType>;
+  using DstTensorType = Tensor<DataType>;
+
+  SrcTensorType src_tensor(SrcDev, {4, 6}, {DT::Sample, DT::Any});
+
+  auto dst_tensor = MakeAccessibleOnDevice(src_tensor, DstDev);
+
+  REQUIRE(dst_tensor->shape() == src_tensor.shape());
+  REQUIRE(dst_tensor->dim_types() == src_tensor.dim_types());
+  REQUIRE(dst_tensor->strides() == src_tensor.strides());
+  REQUIRE(dst_tensor->get_device() == DstDev);
+
+  if (SrcDev == DstDev)
+  {
+    // dst_tensor should be a view of src_tensor.
+    REQUIRE(dst_tensor->get_view_type() == ViewType::Mutable);
+    REQUIRE(dst_tensor->data() == src_tensor.data());
+  }
+#ifdef H2_TEST_WITH_GPU
+  else if (gpu::is_integrated())
+  {
+    // Should also have a view.
+    REQUIRE(dst_tensor->get_view_type() == ViewType::Mutable);
+    REQUIRE(dst_tensor->data() == src_tensor.data());
+  }
+#endif
+  else
+  {
+    REQUIRE_FALSE(dst_tensor->is_view());
+    REQUIRE(dst_tensor->data() != src_tensor.data());
+  }
+}
