@@ -20,13 +20,15 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensors can be created",
                         "[dist-tensor]",
                         AllDevList)
 {
-  using DistTensorType = DistTensor<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using DistTensorType = DistTensor<DataType>;
 
   for_comms([&](Comm& comm) {
     for_grid_shapes([&](ShapeTuple shape) {
       ProcessorGrid grid = ProcessorGrid(comm, shape);
-      REQUIRE_NOTHROW(DistTensorType(grid));
+      REQUIRE_NOTHROW(DistTensorType(Dev, grid));
       REQUIRE_NOTHROW(DistTensorType(
+          Dev,
           shape,
           DTTuple(TuplePad<DTTuple>(shape.size(), DT::Any)),
           grid,
@@ -39,7 +41,8 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
                         "[dist-tensor]",
                         AllDevList)
 {
-  using DistTensorType = DistTensor<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using DistTensorType = DistTensor<DataType>;
 
   SECTION("Block distribution")
   {
@@ -50,8 +53,8 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
         tensor_shape.set_size(grid.ndim());
         DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
         DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), Distribution::Block));
-        DistTensorType tensor =
-            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+        DistTensorType tensor = DistTensorType(
+            Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
 
         // Compute the local shape.
         ShapeTuple local_shape(TuplePad<ShapeTuple>(grid.ndim(), 0));
@@ -126,8 +129,8 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
         tensor_shape.set_size(grid.ndim());
         DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
         DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), Distribution::Replicated));
-        DistTensorType tensor =
-            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+        DistTensorType tensor = DistTensorType(
+            Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
 
         // Compute the local shape.
         ShapeTuple local_shape = tensor_shape;
@@ -175,8 +178,8 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
         tensor_shape.set_size(grid.ndim());
         DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
         DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), Distribution::Single));
-        DistTensorType tensor =
-            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+        DistTensorType tensor = DistTensorType(
+            Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
 
         // Compute the local shape.
         ShapeTuple local_shape;
@@ -245,8 +248,8 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
         DistTTuple tensor_dist(Distribution::Block,
                                Distribution::Replicated,
                                Distribution::Single);
-        DistTensorType tensor =
-            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+        DistTensorType tensor = DistTensorType(
+            Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
 
         // Compute the local shape.
         ShapeTuple local_shape(TuplePad<ShapeTuple>(grid.ndim()));
@@ -322,12 +325,13 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor metadata is sane",
                         "[dist-tensor]",
                         AllDevList)
 {
-  using DistTensorType = DistTensor<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using DistTensorType = DistTensor<DataType>;
 
   for_comms([&](Comm& comm) {
     for_grid_shapes([&](ShapeTuple grid_shape) {
       ProcessorGrid grid = ProcessorGrid(comm, grid_shape);
-      DistTensorType tensor = DistTensorType(grid);
+      DistTensorType tensor = DistTensorType(Dev, grid);
 
       REQUIRE(tensor.shape() == ShapeTuple{});
       REQUIRE(tensor.dim_types() == DTTuple{});
@@ -359,19 +363,20 @@ TEMPLATE_LIST_TEST_CASE("Lazy and strict distributed tensors are sane",
                         "[dist-tensor]",
                         AllDevList)
 {
-  using DistTensorType = DistTensor<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using DistTensorType = DistTensor<DataType>;
 
   Comm& comm = get_comm_or_skip(1);
   ProcessorGrid grid(comm, ShapeTuple{1});
 
-  REQUIRE_FALSE(DistTensorType(grid).is_lazy());
-  REQUIRE_FALSE(DistTensorType(grid, StrictAlloc).is_lazy());
-  REQUIRE(DistTensorType(grid, LazyAlloc).is_lazy());
+  REQUIRE_FALSE(DistTensorType(Dev, grid).is_lazy());
+  REQUIRE_FALSE(DistTensorType(Dev, grid, StrictAlloc).is_lazy());
+  REQUIRE(DistTensorType(Dev, grid, LazyAlloc).is_lazy());
 
   REQUIRE_FALSE(
-      DistTensorType({4}, {DT::Any}, grid, {Distribution::Block}, StrictAlloc)
+    DistTensorType(Dev, {4}, {DT::Any}, grid, {Distribution::Block}, StrictAlloc)
           .is_lazy());
-  REQUIRE(DistTensorType({4}, {DT::Any}, grid, {Distribution::Block}, LazyAlloc)
+  REQUIRE(DistTensorType(Dev, {4}, {DT::Any}, grid, {Distribution::Block}, LazyAlloc)
               .is_lazy());
 }
 
@@ -379,7 +384,8 @@ TEMPLATE_LIST_TEST_CASE("Resizing distributed tensors works",
                         "[dist-tensor]",
                         AllDevList)
 {
-  using DistTensorType = DistTensor<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using DistTensorType = DistTensor<DataType>;
 
   SECTION("Resizing works")
   {
@@ -391,8 +397,8 @@ TEMPLATE_LIST_TEST_CASE("Resizing distributed tensors works",
         tensor_shape.set_size(grid.ndim());
         DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
         DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), Distribution::Block));
-        DistTensorType tensor =
-          DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+        DistTensorType tensor = DistTensorType(
+            Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
 
         ShapeTuple new_shape(4, 10);
         new_shape.set_size(grid.ndim());
@@ -451,8 +457,8 @@ TEMPLATE_LIST_TEST_CASE("Resizing distributed tensors works",
         tensor_shape.set_size(grid.ndim());
         DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
         DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), Distribution::Block));
-        DistTensorType tensor =
-          DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+        DistTensorType tensor = DistTensorType(
+            Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
 
         tensor.empty();
         REQUIRE(tensor.shape() == ShapeTuple{});
@@ -484,8 +490,8 @@ TEMPLATE_LIST_TEST_CASE("Resizing distributed tensors works",
         tensor_shape.set_size(grid.ndim());
         DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
         DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), Distribution::Block));
-        DistTensorType tensor =
-          DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+        DistTensorType tensor = DistTensorType(
+            Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
 
         tensor.empty();
         ShapeTuple new_shape(4, 10);
@@ -540,7 +546,7 @@ TEMPLATE_LIST_TEST_CASE("Writing to distributed tensors works",
                         "[dist-tensor]",
                         AllDevList)
 {
-  using DistTensorType = DistTensor<DataType, TestType::value>;
+  using DistTensorType = DistTensor<DataType>;
   constexpr Device Dev = TestType::value;
 
   for_comms([&](Comm& comm) {
@@ -555,8 +561,8 @@ TEMPLATE_LIST_TEST_CASE("Writing to distributed tensors works",
         tensor_shape.set_size(grid.ndim());
         DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
         DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
-        DistTensorType tensor =
-          DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+        DistTensorType tensor = DistTensorType(
+            Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
         typename DistTensorType::local_tensor_type local_tensor =
           tensor.local_tensor();
 
@@ -581,7 +587,7 @@ TEMPLATE_LIST_TEST_CASE(
     "[dist-tensor]",
     AllDevList)
 {
-  using DistTensorType = DistTensor<DataType, TestType::value>;
+  using DistTensorType = DistTensor<DataType>;
   constexpr Device Dev = TestType::value;
 
   for_comms([&](Comm& comm) {
@@ -607,13 +613,15 @@ TEMPLATE_LIST_TEST_CASE(
         write_ele<Dev>(buf.buf, i, static_cast<DataType>(i));
       }
 
-      DistTensorType tensor(buf.buf,
+      DistTensorType tensor(Dev,
+                            buf.buf,
                             tensor_shape,
                             tensor_dim_types,
                             grid,
                             tensor_dist,
                             tensor_local_shape,
-                            tensor_local_strides);
+                            tensor_local_strides,
+                            ComputeStream{Dev});
 
       REQUIRE(tensor.shape() == tensor_shape);
       REQUIRE(tensor.dim_types() == tensor_dim_types);
@@ -649,7 +657,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
                         "[dist-tensor]",
                         AllDevList)
 {
-  using DistTensorType = DistTensor<DataType, TestType::value>;
+  using DistTensorType = DistTensor<DataType>;
   constexpr Device Dev = TestType::value;
 
   SECTION("Basic views work")
@@ -666,8 +674,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           tensor_shape.set_size(grid.ndim());
           DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
-          DistTensorType tensor =
-            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+          DistTensorType tensor = DistTensorType(
+              Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
           typename DistTensorType::local_tensor_type local_tensor =
             tensor.local_tensor();
 
@@ -677,7 +685,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
             write_ele<Dev>(buf, i, static_cast<DataType>(i));
           }
 
-          DistTensorType* view = tensor.view();
+          std::unique_ptr<DistTensorType> view = tensor.view();
           REQUIRE(view->shape() == tensor_shape);
           REQUIRE(view->local_shape() == tensor.local_shape());
           REQUIRE(view->dim_types() == tensor_dim_types);
@@ -722,8 +730,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           tensor_shape.set_size(grid.ndim());
           DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
-          DistTensorType tensor =
-            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+          DistTensorType tensor = DistTensorType(
+              Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
           typename DistTensorType::local_tensor_type local_tensor =
             tensor.local_tensor();
 
@@ -733,7 +741,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
             write_ele<Dev>(buf, i, static_cast<DataType>(i));
           }
 
-          DistTensorType* view = tensor.const_view();
+          std::unique_ptr<DistTensorType> view = tensor.const_view();
           REQUIRE(view->shape() == tensor_shape);
           REQUIRE(view->local_shape() == tensor.local_shape());
           REQUIRE(view->dim_types() == tensor_dim_types);
@@ -778,8 +786,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           tensor_shape.set_size(grid.ndim());
           DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
-          DistTensorType tensor =
-            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+          DistTensorType tensor = DistTensorType(
+              Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
           typename DistTensorType::local_tensor_type local_tensor =
             tensor.local_tensor();
 
@@ -840,7 +848,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
             local_start = get_index_range_start(local_view_indices);
           }
 
-          DistTensorType* view = tensor.view(view_indices);
+          std::unique_ptr<DistTensorType> view = tensor.view(view_indices);
           REQUIRE(view->shape() == view_shape);
           REQUIRE(view->local_shape() == local_shape);
           REQUIRE(view->dim_types() == tensor_dim_types);
@@ -909,8 +917,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           tensor_shape.set_size(grid.ndim());
           DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
-          DistTensorType tensor =
-            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+          DistTensorType tensor = DistTensorType(
+              Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
 
           IndexRangeTuple view_indices({IRng(0)});
 
@@ -934,8 +942,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           tensor_shape.set_size(grid.ndim());
           DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
-          DistTensorType tensor =
-            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+          DistTensorType tensor = DistTensorType(
+              Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
           typename DistTensorType::local_tensor_type local_tensor =
             tensor.local_tensor();
 
@@ -945,8 +953,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
             write_ele<Dev>(buf, i, static_cast<DataType>(i));
           }
 
-          DistTensorType* orig_view = tensor.view();
-          DistTensorType* view = orig_view->view();
+          std::unique_ptr<DistTensorType> orig_view = tensor.view();
+          std::unique_ptr<DistTensorType> view = orig_view->view();
           REQUIRE(view->shape() == tensor_shape);
           REQUIRE(view->local_shape() == tensor.local_shape());
           REQUIRE(view->dim_types() == tensor_dim_types);
@@ -991,8 +999,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           tensor_shape.set_size(grid.ndim());
           DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
-          DistTensorType tensor =
-            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+          DistTensorType tensor = DistTensorType(
+              Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
           typename DistTensorType::local_tensor_type local_tensor =
             tensor.local_tensor();
 
@@ -1002,7 +1010,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
             write_ele<Dev>(buf, i, static_cast<DataType>(i));
           }
 
-          DistTensorType* view = tensor.view();
+          std::unique_ptr<DistTensorType> view = tensor.view();
           REQUIRE(view->is_view());
           view->unview();
           REQUIRE_FALSE(view->is_view());
@@ -1033,8 +1041,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           tensor_shape.set_size(grid.ndim());
           DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
-          DistTensorType tensor =
-            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+          DistTensorType tensor = DistTensorType(
+              Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
           typename DistTensorType::local_tensor_type local_tensor =
             tensor.local_tensor();
 
@@ -1044,7 +1052,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
             write_ele<Dev>(buf, i, static_cast<DataType>(i));
           }
 
-          DistTensorType* view = tensor.view();
+          std::unique_ptr<DistTensorType> view = tensor.view();
           REQUIRE(view->is_view());
           view->empty();
           REQUIRE_FALSE(view->is_view());
@@ -1066,7 +1074,7 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor views work",
                         "[dist-tensor]",
                         AllDevList)
 {
-  using DistTensorType = DistTensor<DataType, TestType::value>;
+  using DistTensorType = DistTensor<DataType>;
   constexpr Device Dev = TestType::value;
 
   SECTION("View with fully empty coordinates works")
@@ -1083,10 +1091,10 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor views work",
           tensor_shape.set_size(grid.ndim());
           DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
-          DistTensorType tensor =
-            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+          DistTensorType tensor = DistTensorType(
+              Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
 
-          DistTensorType* view = tensor.view(IndexRangeTuple{});
+          std::unique_ptr<DistTensorType> view = tensor.view(IndexRangeTuple{});
           REQUIRE(view->shape() == ShapeTuple{});
           REQUIRE(view->local_shape() == ShapeTuple{});
           REQUIRE(view->dim_types() == DTTuple{});
@@ -1126,13 +1134,13 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor views work",
           tensor_shape.set_size(grid.ndim());
           DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
-          DistTensorType tensor =
-              DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+          DistTensorType tensor = DistTensorType(
+              Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
 
           IndexRangeTuple view_indices({IRng(), IRng(2, 3), IRng(1, 2)});
           view_indices.set_size(grid.ndim());
 
-          DistTensorType* view = tensor.view(view_indices);
+          std::unique_ptr<DistTensorType> view = tensor.view(view_indices);
           REQUIRE(view->shape() == ShapeTuple{});
           REQUIRE(view->local_shape() == ShapeTuple{});
           REQUIRE(view->dim_types() == DTTuple{});
@@ -1163,7 +1171,8 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensors are printable",
                         "[dist-tensor]",
                         AllDevList)
 {
-  using DistTensorType = DistTensor<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using DistTensorType = DistTensor<DataType>;
 
   std::stringstream dev_ss;
   dev_ss << TestType::value;
@@ -1180,8 +1189,8 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensors are printable",
         tensor_shape.set_size(grid.ndim());
         DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
         DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
-        DistTensorType tensor =
-            DistTensorType(tensor_shape, tensor_dim_types, grid, tensor_dist);
+        DistTensorType tensor = DistTensorType(
+            Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
 
         std::stringstream ss;
         ss << tensor;

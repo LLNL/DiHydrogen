@@ -34,7 +34,7 @@ TEMPLATE_LIST_TEST_CASE("Buffer copy works", "[tensor][copy]", AllDevPairsList)
     write_ele<DstDev>(dst.buf, i, dst_val);
   }
 
-  REQUIRE_NOTHROW(CopyBuffer<DstDev, SrcDev>(
+  REQUIRE_NOTHROW(CopyBuffer(
       dst.buf, dst_stream, src.buf, src_stream, buf_size));
 
   for (std::size_t i = 0; i < buf_size; ++i)
@@ -52,15 +52,15 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
 {
   constexpr Device SrcDev = meta::tlist::At<TestType, 0>::value;
   constexpr Device DstDev = meta::tlist::At<TestType, 1>::value;
-  using SrcTensorType = Tensor<DataType, SrcDev>;
-  using DstTensorType = Tensor<DataType, DstDev>;
+  using SrcTensorType = Tensor<DataType>;
+  using DstTensorType = Tensor<DataType>;
   constexpr DataType src_val = static_cast<DataType>(1);
   constexpr DataType dst_val = static_cast<DataType>(2);
 
   SECTION("Copying into existing tensor works without resizing")
   {
-    SrcTensorType src_tensor({4, 6}, {DT::Sample, DT::Any});
-    DstTensorType dst_tensor({4, 6}, {DT::Any, DT::Any});
+    SrcTensorType src_tensor(SrcDev, {4, 6}, {DT::Sample, DT::Any});
+    DstTensorType dst_tensor(DstDev, {4, 6}, {DT::Any, DT::Any});
 
     DataType* dst_orig_data = dst_tensor.data();
 
@@ -91,8 +91,8 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
 
   SECTION("Copying into different-sized tensor works")
   {
-    SrcTensorType src_tensor({4, 6}, {DT::Sample, DT::Any});
-    DstTensorType dst_tensor({2, 2}, {DT::Any, DT::Any});
+    SrcTensorType src_tensor(SrcDev, {4, 6}, {DT::Sample, DT::Any});
+    DstTensorType dst_tensor(DstDev, {2, 2}, {DT::Any, DT::Any});
 
     for (std::size_t i = 0; i < src_tensor.numel(); ++i)
     {
@@ -126,8 +126,8 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
 
   SECTION("Copying an empty tensor works")
   {
-    SrcTensorType src_tensor;
-    DstTensorType dst_tensor({2, 4}, {DT::Any, DT::Any});
+    SrcTensorType src_tensor(SrcDev);
+    DstTensorType dst_tensor(DstDev, {2, 4}, {DT::Any, DT::Any});
 
     REQUIRE_NOTHROW(Copy(dst_tensor, src_tensor));
 
@@ -136,8 +136,8 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
 
   SECTION("Copying non-contiguous tensors works")
   {
-    SrcTensorType src_tensor({4, 6}, {DT::Sample, DT::Any});
-    DstTensorType dst_tensor({4, 6}, {DT::Any, DT::Any});
+    SrcTensorType src_tensor(SrcDev, {4, 6}, {DT::Sample, DT::Any});
+    DstTensorType dst_tensor(DstDev, {4, 6}, {DT::Any, DT::Any});
 
     // Resize to be non-contiguous.
     src_tensor.resize(

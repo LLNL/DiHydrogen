@@ -85,7 +85,7 @@ get_extent_from_strides(const ShapeTuple& shape,
 /**
  * A managed chunk of memory with an associated stride.
  */
-template <typename T, Device Dev>
+template <typename T>
 class StridedMemory
 {
 private:
@@ -94,28 +94,31 @@ private:
 public:
 
   /** Allocate empty memory. */
-  StridedMemory(bool lazy = false,
-                const ComputeStream& stream_ = ComputeStream{Dev})
+  StridedMemory(Device device, bool lazy, const ComputeStream& stream_)
     : raw_buffer(nullptr),
       mem_offset(INVALID_OFFSET),
       mem_strides{},
       mem_shape{},
+      mem_device{device},
       stream(stream_),
       is_mem_lazy(lazy)
   {}
 
   /** Allocate memory for shape, with unit strides. */
-  StridedMemory(const ShapeTuple& shape, bool lazy = false,
-                const ComputeStream& stream_ = ComputeStream{Dev})
-    : StridedMemory(shape, get_contiguous_strides(shape), lazy, stream_)
+  StridedMemory(Device device,
+                const ShapeTuple& shape,
+                bool lazy,
+                const ComputeStream& stream_)
+    : StridedMemory(device, shape, get_contiguous_strides(shape), lazy, stream_)
   {}
 
   /** Allocate memory for shape with the given strides. */
-  StridedMemory(const ShapeTuple& shape,
+  StridedMemory(Device device,
+                const ShapeTuple& shape,
                 const StrideTuple& strides,
-                bool lazy = false,
-                const ComputeStream& stream_ = ComputeStream{Dev})
-      : StridedMemory(lazy, stream_)
+                bool lazy,
+                const ComputeStream& stream_)
+    : StridedMemory(device, lazy, stream_)
   {
     H2_ASSERT_DEBUG(shape.size() == strides.size(),
                     "Shape and strides must be the same size");
@@ -132,10 +135,10 @@ public:
   }
 
   /** View a subregion of an existing memory region. */
-  StridedMemory(const StridedMemory<T, Dev>& base,
-                const IndexRangeTuple& coords)
+  StridedMemory(const StridedMemory<T>& base, const IndexRangeTuple& coords)
       : raw_buffer(base.raw_buffer),
         mem_offset(INVALID_OFFSET),
+        mem_device(base.mem_device),
         // mem_shape and mem_strides are set below.
         stream(base.stream),
         is_mem_lazy(base.is_lazy())
@@ -181,14 +184,16 @@ public:
   }
 
   /** Wrap an existing memory buffer. */
-  StridedMemory(T* buffer,
+  StridedMemory(Device device,
+                T* buffer,
                 const ShapeTuple& shape,
                 const StrideTuple& strides,
-                const ComputeStream& stream_ = ComputeStream{Dev})
+                const ComputeStream& stream_)
     : raw_buffer(nullptr),
       mem_offset(0),
       mem_strides(strides),
       mem_shape(shape),
+      mem_device(device),
       stream(stream_),
       is_mem_lazy(false)
   {
@@ -201,7 +206,7 @@ public:
                                >= product<std::size_t>(shape),
                     "Provided strides are not sane");
     std::size_t size = get_extent_from_strides(shape, strides);
-    raw_buffer = std::make_shared<RawBuffer<T>>(Dev, buffer, size, stream);
+    raw_buffer = std::make_shared<RawBuffer<T>>(device, buffer, size, stream);
   }
 
   ~StridedMemory()
@@ -347,10 +352,9 @@ public:
     }
   }
 
-  bool is_lazy() const H2_NOEXCEPT
-  {
-    return is_mem_lazy;
-  }
+  bool is_lazy() const H2_NOEXCEPT { return is_mem_lazy; }
+
+  Device get_device() const H2_NOEXCEPT { return mem_device; }
 
 private:
   /**
@@ -375,6 +379,7 @@ private:
   std::weak_ptr<RawBuffer<T>> old_raw_buffer;
   StrideTuple mem_strides;  /**< Strides associated with the memory. */
   ShapeTuple mem_shape;  /**< Shape describing the extent of the memory. */
+  Device mem_device;     /**< Device the memory is on. */
   ComputeStream stream;  /**< Compute stream for operations. */
   bool is_mem_lazy;  /**< Whether allocation is lazy. */
 
@@ -386,18 +391,19 @@ private:
     {
       const std::size_t size = get_extent_from_strides(mem_shape, mem_strides);
       if (size) {
-        raw_buffer = std::make_shared<RawBuffer<T>>(Dev, size, lazy, stream);
+        raw_buffer =
+            std::make_shared<RawBuffer<T>>(mem_device, size, lazy, stream);
       }
     }
   }
 };
 
 /** Support printing StridedMemory. */
-template <typename T, Device Dev>
+template <typename T>
 inline std::ostream& operator<<(std::ostream& os,
-                                const StridedMemory<T, Dev>& mem)
+                                const StridedMemory<T>& mem)
 {
-  os << "StridedMemory<" << TypeName<T>() << ", " << Dev << ">("
+  os << "StridedMemory<" << TypeName<T>() << ", " << mem.get_device() << ">("
      << (mem.is_lazy() ? "lazy" : "not lazy") << ", "
      << mem.data() << ", " << mem.strides()
      << ", " << mem.shape() << ")";
@@ -405,9 +411,9 @@ inline std::ostream& operator<<(std::ostream& os,
 }
 
 /** Print the contents of StridedMemory. */
-template <typename T, Device Dev>
+template <typename T>
 inline std::ostream& strided_memory_contents(std::ostream& os,
-                                             const StridedMemory<T, Dev>& mem)
+                                             const StridedMemory<T>& mem)
 {
   DataIndexType size =
       mem.shape().size() ? product<DataIndexType>(mem.shape()) : 0;

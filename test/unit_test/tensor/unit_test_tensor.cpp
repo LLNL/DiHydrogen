@@ -124,20 +124,28 @@ TEST_CASE("for_ndim", "[tensor]")
 
 TEMPLATE_LIST_TEST_CASE("Tensors can be created", "[tensor]", AllDevList)
 {
-  using TensorType = Tensor<DataType, TestType::value>;
-  REQUIRE_NOTHROW(TensorType());
-  REQUIRE_NOTHROW(TensorType({2}, {DT::Any}));
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<DataType>;
+  REQUIRE_NOTHROW(TensorType(Dev));
+  REQUIRE_NOTHROW(TensorType(Dev, {2}, {DT::Any}));
 
   DataType* null_buf = nullptr;
-  REQUIRE_NOTHROW(TensorType(null_buf, {0}, {DT::Any}, {1}));
-  REQUIRE_NOTHROW(TensorType(const_cast<const DataType*>(null_buf), {0}, {DT::Any}, {1}));
+  REQUIRE_NOTHROW(
+      TensorType(Dev, null_buf, {0}, {DT::Any}, {1}, ComputeStream{Dev}));
+  REQUIRE_NOTHROW(TensorType(Dev,
+                             const_cast<const DataType*>(null_buf),
+                             {0},
+                             {DT::Any},
+                             {1},
+                             ComputeStream{Dev}));
 }
 
 TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
 {
-  using TensorType = Tensor<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<DataType>;
 
-  TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
+  TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
 
   REQUIRE(tensor.shape() == ShapeTuple{4, 6});
   REQUIRE(tensor.shape(0) == 4);
@@ -161,7 +169,8 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(tensor.get({0, 0}) == tensor.data());
   REQUIRE_FALSE(tensor.is_lazy());
 
-  const TensorType const_tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
+  const TensorType const_tensor =
+      TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
   REQUIRE(const_tensor.shape() == ShapeTuple{4, 6});
   REQUIRE(const_tensor.shape(0) == 4);
   REQUIRE(const_tensor.shape(1) == 6);
@@ -187,9 +196,10 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
 
 TEMPLATE_LIST_TEST_CASE("Empty tensor metadata is sane", "[tensor]", AllDevList)
 {
-  using TensorType = Tensor<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<DataType>;
 
-  TensorType tensor = TensorType();
+  TensorType tensor = TensorType(Dev);
 
   REQUIRE(tensor.shape() == ShapeTuple{});
   REQUIRE(tensor.dim_types() == DTTuple{});
@@ -211,9 +221,10 @@ TEMPLATE_LIST_TEST_CASE("Single element tensor metadata is sane",
                         "[tensor]",
                         AllDevList)
 {
-  using TensorType = Tensor<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<DataType>;
 
-  TensorType tensor = TensorType({1}, {DT::Any});
+  TensorType tensor = TensorType(Dev, {1}, {DT::Any});
 
   REQUIRE(tensor.shape() == ShapeTuple{1});
   REQUIRE(tensor.dim_types() == DTTuple{DT::Any});
@@ -236,21 +247,24 @@ TEMPLATE_LIST_TEST_CASE("Lazy and strict tensors are sane",
                         "[tensor]",
                         AllDevList)
 {
-  using TensorType = Tensor<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<DataType>;
 
-  REQUIRE_FALSE(TensorType().is_lazy());
-  REQUIRE_FALSE(TensorType(StrictAlloc).is_lazy());
-  REQUIRE(TensorType(LazyAlloc).is_lazy());
+  REQUIRE_FALSE(TensorType(Dev).is_lazy());
+  REQUIRE_FALSE(TensorType(Dev, StrictAlloc).is_lazy());
+  REQUIRE(TensorType(Dev, LazyAlloc).is_lazy());
 
-  REQUIRE_FALSE(TensorType({4, 6}, {DT::Sample, DT::Any}, StrictAlloc).is_lazy());
-  REQUIRE(TensorType({4, 6}, {DT::Sample, DT::Any}, LazyAlloc).is_lazy());
+  REQUIRE_FALSE(
+      TensorType(Dev, {4, 6}, {DT::Sample, DT::Any}, StrictAlloc).is_lazy());
+  REQUIRE(TensorType(Dev, {4, 6}, {DT::Sample, DT::Any}, LazyAlloc).is_lazy());
 }
 
 TEMPLATE_LIST_TEST_CASE("Resizing tensors works", "[tensor]", AllDevList)
 {
-  using TensorType = Tensor<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<DataType>;
 
-  TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
+  TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
 
   SECTION("Resizing without changing the number of dimensions") {
     tensor.resize({2, 3});
@@ -318,9 +332,9 @@ TEMPLATE_LIST_TEST_CASE("Resizing tensors works", "[tensor]", AllDevList)
 TEMPLATE_LIST_TEST_CASE("Writing to tensors works", "[tensor]", AllDevList)
 {
   constexpr Device Dev = TestType::value;
-  using TensorType = Tensor<DataType, TestType::value>;
+  using TensorType = Tensor<DataType>;
 
-  TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
+  TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
 
   DataType* buf = tensor.data();
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
@@ -344,7 +358,7 @@ TEMPLATE_LIST_TEST_CASE("Attaching tensors to existing buffers works",
                         AllDevList)
 {
   constexpr Device Dev = TestType::value;
-  using TensorType = Tensor<DataType, TestType::value>;
+  using TensorType = Tensor<DataType>;
   constexpr std::size_t buf_size = 4*6;
 
   DeviceBuf<DataType, Dev> buf(buf_size);
@@ -353,7 +367,8 @@ TEMPLATE_LIST_TEST_CASE("Attaching tensors to existing buffers works",
     write_ele<Dev>(buf.buf, i, static_cast<DataType>(i));
   }
 
-  TensorType tensor = TensorType(buf.buf, {4, 6}, {DT::Sample, DT::Any}, {1, 4});
+  TensorType tensor = TensorType(
+      Dev, buf.buf, {4, 6}, {DT::Sample, DT::Any}, {1, 4}, ComputeStream{Dev});
   REQUIRE(tensor.shape() == ShapeTuple{4, 6});
   REQUIRE(tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
   REQUIRE(tensor.strides() == StrideTuple{1, 4});
@@ -381,9 +396,9 @@ TEMPLATE_LIST_TEST_CASE("Attaching tensors to existing buffers works",
 TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
 {
   constexpr Device Dev = TestType::value;
-  using TensorType = Tensor<DataType, TestType::value>;
+  using TensorType = Tensor<DataType>;
 
-  TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
+  TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
     write_ele<Dev>(tensor.data(), i, static_cast<DataType>(i));
@@ -391,7 +406,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
 
   SECTION("Basic views work")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     REQUIRE(view->shape() == ShapeTuple{4, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -410,7 +425,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Constant views work")
   {
-    TensorType* view = tensor.const_view();
+    std::unique_ptr<TensorType> view = tensor.const_view();
     REQUIRE(view->shape() == ShapeTuple{4, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -425,7 +440,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Viewing a subtensor works")
   {
-    TensorType* view = tensor.view({IRng(1), ALL});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(1), ALL});
     REQUIRE(view->shape() == ShapeTuple{6});
     REQUIRE(view->dim_types() == DTTuple{DT::Any});
     REQUIRE(view->strides() == StrideTuple{4});
@@ -442,7 +457,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Operator-style views work")
   {
-    TensorType* view = tensor({IRng(1, 3), ALL});
+    std::unique_ptr<TensorType> view = tensor({IRng(1, 3), ALL});
     REQUIRE(view->shape() == ShapeTuple{2, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -462,7 +477,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("View of a single element works")
   {
-    TensorType* view = tensor.view({IRng(1, 2), IRng(0, 1)});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(1, 2), IRng(0, 1)});
     REQUIRE(view->shape() == ShapeTuple{1, 1});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 1});
@@ -476,7 +491,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("View of a single element, eliminating dimensions, works")
   {
-    TensorType* view = tensor.view({IRng(1), IRng(0)});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(1), IRng(0)});
     REQUIRE(view->shape() == ShapeTuple{1});
     REQUIRE(view->dim_types() == DTTuple{DT::Scalar});
     REQUIRE(view->strides() == StrideTuple{1});
@@ -490,8 +505,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Viewing a view works")
   {
-    TensorType* view_orig = tensor.view();
-    TensorType* view = view_orig->view();
+    std::unique_ptr<TensorType> view_orig = tensor.view();
+    std::unique_ptr<TensorType> view = view_orig->view();
     REQUIRE(view->shape() == ShapeTuple{4, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -508,7 +523,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Unviewing a view works")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     REQUIRE(view->is_view());
     view->unview();
     REQUIRE_FALSE(view->is_view());
@@ -522,7 +537,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   }
   SECTION("Emptying a view unviews")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     view->empty();
     REQUIRE_FALSE(view->is_view());
     REQUIRE(view->shape() == ShapeTuple{});
@@ -541,7 +556,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
 #endif
   SECTION("Resizing a view fails")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     REQUIRE_THROWS(view->resize(ShapeTuple{2, 3}));
     REQUIRE_THROWS(view->resize(ShapeTuple{2, 3, 4},
                                 DTTuple{DT::Sample, DT::Any, DT::Any}));
@@ -557,14 +572,14 @@ TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
                         AllDevList)
 {
   constexpr Device Dev = TestType::value;
-  using TensorType = Tensor<DataType, TestType::value>;
+  using TensorType = Tensor<DataType>;
 
-  TensorType tensor = TensorType({1}, {DT::Sample});
+  TensorType tensor = TensorType(Dev, {1}, {DT::Sample});
   write_ele<Dev>(tensor.data(), 0, static_cast<DataType>(1));
 
   SECTION("Basic views work")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     REQUIRE(view->shape() == ShapeTuple{1});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample});
     REQUIRE(view->strides() == StrideTuple{1});
@@ -580,7 +595,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
 
   SECTION("Manually-specified view range works")
   {
-    TensorType* view = tensor.view({IRng(0, 1)});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(0, 1)});
     REQUIRE(view->shape() == ShapeTuple{1});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample});
     REQUIRE(view->strides() == StrideTuple{1});
@@ -596,7 +611,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
 
   SECTION("View with a scalar index works")
   {
-    TensorType* view = tensor.view({IRng(0)});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(0)});
     REQUIRE(view->shape() == ShapeTuple{1});
     REQUIRE(view->dim_types() == DTTuple{DT::Scalar});
     REQUIRE(view->strides() == StrideTuple{1});
@@ -616,13 +631,13 @@ TEMPLATE_LIST_TEST_CASE("Viewing constant tensors works",
                         AllDevList)
 {
   constexpr Device Dev = TestType::value;
-  using TensorType = Tensor<DataType, TestType::value>;
+  using TensorType = Tensor<DataType>;
 
-  const TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
+  const TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
 
   SECTION("Basic views work")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     REQUIRE(view->shape() == ShapeTuple{4, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -637,7 +652,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing constant tensors works",
   }
   SECTION("Operator-style views work")
   {
-    TensorType* view = tensor({IRng(1, 3), ALL});
+    std::unique_ptr<TensorType> view = tensor({IRng(1, 3), ALL});
     REQUIRE(view->shape() == ShapeTuple{2, 6});
     REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(view->strides() == StrideTuple{1, 4});
@@ -655,9 +670,9 @@ TEMPLATE_LIST_TEST_CASE("Viewing constant tensors works",
 TEMPLATE_LIST_TEST_CASE("Empty views work", "[tensor]", AllDevList)
 {
   constexpr Device Dev = TestType::value;
-  using TensorType = Tensor<DataType, TestType::value>;
+  using TensorType = Tensor<DataType>;
 
-  TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
+  TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
     write_ele<Dev>(tensor.data(), i, static_cast<DataType>(i));
@@ -665,7 +680,7 @@ TEMPLATE_LIST_TEST_CASE("Empty views work", "[tensor]", AllDevList)
 
   SECTION("View with fully empty coordinates work")
   {
-    TensorType* view = tensor.view(IndexRangeTuple{});
+    std::unique_ptr<TensorType> view = tensor.view(IndexRangeTuple{});
     REQUIRE(view->shape() == ShapeTuple{});
     REQUIRE(view->dim_types() == DTTuple{});
     REQUIRE(view->strides() == StrideTuple{});
@@ -680,7 +695,7 @@ TEMPLATE_LIST_TEST_CASE("Empty views work", "[tensor]", AllDevList)
 
   SECTION("View with one coordinate empty works")
   {
-    TensorType* view = tensor.view({IRng(0, 1), IRng()});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(0, 1), IRng()});
     REQUIRE(view->shape() == ShapeTuple{});
     REQUIRE(view->dim_types() == DTTuple{});
     REQUIRE(view->strides() == StrideTuple{});
@@ -700,9 +715,9 @@ TEMPLATE_LIST_TEST_CASE("Making tensors contiguous works",
                         AllDevList)
 {
   constexpr Device Dev = TestType::value;
-  using TensorType = Tensor<DataType, TestType::value>;
+  using TensorType = Tensor<DataType>;
 
-  TensorType tensor = TensorType({4, 6}, {DT::Sample, DT::Any});
+  TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
     write_ele<Dev>(tensor.data(), i, static_cast<DataType>(i));
@@ -711,16 +726,16 @@ TEMPLATE_LIST_TEST_CASE("Making tensors contiguous works",
   SECTION("Making contiguous tensors contiguous works")
   {
     REQUIRE(tensor.is_contiguous());
-    TensorType* contig = tensor.contiguous();
+    std::unique_ptr<TensorType> contig = tensor.contiguous();
     REQUIRE(contig->is_view());
     REQUIRE(contig->data() == tensor.data());
   }
   SECTION("Making non-contiguous tensors contiguous work")
   {
-    TensorType* view = tensor.view({IRng(1, 2), ALL});
+    std::unique_ptr<TensorType> view = tensor.view({IRng(1, 2), ALL});
     REQUIRE_FALSE(view->is_contiguous());
 
-    TensorType* contig = view->contiguous();
+    std::unique_ptr<TensorType> contig = view->contiguous();
     REQUIRE(contig->is_contiguous());
     REQUIRE(contig->data() != view->data());
     REQUIRE(contig->shape() == ShapeTuple{6});
@@ -734,14 +749,15 @@ TEMPLATE_LIST_TEST_CASE("Making tensors contiguous works",
 
 TEMPLATE_LIST_TEST_CASE("Tensors are printable", "[tensor]", AllDevList)
 {
-  using TensorType = Tensor<DataType, TestType::value>;
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<DataType>;
 
   std::stringstream dev_ss;
   dev_ss << TestType::value;
 
   std::stringstream ss;
 
-  TensorType tensor({3, 5}, {DT::Sample, DT::Any});
+  TensorType tensor(Dev, {3, 5}, {DT::Sample, DT::Any});
 
   SECTION("No view")
   {
@@ -753,7 +769,7 @@ TEMPLATE_LIST_TEST_CASE("Tensors are printable", "[tensor]", AllDevList)
 
   SECTION("View")
   {
-    TensorType* view = tensor.view();
+    std::unique_ptr<TensorType> view = tensor.view();
     ss << *view;
     REQUIRE(ss.str()
             == std::string("Tensor<") + TypeName<DataType>() + ", "
