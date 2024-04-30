@@ -71,7 +71,7 @@ public:
     tensor_memory(device, const_cast<T*>(buffer), shape_, strides_, stream)
   {}
 
-  /** Private constructor for views. */
+  /** Internal constructor for views. */
   Tensor(ViewType view_type_,
          const StridedMemory<T>& mem_,
          const ShapeTuple& shape_,

@@ -100,7 +100,7 @@ public:
             device, buffer, local_shape_, dim_types_, local_strides_, stream)
   {}
 
-  /** Private constructor for views. */
+  /** Internal constructor for views. */
   DistTensor(ViewType view_type_,
              const Tensor<T>& orig_tensor_local_,
              const ShapeTuple& local_shape_,
