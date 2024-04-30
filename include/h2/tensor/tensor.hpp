@@ -84,7 +84,7 @@ public:
   {}
 
   /**
-   * Private constructor for views from different devices.
+   * Internal constructor for views from different devices.
    *
    * Not protected by a passkey because we use it from a free function.
    */
