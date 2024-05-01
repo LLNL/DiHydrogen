@@ -321,6 +321,41 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
   }
 }
 
+TEMPLATE_LIST_TEST_CASE("Base distributed tensor metadata is sane",
+                        "[dist-tensor]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using DistTensorType = DistTensor<DataType>;
+
+  Comm& comm = get_comm_or_skip(1);
+  ProcessorGrid grid = ProcessorGrid(comm, ShapeTuple{1});
+  std::unique_ptr<BaseDistTensor> tensor =
+      std::make_unique<DistTensorType>(Dev,
+                                       ShapeTuple{8},
+                                       DTTuple{DT::Any},
+                                       grid,
+                                       DistTTuple{Distribution::Block});
+  REQUIRE(tensor->shape() == ShapeTuple{8});
+  REQUIRE(tensor->dim_types() == DTTuple{DT::Any});
+  REQUIRE(tensor->local_shape() == ShapeTuple{8});
+  REQUIRE(tensor->proc_grid() == grid);
+  REQUIRE(tensor->distribution() == DistTTuple{Distribution::Block});
+  REQUIRE(tensor->shape(0) == 8);
+  REQUIRE(tensor->dim_type(0) == DT::Any);
+  REQUIRE(tensor->distribution(0) == Distribution::Block);
+  REQUIRE(tensor->local_shape(0) == 8);
+  REQUIRE(tensor->ndim() == 1);
+  REQUIRE(tensor->numel() == 8);
+  REQUIRE_FALSE(tensor->is_empty());
+  REQUIRE(tensor->local_numel() == 8);
+  REQUIRE_FALSE(tensor->is_local_empty());
+  REQUIRE_FALSE(tensor->is_view());
+  REQUIRE_FALSE(tensor->is_const_view());
+  REQUIRE(tensor->get_view_type() == ViewType::None);
+  REQUIRE(tensor->get_device() == TestType::value);
+}
+
 TEMPLATE_LIST_TEST_CASE("Empty distributed tensor metadata is sane",
                         "[dist-tensor]",
                         AllDevList)
