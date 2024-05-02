@@ -124,11 +124,8 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
 #else  // H2_DEBUG
 #define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)  \
   do {                                                  \
-    if ((device) == Device::CPU)                        \
-    {                                                   \
-      constexpr Device Dev = Device::CPU;               \
-      code;                                             \
-    }                                                   \
+    constexpr Device Dev = Device::CPU;                 \
+    cpu_code;                                           \
   } while (0);
 #endif  // H2_DEBUG
 #endif  // H2_HAS_GPU
