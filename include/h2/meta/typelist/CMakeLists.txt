@@ -21,6 +21,7 @@ h2_add_sources_to_target_and_install(
   HaskellAccessors.hpp
   Length.hpp
   LispAccessors.hpp
+  Map.hpp
   Member.hpp
   Remove.hpp
   RemoveAll.hpp
