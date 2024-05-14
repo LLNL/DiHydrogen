@@ -98,81 +98,54 @@ constexpr bool all_of(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
   return true;
 }
 
-/**
- * Return a new tuple that is the result of applying a predicate to
- * each entry of the tuple.
- */
-template <typename T,
-          typename SizeType,
-          SizeType N,
-          typename Predicate>
-constexpr FixedSizeTuple<T, SizeType, N>
-map(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
-{
-  FixedSizeTuple<T, SizeType, N> mapped_tuple(
-      TuplePad<FixedSizeTuple<T, SizeType, N>>(tuple.size()));
-  for (SizeType i = 0; i < tuple.size(); ++i)
-  {
-    mapped_tuple[i] = p(tuple[i]);
-  }
-  return mapped_tuple;
-}
-
-/** Map with a different FixedSizeTuple return type. */
-template <typename NewT,
-          typename T,
-          typename SizeType,
-          SizeType N,
-          typename Predicate>
-constexpr FixedSizeTuple<NewT, SizeType, N>
-map(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
-{
-  FixedSizeTuple<NewT, SizeType, N> mapped_tuple(
-      TuplePad<FixedSizeTuple<NewT, SizeType, N>>(tuple.size()));
-  for (SizeType i = 0; i < tuple.size(); ++i)
-  {
-    mapped_tuple[i] = p(tuple[i]);
-  }
-  return mapped_tuple;
-}
-
-/**
- * Like map, except passes the index of each entry in tuple to the
- * given predicate, rather than the value.
+/** @brief Map a unary function over tuple elements
  *
- * This is primarily useful when your predicate can capture some other
- * object that it needs to interact with.
+ *  This is the classic "map" function ubiquitous in functional
+ *  programming.
+ *
+ *  @param[in] tuple The original tuple
+ *  @param[in] f A unary function of the tuple element type
+ *  @returns A new tuple that is the result of applying a unary
+ *           function to each entry of the tuple.
  */
-template <typename T,
-          typename SizeType,
-          SizeType N,
-          typename Predicate>
-constexpr FixedSizeTuple<T, SizeType, N>
-map_index(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
+template <typename T, typename SizeType, SizeType N, typename UnaryF>
+constexpr auto map(const FixedSizeTuple<T, SizeType, N>& tuple, UnaryF f)
+  -> FixedSizeTuple<std::invoke_result_t<UnaryF, T>, SizeType, N>
 {
-  FixedSizeTuple<T, SizeType, N> mapped_tuple(
-      TuplePad<FixedSizeTuple<T, SizeType, N>>(tuple.size()));
-  for (SizeType i = 0; i < tuple.size(); ++i)
-  {
-    mapped_tuple[i] = p(i);
-  }
-  return mapped_tuple;
-}
-
-/** map_index with a different FixedSizeTuple return type. */
-template <typename NewT,
-          typename T,
-          typename SizeType,
-          SizeType N,
-          typename Predicate>
-constexpr FixedSizeTuple<NewT, SizeType, N>
-map_index(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
-{
+  using NewT = std::invoke_result_t<UnaryF, T>;
   FixedSizeTuple<NewT, SizeType, N> mapped_tuple(
       TuplePad<FixedSizeTuple<NewT, SizeType, N>>(tuple.size()));
   for (SizeType i = 0; i < tuple.size(); ++i)
   {
-    mapped_tuple[i] = p(i);
+    mapped_tuple[i] = f(tuple[i]);
+  }
+  return mapped_tuple;
+}
+
+/** @brief Map a unary function over tuple indices
+ *
+ *  Like map, except passes the index of each entry in tuple to the
+ *  given predicate, rather than the value.
+ *
+ *  This is primarily useful when your predicate can capture some other
+ *  object that it needs to interact with.
+ *
+ *  @param[in] tuple The original tuple
+ *  @param[in] f A unary function of the tuple index type
+ *  @returns A new tuple that is the result of applying a unary
+ *           function to each index in the tuple.
+ */
+template <typename T, typename SizeType, SizeType N, typename IndexF>
+constexpr auto map_index(const FixedSizeTuple<T, SizeType, N>& tuple,
+                         IndexF f)
+  -> FixedSizeTuple<std::invoke_result_t<IndexF, SizeType>, SizeType, N>
+{
+  using NewT = std::invoke_result_t<IndexF, SizeType>;
+  FixedSizeTuple<NewT, SizeType, N> mapped_tuple(
+      TuplePad<FixedSizeTuple<NewT, SizeType, N>>(tuple.size()));
+  for (SizeType i = 0; i < tuple.size(); ++i)
+  {
+    mapped_tuple[i] = f(i);
   }
   return mapped_tuple;
 }
