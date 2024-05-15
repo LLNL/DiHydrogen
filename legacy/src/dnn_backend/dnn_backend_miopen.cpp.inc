@@ -1343,7 +1343,6 @@ std::ostream& distconv::util::operator<<(std::ostream& os, miopenDataType_t& dt)
     case miopenFloat: return os << "float";       // Fully supported
     case miopenInt32: return os << "int32";       // Partially supported
     case miopenInt8: return os << "int8";         // Partially supported
-    case miopenInt8x4: return os << "int8x4";     // Partially supported
     case miopenBFloat16: return os << "bfloat16"; // Partially supported
     case miopenDouble: return os << "double";     // Partially supported
     default: return os << "UNKNOWN";
