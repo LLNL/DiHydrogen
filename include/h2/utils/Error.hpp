@@ -8,10 +8,10 @@
 #ifndef H2_UTILS_ERROR_HPP_
 #define H2_UTILS_ERROR_HPP_
 
+#include <h2_config.hpp>
+
 #include <stdexcept>
 #include <string>
-
-#include <h2_config.hpp>
 
 /** @file Error.hpp
  *
@@ -50,8 +50,13 @@ H2_DEFINE_FORWARDING_EXCEPTION(H2Exception, std::runtime_error);
  *  @param ... The arguments to pass to the exception.
  */
 #define H2_ASSERT(cond, excptn, ...)                                           \
-    if (!(cond))                                                               \
-        throw excptn(__VA_ARGS__);
+    do                                                                         \
+    {                                                                          \
+        if (!(cond))                                                           \
+        {                                                                      \
+            throw excptn(__VA_ARGS__);                                         \
+        }                                                                      \
+    } while (0)
 
 #ifdef H2_DEBUG
 /** @def H2_ASSERT_DEBUG
