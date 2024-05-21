@@ -20,6 +20,7 @@ make_matrix(El::Int height, El::Int width, El::Int ldim = 0)
 {
     using MatrixType = El::Matrix<DataType, D>;
     MatrixType mat{height, width, ldim};
+    El::MakeUniform(mat);
     return mat;
 }
 
@@ -193,6 +194,12 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
 
         CHECK(tensor.shape() == h2::ShapeTuple{m});
         CHECK(tensor.strides() == h2::StrideTuple{1});
+
+        for (int row = 0; row < m; ++row)
+        {
+            INFO("ROW=" << row);
+            CHECK(tensor.get({row}) == mat.LockedBuffer(row, 0));
+        }
     }
 
     SECTION("Const column vector")
@@ -208,6 +215,12 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
 
         CHECK(tensor.shape() == h2::ShapeTuple{m});
         CHECK(tensor.strides() == h2::StrideTuple{1});
+
+        for (int row = 0; row < m; ++row)
+        {
+            INFO("ROW=" << row);
+            CHECK(tensor.get({row}) == mat.LockedBuffer(row, 0));
+        }
     }
 
     SECTION("Row vector")
@@ -221,6 +234,12 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
 
         CHECK(tensor.shape() == h2::ShapeTuple{n});
         CHECK(tensor.strides() == h2::StrideTuple{ldim});
+
+        for (int col = 0; col < n; ++col)
+        {
+            INFO("COL=" << col);
+            CHECK(tensor.get({col}) == mat.LockedBuffer(0, col));
+        }
     }
 
     SECTION("Const row vector")
@@ -235,6 +254,12 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
 
         CHECK(tensor.shape() == h2::ShapeTuple{n});
         CHECK(tensor.strides() == h2::StrideTuple{1});
+
+        for (int col = 0; col < n; ++col)
+        {
+            INFO("COL=" << col);
+            CHECK(tensor.get({col}) == mat.LockedBuffer(0, col));
+        }
     }
 
     SECTION("Contiguous matrix")
@@ -248,6 +273,13 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
 
         CHECK(tensor.shape() == h2::ShapeTuple{m, n});
         CHECK(tensor.strides() == h2::StrideTuple{1, m});
+
+        for (int col = 0; col < n; ++col)
+            for (int row = 0; row < m; ++row)
+            {
+                INFO("ROW=" << row << ", COL=" << col);
+                CHECK(tensor.get({row, col}) == mat.LockedBuffer(row, col));
+            }
     }
 
     SECTION("Contiguous const matrix")
@@ -262,6 +294,13 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
 
         CHECK(tensor.shape() == h2::ShapeTuple{m, n});
         CHECK(tensor.strides() == h2::StrideTuple{1, m});
+
+        for (int col = 0; col < n; ++col)
+            for (int row = 0; row < m; ++row)
+            {
+                INFO("ROW=" << row << ", COL=" << col);
+                CHECK(tensor.get({row, col}) == mat.LockedBuffer(row, col));
+            }
     }
 
     SECTION("Non-contiguous matrix")
@@ -275,6 +314,13 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
 
         CHECK(tensor.shape() == h2::ShapeTuple{m, n});
         CHECK(tensor.strides() == h2::StrideTuple{1, ldim});
+
+        for (int col = 0; col < n; ++col)
+            for (int row = 0; row < m; ++row)
+            {
+                INFO("ROW=" << row << ", COL=" << col);
+                CHECK(tensor.get({row, col}) == mat.LockedBuffer(row, col));
+            }
     }
 
     SECTION("Non-contiguous const matrix")
@@ -289,6 +335,13 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
 
         CHECK(tensor.shape() == h2::ShapeTuple{m, n});
         CHECK(tensor.strides() == h2::StrideTuple{1, ldim});
+
+        for (int col = 0; col < n; ++col)
+            for (int row = 0; row < m; ++row)
+            {
+                INFO("ROW=" << row << ", COL=" << col);
+                CHECK(tensor.get({row, col}) == mat.LockedBuffer(row, col));
+            }
     }
 }
 
