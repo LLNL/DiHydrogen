@@ -112,12 +112,13 @@ auto make_dist_tensor_impl(T* const buffer,
     return DistTensor<U>{
         H2Device<D>,
         buffer,
-        ShapeTuple{safe_as<int>(mat.Height()), safe_as<int>(mat.Width())},
+        ShapeTuple{safe_as<DimType>(mat.Height()),
+                   safe_as<DimType>(mat.Width())},
         DimensionTypeTuple{DimensionType::Any, DimensionType::Any},
         make_default_grid(mat.Grid(), coldist, rowdist),
         DistributionTypeTuple{to_h2_dist(coldist), to_h2_dist(rowdist)},
-        ShapeTuple{safe_as<int>(mat.LocalHeight()),
-                   safe_as<int>(mat.LocalWidth())},
+        ShapeTuple{safe_as<DimType>(mat.LocalHeight()),
+                   safe_as<DimType>(mat.LocalWidth())},
         StrideTuple{1, mat.LDim()},
         ComputeStream{El::SyncInfoFromMatrix(
             static_cast<El::Matrix<U, D> const&>(mat.LockedMatrix()))}};
