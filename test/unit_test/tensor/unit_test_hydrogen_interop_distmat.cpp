@@ -1,5 +1,4 @@
 #include "h2/tensor/dist_tensor.hpp"
-#include "h2/tensor/dist_tensor_base.hpp"
 #include "h2/tensor/hydrogen_interop.hpp"
 #include "h2/tensor/proc_grid.hpp"
 #include "utils.hpp"
@@ -280,10 +279,6 @@ TEMPLATE_LIST_TEST_CASE(
         // each process. (Each column of the processing grid contains
         // an identical slice of the matrix.)
 
-        // FIXME
-        CHECK(A_tensor->local_shape(0)
-              == A_tensor->shape(0) / A_tensor->proc_grid().shape(0));
-
         CHECK(A_tensor->local_shape(1) == A_tensor->shape(1));
         CHECK(A_tensor->local_shape(1) == A.Width());
 
@@ -310,12 +305,6 @@ TEMPLATE_LIST_TEST_CASE(
         // processing grid while the column index is block-distributed
         // across a row of the processing grid.
 
-        // FIXME
-        CHECK(A_tensor->local_shape(0)
-              == A_tensor->shape(0) / A_tensor->proc_grid().shape(0));
-        CHECK(A_tensor->local_shape(1)
-              == A_tensor->shape(1) / A_tensor->proc_grid().shape(1));
-
         CHECK(A_tensor->distribution(0) == h2::Distribution::Block);
         CHECK(A_tensor->distribution(1) == h2::Distribution::Block);
     }
@@ -338,11 +327,6 @@ TEMPLATE_LIST_TEST_CASE(
         // The row index is block-distributed across a row of the
         // processing grid while the column index is block-distributed
         // down a column of the processing grid.
-        // FIXME
-        CHECK(A_tensor->local_shape(0)
-              == A_tensor->shape(0) / A_tensor->proc_grid().shape(0));
-        CHECK(A_tensor->local_shape(1)
-              == A_tensor->shape(1) / A_tensor->proc_grid().shape(1));
 
         CHECK(A_tensor->distribution(0) == h2::Distribution::Block);
         CHECK(A_tensor->distribution(1) == h2::Distribution::Block);
@@ -493,7 +477,7 @@ TEMPLATE_LIST_TEST_CASE(
 
         SECTION("Correct dist types, 1d row comm instead of 2d")
         {
-            if (grid_shape_rmaj == grid_shape_1dr)
+            if (grid_shape_cmaj == grid_shape_1dr)
                 SKIP("2d and 1d row communicator shapes coincide");
 
             auto const proc_grid_bad =
@@ -506,8 +490,8 @@ TEMPLATE_LIST_TEST_CASE(
 
         SECTION("Correct dist types, incongruent communicator")
         {
-            if (g.Size() == 1)
-                SKIP("1-process communicator");
+            if (g.Height() == 1 || g.Width() == 1)
+                SKIP("1-D communicator");
 
             auto const proc_grid_bad =
                 h2::ProcessorGrid{g.VRComm(), grid_shape_cmaj};
@@ -569,7 +553,7 @@ TEMPLATE_LIST_TEST_CASE(
 
         SECTION("Correct dist types, 1d row comm instead of 2d")
         {
-            if (grid_shape_rmaj == grid_shape_1dr)
+            if (grid_shape_cmaj == grid_shape_1dr)
                 SKIP("2d and 1d row communicator shapes coincide");
 
             auto const proc_grid_bad =
@@ -582,8 +566,8 @@ TEMPLATE_LIST_TEST_CASE(
 
         SECTION("Correct dist types, incongruent communicator")
         {
-            if (g.Size() == 1)
-                SKIP("1-process communicator");
+            if (g.Height() == 1 || g.Width() == 1)
+                SKIP("1-D communicator");
 
             auto const proc_grid_bad =
                 h2::ProcessorGrid{g.VRComm(), grid_shape_cmaj};
@@ -658,8 +642,8 @@ TEMPLATE_LIST_TEST_CASE(
 
         SECTION("Correct dist types, incongruent communicator")
         {
-            if (g.Size() == 1)
-                SKIP("1-process communicator");
+            if (g.Height() == 1 || g.Width() == 1)
+                SKIP("1-D communicator");
 
             auto const proc_grid_bad =
                 h2::ProcessorGrid{g.VCComm(), grid_shape_rmaj};
@@ -734,8 +718,8 @@ TEMPLATE_LIST_TEST_CASE(
 
         SECTION("Correct dist types, incongruent communicator")
         {
-            if (g.Size() == 1)
-                SKIP("1-process communicator");
+            if (g.Height() == 1 || g.Width() == 1)
+                SKIP("1-D communicator");
 
             auto const proc_grid_bad =
                 h2::ProcessorGrid{g.VCComm(), grid_shape_rmaj};
@@ -810,8 +794,8 @@ TEMPLATE_LIST_TEST_CASE(
 
         SECTION("Correct dist types, incongruent communicator")
         {
-            if (g.Size() == 1)
-                SKIP("1-process communicator");
+            if (g.Height() == 1 || g.Width() == 1)
+                SKIP("1-D communicator");
 
             auto const proc_grid_bad =
                 h2::ProcessorGrid{g.VCComm(), grid_shape_rmaj};
@@ -873,7 +857,7 @@ TEMPLATE_LIST_TEST_CASE(
 
         SECTION("Correct dist types, 1d row comm instead of 2d")
         {
-            if (grid_shape_rmaj == grid_shape_1dr)
+            if (grid_shape_cmaj == grid_shape_1dr)
                 SKIP("2d and 1d row communicator shapes coincide");
 
             auto const proc_grid_bad =
@@ -886,8 +870,8 @@ TEMPLATE_LIST_TEST_CASE(
 
         SECTION("Correct dist types, incongruent communicator")
         {
-            if (g.Size() == 1)
-                SKIP("1-process communicator");
+            if (g.Height() == 1 || g.Width() == 1)
+                SKIP("1-D communicator");
 
             auto const proc_grid_bad =
                 h2::ProcessorGrid{g.VRComm(), grid_shape_cmaj};
