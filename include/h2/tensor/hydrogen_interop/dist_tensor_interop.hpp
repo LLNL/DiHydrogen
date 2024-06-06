@@ -102,21 +102,44 @@ make_default_grid(El::Grid const& g, El::Dist coldist, El::Dist rowdist)
     return ProcessorGrid{comm, make_canonical_grid_shape(g, coldist, rowdist)};
 }
 
+template <typename T>
+void assert_valid_conversion_to_h2(El::AbstractDistMatrix<T> const& mat,
+                                   ProcessorGrid const& g)
+{
+    // ProcessGrid must be 2D
+    H2_ASSERT(g.ndim() == 2,
+              std::logic_error,
+              "Conversion to H2 must use 2D ProcessorGrid");
+
+    if (is_1d_dist(mat.ColDist(), mat.RowDist()))
+        H2_ASSERT(g.shape(0) == 1 || g.shape(1) == 1,
+                  std::logic_error,
+                  "1D distribution must have one unit dimension");
+
+    // Shape needs to be ok
+    H2_ASSERT(g.shape()
+                  == make_canonical_grid_shape(
+                      mat.Grid(), mat.ColDist(), mat.RowDist()),
+              std::logic_error,
+              "Grid shape does not match distribution requirements.");
+}
+
 template <El::Device D, typename T, typename U>
 auto make_dist_tensor_impl(T* const buffer,
-                           El::AbstractDistMatrix<U> const& mat)
+                           El::AbstractDistMatrix<U> const& mat,
+                           ProcessorGrid&& g)
 {
     static_assert(meta::Eq<std::decay_t<T>, U>);
-    auto const coldist = mat.ColDist();
-    auto const rowdist = mat.RowDist();
+    assert_valid_conversion_to_h2(mat, g);
     return DistTensor<U>{
         H2Device<D>,
         buffer,
         ShapeTuple{safe_as<DimType>(mat.Height()),
                    safe_as<DimType>(mat.Width())},
         DimensionTypeTuple{DimensionType::Any, DimensionType::Any},
-        make_default_grid(mat.Grid(), coldist, rowdist),
-        DistributionTypeTuple{to_h2_dist(coldist), to_h2_dist(rowdist)},
+        std::move(g),
+        DistributionTypeTuple{to_h2_dist(mat.ColDist()),
+                              to_h2_dist(mat.RowDist())},
         ShapeTuple{safe_as<DimType>(mat.LocalHeight()),
                    safe_as<DimType>(mat.LocalWidth())},
         StrideTuple{1, mat.LDim()},
@@ -124,14 +147,46 @@ auto make_dist_tensor_impl(T* const buffer,
             static_cast<El::Matrix<U, D> const&>(mat.LockedMatrix()))}};
 }
 
-template <El::Device D, typename T, typename U>
-auto make_dist_tensor_ptr_impl(T* const buffer,
-                               El::AbstractDistMatrix<U> const& mat)
-{
-    return std::make_unique<DistTensor<U>>(
-        make_dist_tensor_impl<D>(buffer, mat));
-}
 } // namespace internal
+
+/** @name Hydrogen to DiHydrogen Zero-Copy Conversion (return by value) */
+///@{
+
+template <typename T>
+auto as_h2_tensor(El::AbstractDistMatrix<T>& mat,
+                  ProcessorGrid g) -> DistTensor<T>
+{
+    switch (mat.GetLocalDevice())
+    {
+    case El::Device::CPU:
+        return internal::make_dist_tensor_impl<El::Device::CPU>(
+            mat.Buffer(), mat, std::move(g));
+#ifdef H2_HAS_GPU
+    case El::Device::GPU:
+        return internal::make_dist_tensor_impl<El::Device::GPU>(
+            mat.Buffer(), mat, std::move(g));
+#endif
+    default: throw std::logic_error("Unknown device.");
+    }
+}
+
+template <typename T>
+auto as_h2_tensor(El::AbstractDistMatrix<T> const& mat,
+                  ProcessorGrid g) -> DistTensor<T>
+{
+    switch (mat.GetLocalDevice())
+    {
+    case El::Device::CPU:
+        return internal::make_dist_tensor_impl<El::Device::CPU>(
+            mat.LockedBuffer(), mat, std::move(g));
+#ifdef H2_HAS_GPU
+    case El::Device::GPU:
+        return internal::make_dist_tensor_impl<El::Device::GPU>(
+            mat.LockedBuffer(), mat, std::move(g));
+#endif
+    default: throw std::logic_error("Unknown device.");
+    }
+}
 
 /** @brief Zero-copy convert a Hydrogen distributed matrix to a
  *         DiHydrogen distributed tensor.
@@ -153,18 +208,9 @@ auto make_dist_tensor_ptr_impl(T* const buffer,
 template <typename T>
 auto as_h2_tensor(El::AbstractDistMatrix<T>& mat) -> DistTensor<T>
 {
-    switch (mat.GetLocalDevice())
-    {
-    case El::Device::CPU:
-        return internal::make_dist_tensor_impl<El::Device::CPU>(mat.Buffer(),
-                                                                mat);
-#ifdef H2_HAS_GPU
-    case El::Device::GPU:
-        return internal::make_dist_tensor_impl<El::Device::GPU>(mat.Buffer(),
-                                                                mat);
-#endif
-    default: throw std::logic_error("Unknown device.");
-    }
+    return as_h2_tensor(
+        mat,
+        internal::make_default_grid(mat.Grid(), mat.ColDist(), mat.RowDist()));
 }
 
 /** @brief Zero-copy convert a Hydrogen distributed matrix to a
@@ -187,19 +233,15 @@ auto as_h2_tensor(El::AbstractDistMatrix<T>& mat) -> DistTensor<T>
 template <typename T>
 auto as_h2_tensor(El::AbstractDistMatrix<T> const& mat) -> DistTensor<T>
 {
-    switch (mat.GetLocalDevice())
-    {
-    case El::Device::CPU:
-        return internal::make_dist_tensor_impl<El::Device::CPU>(
-            mat.LockedBuffer(), mat);
-#ifdef H2_HAS_GPU
-    case El::Device::GPU:
-        return internal::make_dist_tensor_impl<El::Device::GPU>(
-            mat.LockedBuffer(), mat);
-#endif
-    default: throw std::logic_error("Unknown device.");
-    }
+    return as_h2_tensor(
+        mat,
+        internal::make_default_grid(mat.Grid(), mat.ColDist(), mat.RowDist()));
 }
+
+///@}
+/** @name Hydrogen to DiHydrogen Zero-Copy Conversion (return by smart pointer)
+ */
+///@{
 
 /** @brief Zero-copy convert a Hydrogen distributed matrix to a
  *         DiHydrogen distributed tensor. (Pointer version)
@@ -208,18 +250,7 @@ template <typename T>
 auto as_h2_tensor_ptr(El::AbstractDistMatrix<T>& mat)
     -> std::unique_ptr<DistTensor<T>>
 {
-    switch (mat.GetLocalDevice())
-    {
-    case El::Device::CPU:
-        return internal::make_dist_tensor_ptr_impl<El::Device::CPU>(
-            mat.Buffer(), mat);
-#ifdef H2_HAS_GPU
-    case El::Device::GPU:
-        return internal::make_dist_tensor_ptr_impl<El::Device::GPU>(
-            mat.Buffer(), mat);
-#endif
-    default: throw std::logic_error("Unknown device.");
-    }
+    return std::make_unique<DistTensor<T>>(as_h2_tensor(mat));
 }
 
 /** @brief Zero-copy convert a Hydrogen distributed matrix to a
@@ -229,21 +260,36 @@ template <typename T>
 auto as_h2_tensor_ptr(El::AbstractDistMatrix<T> const& mat)
     -> std::unique_ptr<DistTensor<T>>
 {
-    switch (mat.GetLocalDevice())
-    {
-    case El::Device::CPU:
-        return internal::make_dist_tensor_ptr_impl<El::Device::CPU>(
-            mat.LockedBuffer(), mat);
-#ifdef H2_HAS_GPU
-    case El::Device::GPU:
-        return internal::make_dist_tensor_ptr_impl<El::Device::GPU>(
-            mat.LockedBuffer(), mat);
-#endif
-    default: throw std::logic_error("Unknown device.");
-    }
+    return std::make_unique<DistTensor<T>>(as_h2_tensor(mat));
 }
 
-// Now we go the other way. In this case, we require that the user
+/** @brief Zero-copy convert a Hydrogen distributed matrix to a
+ *         DiHydrogen distributed tensor. (Pointer version)
+ *
+ *  This overload uses the user-provided ProcessorGrid.
+ **/
+template <typename T>
+auto as_h2_tensor_ptr(El::AbstractDistMatrix<T>& mat,
+                      ProcessorGrid g) -> std::unique_ptr<DistTensor<T>>
+{
+    return std::make_unique<DistTensor<T>>(as_h2_tensor(mat, std::move(g)));
+}
+
+/** @brief Zero-copy convert a Hydrogen distributed matrix to a
+ *         DiHydrogen distributed tensor. (Const pointer version)
+ *
+ *  This overload uses the user-provided ProcessorGrid.
+ **/
+template <typename T>
+auto as_h2_tensor_ptr(El::AbstractDistMatrix<T> const& mat,
+                      ProcessorGrid g) -> std::unique_ptr<DistTensor<T>>
+{
+    return std::make_unique<DistTensor<T>>(as_h2_tensor(mat, std::move(g)));
+}
+
+///@}
+
+// now we go the other way. In this case, we require that the user
 // provide us an `El::Grid` to use. The reason for this is lifetime
 // management of the `El::Grid`. Specifically, `El::DistMatrix`
 // doesn't manage the lifetime of the grid at all, so without a
@@ -407,6 +453,9 @@ void set_sync(El::AbstractDistMatrix<T>& mat, ComputeStream stream)
 }
 } // namespace internal
 
+/** @name DiHydrogen to Hydrogen Zero-Copy Conversion */
+///@{
+
 /** @brief Zero-copy convert a distributed tensor into a Hydrogen
  *         distributed matrix.
  *
@@ -490,4 +539,7 @@ auto as_h_matrix(DistTensor<T> const& tensor,
     set_sync(*out, tensor.get_stream());
     return out;
 }
+
+///@}
+
 } // namespace h2
