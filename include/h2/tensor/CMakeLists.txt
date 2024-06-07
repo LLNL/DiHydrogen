@@ -20,6 +20,9 @@ h2_add_sources_to_target_and_install(
   dist_utils.hpp
   fixed_size_tuple.hpp
   hydrogen_interop.hpp
+  hydrogen_interop/interop_utils.hpp
+  hydrogen_interop/local_tensor_interop.hpp
+  hydrogen_interop/dist_tensor_interop.hpp
   proc_grid.hpp
   raw_buffer.hpp
   strided_memory.hpp

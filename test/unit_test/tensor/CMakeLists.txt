@@ -26,5 +26,6 @@ endif ()
 
 target_sources(MPICatchTests PRIVATE
   unit_test_dist_tensor.cpp
+  unit_test_hydrogen_interop_distmat.cpp
   unit_test_proc_grid.cpp
 )
