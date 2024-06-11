@@ -32,8 +32,8 @@ string(TOUPPER ${CMAKE_BUILD_TYPE} CMAKE_BUILD_TYPE)
 
 include(CMakeDependentOption)
 
-option(H2_ENABLE_DISTCONV_LEGACY
-  "Enable the legacy DistConv code branch."
+option(H2_ENABLE_NVSHMEM
+  "Search for and link to NVSHMEM"
   OFF)
 
 option(H2_ENABLE_CUDA
@@ -205,12 +205,14 @@ if (H2_ENABLE_CUDA)
   if (CMAKE_CUDA_COMPILER)
     set(H2_HAS_CUDA TRUE)
   endif ()
-  find_package(NVSHMEM)
-
   set(H2_CUDA_LIBS
     h2::cuda_toolkit)
-  if (NVSHMEM_FOUND)
-    list(APPEND H2_CUDA_LIBS NVSHMEM::NVSHMEM)
+
+  if (H2_ENABLE_NVSHMEM)
+    find_package(NVSHMEM)
+    if (NVSHMEM_FOUND)
+      list(APPEND H2_CUDA_LIBS NVSHMEM::NVSHMEM)
+    endif ()
   endif ()
 endif (H2_ENABLE_CUDA)
 
