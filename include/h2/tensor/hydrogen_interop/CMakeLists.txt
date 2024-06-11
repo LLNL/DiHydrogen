@@ -6,31 +6,15 @@
 ################################################################################
 
 # Append this directory to the current install prefix
-set(H2_CURRENT_INSTALL_PREFIX "${H2_CURRENT_INSTALL_PREFIX}/tensor")
+set(H2_CURRENT_INSTALL_PREFIX
+  "${H2_CURRENT_INSTALL_PREFIX}/tensor/hydrogen_interop")
 
 # Setup this directory's files
 h2_add_sources_to_target_and_install(
   TARGET H2Core COMPONENT CORE SCOPE INTERFACE
   INSTALL_PREFIX "${H2_CURRENT_INSTALL_PREFIX}"
   SOURCES
-  copy.hpp
-  dist_tensor_base.hpp
-  dist_tensor.hpp
-  dist_types.hpp
-  dist_utils.hpp
-  fixed_size_tuple.hpp
-  hydrogen_interop.hpp
-  hydrogen_interop/interop_utils.hpp
-  hydrogen_interop/local_tensor_interop.hpp
-  hydrogen_interop/dist_tensor_interop.hpp
-  proc_grid.hpp
-  raw_buffer.hpp
-  strided_memory.hpp
-  tensor_base.hpp
-  tensor_types.hpp
-  tensor_utils.hpp
-  tensor.hpp
-  tuple_utils.hpp
+  interop_utils.hpp
+  local_tensor_interop.hpp
+  dist_tensor_interop.hpp
 )
-
-add_subdirectory(hydrogen_interop)
