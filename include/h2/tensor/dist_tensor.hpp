@@ -125,6 +125,22 @@ public:
 
   virtual ~DistTensor() = default;
 
+  /**
+   * Disable copy construction.
+   *
+   * Using it leads to ambiguity in mutable vs const views. Create a
+   * view or copy explicitly instead.
+   */
+  DistTensor(const DistTensor&) = delete;
+
+  /**
+   * Disable copy assignment.
+   *
+   * Using it leads to ambiguity in mutable vs const views. Create a
+   * view or copy explicitly instead.
+   */
+  DistTensor& operator=(const DistTensor&) = delete;
+
   /** Output a short description of the tensor. */
   void short_describe(std::ostream& os) const override
   {

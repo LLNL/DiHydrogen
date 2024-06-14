@@ -98,7 +98,7 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
         REQUIRE_FALSE(tensor.is_const_view());
         REQUIRE(tensor.get_view_type() == ViewType::None);
         REQUIRE(tensor.get_device() == TestType::value);
-        typename DistTensorType::local_tensor_type local_tensor =
+        typename DistTensorType::local_tensor_type& local_tensor =
             tensor.local_tensor();
         REQUIRE(local_tensor.shape() == local_shape);
         if (is_local_empty)
@@ -156,7 +156,7 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
         REQUIRE_FALSE(tensor.is_const_view());
         REQUIRE(tensor.get_view_type() == ViewType::None);
         REQUIRE(tensor.get_device() == TestType::value);
-        typename DistTensorType::local_tensor_type local_tensor =
+        typename DistTensorType::local_tensor_type& local_tensor =
             tensor.local_tensor();
         REQUIRE(local_tensor.shape() == local_shape);
         REQUIRE(local_tensor.dim_types() == tensor_dim_types);
@@ -216,7 +216,7 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
         REQUIRE_FALSE(tensor.is_const_view());
         REQUIRE(tensor.get_view_type() == ViewType::None);
         REQUIRE(tensor.get_device() == TestType::value);
-        typename DistTensorType::local_tensor_type local_tensor =
+        typename DistTensorType::local_tensor_type& local_tensor =
             tensor.local_tensor();
         REQUIRE(local_tensor.shape() == local_shape);
         if (is_local_empty)
@@ -298,7 +298,7 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
         REQUIRE_FALSE(tensor.is_const_view());
         REQUIRE(tensor.get_view_type() == ViewType::None);
         REQUIRE(tensor.get_device() == TestType::value);
-        typename DistTensorType::local_tensor_type local_tensor =
+        typename DistTensorType::local_tensor_type& local_tensor =
             tensor.local_tensor();
         REQUIRE(local_tensor.shape() == local_shape);
         if (is_local_empty)
@@ -382,7 +382,7 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor metadata is sane",
       REQUIRE_FALSE(tensor.is_const_view());
       REQUIRE(tensor.get_view_type() == ViewType::None);
       REQUIRE(tensor.get_device() == TestType::value);
-      typename DistTensorType::local_tensor_type local_tensor =
+      typename DistTensorType::local_tensor_type& local_tensor =
           tensor.local_tensor();
       REQUIRE(local_tensor.shape() == ShapeTuple{});
       REQUIRE(local_tensor.dim_types() == DTTuple{});
@@ -463,7 +463,7 @@ TEMPLATE_LIST_TEST_CASE("Resizing distributed tensors works",
         REQUIRE_FALSE(tensor.is_empty());
         REQUIRE(tensor.local_numel() == new_local_numel);
         REQUIRE(tensor.is_local_empty() == is_local_empty);
-        typename DistTensorType::local_tensor_type local_tensor =
+        typename DistTensorType::local_tensor_type& local_tensor =
           tensor.local_tensor();
         REQUIRE(local_tensor.shape() == new_local_shape);
         if (is_local_empty)
@@ -505,7 +505,7 @@ TEMPLATE_LIST_TEST_CASE("Resizing distributed tensors works",
         REQUIRE(tensor.is_empty());
         REQUIRE(tensor.local_numel() == 0);
         REQUIRE(tensor.is_local_empty());
-        typename DistTensorType::local_tensor_type local_tensor =
+        typename DistTensorType::local_tensor_type& local_tensor =
           tensor.local_tensor();
         REQUIRE(local_tensor.shape() == ShapeTuple{});
         REQUIRE(local_tensor.dim_types() == DTTuple{});
@@ -557,7 +557,7 @@ TEMPLATE_LIST_TEST_CASE("Resizing distributed tensors works",
         REQUIRE_FALSE(tensor.is_empty());
         REQUIRE(tensor.local_numel() == new_local_numel);
         REQUIRE(tensor.is_local_empty() == is_local_empty);
-        typename DistTensorType::local_tensor_type local_tensor =
+        typename DistTensorType::local_tensor_type& local_tensor =
           tensor.local_tensor();
         REQUIRE(local_tensor.shape() == new_local_shape);
         if (is_local_empty)
@@ -598,7 +598,7 @@ TEMPLATE_LIST_TEST_CASE("Writing to distributed tensors works",
         DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
         DistTensorType tensor = DistTensorType(
             Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
-        typename DistTensorType::local_tensor_type local_tensor =
+        typename DistTensorType::local_tensor_type& local_tensor =
           tensor.local_tensor();
 
         DataType* buf = tensor.data();
@@ -671,7 +671,7 @@ TEMPLATE_LIST_TEST_CASE(
       REQUIRE(tensor.get_view_type() == ViewType::Mutable);
       REQUIRE(tensor.data() == buf.buf);
 
-      typename DistTensorType::local_tensor_type local_tensor =
+      typename DistTensorType::local_tensor_type& local_tensor =
           tensor.local_tensor();
       REQUIRE(local_tensor.shape() == tensor_local_shape);
       REQUIRE(local_tensor.strides() == tensor_local_strides);
@@ -711,7 +711,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
           DistTensorType tensor = DistTensorType(
               Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
-          typename DistTensorType::local_tensor_type local_tensor =
+          typename DistTensorType::local_tensor_type& local_tensor =
             tensor.local_tensor();
 
           DataType* buf = tensor.data();
@@ -732,7 +732,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           REQUIRE(view->get_view_type() == ViewType::Mutable);
           REQUIRE(view->data() == tensor.data());
 
-          typename DistTensorType::local_tensor_type local_view =
+          typename DistTensorType::local_tensor_type& local_view =
               view->local_tensor();
           REQUIRE(local_view.shape() == local_tensor.shape());
           REQUIRE(local_view.dim_types() == local_tensor.dim_types());
@@ -767,7 +767,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
           DistTensorType tensor = DistTensorType(
               Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
-          typename DistTensorType::local_tensor_type local_tensor =
+          typename DistTensorType::local_tensor_type& local_tensor =
             tensor.local_tensor();
 
           DataType* buf = tensor.data();
@@ -788,7 +788,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           REQUIRE(view->get_view_type() == ViewType::Const);
           REQUIRE(view->const_data() == tensor.data());
 
-          typename DistTensorType::local_tensor_type local_view =
+          typename DistTensorType::local_tensor_type& local_view =
               view->local_tensor();
           REQUIRE(local_view.shape() == local_tensor.shape());
           REQUIRE(local_view.dim_types() == local_tensor.dim_types());
@@ -823,7 +823,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
           DistTensorType tensor = DistTensorType(
               Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
-          typename DistTensorType::local_tensor_type local_tensor =
+          typename DistTensorType::local_tensor_type& local_tensor =
             tensor.local_tensor();
 
           DataType* buf = tensor.data();
@@ -903,7 +903,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
             REQUIRE(view->data() == local_tensor.get(local_start));
           }
 
-          typename DistTensorType::local_tensor_type local_view =
+          typename DistTensorType::local_tensor_type& local_view =
               view->local_tensor();
           REQUIRE(local_view.shape() == local_shape);
           REQUIRE(local_view.numel() == local_numel);
@@ -979,7 +979,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
           DistTensorType tensor = DistTensorType(
               Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
-          typename DistTensorType::local_tensor_type local_tensor =
+          typename DistTensorType::local_tensor_type& local_tensor =
             tensor.local_tensor();
 
           DataType* buf = tensor.data();
@@ -1001,7 +1001,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           REQUIRE(view->get_view_type() == ViewType::Mutable);
           REQUIRE(view->data() == tensor.data());
 
-          typename DistTensorType::local_tensor_type local_view =
+          typename DistTensorType::local_tensor_type& local_view =
               view->local_tensor();
           REQUIRE(local_view.shape() == local_tensor.shape());
           REQUIRE(local_view.dim_types() == local_tensor.dim_types());
@@ -1036,7 +1036,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
           DistTensorType tensor = DistTensorType(
               Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
-          typename DistTensorType::local_tensor_type local_tensor =
+          typename DistTensorType::local_tensor_type& local_tensor =
             tensor.local_tensor();
 
           DataType* buf = tensor.data();
@@ -1078,7 +1078,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
           DistTensorType tensor = DistTensorType(
               Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
-          typename DistTensorType::local_tensor_type local_tensor =
+          typename DistTensorType::local_tensor_type& local_tensor =
             tensor.local_tensor();
 
           DataType* buf = tensor.data();
@@ -1141,7 +1141,7 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor views work",
           REQUIRE(view->get_view_type() == ViewType::Mutable);
           REQUIRE(view->data() == nullptr);
 
-          typename DistTensorType::local_tensor_type local_view =
+          typename DistTensorType::local_tensor_type& local_view =
               view->local_tensor();
           REQUIRE(local_view.shape() == ShapeTuple{});
           REQUIRE(local_view.dim_types() == DTTuple{});
@@ -1187,7 +1187,7 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor views work",
           REQUIRE(view->get_view_type() == ViewType::Mutable);
           REQUIRE(view->data() == nullptr);
 
-          typename DistTensorType::local_tensor_type local_view =
+          typename DistTensorType::local_tensor_type& local_view =
               view->local_tensor();
           REQUIRE(local_view.shape() == ShapeTuple{});
           REQUIRE(local_view.dim_types() == DTTuple{});
