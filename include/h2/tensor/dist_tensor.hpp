@@ -141,6 +141,12 @@ public:
    */
   DistTensor& operator=(const DistTensor&) = delete;
 
+  /** Move construction */
+  DistTensor(DistTensor&&) = default;
+
+  /** Move assignment */
+  DistTensor& operator=(DistTensor&&) = default;
+
   /** Output a short description of the tensor. */
   void short_describe(std::ostream& os) const override
   {

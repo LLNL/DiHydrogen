@@ -126,35 +126,35 @@ TEST_CASE("is_chw_packed predicate", "[tensor][utilities]")
         CHECK_FALSE(tensor.is_contiguous());
         CHECK_FALSE(is_chw_packed(tensor));
 
-        TensorType tensor2 = TensorType{
+        tensor = TensorType{
             Dev,
             mock_data,
             {7, 6, 5, 4, 3},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any},
             {1, 8, 48, 240, 960},
             h2::ComputeStream{Dev}};
-        CHECK_FALSE(tensor2.is_contiguous());
-        CHECK_FALSE(is_chw_packed(tensor2));
+        CHECK_FALSE(tensor.is_contiguous());
+        CHECK_FALSE(is_chw_packed(tensor));
 
-        TensorType tensor3 = TensorType{
+        tensor = TensorType{
             Dev,
             mock_data,
             {7, 6, 5, 4, 3},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any},
             {1, 7, 43, 215, 860},
             h2::ComputeStream{Dev}};
-        CHECK_FALSE(tensor3.is_contiguous());
-        CHECK_FALSE(is_chw_packed(tensor3));
+        CHECK_FALSE(tensor.is_contiguous());
+        CHECK_FALSE(is_chw_packed(tensor));
 
-        TensorType tensor4 = TensorType{
+        tensor = TensorType{
             Dev,
             mock_data,
             {7, 6, 5, 4, 3},
             {h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any, h2::DT::Any},
             {1, 7, 42, 211, 844},
             h2::ComputeStream{Dev}};
-        CHECK_FALSE(tensor4.is_contiguous());
-        CHECK_FALSE(is_chw_packed(tensor4));
+        CHECK_FALSE(tensor.is_contiguous());
+        CHECK_FALSE(is_chw_packed(tensor));
     }
 }
 

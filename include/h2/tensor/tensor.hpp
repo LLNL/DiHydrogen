@@ -111,6 +111,12 @@ public:
    */
   Tensor& operator=(const Tensor&) = delete;
 
+  /** Move construction */
+  Tensor(Tensor&&) = default;
+
+  /** Move assignment */
+  Tensor& operator=(Tensor&&) = default;
+
   /** Output a short description of the tensor. */
   void short_describe(std::ostream& os) const override
   {
