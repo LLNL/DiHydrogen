@@ -47,6 +47,10 @@ void copy_buffer(T* dst,
 {
   H2_ASSERT_DEBUG(count == 0 || (dst != nullptr && src != nullptr),
                   "Null buffers");
+  // TODO: Debug check: Assert buffers do not overlap.
+  static_assert(
+      std::is_trivially_copyable_v<T>,
+      "Attempt to copy a buffer with a type that is not trivially copyable");
   const Device src_dev = src_stream.get_device();
   const Device dst_dev = dst_stream.get_device();
   if (src_dev == Device::CPU && dst_dev == Device::CPU)

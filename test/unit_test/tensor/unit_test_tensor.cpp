@@ -8,6 +8,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_template_test_macros.hpp>
 
+#include <memory>
+
 #include "h2/tensor/tensor.hpp"
 #include "h2/utils/typename.hpp"
 #include "utils.hpp"
@@ -185,13 +187,62 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE_FALSE(const_tensor.is_empty());
   REQUIRE(const_tensor.is_contiguous());
   REQUIRE_FALSE(const_tensor.is_view());
-  REQUIRE_FALSE(tensor.is_const_view());
-  REQUIRE(tensor.get_view_type() == ViewType::None);
+  REQUIRE_FALSE(const_tensor.is_const_view());
+  REQUIRE(const_tensor.get_view_type() == ViewType::None);
   REQUIRE(const_tensor.get_device() == TestType::value);
   REQUIRE(const_tensor.data() != nullptr);
   REQUIRE(const_tensor.const_data() != nullptr);
   REQUIRE(const_tensor.get({0, 0}) == const_tensor.data());
   REQUIRE_FALSE(const_tensor.is_lazy());
+}
+
+TEMPLATE_LIST_TEST_CASE("Base tensor metadata is sane",
+                        "[tensor]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<DataType>;
+
+  std::unique_ptr<BaseTensor> tensor = std::make_unique<TensorType>(
+      Dev, ShapeTuple{4, 6}, DTTuple{DT::Sample, DT::Any});
+  REQUIRE(tensor->shape() == ShapeTuple{4, 6});
+  REQUIRE(tensor->shape(0) == 4);
+  REQUIRE(tensor->shape(1) == 6);
+  REQUIRE(tensor->dim_types() == DTTuple{DT::Sample, DT::Any});
+  REQUIRE(tensor->dim_type(0) == DT::Sample);
+  REQUIRE(tensor->dim_type(1) == DT::Any);
+  REQUIRE(tensor->strides() == StrideTuple{1, 4});
+  REQUIRE(tensor->stride(0) == 1);
+  REQUIRE(tensor->stride(1) == 4);
+  REQUIRE(tensor->ndim() == 2);
+  REQUIRE(tensor->numel() == 4*6);
+  REQUIRE_FALSE(tensor->is_empty());
+  REQUIRE(tensor->is_contiguous());
+  REQUIRE_FALSE(tensor->is_view());
+  REQUIRE_FALSE(tensor->is_const_view());
+  REQUIRE(tensor->get_view_type() == ViewType::None);
+  REQUIRE(tensor->get_device() == TestType::value);
+
+  std::unique_ptr<const BaseTensor> const_tensor =
+      std::make_unique<const TensorType>(
+          Dev, ShapeTuple{4, 6}, DTTuple{DT::Sample, DT::Any});
+  REQUIRE(const_tensor->shape() == ShapeTuple{4, 6});
+  REQUIRE(const_tensor->shape(0) == 4);
+  REQUIRE(const_tensor->shape(1) == 6);
+  REQUIRE(const_tensor->dim_types() == DTTuple{DT::Sample, DT::Any});
+  REQUIRE(const_tensor->dim_type(0) == DT::Sample);
+  REQUIRE(const_tensor->dim_type(1) == DT::Any);
+  REQUIRE(const_tensor->strides() == StrideTuple{1, 4});
+  REQUIRE(const_tensor->stride(0) == 1);
+  REQUIRE(const_tensor->stride(1) == 4);
+  REQUIRE(const_tensor->ndim() == 2);
+  REQUIRE(const_tensor->numel() == 4*6);
+  REQUIRE_FALSE(const_tensor->is_empty());
+  REQUIRE(const_tensor->is_contiguous());
+  REQUIRE_FALSE(const_tensor->is_view());
+  REQUIRE_FALSE(const_tensor->is_const_view());
+  REQUIRE(const_tensor->get_view_type() == ViewType::None);
+  REQUIRE(const_tensor->get_device() == TestType::value);
 }
 
 TEMPLATE_LIST_TEST_CASE("Empty tensor metadata is sane", "[tensor]", AllDevList)

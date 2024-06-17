@@ -95,6 +95,28 @@ public:
 
   virtual ~Tensor() = default;
 
+  /**
+   * Disable copy construction.
+   *
+   * Using it leads to ambiguity in mutable vs const views. Create a
+   * view or copy explicitly instead.
+   */
+  Tensor(const Tensor&) = delete;
+
+  /**
+   * Disable copy assignment.
+   *
+   * Using it leads to ambiguity in mutable vs const views. Create a
+   * view or copy explicitly instead.
+   */
+  Tensor& operator=(const Tensor&) = delete;
+
+  /** Move construction */
+  Tensor(Tensor&&) = default;
+
+  /** Move assignment */
+  Tensor& operator=(Tensor&&) = default;
+
   /** Output a short description of the tensor. */
   void short_describe(std::ostream& os) const override
   {
