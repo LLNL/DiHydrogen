@@ -60,7 +60,7 @@ endif ()
 if (H2_HAS_ROCM)
   find_dependency(hip)
   find_library(HSA_LIBRARY hsa-runtime64
-    HINTS ${ROCM_PATH}/hsa $ENV{ROCM_PATH}/hsa
+    HINTS ${ROCM_PATH}/hsa $ENV{ROCM_PATH}/hsa ${ROCM_PATH} $ENV{ROCM_PATH}
     PATH_SUFFIXES lib lib64
     DOC "HSA runtime library"
     NO_DEFAULT_PATH)
