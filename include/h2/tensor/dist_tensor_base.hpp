@@ -63,13 +63,24 @@ public:
         tensor_view_type(ViewType::None)
   {
     H2_ASSERT_DEBUG(tensor_shape.size() == tensor_dim_types.size(),
-                    "Tensor shape and dimension types must be the same size");
+                    "Tensor shape (",
+                    tensor_shape,
+                    ") and dimension types (",
+                    tensor_dim_types,
+                    ") must be the same size");
     H2_ASSERT_DEBUG((tensor_shape.size() == tensor_grid.ndim())
                         || tensor_shape.is_empty(),
-                    "Tensor and processor grid must be the same rank");
-    H2_ASSERT_DEBUG(
-        tensor_shape.size() == tensor_dist_types.size(),
-        "Tensor distribution types and processor grid must be the same rank");
+                    "Tensor (",
+                    tensor_shape,
+                    ") and processor grid (",
+                    tensor_grid.shape(),
+                    ") must be the same rank");
+    H2_ASSERT_DEBUG(tensor_shape.size() == tensor_dist_types.size(),
+                    "Tensor distribution types (",
+                    tensor_dist_types,
+                    ") and processor grid (",
+                    tensor_grid.shape(),
+                    ") must be the same rank");
     tensor_local_shape =
         internal::get_local_shape(tensor_shape, tensor_grid, tensor_dist_types);
   }

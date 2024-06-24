@@ -45,7 +45,11 @@ constexpr inline bool are_strides_contiguous(
   const ShapeTuple& shape,
   const StrideTuple& strides) H2_NOEXCEPT {
   H2_ASSERT_DEBUG(shape.size() == strides.size(),
-                  "Shape and strides must be the same size");
+                  "Shape (",
+                  shape,
+                  ") and strides (",
+                  strides,
+                  ") must be the same size");
   // Contiguous strides should follow the prefix-product.
   typename StrideTuple::type prod = 1;
   typename ShapeTuple::size_type i = 1;
@@ -121,12 +125,16 @@ public:
     : StridedMemory(device, lazy, stream_)
   {
     H2_ASSERT_DEBUG(shape.size() == strides.size(),
-                    "Shape and strides must be the same size");
+                    "Shape (",
+                    shape,
+                    ") and strides (",
+                    strides,
+                    ") must be the same size");
     if (!shape.is_empty())
     {
       H2_ASSERT_DEBUG(
         get_extent_from_strides(shape, strides) >= product<std::size_t>(shape),
-        "Provided strides are not sane");
+        "Provided strides (", strides, ") are not sane");
       mem_strides = strides;
       mem_shape = shape;
       make_raw_buffer(lazy);
@@ -220,7 +228,7 @@ public:
     H2_ASSERT_DEBUG(shape.is_empty()
                         || get_extent_from_strides(shape, strides)
                                >= product<std::size_t>(shape),
-                    "Provided strides are not sane");
+                    "Provided strides (", strides, ") are not sane");
     std::size_t size = get_extent_from_strides(shape, strides);
     raw_buffer = std::make_shared<RawBuffer<T>>(device, buffer, size, stream);
   }

@@ -77,7 +77,10 @@ struct H2EnvManager
 
   H2EnvVar& get_env_var(const std::string& name)
   {
-    H2_ASSERT_DEBUG(check_env_var(name), "environment variable not registered");
+    H2_ASSERT_DEBUG(check_env_var(name),
+                    "environment variable H2_",
+                    name,
+                    " not registered");
 
     return env_var_cache[name];
   }

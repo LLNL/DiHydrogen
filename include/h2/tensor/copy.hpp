@@ -77,7 +77,7 @@ void copy_buffer(T* dst,
 #endif
   else
   {
-    throw H2Exception("Unknown device combination");
+    throw H2Exception("Unknown device combination ", src_dev, " and ", dst_dev);
   }
 }
 
@@ -199,7 +199,7 @@ std::unique_ptr<Tensor<T>> make_accessible_on_device(
 #else  // H2_HAS_GPU
   // No GPU support, but dev differs from the tensor's device.
   // This should not happen.
-  throw H2Exception("Unknown device");
+  throw H2Exception("Unknown device ", dev);
 #endif  // H2_HAS_GPU
 }
 

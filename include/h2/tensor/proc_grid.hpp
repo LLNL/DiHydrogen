@@ -57,7 +57,11 @@ public:
   ProcessorGrid(const Comm& comm_, ShapeTuple shape_)
   {
     H2_ASSERT_ALWAYS(comm_.Size() == product<RankType>(shape_),
-                     "Grid size must match communicator size");
+                     "Grid size (",
+                     shape_,
+                     ") must match communicator size (",
+                     comm_.Size(),
+                     ")");
     grid_comm = std::make_shared<Comm>(comm_.GetMPIComm());
     grid_shape = shape_;
     // Currently fix a column-major ordering.

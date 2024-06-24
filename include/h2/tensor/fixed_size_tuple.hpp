@@ -170,19 +170,34 @@ struct FixedSizeTuple {
 
   /** Return the value of the tuple at the i'th index. */
   constexpr T& operator[](SizeType i) H2_NOEXCEPT {
-    H2_ASSERT_DEBUG(i < size_, "Tuple index too large");
+    H2_ASSERT_DEBUG(i < size_,
+                    "Tuple index ",
+                    i,
+                    " too large (must be less than ",
+                    size_,
+                    ")");
     return data_[i];
   }
 
   /** Return the value of the tuple at the i'th index. */
   constexpr const T& operator[](SizeType i) const H2_NOEXCEPT {
-    H2_ASSERT_DEBUG(i < size_, "Tuple index too large");
+    H2_ASSERT_DEBUG(i < size_,
+                    "Tuple index ",
+                    i,
+                    " too large (must be less than ",
+                    size_,
+                    ")");
     return data_[i];
   }
 
   /** Set the entry at the i'th index to v. */
   constexpr void set(SizeType i, T v) H2_NOEXCEPT {
-    H2_ASSERT_DEBUG(i < size_, "Tuple index too large");
+    H2_ASSERT_DEBUG(i < size_,
+                    "Tuple index ",
+                    i,
+                    " too large (must be less than ",
+                    size_,
+                    ")");
     data_[i] = v;
   }
 
@@ -193,7 +208,8 @@ struct FixedSizeTuple {
    * newly-valid entries is undefined until they are set.
    */
   constexpr void set_size(SizeType new_size) H2_NOEXCEPT {
-    H2_ASSERT_DEBUG(new_size <= N, "New size exceeds max");
+    H2_ASSERT_DEBUG(
+        new_size <= N, "New size ", new_size, " exceeds max size ", N);
     size_ = new_size;
   }
 
@@ -206,7 +222,7 @@ struct FixedSizeTuple {
    */
   constexpr void append(T v) H2_NOEXCEPT
   {
-    H2_ASSERT_DEBUG(size_ < N - 1, "Append would exceed tuple size");
+    H2_ASSERT_DEBUG(size_ < N - 1, "Append would exceed tuple size ", N);
     data_[size_] = v;
     ++size_;
   }

@@ -196,7 +196,11 @@ public:
     // have to compute the strides manually.
     H2_ASSERT_ALWAYS(!this->is_view(), "Cannot resize a view");
     H2_ASSERT_ALWAYS(new_dim_types.size() == new_shape.size(),
-                     "New shape and dimension types must have the same size");
+                     "New shape (",
+                     new_shape,
+                     ") and dimension types (",
+                     new_dim_types,
+                     ") must have the same size");
     // Don't reallocate if we would not change the size.
     if (this->tensor_shape == new_shape)
     {
@@ -223,10 +227,18 @@ public:
   {
     H2_ASSERT_ALWAYS(!this->is_view(), "Cannot resize a view");
     H2_ASSERT_ALWAYS(new_dim_types.size() == new_shape.size(),
-                     "New shape and dimension types must have the same size");
+                     "New shape (",
+                     new_shape,
+                     ") and dimension types (",
+                     new_dim_types,
+                     ") must have the same size");
     H2_ASSERT_ALWAYS(new_strides.is_empty()
                          || new_strides.size() == new_shape.size(),
-                     "New shape and strides must have the same size");
+                     "New shape (",
+                     new_shape,
+                     ") and strides (",
+                     new_strides,
+                     ") must have the same size");
     // Don't reallocate if we would not change the size.
     if (this->tensor_shape == new_shape && strides() == new_strides)
     {
@@ -460,7 +472,10 @@ private:
   {
     if (!is_index_range_contained(coords, this->tensor_shape))
     {
-      throw H2Exception("Attempting to construct an out-of-range view");
+      throw H2Exception("Attempting to construct an out-of-range view, ",
+                        coords,
+                        " is not in ",
+                        this->tensor_shape);
     }
     // We need an explicit check here because specific coordinates may
     // be empty. We can handle empty IndexRangeTuples, but not empty
