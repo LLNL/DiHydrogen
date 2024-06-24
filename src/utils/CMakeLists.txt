@@ -7,6 +7,7 @@
 
 # Proper C++ files to add to the library
 target_sources(H2Core PRIVATE
+  environment_vars.cpp
   Error.cpp
   Logger.cpp
   typename.cpp
