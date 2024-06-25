@@ -478,9 +478,7 @@ auto GPUDNNBackend::get_fwd_algorithm_by_autotune(
     void* ws = nullptr;
     if (ws_size)
     {
-        auto const stream = get_stream(handle);
-        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceAllocate(
-            &ws, ws_size, stream));
+        H2_CHECK_CUDA(cudaMalloc(&ws, ws_size));
     }
     for (int t = 0; t < trial_count + skip; ++t)
     {
@@ -548,7 +546,7 @@ auto GPUDNNBackend::get_fwd_algorithm_by_autotune(
     }
     delete[] perf_results;
     if (ws_size)
-        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(ws));
+        H2_CHECK_CUDA(cudaFree(ws));
     auto const best_algo =
         find_best_algorithm<cudnnConvolutionFwdAlgo_t,
                             cudnnConvolutionFwdAlgoPerf_t>(perf_results_all);
@@ -638,9 +636,7 @@ auto GPUDNNBackend::get_bwd_data_algorithm_by_autotune(
     void* ws = nullptr;
     if (ws_size)
     {
-        auto const stream = get_stream(handle);
-        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceAllocate(
-            &ws, ws_size, stream));
+        H2_CHECK_CUDA(cudaMalloc(&ws, ws_size));
     }
     for (int t = 0; t < trial_count + skip; ++t)
     {
@@ -709,7 +705,7 @@ auto GPUDNNBackend::get_bwd_data_algorithm_by_autotune(
     }
     delete[] perf_results;
     if (ws_size)
-        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(ws));
+        H2_CHECK_CUDA(cudaFree(ws));
     auto const best_algo =
         find_best_algorithm<cudnnConvolutionBwdDataAlgo_t,
                             cudnnConvolutionBwdDataAlgoPerf_t>(
@@ -801,9 +797,7 @@ auto GPUDNNBackend::get_bwd_filter_algorithm_by_autotune(
     void* ws = nullptr;
     if (ws_size)
     {
-        auto const stream = get_stream(handle);
-        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceAllocate(
-            &ws, ws_size, stream));
+        H2_CHECK_CUDA(cudaMalloc(&ws, ws_size));
     }
     for (int t = 0; t < trial_count + skip; ++t)
     {
@@ -873,7 +867,7 @@ auto GPUDNNBackend::get_bwd_filter_algorithm_by_autotune(
     }
     delete[] perf_results;
     if (ws_size)
-        H2_CHECK_CUDA(h2::gpu::default_cub_allocator().DeviceFree(ws));
+        H2_CHECK_CUDA(cudaFree(ws));
     auto const best_algo =
         find_best_algorithm<cudnnConvolutionBwdFilterAlgo_t,
                             cudnnConvolutionBwdFilterAlgoPerf_t>(
