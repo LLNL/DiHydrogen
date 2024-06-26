@@ -35,11 +35,26 @@ namespace h2
  * @param[in] args The things to be concatenated into a string.
  */
 template <typename... Args>
-inline std::string build_string(Args&&... args)
+inline std::string build_string(Args&&... args) noexcept(sizeof...(Args) == 0)
 {
+  if constexpr (sizeof...(Args) == 0)
+  {
+    return std::string();
+  }
+
   std::ostringstream ss;
   (ss << ... << args);
   return ss.str();
+}
+
+inline std::string build_string(const char* s)
+{
+  return std::string(s);
+}
+
+inline std::string build_string(const std::string& s)
+{
+  return std::string(s);
 }
 
 /** Return an upper-cased version of a string. */

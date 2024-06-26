@@ -35,11 +35,18 @@ bool H2ExceptionBase::should_save_backtrace() const
 #endif
 }
 
-void H2ExceptionBase::collect_backtrace()
+void H2ExceptionBase::set_what_and_maybe_collect_backtrace(
+    const std::string& what_arg, bool collect_bt)
 {
   constexpr int max_frames = 128;
   using c_str_ptr = std::unique_ptr<char, void (*)(void*)>;
   using c_str_ptr_ptr = std::unique_ptr<char*, void (*)(void*)>;
+
+  if (!collect_bt)
+  {
+    what_ = std::make_shared<std::string>(what_arg);
+    return;
+  }
 
   void* frames[max_frames];
   const int num_frames = backtrace(frames, max_frames);
@@ -51,7 +58,7 @@ void H2ExceptionBase::collect_backtrace()
   // Note we cannot directly demangle the entries returned by
   // backtrace_symbols.
   std::ostringstream ss;
-  ss << what_ << "\nStack trace:\n";
+  ss << what_arg << "\nStack trace:\n";
   for (int i = 0; i < num_frames; ++i)
   {
     ss << std::setw(4) << i << ": ";
@@ -83,7 +90,7 @@ void H2ExceptionBase::collect_backtrace()
     ss << "\n";
   }
 
-  what_ = ss.str();
+  what_ = std::make_shared<std::string>(ss.str());
 }
 
 namespace h2

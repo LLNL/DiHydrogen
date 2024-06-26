@@ -10,7 +10,8 @@
 
 #include <h2_config.hpp>
 
-#include <stdexcept>
+#include <exception>
+#include <memory>
 #include <string>
 
 #include "h2/utils/strings.hpp"
@@ -53,40 +54,57 @@ static constexpr struct no_save_backtrace_t {} NoSaveBacktrace;
  * @warning This shouldn't need to be a warning, but history shows it
  * needs to be: Do not attempt to use this in a signal handler.
  */
-class H2ExceptionBase
+class H2ExceptionBase : public std::exception
 {
 public:
   H2ExceptionBase(const std::string& what_arg)
-    : what_(what_arg)
   {
-    if (should_save_backtrace())
-    {
-      collect_backtrace();
-    }
+    set_what_and_maybe_collect_backtrace(what_arg, should_save_backtrace());
   }
 
+  H2ExceptionBase(const char* what_arg)
+    : H2ExceptionBase(std::string(what_arg))
+  {}
+
   H2ExceptionBase(const std::string& what_arg, save_backtrace_t)
-    : what_(what_arg)
   {
-    collect_backtrace();
+    set_what_and_maybe_collect_backtrace(what_arg, true);
   }
 
   H2ExceptionBase(const std::string& what_arg, no_save_backtrace_t)
-    : what_(what_arg)
+  {
+    set_what_and_maybe_collect_backtrace(what_arg, false);
+  }
+
+  H2ExceptionBase(const H2ExceptionBase& other) noexcept
+    : what_(other.what_)
   {}
+
+  H2ExceptionBase& operator=(const H2ExceptionBase& other) noexcept
+  {
+    what_ = other.what_;
+    return *this;
+  }
 
   virtual ~H2ExceptionBase() {}
 
-  virtual const char* what() const noexcept { return what_.c_str(); }
+  virtual const char* what() const noexcept { return what_->c_str(); }
 
 private:
-  std::string what_;  /**< Error message possibly with backtrace. */
+  /**
+   * Error message, possibly with a backtrace.
+   *
+   * This is wrapped in a shared_ptr to avoid copying the string when
+   * the exception is copied, as this might throw.
+   */
+  std::shared_ptr<std::string> what_;
 
   /** Whether to save a backtrace if not explicitly requested. */
   bool should_save_backtrace() const;
 
-  /** Collect backtrace frames and append them to what_. */
-  void collect_backtrace();
+  /** Set up what_ and maybe collect a backtrace.. */
+  void set_what_and_maybe_collect_backtrace(const std::string& what_arg,
+                                            bool collect_bt);
 };
 
 /** Any non-recoverable error. */

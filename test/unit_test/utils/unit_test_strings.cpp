@@ -20,6 +20,7 @@ TEST_CASE("build_string works for empty args", "[utilities][strings]")
 {
   std::string s = build_string();
   REQUIRE(s == "");
+  REQUIRE(noexcept(build_string()));
 }
 
 TEST_CASE("build_string works for empty string", "[utilities][strings]")
@@ -38,6 +39,8 @@ TEST_CASE("build_string works for basic arguments", "[utilities][strings]")
   REQUIRE(s == "foo bar");
   s = build_string("foo", 42);
   REQUIRE(s == "foo42");
+  s = build_string(std::string("foo"));
+  REQUIRE(s == "foo");
 }
 
 struct TestStruct
