@@ -507,11 +507,12 @@ auto as_h_matrix(DistTensor<T>& tensor,
     // Make the new DistMatrix
     auto out = make_distmat<T>(tensor.get_device(), g, coldist, rowdist);
     // Attach data
-    as_h_matrix_impl(tensor.data(),
-                     *out,
-                     tensor.shape(0),
-                     tensor.shape(1),
-                     tensor.const_local_tensor().stride(1));
+    as_h_matrix_impl(
+        tensor.data(),
+        *out,
+        tensor.shape(0),
+        tensor.shape(1),
+        tensor.is_local_empty() ? 1 : tensor.const_local_tensor().stride(1));
     // Update syncinfo
     set_sync(*out, tensor.get_stream());
     return out;
@@ -530,11 +531,12 @@ auto as_h_matrix(DistTensor<T> const& tensor,
     // Make the new DistMatrix
     auto out = make_distmat<T>(tensor.get_device(), g, coldist, rowdist);
     // Attach data
-    as_h_matrix_impl(tensor.data(),
-                     *out,
-                     tensor.shape(0),
-                     tensor.shape(1),
-                     tensor.const_local_tensor().stride(1));
+    as_h_matrix_impl(
+        tensor.data(),
+        *out,
+        tensor.shape(0),
+        tensor.shape(1),
+        tensor.is_local_empty() ? 1 : tensor.const_local_tensor().stride(1));
     // Update syncinfo
     set_sync(*out, tensor.get_stream());
     return out;
