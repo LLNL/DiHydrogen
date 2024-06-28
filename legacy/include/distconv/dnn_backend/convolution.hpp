@@ -294,7 +294,16 @@ public:
     template <typename Allocator>
     void setup_bias(const tensor::Tensor<DataType, LocaleMPI, Allocator>& bias)
     {
-        GPUDNNBackend::setup_tensor_descriptor(m_bias_d, bias, false);
+        auto const dt = util::get_dnnlib_type<DataType>();
+        auto shape = bias.get_local_shape();
+        IntVector strides =
+            tensor::get_strides(shape, bias.get_halo_width(), 1);
+        GPUDNNBackend::set_tensor_descriptor(
+            m_bias_d,
+            dt,
+            shape.num_dims(),
+            util::reverse(IntVector(shape)).data(),
+            util::reverse(strides).data());
         util::MPIPrintStreamDebug() << "bias: " << m_bias_d;
     }
 
@@ -302,7 +311,16 @@ public:
     void setup_bias_gradient(
         const tensor::Tensor<DataType, LocaleMPI, Allocator>& d_bias)
     {
-        GPUDNNBackend::setup_tensor_descriptor(m_d_bias_d, d_bias, false);
+        auto const dt = util::get_dnnlib_type<DataType>();
+        auto shape = d_bias.get_local_shape();
+        IntVector strides =
+            tensor::get_strides(shape, d_bias.get_halo_width(), 1);
+        GPUDNNBackend::set_tensor_descriptor(
+            m_d_bias_d,
+            dt,
+            shape.num_dims(),
+            util::reverse(IntVector(shape)).data(),
+            util::reverse(strides).data());
         util::MPIPrintStreamDebug() << "d_bias: " << m_d_bias_d;
     }
 
@@ -391,7 +409,7 @@ public:
                     input.clear_halo(dim, m_be.get_stream());
                 }
             }
-            
+
             forward_exchange_halo(input);
         }
 
