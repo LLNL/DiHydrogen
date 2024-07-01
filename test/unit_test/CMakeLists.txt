@@ -83,8 +83,12 @@ set_target_properties(SeqCatchTests
   CXX_EXTENSIONS OFF
   CXX_STANDARD_REQUIRED ON)
 
-# Not 100% sold on this
-catch_discover_tests(SeqCatchTests)
+# Add the test. Outputs to console (for CTest's default logging) and
+# in JUnit format for ease of CI integration
+add_test(
+  NAME "Sequential Catch2 Tests"
+  COMMAND $<TARGET_FILE:SeqCatchTests> -r console -r JUnit::out=seq.xml
+  WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
 if (H2_CODE_COVERAGE)
   add_code_coverage(SeqCatchTests coverage)
