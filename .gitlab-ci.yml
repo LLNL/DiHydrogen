@@ -43,14 +43,6 @@ pascal testing:
     forward:
       pipeline_variables: true
 
-quartz testing:
-  stage: run-all-clusters
-  trigger:
-    strategy: depend
-    include: '/.gitlab/build-and-test-quartz.yml'
-    forward:
-      pipeline_variables: true
-
 tioga testing:
   stage: run-all-clusters
   trigger:

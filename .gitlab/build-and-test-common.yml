@@ -21,13 +21,10 @@
   artifacts:
     when: always
     paths:
-      - "${CI_PROJECT_DIR}/*_junit.xml"
+      - "${CI_PROJECT_DIR}/*_junit.*xml"
       - "${CI_PROJECT_DIR}/*.cmake"
-      - "${CI_PROJECT_DIR}/spack*.txt"
-      - "${CI_PROJECT_DIR}/ci_environment.log"
-      - "${CI_PROJECT_DIR}/${CI_JOB_ID}/*"
     reports:
-      junit: "${CI_PROJECT_DIR}/*_junit.xml"
+      junit: "${CI_PROJECT_DIR}/*_junit.*xml"
   extends: .build-and-test-base
 
 .build-and-test-coverage:
@@ -35,15 +32,9 @@
     when: always
     paths:
       - "${CI_PROJECT_DIR}/*-gcovr.xml"
-      - "${CI_PROJECT_DIR}/*_junit.xml"
-      - "${CI_PROJECT_DIR}/*.cmake"
-      - "${CI_PROJECT_DIR}/spack*.txt"
-      - "${CI_PROJECT_DIR}/ci_environment.log"
-      - "${CI_PROJECT_DIR}/build_*/coverage/"
-      - "${CI_PROJECT_DIR}/build_*/*-gcovr.xml"
-      - "${CI_PROJECT_DIR}/${CI_JOB_ID}/*"
+      - "${CI_PROJECT_DIR}/*_junit.*xml"
     reports:
-      junit: "${CI_PROJECT_DIR}/*_junit.xml"
+      junit: "${CI_PROJECT_DIR}/*_junit.*xml"
       coverage_report:
         coverage_format: cobertura
         path: "${CI_PROJECT_DIR}/SeqCatchTests-gcovr.xml"
