@@ -123,6 +123,22 @@ public:
                      Passkey<DistTensor<T>>{})
   {}
 
+  /** Internal constructor for cloning. */
+  DistTensor(Tensor<T>& local_tensor_clone,
+             const ShapeTuple& shape_,
+             const DimensionTypeTuple& dim_types_,
+             ProcessorGrid grid_,
+             const DistributionTypeTuple& dist_types_,
+             Passkey<DistTensor<T>>)
+      : BaseDistTensor(ViewType::None,
+                       shape_,
+                       dim_types_,
+                       grid_,
+                       dist_types_,
+                       local_tensor_clone.shape()),
+        tensor_local(std::move(local_tensor_clone))
+  {}
+
   virtual ~DistTensor() = default;
 
   /**
@@ -146,6 +162,22 @@ public:
 
   /** Move assignment */
   DistTensor& operator=(DistTensor&&) = default;
+
+  /**
+   * Return an exact copy of this tensor.
+   *
+   *
+   */
+  std::unique_ptr<DistTensor<T>> clone() const
+  {
+    auto local_tensor_clone = tensor_local.clone();
+    return std::make_unique<DistTensor<T>>(*local_tensor_clone,
+                                           shape(),
+                                           dim_types(),
+                                           proc_grid(),
+                                           distribution(),
+                                           Passkey<DistTensor<T>>{});
+  }
 
   /** Output a short description of the tensor. */
   void short_describe(std::ostream& os) const override

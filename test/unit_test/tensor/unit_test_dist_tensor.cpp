@@ -1202,6 +1202,58 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor views work",
   }
 }
 
+TEMPLATE_LIST_TEST_CASE("Cloning distributed tensors works",
+                        "[dist-tensor]",
+                        AllDevList)
+{
+  using DistTensorType = DistTensor<DataType>;
+  constexpr Device Dev = TestType::value;
+
+  for_comms([&](Comm& comm) {
+    for_grid_shapes([&](ShapeTuple grid_shape) {
+      for (Distribution dist : {Distribution::Block,
+                                Distribution::Replicated,
+                                Distribution::Single})
+      {
+        ProcessorGrid grid = ProcessorGrid(comm, grid_shape);
+
+        ShapeTuple tensor_shape(8, 5, 12);
+        tensor_shape.set_size(grid.ndim());
+        DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
+        DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
+        DistTensorType tensor = DistTensorType(
+            Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
+        std::unique_ptr<DistTensorType> clone = tensor.clone();
+
+        REQUIRE(clone->shape() == tensor.shape());
+        REQUIRE(clone->dim_types() == tensor.dim_types());
+        REQUIRE(clone->distribution() == tensor.distribution());
+        REQUIRE(clone->local_shape() == tensor.local_shape());
+        REQUIRE(clone->proc_grid() == tensor.proc_grid());
+        REQUIRE(clone->ndim() == tensor.ndim());
+        REQUIRE(clone->numel() == tensor.numel());
+        REQUIRE(clone->is_empty() == tensor.is_empty());
+        REQUIRE(clone->local_numel() == tensor.local_numel());
+        REQUIRE(clone->is_local_empty() == tensor.is_local_empty());
+        REQUIRE_FALSE(clone->is_view());
+        REQUIRE_FALSE(clone->is_const_view());
+        REQUIRE(clone->get_view_type() == ViewType::None);
+        REQUIRE(clone->get_device() == tensor.get_device());
+        REQUIRE(clone->is_lazy() == tensor.is_lazy());
+        if (tensor.is_local_empty())
+        {
+          REQUIRE(clone->data() == nullptr);
+        }
+        else
+        {
+          REQUIRE(clone->data() != nullptr);
+          REQUIRE(clone->data() != tensor.data());
+        }
+      }
+    }, comm, 0, 3);
+  });
+}
+
 TEMPLATE_LIST_TEST_CASE("Distributed tensors are printable",
                         "[dist-tensor]",
                         AllDevList)
