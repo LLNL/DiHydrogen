@@ -614,6 +614,170 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views across devices work",
 
 #endif  // H2_TEST_WITH_GPU
 
+TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
+                        "[tensor][strided_memory]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
+
+  SECTION("Cloning an empty StridedMemory")
+  {
+    MemType mem(Dev, false, ComputeStream{Dev});
+    MemType clone = mem.clone();
+    REQUIRE(clone.data() == nullptr);
+    REQUIRE(clone.size() == mem.size());
+    REQUIRE(clone.get_device() == Dev);
+    REQUIRE(clone.strides() == StrideTuple{});
+    REQUIRE(clone.shape() == ShapeTuple{});
+    REQUIRE(clone.is_lazy() == mem.is_lazy());
+  }
+
+  SECTION("Cloning a regular StridedMemory")
+  {
+    MemType mem(Dev, ShapeTuple{3, 7}, false, ComputeStream{Dev});
+    for (std::size_t i = 0; i < product<std::size_t>(mem.shape()); ++i)
+    {
+      write_ele<Dev>(mem.data(), i, static_cast<DataType>(i));
+    }
+    MemType clone = mem.clone();
+    REQUIRE(clone.data() != nullptr);
+    REQUIRE(clone.data() != mem.data());
+    REQUIRE(clone.size() == mem.size());
+    REQUIRE(clone.get_device() == Dev);
+    REQUIRE(clone.strides() == mem.strides());
+    REQUIRE(clone.shape() == mem.shape());
+    REQUIRE(clone.is_lazy() == mem.is_lazy());
+    for (std::size_t i = 0; i < product<std::size_t>(clone.shape()); ++i)
+    {
+      REQUIRE(read_ele<Dev>(clone.data(), i) == i);
+    }
+  }
+
+  SECTION("Cloning a lazy StridedMemory after ensure")
+  {
+    MemType mem(Dev, ShapeTuple{3, 7}, true, ComputeStream{Dev});
+    mem.ensure();
+    MemType clone = mem.clone();
+    REQUIRE(clone.data() != nullptr);
+    REQUIRE(clone.data() != mem.data());
+    REQUIRE(clone.size() == mem.size());
+    REQUIRE(clone.get_device() == Dev);
+    REQUIRE(clone.strides() == mem.strides());
+    REQUIRE(clone.shape() == mem.shape());
+    REQUIRE(clone.is_lazy() == mem.is_lazy());
+  }
+
+  SECTION("Cloning a lazy StridedMemory before ensure")
+  {
+    MemType mem(Dev, ShapeTuple{3, 7}, true, ComputeStream{Dev});
+    MemType clone = mem.clone();
+    REQUIRE(clone.is_lazy());
+    REQUIRE(clone.data() == nullptr);
+    clone.ensure();
+    REQUIRE(clone.data() != nullptr);
+    REQUIRE(mem.data() == nullptr);
+    REQUIRE(clone.size() == mem.size());
+    REQUIRE(clone.get_device() == Dev);
+    REQUIRE(clone.strides() == mem.strides());
+    REQUIRE(clone.shape() == mem.shape());
+    REQUIRE(clone.is_lazy() == mem.is_lazy());
+  }
+
+  SECTION("Cloning a contiguous StridedMemory view")
+  {
+    MemType base_mem(Dev, ShapeTuple{3, 7, 3}, false, ComputeStream{Dev});
+    for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
+    {
+      write_ele<Dev>(base_mem.data(), i, static_cast<DataType>(i));
+    }
+    MemType mem(base_mem, {ALL, ALL, ALL});
+    MemType clone = mem.clone();
+    REQUIRE(clone.data() != nullptr);
+    REQUIRE(clone.data() != mem.data());
+    REQUIRE(clone.size() == mem.size());
+    REQUIRE(clone.get_device() == Dev);
+    REQUIRE(clone.strides() == mem.strides());
+    REQUIRE(clone.shape() == mem.shape());
+    REQUIRE(clone.is_lazy() == mem.is_lazy());
+    for (std::size_t i = 0; i < product<std::size_t>(clone.shape()); ++i)
+    {
+      REQUIRE(read_ele<Dev>(clone.data(), i) == i);
+    }
+  }
+
+  // Not checking size() because the buffer may change.
+  SECTION("Cloning a contiguous, offset StridedMemory view")
+  {
+    MemType base_mem(Dev, ShapeTuple{3, 7, 3}, false, ComputeStream{Dev});
+    for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
+    {
+      write_ele<Dev>(base_mem.data(), i, static_cast<DataType>(i));
+    }
+    MemType mem(base_mem, {ALL, ALL, IRng(1)});
+    MemType clone = mem.clone();
+    REQUIRE(clone.data() != nullptr);
+    REQUIRE(clone.data() != mem.data());
+    REQUIRE(clone.get_device() == Dev);
+    REQUIRE(clone.strides() == mem.strides());
+    REQUIRE(clone.shape() == mem.shape());
+    REQUIRE(clone.is_lazy() == mem.is_lazy());
+    for (DimType j = 0; j < clone.shape(1); ++j)
+    {
+      for (DimType i = 0; i < clone.shape(0); ++i)
+      {
+        REQUIRE(read_ele<Dev>(clone.get({i, j}))
+                == base_mem.get_index({i, j, 1}));
+      }
+    }
+  }
+
+  SECTION("Cloning a non-contiguous StridedMemory view")
+  {
+    MemType base_mem(Dev, ShapeTuple{3, 7, 3}, false, ComputeStream{Dev});
+    for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
+    {
+      write_ele<Dev>(base_mem.data(), i, static_cast<DataType>(i));
+    }
+    MemType mem(base_mem, {IRng(1), ALL, ALL});
+    MemType clone = mem.clone();
+    REQUIRE(clone.data() != nullptr);
+    REQUIRE(clone.data() != mem.data());
+    REQUIRE(clone.get_device() == Dev);
+    REQUIRE(clone.strides() == mem.strides());
+    REQUIRE(clone.shape() == mem.shape());
+    REQUIRE(clone.is_lazy() == mem.is_lazy());
+    for (DimType k = 0; k < clone.shape(1); ++k)
+    {
+      for (DimType j = 0; j < clone.shape(0); ++j)
+      {
+        REQUIRE(read_ele<Dev>(clone.get({j, k}))
+                == base_mem.get_index({1, j, k}));
+      }
+    }
+  }
+
+  SECTION("Cloning a StridedMemory wrapping an external buffer")
+  {
+    constexpr std::size_t buf_size = 4 * 6;
+    DeviceBuf<DataType, Dev> buf(buf_size);
+    for (std::size_t i = 0; i < buf_size; ++i)
+    {
+      write_ele<Dev>(buf.buf, i, static_cast<DataType>(i));
+    }
+
+    MemType mem(
+        Dev, buf.buf, ShapeTuple{4, 6}, StrideTuple{1, 4}, ComputeStream{Dev});
+    MemType clone = mem.clone();
+    REQUIRE(clone.data() != nullptr);
+    REQUIRE(clone.data() != mem.data());
+    REQUIRE(clone.get_device() == Dev);
+    REQUIRE(clone.strides() == mem.strides());
+    REQUIRE(clone.shape() == mem.shape());
+    REQUIRE(clone.is_lazy() == mem.is_lazy());
+  }
+}
+
 TEMPLATE_LIST_TEST_CASE("StridedMemory is printable",
                         "[tensor][strided_memory]",
                         AllDevList)
