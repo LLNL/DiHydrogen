@@ -798,6 +798,39 @@ TEMPLATE_LIST_TEST_CASE("Making tensors contiguous works",
   }
 }
 
+TEMPLATE_LIST_TEST_CASE("Cloning tensors works",
+                        "[tensor]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<DataType>;
+
+  TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
+  for (DataIndexType i = 0; i < tensor.numel(); ++i)
+  {
+    write_ele<Dev>(tensor.data(), i, static_cast<DataType>(i));
+  }
+
+  SECTION("Cloning an entire tensor works")
+  {
+    std::unique_ptr<TensorType> clone = tensor.clone();
+    REQUIRE(clone->shape() == tensor.shape());
+    REQUIRE(clone->dim_types() == tensor.dim_types());
+    REQUIRE(clone->strides() == tensor.strides());
+    REQUIRE(clone->ndim() == tensor.ndim());
+    REQUIRE(clone->numel() == tensor.numel());
+    REQUIRE(clone->is_empty() == tensor.is_empty());
+    REQUIRE_FALSE(clone->is_view());
+    REQUIRE_FALSE(clone->is_const_view());
+    REQUIRE(clone->get_view_type() == ViewType::None);
+    REQUIRE(clone->is_contiguous() == tensor.is_contiguous());
+    REQUIRE(clone->get_device() == tensor.get_device());
+    REQUIRE(clone->is_lazy() == tensor.is_lazy());
+    REQUIRE(clone->data() != nullptr);
+    REQUIRE(clone->data() != tensor.data());
+  }
+}
+
 TEMPLATE_LIST_TEST_CASE("Tensors are printable", "[tensor]", AllDevList)
 {
   constexpr Device Dev = TestType::value;
