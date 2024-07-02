@@ -11,22 +11,15 @@ stages:
 include:
   local: "/.gitlab/build-and-test-common.yml"
 
-gcc-10-3-1-cuda-11-7-0:
+gcc-11-2-1-cuda-11-8-0-pascal:
   variables:
-    SPEC: "%gcc@10.3.1 +developer +cuda cuda_arch=60 ^cuda@11.7.0"
-    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 cuda/11.7.0 ninja/1.11.0"
+    MODULES: "gcc/11.2.1-magic openmpi/4.1.2 cuda/11.8.0"
   extends: [.build-and-test-on-pascal, .build-and-test]
 
-gcc-10-3-1-cuda-11-8-0:
+gcc-11-2-1-cuda-11-8-0-coverage-pascal:
   variables:
-    SPEC: "%gcc@10.3.1 +developer +cuda cuda_arch=60 ^cuda@11.8.0"
-    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 cuda/11.8.0 ninja/1.11.0"
-  extends: [.build-and-test-on-pascal, .build-and-test]
-
-gcc-10-3-1-cuda-11-8-0-coverage:
-  variables:
-    SPEC: "%gcc@10.3.1 +developer +ci +coverage +cuda cuda_arch=60 ^cuda@11.8.0"
-    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 cuda/11.8.0 ninja/1.11.0 python"
+    MODULES: "gcc/11.2.1-magic openmpi/4.1.2 cuda/11.8.0 python"
+    WITH_COVERAGE: "1"
   extends: [.build-and-test-on-pascal, .build-and-test-coverage]
 
 .build-and-test-on-pascal:
