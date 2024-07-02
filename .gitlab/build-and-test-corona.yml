@@ -20,12 +20,12 @@ include:
 # load a module to get a real prefix. This only matters when
 # "+ci+coverage".
 
-rocm-6-0-2:
+rocm-6-0-2-corona:
   variables:
     MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/6.0.2 python"
   extends: [.build-and-test-on-corona, .build-and-test]
 
-rocm-6-0-2-distconv:
+rocm-6-0-2-distconv-corona:
   variables:
     MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/6.0.2 python"
     WITH_DISTCONV: "1"
@@ -33,7 +33,7 @@ rocm-6-0-2-distconv:
   rules:
     - if: $TEST_DISTCONV_BUILD == "1"
 
-rocm-6-0-2-coverage:
+rocm-6-0-2-coverage-corona:
   variables:
     MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/6.0.2 python"
     WITH_COVERAGE: "1"

@@ -11,12 +11,12 @@ stages:
 include:
   local: "/.gitlab/build-and-test-common.yml"
 
-rocm-6-1-2:
+rocm-6-1-2-tioga:
   variables:
     MODULES: "PrgEnv-cray rocm/6.1.2 cray-mpich cray-libsci"
   extends: .build-and-test-on-tioga
 
-rocm-6-1-2-distconv:
+rocm-6-1-2-distconv-tioga:
   variables:
     MODULES: "PrgEnv-cray rocm/6.1.2 cray-mpich cray-libsci"
     WITH_DISTCONV: "1"

@@ -47,24 +47,14 @@ fi
 cd ${project_dir}
 
 # Create some temporary build space.
-if false #[[ -d /dev/shm ]]
-then
-    prefix="/dev/shm/${hostname}"
-    if [[ -z "${job_unique_id}" ]]; then
+if [[ -z "${job_unique_id}" ]]; then
+    job_unique_id=manual_job_$(date +%s)
+    while [[ -d ${prefix}-${job_unique_id} ]] ; do
+        sleep 1
         job_unique_id=manual_job_$(date +%s)
-        while [[ -d ${prefix}-${job_unique_id} ]] ; do
-            sleep 1
-            job_unique_id=manual_job_$(date +%s)
-        done
-    fi
-
-    build_dir="${prefix}-${job_unique_id}"
-else
-    build_dir="${project_dir}/build-${job_unique_id}"
+    done
 fi
-
-prefix="${build_dir}/install"
-mkdir -p ${prefix}
+build_dir="${project_dir}/build-${job_unique_id}"
 
 # Dependencies
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -72,10 +62,6 @@ echo "~~~~~ Build and test started"
 echo "~~~~~         Start: $(date)"
 echo "~~~~~          Host: ${hostname}"
 echo "~~~~~   Project dir: ${project_dir}"
-echo "~~~~~"
-echo "~~~~~ Building Dependencies"
-echo "~~~~~     Build dir: ${build_dir}"
-echo "~~~~~   Install dir: ${prefix}"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
 # Get the superbuild because why not.
@@ -92,21 +78,49 @@ git config core.sparseCheckout true
 echo "scripts/superbuild" >> .git/info/sparse-checkout
 git pull --ff-only origin develop
 
+prefix="${project_dir}/install-deps-${CI_JOB_NAME_SLUG:-${job_unique_id}}"
+
 # Setup the build environment
 source ${project_dir}/.gitlab/setup_env.sh
 
 # Superbuild the dependencies (uses "${cluster}", "${prefix}", and "${lbann_sb_dir}")
-cd ${build_dir}
-source ${project_dir}/.gitlab/configure_deps.sh
-cmake --build build-deps
+if [[ ! -d "${prefix}" ]]
+then
+
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    echo "~~~~~ Building Dependencies"
+    echo "~~~~~     Build dir: ${build_dir}"
+    echo "~~~~~   Install dir: ${prefix}"
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+    cd ${build_dir}
+    source ${project_dir}/.gitlab/configure_deps.sh
+    cmake --build build-deps
+
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    echo "~~~~~ Dependencies Built"
+    echo "~~~~~ $(date)"
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+else
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+    echo "~~~~~ Using Cached Dependencies"
+    echo "~~~~~     Prefix: ${prefix}"
+    echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+    for f in $(find ${prefix} -iname "*.pc");
+    do
+        pfx=$(realpath $(dirname $(dirname $(dirname $f))))
+        echo " >> Changing prefix in $(realpath $f) to: ${pfx}"
+        sed -i -e "s|^prefix=.*|prefix=${pfx}|g" $f
+    done
+fi
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-echo "~~~~~ Dependencies Built"
-echo "~~~~~ $(date)"
-echo "~~~~~"
 echo "~~~~~ Building DiHydrogen"
+echo "~~~~~ $(date)"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
+prefix=${build_dir}/install
 cd ${build_dir}
 source ${project_dir}/.gitlab/configure_h2.sh
 if ! cmake --build build-h2 ;

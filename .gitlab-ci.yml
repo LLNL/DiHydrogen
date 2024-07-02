@@ -5,6 +5,10 @@
 ## SPDX-License-Identifier: Apache-2.0
 ################################################################################
 
+include:
+  - project: 'lc-templates/id_tokens'
+    file: 'id_tokens.yml'
+
 stages:
   - run-all-clusters
 
@@ -39,7 +43,7 @@ pascal testing:
   stage: run-all-clusters
   trigger:
     strategy: depend
-    include: '/.gitlab/build-and-test-pascal.yml'
+    include: '.gitlab/build-and-test-pascal.yml'
     forward:
       pipeline_variables: true
 
