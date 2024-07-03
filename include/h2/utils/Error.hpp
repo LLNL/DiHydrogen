@@ -100,7 +100,7 @@ private:
   std::shared_ptr<std::string> what_;
 
   /** Whether to save a backtrace if not explicitly requested. */
-  static bool should_save_backtrace() const;
+  static bool should_save_backtrace();
 
   /** Set up what_ and maybe collect a backtrace.. */
   void set_what_and_maybe_collect_backtrace(const std::string& what_arg,
