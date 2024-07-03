@@ -236,9 +236,17 @@ public:
                      "Cannot change the number of dimensions when resizing a "
                      "distributed tensor");
     H2_ASSERT_ALWAYS(new_dim_types.size() == new_shape.size(),
-                     "Shape and dimension types must be the same size");
+                     "Shape (",
+                     new_shape,
+                     ") and dimension types (",
+                     new_dim_types,
+                     ") must be the same size");
     H2_ASSERT_ALWAYS(new_dist_types.size() == new_shape.size(),
-                     "Shape and distribution types must be the same size");
+                     "Shape (",
+                     new_shape,
+                     ") and distribution types (",
+                     new_dist_types,
+                     ") must be the same size");
     this->tensor_shape = new_shape;
     this->tensor_local_shape = internal::get_local_shape(
         new_shape, this->tensor_grid, new_dist_types);
@@ -452,11 +460,14 @@ private:
                                            ViewType view_type) const
   {
     H2_ASSERT_ALWAYS(is_index_range_contained(index_range, this->tensor_shape),
-                     "Cannot construct an out-of-range view");
+                     "Cannot construct an out-of-range view, ",
+                     index_range,
+                     " is not contained in ",
+                     this->tensor_shape);
     H2_ASSERT_ALWAYS(
         !any_of(index_range,
                 [](const IndexRangeTuple::type& x) { return x.is_scalar(); }),
-        "Scalar indices are not permitted in global views");
+        "Scalar indices (", index_range, ") are not permitted in global views");
 
     // We have three cases:
     // 1. The indices are empty, so we have a globally empty view.

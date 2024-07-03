@@ -286,7 +286,8 @@ public:
   template <Device Dev>
   void wait_for_this() const
   {
-    H2_ASSERT_DEBUG(Dev == device, "Incorrect device");
+    H2_ASSERT_DEBUG(
+        Dev == device, "Incorrect device ", Dev, " (expected ", device, ")");
     H2_DEVICE_DISPATCH_CONST(
       Dev,
       (void) 0,
@@ -297,7 +298,8 @@ public:
   template <Device Dev>
   typename internal::RawSyncEvent<Dev>::type get_event() const H2_NOEXCEPT
   {
-    H2_ASSERT_DEBUG(Dev == device, "Attempt to get raw event for wrong device");
+    H2_ASSERT_DEBUG(
+        Dev == device, "Incorrect device ", Dev, " (expected ", device, ")");
     H2_DEVICE_DISPATCH_CONST(
       Dev,
       return cpu_event,
@@ -544,7 +546,12 @@ public:
   template <Device ThisDev, Device EventDev>
   void add_sync_point(const SyncEvent& event) const
   {
-    H2_ASSERT_DEBUG(ThisDev == device, "Incorrect device");
+    H2_ASSERT_DEBUG(ThisDev == device,
+                    "Incorrect device ",
+                    ThisDev,
+                    " (expected ",
+                    device,
+                    ")");
     if constexpr (ThisDev == Device::CPU)
     {
       if constexpr (EventDev == Device::CPU)
@@ -590,7 +597,12 @@ public:
   template <Device ThisDev, Device EventDev>
   void wait_for(const SyncEvent& event) const
   {
-    H2_ASSERT_DEBUG(ThisDev == device, "Incorrect device");
+    H2_ASSERT_DEBUG(ThisDev == device,
+                    "Incorrect device ",
+                    ThisDev,
+                    " (expected ",
+                    device,
+                    ")");
     if constexpr (ThisDev == Device::CPU)
     {
       if constexpr (EventDev == Device::CPU)
@@ -641,7 +653,12 @@ public:
   template <Device ThisDev, Device StreamDev>
   void wait_for(const ComputeStream& other_stream) const
   {
-    H2_ASSERT_DEBUG(ThisDev == device, "Incorrect device");
+    H2_ASSERT_DEBUG(ThisDev == device,
+                    "Incorrect device ",
+                    ThisDev,
+                    " (expected ",
+                    device,
+                    ")");
     if constexpr (ThisDev == Device::CPU)
     {
       if constexpr (StreamDev == Device::CPU)
@@ -689,7 +706,12 @@ public:
   template <Device ThisDev>
   void wait_for_this() const
   {
-    H2_ASSERT_DEBUG(ThisDev == device, "Incorrect device");
+    H2_ASSERT_DEBUG(ThisDev == device,
+                    "Incorrect device ",
+                    ThisDev,
+                    " (expected ",
+                    device,
+                    ")");
     H2_DEVICE_DISPATCH_CONST(
       ThisDev,
       (void) 0,
@@ -701,7 +723,11 @@ public:
   typename internal::RawComputeStream<ThisDev>::type get_stream() const H2_NOEXCEPT
   {
     H2_ASSERT_DEBUG(ThisDev == device,
-                    "Attempt to get raw stream for wrong device");
+                    "Attempt to get raw stream for wrong device ",
+                    ThisDev,
+                    " (expected ",
+                    device,
+                    ")");
     H2_DEVICE_DISPATCH_CONST(
       ThisDev,
       return cpu_stream,

@@ -88,7 +88,12 @@ get_dim_local_size(typename ShapeTuple::type dim_size,
                    Distribution dist,
                    RankType grid_rank)
 {
-  H2_ASSERT_DEBUG(grid_rank < proc_grid.size(), "Invalid grid rank");
+  H2_ASSERT_DEBUG(grid_rank < proc_grid.size(),
+                  "Invalid grid rank ",
+                  grid_rank,
+                  " (max grid rank ",
+                  proc_grid.size(),
+                  ")");
   const ShapeTuple::type grid_dim_size = proc_grid.shape(dim);
   const RankType grid_dim_rank = proc_grid.get_dimension_rank(
       dim, grid_rank);
@@ -106,7 +111,7 @@ get_dim_local_size(typename ShapeTuple::type dim_size,
                                                     grid_dim_rank,
                                                     grid_dim_rank == 0);
   default:
-    H2_ASSERT_ALWAYS(false, "Invalid distribution");
+    H2_ASSERT_ALWAYS(false, "Invalid distribution ", dist);
   }
 }
 
@@ -211,7 +216,12 @@ inline IndexRange get_dim_global_indices(typename ShapeTuple::type dim_size,
                                          Distribution dist,
                                          RankType grid_rank)
 {
-  H2_ASSERT_DEBUG(grid_rank < proc_grid.size(), "Invalid grid rank");
+  H2_ASSERT_DEBUG(grid_rank < proc_grid.size(),
+                  "Invalid grid rank ",
+                  grid_rank,
+                  " (max gird rank, ",
+                  proc_grid.size(),
+                  ")");
   const ShapeTuple::type grid_dim_size = proc_grid.shape(dim);
   const RankType grid_dim_rank = proc_grid.get_dimension_rank(
       dim, grid_rank);
@@ -236,7 +246,7 @@ inline IndexRange get_dim_global_indices(typename ShapeTuple::type dim_size,
         grid_dim_rank,
         grid_dim_rank == 0);
   default:
-    H2_ASSERT_ALWAYS(false, "Invalid distribution");
+    H2_ASSERT_ALWAYS(false, "Invalid distribution ", dist);
   }
 }
 
@@ -332,7 +342,12 @@ inline DimType dim_global2local_index(typename ShapeTuple::type dim_size,
                                       Distribution dist,
                                       DimType global_index)
 {
-  H2_ASSERT_DEBUG(global_index < dim_size, "Invalid global index");
+  H2_ASSERT_DEBUG(global_index < dim_size,
+                  "Invalid global index ",
+                  global_index,
+                  " (max dimension size ",
+                  dim_size,
+                  ")");
   const ShapeTuple::type grid_dim_size = proc_grid.shape(dim);
   switch (dist)
   {
@@ -346,7 +361,7 @@ inline DimType dim_global2local_index(typename ShapeTuple::type dim_size,
     return dim_global2local_index<Distribution::Single>(
         dim_size, grid_dim_size, global_index);
   default:
-    H2_ASSERT_ALWAYS(false, "Invalid distribution");
+    H2_ASSERT_ALWAYS(false, "Invalid distribution ", dist);
   }
 }
 
@@ -370,7 +385,8 @@ inline IndexRangeTuple global2local_indices(ShapeTuple global_shape,
                           [](const typename IndexRangeTuple::type& c) {
                             return c.is_empty();
                           }),
-                  "Empty index entries are not supported");
+                  "Empty index entries are not supported, got ",
+                  global_indices);
   return map_index(global_indices, [&](IndexRangeTuple::size_type dim) {
     if (global_indices[dim].is_scalar())
     {
@@ -448,7 +464,12 @@ inline RankType dim_global2rank(typename ShapeTuple::type dim_size,
                                 Distribution dist,
                                 DimType global_index)
 {
-  H2_ASSERT_DEBUG(global_index < dim_size, "Invalid global index");
+  H2_ASSERT_DEBUG(global_index < dim_size,
+                  "Invalid global index ",
+                  global_index,
+                  " (max dimension size ",
+                  dim_size,
+                  ")");
   const ShapeTuple::type grid_dim_size = proc_grid.shape(dim);
   switch (dist)
   {
@@ -463,7 +484,7 @@ inline RankType dim_global2rank(typename ShapeTuple::type dim_size,
     return dim_global2rank<Distribution::Single>(
         dim_size, grid_dim_size, global_index);
   default:
-    H2_ASSERT_ALWAYS(false, "Invalid distribution");
+    H2_ASSERT_ALWAYS(false, "Invalid distribution ", dist);
   }
 }
 
@@ -539,8 +560,17 @@ inline DimType dim_local2global_index(typename ShapeTuple::type dim_size,
                                       DimType local_index)
 {
   H2_ASSERT_DEBUG(grid_dim_rank < proc_grid.shape(dim),
-                  "Invalid grid dimension rank");
-  H2_ASSERT_DEBUG(local_index < dim_size, "Invalid local index");
+                  "Invalid grid dimension rank ",
+                  grid_dim_rank,
+                  " for dimension ",
+                  dim,
+                  " of grid ",
+                  proc_grid.shape());
+  H2_ASSERT_DEBUG(local_index < dim_size,
+                  "Invalid local index ",
+                  local_index,
+                  " (max dimension size ",
+                  dim_size, ")");
   const ShapeTuple::type grid_dim_size = proc_grid.shape(dim);
   switch (dist)
   {
@@ -554,7 +584,7 @@ inline DimType dim_local2global_index(typename ShapeTuple::type dim_size,
     return dim_local2global_index<Distribution::Single>(
         dim_size, grid_dim_size, grid_dim_rank, local_index);
   default:
-    H2_ASSERT_ALWAYS(false, "Invalid distribution");
+    H2_ASSERT_ALWAYS(false, "Invalid distribution ", dist);
   }
 }
 
@@ -568,7 +598,7 @@ inline ScalarIndexTuple local2global_index(ShapeTuple global_shape,
     H2_ASSERT_DEBUG(
         local_index[dim] < get_dim_local_size(
             global_shape[dim], dim, proc_grid, dist[dim], grid_rank),
-        "Invalid local index");
+        "Invalid local index ", local_index);
     return dim_local2global_index(global_shape[dim],
                                   dim,
                                   proc_grid,

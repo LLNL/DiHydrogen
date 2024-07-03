@@ -76,7 +76,11 @@ get_index_range_shape(const IndexRangeTuple& coords,
                       const ShapeTuple& shape) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(coords.size() <= shape.size(),
-                  "coords size not compatible with shape size");
+                  "coords size (",
+                  coords,
+                  ") not compatible with shape size (",
+                  shape,
+                  ")");
   H2_ASSERT_DEBUG(!is_index_range_empty(coords) || coords.is_empty(),
                   "get_index_range_shape does not work with empty ranges");
   ShapeTuple new_shape(TuplePad<ShapeTuple>(shape.size()));
@@ -126,7 +130,10 @@ do_index_ranges_intersect(const IndexRange& ir1,
                           const IndexRange& ir2) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(!ir1.is_scalar() && !ir2.is_scalar(),
-                  "Cannot intersect scalar index ranges");
+                  "Cannot intersect scalar index ranges ",
+                  ir1,
+                  " and ",
+                  ir2);
   return !ir1.is_empty() && !ir2.is_empty()
          && ((ir1 == ALL) || (ir2 == ALL)
              || (ir1.start() < ir2.end() && ir2.start() < ir1.end()));
@@ -142,7 +149,11 @@ do_index_ranges_intersect(const IndexRangeTuple& ir1,
                           const IndexRangeTuple& ir2) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(ir1.size() == ir2.size(),
-                  "Index ranges must be the same size to intersect");
+                  "Index ranges ",
+                  ir1,
+                  " and ",
+                  ir2,
+                  " must be the same size to intersect");
   for (typename IndexRangeTuple::size_type i = 0; i < ir1.size(); ++i)
   {
     if (!do_index_ranges_intersect(ir1[i], ir2[i]))
@@ -162,7 +173,7 @@ constexpr inline IndexRange
 intersect_index_ranges(const IndexRange& ir1, const IndexRange& ir2) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(do_index_ranges_intersect(ir1, ir2),
-                  "Index ranges must intersect");
+                  "Index ranges ", ir1, " and ", ir2, " must intersect");
   return IndexRange(std::max(ir1.start(), ir2.start()),
                     std::min(ir1.end(), ir2.end()));
 }
@@ -177,9 +188,17 @@ intersect_index_ranges(const IndexRangeTuple& ir1,
                        const IndexRangeTuple& ir2) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(ir1.size() == ir2.size(),
-                  "Index ranges must be the same size to intersect");
+                  "Index ranges ",
+                  ir1,
+                  " and ",
+                  ir2,
+                  " must be the same size to intersect");
   H2_ASSERT_DEBUG(do_index_ranges_intersect(ir1, ir2),
-                  "Index ranges must intersect");
+                  "Index ranges ",
+                  ir1,
+                  " and ",
+                  ir2,
+                  " must intersect");
   return map_index(ir1, [&ir1, &ir2](IndexRangeTuple::size_type i) {
     return intersect_index_ranges(ir1[i], ir2[i]);
   });

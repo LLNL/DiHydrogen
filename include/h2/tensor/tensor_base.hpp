@@ -54,9 +54,13 @@ public:
     tensor_view_type(ViewType::None)
   {
     H2_ASSERT_DEBUG(tensor_shape.size() == tensor_dim_types.size(),
-                    "Tensor shape and dimension types must be the same size");
+                    "Tensor shape (",
+                    tensor_shape,
+                    " ) and dimension types (",
+                    tensor_dim_types,
+                    ") must be the same size");
     H2_ASSERT_DEBUG(shape_.is_empty() || product<DataIndexType>(shape_) > 0,
-                    "Zero-length dimensions are not permitted");
+                    "Zero-length dimensions are not permitted, got ", shape_);
   }
 
   /** Construct an empty tensor. */
@@ -139,7 +143,11 @@ protected:
         tensor_view_type(view_type_)
   {
     H2_ASSERT_DEBUG(tensor_shape.size() == tensor_dim_types.size(),
-                    "Tensor shape and dimension types must be the same size");
+                    "Tensor shape ",
+                    tensor_shape,
+                    " and dimension types ",
+                    tensor_dim_types,
+                    " must be the same size");
   }
 };
 

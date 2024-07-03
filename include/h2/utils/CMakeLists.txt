@@ -15,9 +15,11 @@ h2_add_sources_to_target_and_install(
   As.hpp
   Cloneable.hpp
   Describable.hpp
+  environment_vars.hpp
   Error.hpp
   IntegerMath.hpp
   Logger.hpp
   passkey.hpp
+  strings.hpp
   typename.hpp
   )
