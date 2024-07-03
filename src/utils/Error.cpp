@@ -25,7 +25,7 @@
 #include "h2/utils/environment_vars.hpp"
 #endif
 
-bool H2ExceptionBase::should_save_backtrace() const
+bool H2ExceptionBase::should_save_backtrace()
 {
 #ifdef H2_DEBUG
   return true;  // Always save backtraces in debug mode.
