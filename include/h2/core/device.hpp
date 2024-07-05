@@ -20,14 +20,8 @@
 
 #include "h2/meta/TypeList.hpp"
 
-
-namespace h2
+namespace hydrogen
 {
-
-/**
- * Define the underlying compute device type.
- */
-using Device = El::Device;  // Leverage Hydrogen's device typing.
 
 /** Support printing Device. */
 inline std::ostream& operator<<(std::ostream& os, const Device& dev)
@@ -48,6 +42,15 @@ inline std::ostream& operator<<(std::ostream& os, const Device& dev)
   }
   return os;
 }
+}
+
+namespace h2
+{
+
+/**
+ * Define the underlying compute device type.
+ */
+using Device = El::Device;  // Leverage Hydrogen's device typing.
 
 // Support representing devices as generic types.
 using CPUDev_t = std::integral_constant<h2::Device, h2::Device::CPU>;
