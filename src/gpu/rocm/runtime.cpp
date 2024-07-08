@@ -358,12 +358,11 @@ void h2::gpu::init_runtime()
         set_reasonable_default_gpu();
         initialized_ = true;
 
-        // TODO: Currently broken, but this check should handle this in
-        // the future.
-        //hipDeviceProp_t props;
-        //H2_CHECK_HIP(hipGetDevicePropertieee(&props, current_gpu()));
-        //is_integrated_ = props.integrated;
-        is_integrated_ = false;
+        hipDeviceProp_t props;
+        H2_CHECK_HIP(hipGetDeviceProperties(&props, current_gpu()));
+        is_integrated_ = props.integrated;
+        H2_GPU_TRACE(
+          is_integrated_ ? "GPU is integrated" : "GPU is NOT integrated");
     }
     else
     {
