@@ -22,11 +22,13 @@ include:
 
 rocm-6-0-2-corona:
   variables:
+    COMPILER_FAMILY: amdclang
     MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/6.0.2 python"
   extends: [.build-and-test-on-corona, .build-and-test]
 
 rocm-6-0-2-distconv-corona:
   variables:
+    COMPILER_FAMILY: amdclang
     MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/6.0.2 python"
     WITH_DISTCONV: "1"
   extends: [.build-and-test-on-corona, .build-and-test]
@@ -35,6 +37,7 @@ rocm-6-0-2-distconv-corona:
 
 rocm-6-0-2-coverage-corona:
   variables:
+    COMPILER_FAMILY: amdclang
     MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/6.0.2 python"
     WITH_COVERAGE: "1"
   extends: [.build-and-test-on-corona, .build-and-test-coverage]

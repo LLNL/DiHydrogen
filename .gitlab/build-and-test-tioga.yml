@@ -13,11 +13,13 @@ include:
 
 rocm-6-1-2-tioga:
   variables:
+    COMPILER_FAMILY: amdclang
     MODULES: "PrgEnv-cray rocm/6.1.2 cray-mpich cray-libsci"
   extends: .build-and-test-on-tioga
 
 rocm-6-1-2-distconv-tioga:
   variables:
+    COMPILER_FAMILY: amdclang
     MODULES: "PrgEnv-cray rocm/6.1.2 cray-mpich cray-libsci"
     WITH_DISTCONV: "1"
   extends: .build-and-test-on-tioga
