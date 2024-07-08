@@ -216,7 +216,8 @@ TEST_CASE("from_string works for floating point values", "[utilities][strings]")
   REQUIRE(std::isnan(from_string<double>("nan")));
   REQUIRE_THROWS(from_string<double>(""));
   REQUIRE_THROWS(from_string<double>("foo"));
-  if constexpr (sizeof(double) != sizeof(long double)) {
+  if constexpr (std::numeric_limits<long double>::max()
+                > std::numeric_limits<double>::max()) {
     REQUIRE_THROWS(from_string<double>(
         std::to_string(std::numeric_limits<long double>::max())));
   }
