@@ -81,6 +81,9 @@ inline std::string str_tolower(std::string str)
 template <typename T>
 inline T from_string(const std::string& str);
 
+template <>
+inline unsigned int from_string<unsigned int>(const std::string&);
+
 inline std::string from_string(std::string&& str)
 {
   return std::move(str);
