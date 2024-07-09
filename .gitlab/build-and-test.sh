@@ -43,6 +43,9 @@ then
     module load ${modules}
 fi
 
+# Finish setting up the environment
+source ${project_dir}/.gitlab/setup_env.sh
+
 # Make sure our working directory is something sane.
 cd ${project_dir}
 
@@ -54,7 +57,8 @@ if [[ -z "${job_unique_id}" ]]; then
         job_unique_id=manual_job_$(date +%s)
     done
 fi
-build_dir="${project_dir}/build-${job_unique_id}"
+build_dir=${BUILD_DIR:-"${project_dir}/build-${job_unique_id}"}
+mkdir -p ${build_dir}
 
 # Dependencies
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -64,27 +68,59 @@ echo "~~~~~          Host: ${hostname}"
 echo "~~~~~   Project dir: ${project_dir}"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-# Get the superbuild because why not.
-lbann_sb_top_dir=${build_dir}/sb
-lbann_sb_dir=${lbann_sb_top_dir}/scripts/superbuild
-mkdir -p ${lbann_sb_top_dir}
-cd ${lbann_sb_top_dir}
-
-# Sparse checkout of the SuperBuild
-git init
-git remote add origin https://github.com/llnl/lbann
-git fetch --depth=1 origin develop
-git config core.sparseCheckout true
-echo "scripts/superbuild" >> .git/info/sparse-checkout
-git pull --ff-only origin develop
-
 prefix="${project_dir}/install-deps-${CI_JOB_NAME_SLUG:-${job_unique_id}}"
 
-# Setup the build environment
-source ${project_dir}/.gitlab/setup_env.sh
+# Just for good measure...
+export CMAKE_PREFIX_PATH=${prefix}/aluminum:${prefix}/catch2:${prefix}/hwloc:${prefix}/hydrogen:${prefix}/nccl:${prefix}/spdlog:${CMAKE_PREFIX_PATH}
 
-# Superbuild the dependencies (uses "${cluster}", "${prefix}", and "${lbann_sb_dir}")
+# Allow a user to force this
+rebuild_deps=${rebuild_deps:-""}
+
+# Rebuild if the prefix doesn't exist.
 if [[ ! -d "${prefix}" ]]
+then
+    rebuild_deps=1
+fi
+
+# Rebuild if latest hashes don't match
+if [[ -z "${rebuild_deps}" ]]
+then
+    function fetch-sha {
+        # $1 is the LLNL package name (e.g., 'aluminum')
+        # $2 is the branch name (e.g., 'master')
+        curl -s -H "Accept: application/vnd.github.VERSION.sha" \
+             "https://api.github.com/repos/llnl/$1/commits/$2"
+    }
+
+    al_head=$(fetch-sha aluminum master)
+    al_prebuilt="<not found>"
+    if [[ -f "${prefix}/al-prebuilt-hash.txt" ]]
+    then
+        al_prebuilt=$(cat ${prefix}/al-prebuilt-hash.txt)
+    fi
+
+    h_head=$(fetch-sha elemental hydrogen)
+    h_prebuilt="<not found>"
+    if [[ -f "${prefix}/h-prebuilt-hash.txt" ]]
+    then
+        h_prebuilt=$(cat ${prefix}/h-prebuilt-hash.txt)
+    fi
+
+    if [[ "${al_head}" != "${al_prebuilt}" ]]
+    then
+        echo "Prebuilt Aluminum hash does not match latest head; rebuilding."
+        echo "  (prebuilt: ${al_prebuilt}; head: ${al_head})"
+        rebuild_deps=1
+    fi
+    if [[ "${h_head}" != "${h_prebuilt}" ]]
+    then
+        echo "Prebuilt Hydrogen hash does not match latest head; rebuilding."
+        echo "  (prebuilt: ${h_prebuilt}; head: ${h_head})"
+        rebuild_deps=1
+    fi
+fi
+
+if [[ -n "${rebuild_deps}" ]]
 then
 
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -93,9 +129,28 @@ then
     echo "~~~~~   Install dir: ${prefix}"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
+    # Get the superbuild because why not.
+    lbann_sb_top_dir=${build_dir}/sb
+    lbann_sb_dir=${lbann_sb_top_dir}/scripts/superbuild
+    mkdir -p ${lbann_sb_top_dir}
+    cd ${lbann_sb_top_dir}
+
+    # Sparse checkout of the SuperBuild
+    git init
+    git remote add origin https://github.com/llnl/lbann
+    git fetch --depth=1 origin develop
+    git config core.sparseCheckout true
+    echo "scripts/superbuild" >> .git/info/sparse-checkout
+    git pull --ff-only origin develop
+
     cd ${build_dir}
+    # Uses "${cluster}", "${prefix}", and "${lbann_sb_dir}"
     source ${project_dir}/.gitlab/configure_deps.sh
     cmake --build build-deps
+
+    # Stamp these commits
+    cd ${build_dir}/build-deps/aluminum/src && git rev-parse HEAD > ${prefix}/al-prebuilt-hash.txt
+    cd ${build_dir}/build-deps/hydrogen/src && git rev-parse HEAD > ${prefix}/h-prebuilt-hash.txt
 
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Dependencies Built"
@@ -136,6 +191,7 @@ echo "~~~~~ Testing DiHydrogen"
 echo "~~~~~ $(date)"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
+failed_tests=0
 source ${project_dir}/.gitlab/run_catch_tests.sh
 
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -158,9 +214,9 @@ then
     python_path=$(ls --color=no -1 -d ${gcovr_prefix}/lib/python*/site-packages)
     echo "python_path=${python_path}"
     PYTHONPATH=${python_path}:${PYTHONPATH} cmake --build build-h2 -t coverage
-    if [[ -e SeqCatchTests-gcovr.xml ]]
+    if [[ -e ${build_dir}/build-h2/SeqCatchTests-gcovr.xml ]]
     then
-        cp SeqCatchTests-gcovr.xml ${project_dir}
+        cp ${build_dir}/build-h2/SeqCatchTests-gcovr.xml ${project_dir}
     fi
 
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
@@ -173,3 +229,5 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo "~~~~~ Build and test completed"
 echo "~~~~~ $(date)"
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+
+[[ "${failed_tests}" -eq 0 ]] && exit 0 || exit 1

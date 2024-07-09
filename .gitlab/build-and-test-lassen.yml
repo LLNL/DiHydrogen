@@ -11,13 +11,25 @@ stages:
 include:
   local: "/.gitlab/build-and-test-common.yml"
 
+# Annoyingly, this isn't working due to libcudadevrt+CMake issues.
+# Even CMake 3.29. Which, at risk of being redundant, is deeply,
+# deeply annoying.
+
+# gcc-11-2-1-cuda-12-2-2-lassen:
+#   variables:
+#     COMPILER_FAMILY: gnu
+#     MODULES: "gcc/11.2.1 spectrum-mpi/rolling-release cuda/12.2.2 cmake/3.29.2 python/3.8.2"
+#   extends: .build-and-test-on-lassen
+
 clang-16-0-6-gcc-11-2-1-cuda-12-2-2-lassen:
   variables:
+    COMPILER_FAMILY: clang
     MODULES: "clang/16.0.6-gcc-11.2.1 spectrum-mpi/rolling-release cuda/12.2.2 cmake/3.29.2 python/3.8.2"
   extends: .build-and-test-on-lassen
 
 clang-16-0-6-gcc-11-2-1-cuda-12-2-2-distconv-lassen:
   variables:
+    COMPILER_FAMILY: clang
     MODULES: "clang/16.0.6-gcc-11.2.1 spectrum-mpi/rolling-release cuda/12.2.2 cmake/3.29.2 python/3.8.2"
     WITH_DISTCONV: "1"
   extends: .build-and-test-on-lassen
