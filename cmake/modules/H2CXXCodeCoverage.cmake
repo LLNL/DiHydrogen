@@ -130,7 +130,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang")
     # NOTE: We need a single exe to pass to lcov. So we make one.
     file(WRITE "${CMAKE_BINARY_DIR}/coverage/tmp/llvm-gcov.sh"
       "#! /bin/bash
-${LLVM_COV_PROGRAM} gcov $@")
+${LLVM_COV_PROGRAM} gcov -m $@")
     file(COPY "${CMAKE_BINARY_DIR}/coverage/tmp/llvm-gcov.sh"
       DESTINATION "${CMAKE_BINARY_DIR}"
       FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
@@ -293,7 +293,7 @@ if (H2_HAVE_GCOV_COVERAGE_TOOLS)
       # Generate the HTML reports
       add_custom_target(
         ${_tltgt}-gen-coverage-html
-        COMMAND ${GENHTML_PROGRAM} ${_INFO_OUT_DIR}/${_tltgt}.total.info.final --output-directory ${_HTML_OUT_DIR}
+        COMMAND ${GENHTML_PROGRAM} ${_INFO_OUT_DIR}/${_tltgt}.total.info.final --demangle-cpp --output-directory ${_HTML_OUT_DIR}
         COMMENT "Generating HTML for ${_tltgt} coverage report."
         BYPRODUCTS ${_HTML_OUT_DIR}/index.html
         VERBATIM)
