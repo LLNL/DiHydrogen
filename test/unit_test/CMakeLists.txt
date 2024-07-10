@@ -93,6 +93,11 @@ add_test(
 if (H2_CODE_COVERAGE)
   add_code_coverage(SeqCatchTests coverage)
   target_link_libraries(SeqCatchTests PRIVATE h2_coverage_flags)
+
+  if (TARGET GPUCatchTests)
+    add_code_coverage(GPUCatchTests coverage)
+    target_link_libraries(GPUCatchTests PRIVATE h2_coverage_flags)
+  endif ()
 endif ()
 
 if (H2_EXTRA_CXX_FLAGS)

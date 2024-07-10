@@ -9,10 +9,10 @@
 #
 # This will produce a macro with the following signature:
 #
-#   macro(add_code_coverage EXE_TARGET MASTER_TARGET)
+#   macro(add_code_coverage EXE_TARGET TOPLEVEL_TARGET)
 #
 #  Where EXE_TARGET is the target to which to add coverage and
-#  MASTER_TARGET is a "dummy target" that depends on all of the
+#  TOPLEVEL_TARGET is a "dummy target" that depends on all of the
 #  individual coverage targets. This will make it possible to run,
 #  e.g., "ninja coverage" to generate all of the coverage targets.
 #
@@ -195,68 +195,150 @@ if (NOT H2_HAVE_LLVM_COVERAGE_TOOLS AND NOT H2_HAVE_GCOV_COVERAGE_TOOLS)
     "  LLVM-COV_ROOT, LLVM-PROFDATA_ROOT")
 endif ()
 
+define_property(GLOBAL PROPERTY COVERAGE_TARGETS
+  BRIEF_DOCS
+  "A list of all targets with coverage added to them")
+
+define_property(TARGET PROPERTY COVERAGE_TARGETS
+  BRIEF_DOCS
+  "A list of the toplevel (dummy) coverage targets for this target")
+
 if (H2_HAVE_GCOV_COVERAGE_TOOLS)
   set(COVERAGE_FLAGS ${GCOV_COVERAGE_FLAGS})
 
-  macro(add_code_coverage EXE_TARGET MASTER_TARGET)
-    set(_INFO_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${EXE_TARGET}/info")
-    set(_HTML_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${EXE_TARGET}/html")
-
-    add_custom_target(
-      ${EXE_TARGET}-gen-lcov
-      # Reset lcov state
-      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --directory ${CMAKE_BINARY_DIR} --zerocounters
-      # Fix files with no called functions
-      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --directory ${CMAKE_BINARY_DIR} --capture --initial --output-file ${_INFO_OUT_DIR}/${EXE_TARGET}.base
-      # Run exe and dump coverage data
-      COMMAND $<TARGET_FILE:${EXE_TARGET}> &> /dev/null
-      # Gather coverage data
-      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --capture --directory ${CMAKE_BINARY_DIR} --output-file ${_INFO_OUT_DIR}/${EXE_TARGET}.info
-      # Add everything together
-      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -a ${_INFO_OUT_DIR}/${EXE_TARGET}.base -a ${_INFO_OUT_DIR}/${EXE_TARGET}.info --output-file ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.tmp
-      # Remove compiler stuff
-      # COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -r ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.tmp "*v1/*" "${COMPILER_PREFIX}/*" "${EXTRA_COMPILER_PREFIX}/*" -o ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.final
-      # Extract this project stuff
-      COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -e ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.tmp "${CMAKE_SOURCE_DIR}/*" "${CMAKE_BINARY_DIR}/*" -o ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.final
-      BYPRODUCTS ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.final
-      DEPENDS ${EXE_TARGET}
-      COMMENT "Generating coverage data for ${EXE_TARGET}."
-      VERBATIM)
-
-    # There's a data race if these don't all depend on one another.
-    foreach (tgt IN LISTS ALL_GEN_LCOV_TGTS)
-      add_dependencies(${EXE_TARGET}-gen-lcov ${tgt})
-    endforeach ()
-    list(APPEND ALL_GEN_LCOV_TGTS ${EXE_TARGET}-gen-lcov)
-
-    add_custom_target(
-      ${EXE_TARGET}-gen-coverage-html
-      COMMAND ${GENHTML_PROGRAM} ${_INFO_OUT_DIR}/${EXE_TARGET}.total.info.final --output-directory ${_HTML_OUT_DIR}
-      COMMENT "Generating HTML for ${EXE_TARGET} coverage report."
-      BYPRODUCTS ${_HTML_OUT_DIR}/index.html
-      VERBATIM)
-    add_dependencies(${EXE_TARGET}-gen-coverage-html ${EXE_TARGET}-gen-lcov)
-
-    add_custom_target(
-      ${EXE_TARGET}-coverage
-      COMMAND ${CMAKE_COMMAND} -E echo "Open ${_HTML_OUT_DIR}/index.html in a web browser to view report."
-      COMMENT "Generated coverage report for ${EXE_TARGET}.")
-    add_dependencies(${EXE_TARGET}-coverage ${EXE_TARGET}-gen-coverage-html)
-
-    add_dependencies(${MASTER_TARGET} ${EXE_TARGET}-coverage)
-
-    if (GCOVR_PROGRAM)
-      add_custom_target(
-        ${EXE_TARGET}-gcovr
-        COMMAND ${GCOVR_PROGRAM} --cobertura-pretty --exclude-unreachable-branches --print-summary -o ${CMAKE_BINARY_DIR}/${EXE_TARGET}-gcovr.xml --gcov-executable "${GCOV_PROGRAM} -b -c -f -r -s ${CMAKE_SOURCE_DIR}"
-        COMMENT "Generating Cobertura report for ${EXE_TARGET} with gcovr."
-        BYPRODUCTS ${CMAKE_BINARY_DIR}/${EXE_TARGET}-gcovr.xml
-        VERBATIM)
-      # This comes *after* gen-coverage-html
-      add_dependencies(${EXE_TARGET}-gcovr ${EXE_TARGET}-gen-coverage-html)
-      # But is still driven by the coverage target
-      add_dependencies(${EXE_TARGET}-coverage ${EXE_TARGET}-gcovr)
+  macro(add_code_coverage EXE_TARGET TOPLEVEL_TARGET)
+    # Add this target to the global list
+    get_property(_all_cov_tgts GLOBAL PROPERTY COVERAGE_TARGETS)
+    if (_all_cov_tgts)
+      list(APPEND _all_cov_tgts "${EXE_TARGET}")
+    else ()
+      set(_all_cov_tgts "${EXE_TARGET}")
     endif ()
+    set_property(GLOBAL PROPERTY COVERAGE_TARGETS "${_all_cov_tgts}")
+
+    get_target_property(_tgt_coverage_tgts ${EXE_TARGET} COVERAGE_TARGETS)
+    if (_tgt_coverage_tgts)
+      list(APPEND _tgt_coverage_tgts "${TOPLEVEL_TARGET}")
+    else ()
+      set(_tgt_coverage_tgts "${TOPLEVEL_TARGET}")
+    endif ()
+    set_target_properties(${EXE_TARGET}
+      PROPERTIES COVERAGE_TARGETS "${_tgt_coverage_tgts}")
+  endmacro ()
+
+  macro(finalize_code_coverage)
+
+    # Find all targets
+    get_property(_all_tgts GLOBAL PROPERTY COVERAGE_TARGETS)
+    list(REMOVE_DUPLICATES _all_tgts)
+
+    # Find all toplevel targets
+    set(_all_toplevel_tgts)
+    foreach (_tgt IN LISTS _all_tgts)
+      get_target_property(_tgt_toplevel_tgts ${_tgt} COVERAGE_TARGETS)
+      if (_tgt_toplevel_tgts)
+        foreach (_tltgt IN LISTS _tgt_toplevel_tgts)
+          list(APPEND _cov_tgts_${_tltgt} "${_tgt}")
+          list(APPEND _all_toplevel_tgts "${_tltgt}")
+        endforeach ()
+      endif ()
+    endforeach ()
+    list(REMOVE_DUPLICATES _all_toplevel_tgts)
+
+    # Build out each toplevel target
+    foreach (_tltgt IN LISTS _all_toplevel_tgts)
+      set(_INFO_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${_tltgt}/info")
+      set(_HTML_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${_tltgt}/html")
+
+      # Write a quick script to run all the executables. Note that
+      # this only works for non-MPI executables.
+      #
+      # FIXME (trb 2024/07/10): This needs to work for MPI executables
+      #                         as well.
+      set(_run_all_tgts_src "#!/bin/bash\n")
+      foreach (_tgt IN LISTS _cov_tgts_${_tltgt})
+        string(APPEND _run_all_tgts_src "$<TARGET_FILE:${_tgt}> &> /dev/null\n")
+      endforeach ()
+      file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/coverage_${_tltgt}_run_all_tgts.sh"
+        CONTENT "${_run_all_tgts_src}"
+        FILE_PERMISSIONS
+        OWNER_READ OWNER_WRITE OWNER_EXECUTE
+        GROUP_READ GROUP_EXECUTE
+        WORLD_READ WORLD_EXECUTE
+      )
+
+      # Build a target
+      add_custom_target(
+        ${_tltgt}-gen-lcov
+        # Reset lcov state
+        COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --directory ${CMAKE_BINARY_DIR} --zerocounters
+        # Fix files with no called functions
+        COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --directory ${CMAKE_BINARY_DIR} --capture --initial --output-file ${_INFO_OUT_DIR}/${_tltgt}.base
+        # Run exe and dump coverage data
+        COMMAND "${CMAKE_BINARY_DIR}/coverage_${_tltgt}_run_all_tgts.sh"
+        # Gather coverage data
+        COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --capture --directory ${CMAKE_BINARY_DIR} --output-file ${_INFO_OUT_DIR}/${_tltgt}.info
+        # Add everything together
+        COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -a ${_INFO_OUT_DIR}/${_tltgt}.base -a ${_INFO_OUT_DIR}/${_tltgt}.info --output-file ${_INFO_OUT_DIR}/${_tltgt}.total.info.tmp
+        # Remove compiler stuff
+        # COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -r ${_INFO_OUT_DIR}/${_tltgt}.total.info.tmp "*v1/*" "${COMPILER_PREFIX}/*" "${EXTRA_COMPILER_PREFIX}/*" -o ${_INFO_OUT_DIR}/${_tltgt}.total.info.final
+        # Extract this project stuff
+        COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -e ${_INFO_OUT_DIR}/${_tltgt}.total.info.tmp "${CMAKE_SOURCE_DIR}/*" "${CMAKE_BINARY_DIR}/*" -o ${_INFO_OUT_DIR}/${_tltgt}.total.info.almost.final
+        # Remove CI stuff
+        COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -r ${_INFO_OUT_DIR}/${_tltgt}.total.info.almost.final "${CMAKE_SOURCE_DIR}/install-deps*" "${CMAKE_SOURCE_DIR}/test/*" -o ${_INFO_OUT_DIR}/${_tltgt}.total.info.final
+        BYPRODUCTS ${_INFO_OUT_DIR}/${_tltgt}.total.info.final
+        COMMENT "Generating coverage data for \"${_tltgt}\"."
+        VERBATIM)
+
+      # Generate the HTML reports
+      add_custom_target(
+        ${_tltgt}-gen-coverage-html
+        COMMAND ${GENHTML_PROGRAM} ${_INFO_OUT_DIR}/${_tltgt}.total.info.final --output-directory ${_HTML_OUT_DIR}
+        COMMENT "Generating HTML for ${_tltgt} coverage report."
+        BYPRODUCTS ${_HTML_OUT_DIR}/index.html
+        VERBATIM)
+
+      # Dummy target to just print out a nice message to the build log
+      add_custom_target(
+        ${_tltgt}-coverage
+        COMMAND ${CMAKE_COMMAND} -E echo "Open ${_HTML_OUT_DIR}/index.html in a web browser to view report."
+        COMMENT "Generated coverage report for target \"${_tltgt}\".")
+
+      # Setup the dependency graph appropriately
+
+      # The lcov target depends on each exe target being built. Make that explicit.
+      foreach (tgt IN LISTS _cov_tgts_${_tltgt})
+        add_dependencies(${_tltgt}-gen-lcov ${tgt})
+      endforeach ()
+
+      # Build each lcov target sequentially
+      foreach (tgt IN LISTS _all_gen_lcov_tgts)
+        add_dependencies(${_tltgt}-gen-lcov ${tgt})
+      endforeach ()
+      list(APPEND _all_gen_lcov_tgts ${_tltgt}-gen-lcov)
+
+      # The HTML depends on the lcov
+      add_dependencies(${_tltgt}-gen-coverage-html ${_tltgt}-gen-lcov)
+
+      # The dummy message target depends on the HTML
+      add_dependencies(${_tltgt}-coverage ${_tltgt}-gen-coverage-html)
+
+      # The toplevel target depends on the dummy message target
+      add_dependencies(${_tltgt} ${_tltgt}-coverage)
+
+      if (GCOVR_PROGRAM)
+        add_custom_target(
+          ${_tltgt}-gcovr
+          COMMAND ${GCOVR_PROGRAM} --cobertura-pretty --exclude-unreachable-branches --print-summary -o ${CMAKE_BINARY_DIR}/${_tltgt}-gcovr.xml --gcov-executable "${GCOV_PROGRAM} -b -c -f -r -s ${CMAKE_SOURCE_DIR}"
+          COMMENT "Generating Cobertura report for \"${_tltgt}\" with gcovr."
+          BYPRODUCTS ${CMAKE_BINARY_DIR}/${_tltgt}-gcovr.xml
+          VERBATIM)
+        # This comes *after* gen-coverage-html
+        add_dependencies(${_tltgt}-gcovr ${_tltgt}-gen-coverage-html)
+        # But is still driven by the coverage target
+        add_dependencies(${_tltgt}-coverage ${_tltgt}-gcovr)
+      endif ()
+    endforeach ()
   endmacro()
 
   # g++ --coverage -ftest-coverage -fprofile-arcs file.cpp
@@ -266,7 +348,7 @@ if (H2_HAVE_GCOV_COVERAGE_TOOLS)
 
 elseif (H2_HAVE_LLVM_COVERAGE_TOOLS)
 
-  macro(add_code_coverage EXE_TARGET MASTER_TARGET)
+  macro(add_code_coverage EXE_TARGET TOPLEVEL_TARGET)
     set(_PROF_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${EXE_TARGET}/prof")
     set(_HTML_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${EXE_TARGET}/html")
 
@@ -293,8 +375,12 @@ elseif (H2_HAVE_LLVM_COVERAGE_TOOLS)
       DEPENDS ${EXE_TARGET}-gen-coverage-html
       COMMENT "Generated coverage report for ${EXE_TARGET}.")
 
-    add_dependencies(${MASTER_TARGET} ${EXE_TARGET}-coverage)
+    add_dependencies(${TOPLEVEL_TARGET} ${EXE_TARGET}-coverage)
   endmacro()
+
+  macro(finalize_code_coverage)
+    # No-op
+  endmacro ()
 
   # clang++ -fprofile-instr-generate -fcoverage-mapping -O0 test.cpp
   # LLVM_PROFILE_FILE=test.profraw ./a.out
