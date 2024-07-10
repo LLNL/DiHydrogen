@@ -468,6 +468,10 @@ if (H2_ENABLE_DISTCONV_LEGACY)
   add_subdirectory(legacy)
 endif ()
 
+if (H2_ENABLE_CODE_COVERAGE)
+  finalize_code_coverage()
+endif ()
+
 # Install target stuff
 include (CMakePackageConfigHelpers)
 

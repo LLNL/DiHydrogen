@@ -207,16 +207,14 @@ then
     echo "~~~~~ $(date)"
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 
-    cmake --build build-h2 -t coverage
-
     # This is beyond obnoxious
     gcovr_prefix=$(dirname $(dirname $(command -v gcovr)))
     python_path=$(ls --color=no -1 -d ${gcovr_prefix}/lib/python*/site-packages)
     echo "python_path=${python_path}"
     PYTHONPATH=${python_path}:${PYTHONPATH} cmake --build build-h2 -t coverage
-    if [[ -e ${build_dir}/build-h2/SeqCatchTests-gcovr.xml ]]
+    if [[ -e ${build_dir}/build-h2/coverage-gcovr.xml ]]
     then
-        cp ${build_dir}/build-h2/SeqCatchTests-gcovr.xml ${project_dir}
+        cp ${build_dir}/build-h2/coverage-gcovr.xml ${project_dir}
     fi
 
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"

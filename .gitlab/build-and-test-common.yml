@@ -44,5 +44,5 @@
       junit: "${CI_PROJECT_DIR}/*junit.*xml"
       coverage_report:
         coverage_format: cobertura
-        path: "${CI_PROJECT_DIR}/SeqCatchTests-gcovr.xml"
+        path: "${CI_PROJECT_DIR}/coverage-gcovr.xml"
   extends: .build-and-test-base
