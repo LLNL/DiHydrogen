@@ -17,6 +17,10 @@
 #define TENSOR_FUNC_DECL
 #endif
 
+#if defined(__HIP__) && !defined(NDEBUG)
+#include <hip/hip_runtime.h>
+#endif
+
 namespace distconv {
 namespace tensor {
 
