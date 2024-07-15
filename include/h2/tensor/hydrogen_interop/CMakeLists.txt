@@ -7,7 +7,7 @@
 
 # Append this directory to the current install prefix
 set(H2_CURRENT_INSTALL_PREFIX
-  "${H2_CURRENT_INSTALL_PREFIX}/tensor/hydrogen_interop")
+  "${H2_CURRENT_INSTALL_PREFIX}/hydrogen_interop")
 
 # Setup this directory's files
 h2_add_sources_to_target_and_install(
