@@ -55,7 +55,7 @@ void copy_buffer(T* dst,
   else if (src_dev == Device::GPU && dst_dev == Device::GPU)
   {
     auto stream = create_multi_sync(dst_stream, src_stream);
-    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream<Device::GPU>());
+    gpu::mem_copy<T>(dst, src, count, stream.get_stream<Device::GPU>());
   }
   else if (src_dev == Device::CPU && dst_dev == Device::GPU)
   {
