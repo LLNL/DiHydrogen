@@ -881,9 +881,17 @@ public:
    *
    * This enables a MultiSync to be passed in place of the main stream.
    */
-  operator const ComputeStream&() const H2_NOEXCEPT
+  operator const ComputeStream&() const H2_NOEXCEPT { return main_stream; }
+
+  /** Return the main stream associated with this MultiSync. */
+  ComputeStream get_main_stream() const H2_NOEXCEPT { return main_stream; }
+
+  /** Return the underlying raw stream associated with the main stream. */
+  template <Device ThisDev>
+  typename internal::RawComputeStream<ThisDev>::type
+  get_stream() const H2_NOEXCEPT
   {
-    return main_stream;
+    return main_stream.get_stream<ThisDev>();
   }
 
 private:
