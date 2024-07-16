@@ -245,7 +245,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory writing works",
   DataType* buf = mem.data();
   for (std::size_t i = 0; i < product<std::size_t>(mem.shape()); ++i)
   {
-    write_ele<Dev>(buf, i, static_cast<DataType>(i));
+    write_ele<Dev>(buf, i, static_cast<DataType>(i), mem.get_stream());
   }
 
   DataIndexType idx = 0;
@@ -255,8 +255,9 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory writing works",
     {
       for (DimType i = 0; i < mem.shape(0); ++i)
       {
-        REQUIRE(read_ele<Dev>(mem.get({i, j, k})) == idx);
-        REQUIRE(read_ele<Dev>(mem.const_get({i, j, k})) == idx);
+        REQUIRE(read_ele<Dev>(mem.get({i, j, k}), mem.get_stream()) == idx);
+        REQUIRE(read_ele<Dev>(mem.const_get({i, j, k}), mem.get_stream())
+                == idx);
         ++idx;
       }
     }
@@ -296,7 +297,8 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
       MemType(Dev, ShapeTuple{3, 7, 3}, false, ComputeStream{Dev});
   for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
   {
-    write_ele<Dev>(base_mem.data(), i, static_cast<DataType>(i));
+    write_ele<Dev>(
+      base_mem.data(), i, static_cast<DataType>(i), base_mem.get_stream());
   }
 
   SECTION("Viewing a subtensor with all three dimensions nontrivial")
@@ -314,10 +316,13 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
         DataIndexType idx = 0;
         for (DimType i = 0; i < mem.shape(0); ++i)
         {
-          REQUIRE(read_ele<Dev>(mem.get({i, j, k}))
+          REQUIRE(read_ele<Dev>(mem.get({i, j, k}), mem.get_stream())
                   == base_mem.get_index({i + 1, j, k + 1}));
           // Large enough to not be a real index.
-          write_ele<Dev>(mem.get({i, j, k}), 0, static_cast<DataType>(1337));
+          write_ele<Dev>(mem.get({i, j, k}),
+                         0,
+                         static_cast<DataType>(1337),
+                         mem.get_stream());
           ++idx;
         }
       }
@@ -333,11 +338,13 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
         {
           if (i >= 1 && i < 3 && k >= 1 && k < 3)
           {
-            REQUIRE(read_ele<Dev>(base_mem.get({i, j, k})) == 1337);
+            REQUIRE(read_ele<Dev>(
+                      base_mem.get({i, j, k}), base_mem.get_stream()) == 1337);
           }
           else
           {
-            REQUIRE(read_ele<Dev>(base_mem.get({i, j, k})) == idx);
+            REQUIRE(read_ele<Dev>(
+                      base_mem.get({i, j, k}), base_mem.get_stream()) == idx);
           }
           ++idx;
         }
@@ -356,7 +363,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
     {
       for (DimType j = 0; j < mem.shape(0); ++j)
       {
-        REQUIRE(read_ele<Dev>(mem.get({j, k}))
+        REQUIRE(read_ele<Dev>(mem.get({j, k}), mem.get_stream())
                 == base_mem.get_index({1, j, k + 1}));
       }
     }
@@ -373,7 +380,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
     {
       for (DimType i = 0; i < mem.shape(0); ++i)
       {
-        REQUIRE(read_ele<Dev>(mem.get({i, 0, k}))
+        REQUIRE(read_ele<Dev>(mem.get({i, 0, k}), mem.get_stream())
                               == base_mem.get_index({i, 1, k}));
       }
     }
@@ -386,7 +393,8 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
     REQUIRE(mem.size() == base_mem.size());
     REQUIRE(mem.data() == (base_mem.data() + base_mem.get_index({1, 0, 0})));
     REQUIRE_FALSE(mem.is_lazy());
-    REQUIRE(read_ele<Dev>(mem.get({0})) == base_mem.get_index({1, 0, 0}));
+    REQUIRE(read_ele<Dev>(mem.get({0}), mem.get_stream())
+            == base_mem.get_index({1, 0, 0}));
   }
   SECTION("Views with totally empty coordinates work")
   {
@@ -638,7 +646,7 @@ TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
     MemType mem(Dev, ShapeTuple{3, 7}, false, ComputeStream{Dev});
     for (std::size_t i = 0; i < product<std::size_t>(mem.shape()); ++i)
     {
-      write_ele<Dev>(mem.data(), i, static_cast<DataType>(i));
+      write_ele<Dev>(mem.data(), i, static_cast<DataType>(i), mem.get_stream());
     }
     MemType clone = mem.clone();
     REQUIRE(clone.data() != nullptr);
@@ -650,7 +658,7 @@ TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
     REQUIRE(clone.is_lazy() == mem.is_lazy());
     for (std::size_t i = 0; i < product<std::size_t>(clone.shape()); ++i)
     {
-      REQUIRE(read_ele<Dev>(clone.data(), i) == i);
+      REQUIRE(read_ele<Dev>(clone.data(), i, clone.get_stream()) == i);
     }
   }
 
@@ -689,10 +697,12 @@ TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
     MemType base_mem(Dev, ShapeTuple{3, 7, 3}, false, ComputeStream{Dev});
     for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
     {
-      write_ele<Dev>(base_mem.data(), i, static_cast<DataType>(i));
+      write_ele<Dev>(
+        base_mem.data(), i, static_cast<DataType>(i), base_mem.get_stream());
     }
     MemType mem(base_mem, {ALL, ALL, ALL});
     MemType clone = mem.clone();
+    clone.get_stream().wait_for_this();
     REQUIRE(clone.data() != nullptr);
     REQUIRE(clone.data() != mem.data());
     REQUIRE(clone.size() == mem.size());
@@ -702,7 +712,7 @@ TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
     REQUIRE(clone.is_lazy() == mem.is_lazy());
     for (std::size_t i = 0; i < product<std::size_t>(clone.shape()); ++i)
     {
-      REQUIRE(read_ele<Dev>(clone.data(), i) == i);
+      REQUIRE(read_ele<Dev>(clone.data(), i, clone.get_stream()) == i);
     }
   }
 
@@ -712,7 +722,8 @@ TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
     MemType base_mem(Dev, ShapeTuple{3, 7, 3}, false, ComputeStream{Dev});
     for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
     {
-      write_ele<Dev>(base_mem.data(), i, static_cast<DataType>(i));
+      write_ele<Dev>(
+        base_mem.data(), i, static_cast<DataType>(i), base_mem.get_stream());
     }
     MemType mem(base_mem, {ALL, ALL, IRng(1)});
     MemType clone = mem.clone();
@@ -726,7 +737,7 @@ TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
     {
       for (DimType i = 0; i < clone.shape(0); ++i)
       {
-        REQUIRE(read_ele<Dev>(clone.get({i, j}))
+        REQUIRE(read_ele<Dev>(clone.get({i, j}), clone.get_stream())
                 == base_mem.get_index({i, j, 1}));
       }
     }
@@ -737,7 +748,8 @@ TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
     MemType base_mem(Dev, ShapeTuple{3, 7, 3}, false, ComputeStream{Dev});
     for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
     {
-      write_ele<Dev>(base_mem.data(), i, static_cast<DataType>(i));
+      write_ele<Dev>(
+        base_mem.data(), i, static_cast<DataType>(i), base_mem.get_stream());
     }
     MemType mem(base_mem, {IRng(1), ALL, ALL});
     MemType clone = mem.clone();
@@ -751,7 +763,7 @@ TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
     {
       for (DimType j = 0; j < clone.shape(0); ++j)
       {
-        REQUIRE(read_ele<Dev>(clone.get({j, k}))
+        REQUIRE(read_ele<Dev>(clone.get({j, k}), clone.get_stream())
                 == base_mem.get_index({1, j, k}));
       }
     }
@@ -763,7 +775,7 @@ TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
     DeviceBuf<DataType, Dev> buf(buf_size);
     for (std::size_t i = 0; i < buf_size; ++i)
     {
-      write_ele<Dev>(buf.buf, i, static_cast<DataType>(i));
+      write_ele<Dev>(buf.buf, i, static_cast<DataType>(i), ComputeStream{Dev});
     }
 
     MemType mem(

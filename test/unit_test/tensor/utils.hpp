@@ -45,15 +45,22 @@ namespace internal
 template <typename T, h2::Device Dev>
 struct Accessor
 {
-  static T read_ele(const T* buf, std::size_t i);
-  static void write_ele(T* buf, std::size_t i, const T& val);
+  static T read_ele(
+    const T* buf, std::size_t i, const h2::ComputeStream& stream);
+  static void write_ele(
+    T* buf, std::size_t i, const T& val, const h2::ComputeStream& stream);
 };
 
 template <typename T>
 struct Accessor<T, h2::Device::CPU>
 {
-  static T read_ele(const T* buf, std::size_t i) { return buf[i]; }
-  static void write_ele(T* buf, std::size_t i, const T& val) { buf[i] = val; }
+  static T read_ele(
+    const T* buf, std::size_t i, const h2::ComputeStream&) { return buf[i]; }
+  static void write_ele(
+    T* buf, std::size_t i, const T& val, const h2::ComputeStream&)
+  {
+    buf[i] = val;
+  }
 };
 
 #ifdef H2_HAS_GPU
@@ -62,15 +69,19 @@ struct Accessor<T, h2::Device::CPU>
 template <typename T>
 struct Accessor<T, h2::Device::GPU>
 {
-  static T read_ele(const T* buf, std::size_t i)
+  static T read_ele(
+    const T* buf, std::size_t i, const h2::ComputeStream& stream)
   {
     T val;
-    ::h2::gpu::mem_copy(&val, buf + i, 1);
+    ::h2::gpu::mem_copy(&val, buf + i, 1, stream.get_stream<h2::Device::GPU>());
+    stream.wait_for_this();
     return val;
   }
-  static void write_ele(T* buf, std::size_t i, const T& val)
+  static void write_ele(
+    T* buf, std::size_t i, const T& val, const h2::ComputeStream& stream)
   {
-    ::h2::gpu::mem_copy(buf + i, &val, 1);
+    ::h2::gpu::mem_copy(buf + i, &val, 1, stream.get_stream<h2::Device::GPU>());
+    stream.wait_for_this();
   }
 };
 #endif
@@ -80,17 +91,25 @@ struct Accessor<T, h2::Device::GPU>
 // Helper to read a value from a buffer on a device.
 // Equivalent to buf[i].
 template <h2::Device Dev, typename T>
-inline T read_ele(const T* buf, std::size_t i = 0)
+inline T read_ele(const T* buf, std::size_t i, const h2::ComputeStream& stream)
 {
-  return internal::Accessor<T, Dev>::read_ele(buf, i);
+  return internal::Accessor<T, Dev>::read_ele(buf, i, stream);
+}
+
+// Equivalent to buf[0].
+template <h2::Device Dev, typename T>
+inline T read_ele(const T* buf, const h2::ComputeStream& stream)
+{
+  return read_ele<Dev>(buf, 0, stream);
 }
 
 // Helper to write a value from a buffer on a device.
 // Equivalent to buf[i] = val.
 template <h2::Device Dev, typename T>
-inline void write_ele(T* buf, std::size_t i, const T& val)
+inline void write_ele(
+  T* buf, std::size_t i, const T& val, const h2::ComputeStream& stream)
 {
-  internal::Accessor<T, Dev>::write_ele(buf, i, val);
+  internal::Accessor<T, Dev>::write_ele(buf, i, val, stream);
 }
 
 // Simple class to manage a buffer on a device.

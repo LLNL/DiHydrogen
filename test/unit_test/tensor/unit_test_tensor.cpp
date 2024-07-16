@@ -390,7 +390,7 @@ TEMPLATE_LIST_TEST_CASE("Writing to tensors works", "[tensor]", AllDevList)
   DataType* buf = tensor.data();
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
-    write_ele<Dev>(buf, i, static_cast<DataType>(i));
+    write_ele<Dev>(buf, i, static_cast<DataType>(i), tensor.get_stream());
   }
 
   DataIndexType idx = 0;
@@ -398,7 +398,7 @@ TEMPLATE_LIST_TEST_CASE("Writing to tensors works", "[tensor]", AllDevList)
   {
     for (DimType i = 0; i < tensor.shape(0); ++i)
     {
-      REQUIRE(read_ele<Dev>(tensor.get({i, j})) == idx);
+      REQUIRE(read_ele<Dev>(tensor.get({i, j}), tensor.get_stream()) == idx);
       ++idx;
     }
   }
@@ -415,7 +415,7 @@ TEMPLATE_LIST_TEST_CASE("Attaching tensors to existing buffers works",
   DeviceBuf<DataType, Dev> buf(buf_size);
   for (std::size_t i = 0; i < buf_size; ++i)
   {
-    write_ele<Dev>(buf.buf, i, static_cast<DataType>(i));
+    write_ele<Dev>(buf.buf, i, static_cast<DataType>(i), ComputeStream{Dev});
   }
 
   TensorType tensor = TensorType(
@@ -431,14 +431,14 @@ TEMPLATE_LIST_TEST_CASE("Attaching tensors to existing buffers works",
 
   for (std::size_t i = 0; i < tensor.numel(); ++i)
   {
-    REQUIRE(read_ele<Dev>(tensor.data(), i) == i);
+    REQUIRE(read_ele<Dev>(tensor.data(), i, tensor.get_stream()) == i);
   }
   DataIndexType idx = 0;
   for (DimType j = 0; j < tensor.shape(1); ++j)
   {
     for (DimType i = 0; i < tensor.shape(0); ++i)
     {
-      REQUIRE(read_ele<Dev>(tensor.get({i, j})) == idx);
+      REQUIRE(read_ele<Dev>(tensor.get({i, j}), tensor.get_stream()) == idx);
       ++idx;
     }
   }
@@ -452,7 +452,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
-    write_ele<Dev>(tensor.data(), i, static_cast<DataType>(i));
+    write_ele<Dev>(
+      tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
   }
 
   SECTION("Basic views work")
@@ -471,7 +472,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
 
     for (DataIndexType i = 0; i < view->numel(); ++i)
     {
-      REQUIRE(read_ele<Dev>(view->data(), i) == i);
+      REQUIRE(read_ele<Dev>(view->data(), i, view->get_stream()) == i);
     }
   }
   SECTION("Constant views work")
@@ -503,7 +504,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
 
     for (DimType i = 0; i < view->shape(0); ++i)
     {
-      REQUIRE(read_ele<Dev>(view->get({i})) == (1 + 4*i));
+      REQUIRE(read_ele<Dev>(view->get({i}), view->get_stream()) == (1 + 4*i));
     }
   }
   SECTION("Operator-style views work")
@@ -522,7 +523,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
     {
       for (DimType i = 0; i < view->shape(0); ++i)
       {
-        REQUIRE(read_ele<Dev>(view->get({i, j})) == (i+1 + j*4));
+        REQUIRE(read_ele<Dev>(view->get({i, j}), view->get_stream())
+                == (i+1 + j*4));
       }
     }
   }
@@ -538,7 +540,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
     REQUIRE(view->data() == (tensor.data() + 1));
     REQUIRE(view->is_contiguous());
 
-    REQUIRE(read_ele<Dev>(view->get({0, 0})) == 1);
+    REQUIRE(read_ele<Dev>(view->get({0, 0}), view->get_stream()) == 1);
   }
   SECTION("View of a single element, eliminating dimensions, works")
   {
@@ -552,7 +554,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
     REQUIRE(view->data() == (tensor.data() + 1));
     REQUIRE(view->is_contiguous());
 
-    REQUIRE(read_ele<Dev>(view->get({0})) == 1);
+    REQUIRE(read_ele<Dev>(view->get({0}), view->get_stream()) == 1);
   }
   SECTION("Viewing a view works")
   {
@@ -569,7 +571,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
 
     for (DataIndexType i = 0; i < view->numel(); ++i)
     {
-      REQUIRE(read_ele<Dev>(view->data(), i) == i);
+      REQUIRE(read_ele<Dev>(view->data(), i, view->get_stream()) == i);
     }
   }
   SECTION("Unviewing a view works")
@@ -626,7 +628,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
   using TensorType = Tensor<DataType>;
 
   TensorType tensor = TensorType(Dev, {1}, {DT::Sample});
-  write_ele<Dev>(tensor.data(), 0, static_cast<DataType>(1));
+  write_ele<Dev>(
+    tensor.data(), 0, static_cast<DataType>(1), tensor.get_stream());
 
   SECTION("Basic views work")
   {
@@ -641,7 +644,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
     REQUIRE(view->get_view_type() == ViewType::Mutable);
     REQUIRE(view->data() == tensor.data());
     REQUIRE(view->is_contiguous());
-    REQUIRE(read_ele<Dev>(view->data(), 0) == 1);
+    REQUIRE(read_ele<Dev>(view->data(), 0, view->get_stream()) == 1);
   }
 
   SECTION("Manually-specified view range works")
@@ -657,7 +660,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
     REQUIRE(view->get_view_type() == ViewType::Mutable);
     REQUIRE(view->data() == tensor.data());
     REQUIRE(view->is_contiguous());
-    REQUIRE(read_ele<Dev>(view->data(), 0) == 1);
+    REQUIRE(read_ele<Dev>(view->data(), 0, view->get_stream()) == 1);
   }
 
   SECTION("View with a scalar index works")
@@ -673,7 +676,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing a tensor with a single element works",
     REQUIRE(view->get_view_type() == ViewType::Mutable);
     REQUIRE(view->data() == tensor.data());
     REQUIRE(view->is_contiguous());
-    REQUIRE(read_ele<Dev>(view->data(), 0) == 1);
+    REQUIRE(read_ele<Dev>(view->data(), 0, view->get_stream()) == 1);
   }
 }
 
@@ -726,7 +729,8 @@ TEMPLATE_LIST_TEST_CASE("Empty views work", "[tensor]", AllDevList)
   TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
-    write_ele<Dev>(tensor.data(), i, static_cast<DataType>(i));
+    write_ele<Dev>(
+      tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
   }
 
   SECTION("View with fully empty coordinates work")
@@ -771,7 +775,8 @@ TEMPLATE_LIST_TEST_CASE("Making tensors contiguous works",
   TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
-    write_ele<Dev>(tensor.data(), i, static_cast<DataType>(i));
+    write_ele<Dev>(
+      tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
   }
 
   SECTION("Making contiguous tensors contiguous works")
@@ -793,7 +798,8 @@ TEMPLATE_LIST_TEST_CASE("Making tensors contiguous works",
     REQUIRE(contig->strides() == StrideTuple{1});
     for (DimType i = 0; i < contig->shape(0); ++i)
     {
-      REQUIRE(read_ele<Dev>(contig->get({i})) == (1 + 4*i));
+      REQUIRE(read_ele<Dev>(contig->get({i}), contig->get_stream())
+              == (1 + 4*i));
     }
   }
 }
@@ -808,7 +814,8 @@ TEMPLATE_LIST_TEST_CASE("Cloning tensors works",
   TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
-    write_ele<Dev>(tensor.data(), i, static_cast<DataType>(i));
+    write_ele<Dev>(
+      tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
   }
 
   SECTION("Cloning an entire tensor works")

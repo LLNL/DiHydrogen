@@ -46,11 +46,13 @@ TEMPLATE_LIST_TEST_CASE("Same-type distributed tensor copy works",
 
           for (DataIndexType i = 0; i < src_tensor.local_numel(); ++i)
           {
-            write_ele<SrcDev>(src_tensor.data(), i, src_val);
+            write_ele<SrcDev>(
+              src_tensor.data(), i, src_val, src_tensor.get_stream());
           }
           for (DataIndexType i = 0; i < dst_tensor.local_numel(); ++i)
           {
-            write_ele<DstDev>(dst_tensor.data(), i, dst_val);
+            write_ele<DstDev>(
+              dst_tensor.data(), i, dst_val, dst_tensor.get_stream());
           }
 
           DataType* dst_orig_data = dst_tensor.data();
@@ -77,8 +79,12 @@ TEMPLATE_LIST_TEST_CASE("Same-type distributed tensor copy works",
 
           for (DataIndexType i = 0; i < src_tensor.local_numel(); ++i)
           {
-            REQUIRE(read_ele<SrcDev>(src_tensor.data(), i) == src_val);
-            REQUIRE(read_ele<DstDev>(dst_tensor.data(), i) == src_val);
+            REQUIRE(
+              read_ele<SrcDev>(src_tensor.data(), i, src_tensor.get_stream())
+              == src_val);
+            REQUIRE(
+              read_ele<DstDev>(dst_tensor.data(), i, dst_tensor.get_stream())
+              == src_val);
           }
         }
       }, comm);
@@ -114,11 +120,13 @@ TEMPLATE_LIST_TEST_CASE("Same-type distributed tensor copy works",
 
             for (DataIndexType i = 0; i < src_tensor.local_numel(); ++i)
             {
-              write_ele<SrcDev>(src_tensor.data(), i, src_val);
+              write_ele<SrcDev>(
+                src_tensor.data(), i, src_val, src_tensor.get_stream());
             }
             for (DataIndexType i = 0; i < dst_tensor.local_numel(); ++i)
             {
-              write_ele<DstDev>(dst_tensor.data(), i, dst_val);
+              write_ele<DstDev>(
+                dst_tensor.data(), i, dst_val, dst_tensor.get_stream());
             }
 
             REQUIRE_NOTHROW(copy(dst_tensor, src_tensor));
@@ -142,8 +150,12 @@ TEMPLATE_LIST_TEST_CASE("Same-type distributed tensor copy works",
 
             for (DataIndexType i = 0; i < src_tensor.local_numel(); ++i)
             {
-              REQUIRE(read_ele<SrcDev>(src_tensor.data(), i) == src_val);
-              REQUIRE(read_ele<DstDev>(dst_tensor.data(), i) == src_val);
+              REQUIRE(
+                read_ele<SrcDev>(src_tensor.data(), i, src_tensor.get_stream())
+                == src_val);
+              REQUIRE(
+                read_ele<DstDev>(dst_tensor.data(), i, dst_tensor.get_stream())
+                == src_val);
             }
           }
         }

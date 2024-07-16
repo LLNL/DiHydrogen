@@ -175,7 +175,7 @@ TEMPLATE_LIST_TEST_CASE("Raw buffers are writable",
   DataType* raw_buf = buf.data();
   for (std::size_t i = 0; i < buf_size; ++i)
   {
-    write_ele<Dev>(raw_buf, i, static_cast<DataType>(i));
+    write_ele<Dev>(raw_buf, i, static_cast<DataType>(i), buf.get_stream());
   }
 
   // Ensure on already allocated data should not change anything.
@@ -184,7 +184,7 @@ TEMPLATE_LIST_TEST_CASE("Raw buffers are writable",
   REQUIRE(buf.data() == raw_buf);
   for (std::size_t i = 0; i < buf_size; ++i)
   {
-    REQUIRE(read_ele<Dev>(raw_buf, i) == i);
+    REQUIRE(read_ele<Dev>(raw_buf, i, buf.get_stream()) == i);
   }
 
   // Release then ensure should be sane, but has no guarantees about
@@ -198,7 +198,7 @@ TEMPLATE_LIST_TEST_CASE("Raw buffers are writable",
   raw_buf = buf.data();
   for (std::size_t i = 0; i < buf_size; ++i)
   {
-    write_ele<Dev>(raw_buf, i, static_cast<DataType>(i));
+    write_ele<Dev>(raw_buf, i, static_cast<DataType>(i), buf.get_stream());
   }
 }
 

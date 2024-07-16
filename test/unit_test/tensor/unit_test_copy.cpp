@@ -30,8 +30,8 @@ TEMPLATE_LIST_TEST_CASE("Buffer copy works", "[tensor][copy]", AllDevPairsList)
 
   for (std::size_t i = 0; i < buf_size; ++i)
   {
-    write_ele<SrcDev>(src.buf, i, src_val);
-    write_ele<DstDev>(dst.buf, i, dst_val);
+    write_ele<SrcDev>(src.buf, i, src_val, src_stream);
+    write_ele<DstDev>(dst.buf, i, dst_val, dst_stream);
   }
 
   REQUIRE_NOTHROW(copy_buffer(
@@ -40,9 +40,9 @@ TEMPLATE_LIST_TEST_CASE("Buffer copy works", "[tensor][copy]", AllDevPairsList)
   for (std::size_t i = 0; i < buf_size; ++i)
   {
     // Source is unchanged:
-    REQUIRE(read_ele<SrcDev>(src.buf, i) == src_val);
+    REQUIRE(read_ele<SrcDev>(src.buf, i, src_stream) == src_val);
     // Destination has the source value:
-    REQUIRE(read_ele<DstDev>(dst.buf, i) == src_val);
+    REQUIRE(read_ele<DstDev>(dst.buf, i, dst_stream) == src_val);
   }
 }
 
@@ -66,8 +66,8 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
 
     for (std::size_t i = 0; i < src_tensor.numel(); ++i)
     {
-      write_ele<SrcDev>(src_tensor.data(), i, src_val);
-      write_ele<DstDev>(dst_tensor.data(), i, dst_val);
+      write_ele<SrcDev>(src_tensor.data(), i, src_val, src_tensor.get_stream());
+      write_ele<DstDev>(dst_tensor.data(), i, dst_val, dst_tensor.get_stream());
     }
 
     REQUIRE_NOTHROW(copy(dst_tensor, src_tensor));
@@ -84,8 +84,10 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
 
     for (std::size_t i = 0; i < src_tensor.numel(); ++i)
     {
-      REQUIRE(read_ele<SrcDev>(src_tensor.data(), i) == src_val);
-      REQUIRE(read_ele<DstDev>(dst_tensor.data(), i) == src_val);
+      REQUIRE(read_ele<SrcDev>(src_tensor.data(), i, src_tensor.get_stream())
+              == src_val);
+      REQUIRE(read_ele<DstDev>(dst_tensor.data(), i, dst_tensor.get_stream())
+              == src_val);
     }
   }
 
@@ -96,11 +98,11 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
 
     for (std::size_t i = 0; i < src_tensor.numel(); ++i)
     {
-      write_ele<SrcDev>(src_tensor.data(), i, src_val);
+      write_ele<SrcDev>(src_tensor.data(), i, src_val, src_tensor.get_stream());
     }
     for (std::size_t i = 0; i < dst_tensor.numel(); ++i)
     {
-      write_ele<DstDev>(dst_tensor.data(), i, dst_val);
+      write_ele<DstDev>(dst_tensor.data(), i, dst_val, dst_tensor.get_stream());
     }
 
     REQUIRE_NOTHROW(copy(dst_tensor, src_tensor));
@@ -116,11 +118,13 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
 
     for (std::size_t i = 0; i < src_tensor.numel(); ++i)
     {
-      REQUIRE(read_ele<SrcDev>(src_tensor.data(), i) == src_val);
+      REQUIRE(read_ele<SrcDev>(src_tensor.data(), i, src_tensor.get_stream())
+              == src_val);
     }
     for (std::size_t i = 0; i < src_tensor.numel(); ++i)
     {
-      REQUIRE(read_ele<DstDev>(dst_tensor.data(), i) == src_val);
+      REQUIRE(read_ele<DstDev>(dst_tensor.data(), i, dst_tensor.get_stream())
+              == src_val);
     }
   }
 
@@ -145,10 +149,10 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
 
     for (std::size_t i = 0; i < src_tensor.numel(); ++i)
     {
-      write_ele<DstDev>(dst_tensor.data(), i, dst_val);
+      write_ele<DstDev>(dst_tensor.data(), i, dst_val, dst_tensor.get_stream());
     }
     for_ndim(src_tensor.shape(), [&](const ScalarIndexTuple& i) {
-      write_ele<SrcDev>(src_tensor.get(i), 0, src_val);
+      write_ele<SrcDev>(src_tensor.get(i), 0, src_val, src_tensor.get_stream());
     });
 
     REQUIRE_NOTHROW(copy(dst_tensor, src_tensor));
@@ -163,8 +167,10 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
     REQUIRE(src_tensor.data() != dst_tensor.data());
 
     for_ndim(src_tensor.shape(), [&](const ScalarIndexTuple& i) {
-      REQUIRE(read_ele<SrcDev>(src_tensor.get(i)) == src_val);
-      REQUIRE(read_ele<DstDev>(dst_tensor.get(i)) == src_val);
+      REQUIRE(read_ele<SrcDev>(src_tensor.get(i), src_tensor.get_stream())
+              == src_val);
+      REQUIRE(read_ele<DstDev>(dst_tensor.get(i), dst_tensor.get_stream())
+              == src_val);
     });
   }
 }
