@@ -604,12 +604,13 @@ TEMPLATE_LIST_TEST_CASE("Writing to distributed tensors works",
         DataType* buf = tensor.data();
         for (DataIndexType i = 0; i < tensor.local_numel(); ++i)
         {
-          write_ele<Dev>(buf, i, static_cast<DataType>(i));
+          write_ele<Dev>(buf, i, static_cast<DataType>(i), tensor.get_stream());
         }
 
         DataIndexType idx = 0;
         for_ndim(local_tensor.shape(), [&](ScalarIndexTuple c) {
-          REQUIRE(read_ele<Dev>(local_tensor.get(c)) == idx);
+          REQUIRE(read_ele<Dev>(local_tensor.get(c), tensor.get_stream())
+                  == idx);
           ++idx;
         });
       }
@@ -645,7 +646,8 @@ TEMPLATE_LIST_TEST_CASE(
       DeviceBuf<DataType, Dev> buf(buf_size);
       for (std::size_t i = 0; i < buf_size; ++i)
       {
-        write_ele<Dev>(buf.buf, i, static_cast<DataType>(i));
+        write_ele<Dev>(
+          buf.buf, i, static_cast<DataType>(i), ComputeStream{Dev});
       }
 
       DistTensorType tensor(Dev,
@@ -677,11 +679,13 @@ TEMPLATE_LIST_TEST_CASE(
       REQUIRE(local_tensor.strides() == tensor_local_strides);
       for (std::size_t i = 0; i < local_tensor.numel(); ++i)
       {
-        REQUIRE(read_ele<Dev>(local_tensor.data(), i) == i);
+        REQUIRE(read_ele<Dev>(local_tensor.data(), i, tensor.get_stream())
+                == i);
       }
       DataIndexType idx = 0;
       for_ndim(local_tensor.shape(), [&](ScalarIndexTuple c) {
-        REQUIRE(read_ele<Dev>(local_tensor.get(c)) == idx);
+        REQUIRE(read_ele<Dev>(local_tensor.get(c), tensor.get_stream())
+                == idx);
         ++idx;
       });
     }, comm, 0, 3);
@@ -717,7 +721,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DataType* buf = tensor.data();
           for (DataIndexType i = 0; i < tensor.local_numel(); ++i)
           {
-            write_ele<Dev>(buf, i, static_cast<DataType>(i));
+            write_ele<Dev>(
+              buf, i, static_cast<DataType>(i), tensor.get_stream());
           }
 
           std::unique_ptr<DistTensorType> view = tensor.view();
@@ -744,7 +749,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
 
           for (DataIndexType i = 0; i < view->local_numel(); ++i)
           {
-            REQUIRE(read_ele<Dev>(view->data(), i) == i);
+            REQUIRE(read_ele<Dev>(view->data(), i, view->get_stream()) == i);
           }
         }
       }, comm, 0, 3);
@@ -773,7 +778,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DataType* buf = tensor.data();
           for (DataIndexType i = 0; i < tensor.local_numel(); ++i)
           {
-            write_ele<Dev>(buf, i, static_cast<DataType>(i));
+            write_ele<Dev>(
+              buf, i, static_cast<DataType>(i), tensor.get_stream());
           }
 
           std::unique_ptr<DistTensorType> view = tensor.const_view();
@@ -800,7 +806,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
 
           for (DataIndexType i = 0; i < view->local_numel(); ++i)
           {
-            REQUIRE(read_ele<Dev>(view->const_data(), i) == i);
+            REQUIRE(read_ele<Dev>(view->const_data(), i, view->get_stream())
+                    == i);
           }
         }
       }, comm, 0, 3);
@@ -829,7 +836,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DataType* buf = tensor.data();
           for (DataIndexType i = 0; i < tensor.local_numel(); ++i)
           {
-            write_ele<Dev>(buf, i, static_cast<DataType>(i));
+            write_ele<Dev>(
+              buf, i, static_cast<DataType>(i), tensor.get_stream());
           }
 
           IndexRangeTuple view_indices({IRng(0, 4), IRng(2, 4), IRng(1, 2)});
@@ -985,7 +993,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DataType* buf = tensor.data();
           for (DataIndexType i = 0; i < tensor.local_numel(); ++i)
           {
-            write_ele<Dev>(buf, i, static_cast<DataType>(i));
+            write_ele<Dev>(
+              buf, i, static_cast<DataType>(i), tensor.get_stream());
           }
 
           std::unique_ptr<DistTensorType> orig_view = tensor.view();
@@ -1013,7 +1022,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
 
           for (DataIndexType i = 0; i < view->local_numel(); ++i)
           {
-            REQUIRE(read_ele<Dev>(view->data(), i) == i);
+            REQUIRE(read_ele<Dev>(view->data(), i, view->get_stream()) == i);
           }
         }
       }, comm, 0, 3);
@@ -1042,7 +1051,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DataType* buf = tensor.data();
           for (DataIndexType i = 0; i < tensor.local_numel(); ++i)
           {
-            write_ele<Dev>(buf, i, static_cast<DataType>(i));
+            write_ele<Dev>(
+              buf, i, static_cast<DataType>(i), tensor.get_stream());
           }
 
           std::unique_ptr<DistTensorType> view = tensor.view();
@@ -1084,7 +1094,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DataType* buf = tensor.data();
           for (DataIndexType i = 0; i < tensor.local_numel(); ++i)
           {
-            write_ele<Dev>(buf, i, static_cast<DataType>(i));
+            write_ele<Dev>(
+              buf, i, static_cast<DataType>(i), tensor.get_stream());
           }
 
           std::unique_ptr<DistTensorType> view = tensor.view();
@@ -1200,6 +1211,58 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor views work",
       }, comm, 0, 3);
     });
   }
+}
+
+TEMPLATE_LIST_TEST_CASE("Cloning distributed tensors works",
+                        "[dist-tensor]",
+                        AllDevList)
+{
+  using DistTensorType = DistTensor<DataType>;
+  constexpr Device Dev = TestType::value;
+
+  for_comms([&](Comm& comm) {
+    for_grid_shapes([&](ShapeTuple grid_shape) {
+      for (Distribution dist : {Distribution::Block,
+                                Distribution::Replicated,
+                                Distribution::Single})
+      {
+        ProcessorGrid grid = ProcessorGrid(comm, grid_shape);
+
+        ShapeTuple tensor_shape(8, 5, 12);
+        tensor_shape.set_size(grid.ndim());
+        DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
+        DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
+        DistTensorType tensor = DistTensorType(
+            Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
+        std::unique_ptr<DistTensorType> clone = tensor.clone();
+
+        REQUIRE(clone->shape() == tensor.shape());
+        REQUIRE(clone->dim_types() == tensor.dim_types());
+        REQUIRE(clone->distribution() == tensor.distribution());
+        REQUIRE(clone->local_shape() == tensor.local_shape());
+        REQUIRE(clone->proc_grid() == tensor.proc_grid());
+        REQUIRE(clone->ndim() == tensor.ndim());
+        REQUIRE(clone->numel() == tensor.numel());
+        REQUIRE(clone->is_empty() == tensor.is_empty());
+        REQUIRE(clone->local_numel() == tensor.local_numel());
+        REQUIRE(clone->is_local_empty() == tensor.is_local_empty());
+        REQUIRE_FALSE(clone->is_view());
+        REQUIRE_FALSE(clone->is_const_view());
+        REQUIRE(clone->get_view_type() == ViewType::None);
+        REQUIRE(clone->get_device() == tensor.get_device());
+        REQUIRE(clone->is_lazy() == tensor.is_lazy());
+        if (tensor.is_local_empty())
+        {
+          REQUIRE(clone->data() == nullptr);
+        }
+        else
+        {
+          REQUIRE(clone->data() != nullptr);
+          REQUIRE(clone->data() != tensor.data());
+        }
+      }
+    }, comm, 0, 3);
+  });
 }
 
 TEMPLATE_LIST_TEST_CASE("Distributed tensors are printable",

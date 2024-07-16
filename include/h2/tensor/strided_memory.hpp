@@ -16,6 +16,7 @@
 #include <utility>
 #include <cstddef>
 
+#include "h2/tensor/copy_buffer.hpp"
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/tensor/tensor_utils.hpp"
 #include "h2/tensor/raw_buffer.hpp"
@@ -239,6 +240,32 @@ public:
     {
       raw_buffer->register_release(stream);
     }
+  }
+
+  /**
+   * Return a clone of this memory.
+   *
+   * The new `StridedMemory` will have a distinct underlying buffer but
+   * otherwise be identical. It will not track references to prior
+   * raw buffers (i.e., it will not recover memory from an existing
+   * view).
+   */
+  StridedMemory<T> clone() const
+  {
+    StridedMemory<T> new_sm(
+        mem_device, mem_shape, mem_strides, is_mem_lazy, stream);
+    // Only copy if we have already ensure'd memory.
+    if (const_data() != nullptr)
+    {
+      new_sm.ensure(false);
+      // Copy only our extent of the data.
+      copy_buffer(new_sm.data(),
+                  new_sm.stream,
+                  const_data(),
+                  stream,
+                  get_extent_from_strides(mem_shape, mem_strides));
+    }
+    return new_sm;
   }
 
   void ensure(bool attempt_recover = true)

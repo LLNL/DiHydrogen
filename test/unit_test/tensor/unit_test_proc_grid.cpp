@@ -107,6 +107,7 @@ TEST_CASE("Processor grid equality works", "[dist-tensor][proc-grid]")
     // Empty grids always use MPI_COMM_NULL.
     ProcessorGrid grid;
     REQUIRE(grid == grid);
+    REQUIRE(grid.is_identical_to(grid));
     REQUIRE_FALSE(grid != grid);
   }
 
@@ -117,20 +118,66 @@ TEST_CASE("Processor grid equality works", "[dist-tensor][proc-grid]")
     ProcessorGrid grid1(comm, ShapeTuple{1});
 
     REQUIRE_FALSE(grid1 == empty_grid);
+    REQUIRE_FALSE(grid1.is_identical_to(empty_grid));
     REQUIRE(grid1 != empty_grid);
     REQUIRE(grid1 == grid1);
+    REQUIRE(grid1.is_identical_to(grid1));
     REQUIRE_FALSE(grid1 != grid1);
 
     // New grid, even from the same comm, duplicates the underlying
     // MPI communicator.
     ProcessorGrid grid2(comm, ShapeTuple{1});
     REQUIRE_FALSE(grid1 == grid2);
+    REQUIRE_FALSE(grid1.is_identical_to(grid2));
+    REQUIRE_FALSE(grid2.is_identical_to(grid1));
     REQUIRE(grid1 != grid2);
 
     // Assignment uses the same underlying MPI comm.
     ProcessorGrid grid3 = grid1;
     REQUIRE(grid1 == grid3);
+    REQUIRE(grid1.is_identical_to(grid3));
+    REQUIRE(grid3.is_identical_to(grid1));
     REQUIRE_FALSE(grid1 != grid3);
+  }
+}
+
+TEST_CASE("Processor grid congruence works", "[dist-tensor][proc-grid]")
+{
+  SECTION("Empty processor grid congruence")
+  {
+    ProcessorGrid grid;
+    ProcessorGrid grid2;
+    REQUIRE(grid.is_congruent_to(grid));
+    REQUIRE(grid.is_congruent_to(grid2));
+  }
+
+  SECTION("Same-size processor grid congruence")
+  {
+    Comm& comm = get_comm_or_skip(1);
+    ProcessorGrid empty_grid;
+    ProcessorGrid grid1(comm, ShapeTuple{1});
+
+    REQUIRE_FALSE(grid1.is_congruent_to(empty_grid));
+    REQUIRE_FALSE(empty_grid.is_congruent_to(grid1));
+    REQUIRE(grid1.is_congruent_to(grid1));
+
+    ProcessorGrid grid2(comm, ShapeTuple{1});
+    REQUIRE(grid1.is_congruent_to(grid2));
+    REQUIRE(grid2.is_congruent_to(grid1));
+
+    ProcessorGrid grid3 = grid1;
+    REQUIRE(grid1.is_congruent_to(grid3));
+    REQUIRE(grid3.is_congruent_to(grid1));
+  }
+
+  SECTION("Different-size processor grids are not congruent")
+  {
+    Comm& comm = get_comm_or_skip(2);
+    ProcessorGrid grid1(comm, ShapeTuple{1, 2});
+    ProcessorGrid grid2(comm, ShapeTuple{2, 1});
+
+    REQUIRE_FALSE(grid1.is_congruent_to(grid2));
+    REQUIRE_FALSE(grid2.is_congruent_to(grid1));
   }
 }
 

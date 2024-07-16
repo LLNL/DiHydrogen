@@ -14,6 +14,7 @@ h2_add_sources_to_target_and_install(
   INSTALL_PREFIX "${H2_CURRENT_INSTALL_PREFIX}"
   SOURCES
   copy.hpp
+  copy_buffer.hpp
   dist_tensor_base.hpp
   dist_tensor.hpp
   dist_types.hpp

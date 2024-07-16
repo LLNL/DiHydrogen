@@ -15,73 +15,20 @@
 
 #include <h2_config.hpp>
 
-#include <cstring>
 #include <memory>
 #include <type_traits>
 
+#include "h2/tensor/copy_buffer.hpp"
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/tensor/tensor.hpp"
 #include "h2/tensor/dist_tensor.hpp"
 
 #ifdef H2_HAS_GPU
 #include "h2/gpu/runtime.hpp"
-#include "h2/gpu/memory_utils.hpp"
 #endif
 
 namespace h2
 {
-
-// Low-level copy routines operating on buffers (raw pointers):
-
-/**
- * Copy count elements from src to dst.
- *
- * If GPU buffers are involved, this will be asynchronous.
- */
-template <typename T>
-void copy_buffer(T* dst,
-                 const ComputeStream& dst_stream,
-                 const T* src,
-                 const ComputeStream& src_stream,
-                 std::size_t count)
-{
-  H2_ASSERT_DEBUG(count == 0 || (dst != nullptr && src != nullptr),
-                  "Null buffers");
-  // TODO: Debug check: Assert buffers do not overlap.
-  static_assert(
-      std::is_trivially_copyable_v<T>,
-      "Attempt to copy a buffer with a type that is not trivially copyable");
-  const Device src_dev = src_stream.get_device();
-  const Device dst_dev = dst_stream.get_device();
-  if (src_dev == Device::CPU && dst_dev == Device::CPU)
-  {
-    std::memcpy(dst, src, count * sizeof(T));
-  }
-#ifdef H2_HAS_GPU
-  else if (src_dev == Device::GPU && dst_dev == Device::GPU)
-  {
-    auto stream = create_multi_sync(dst_stream, src_stream);
-    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream<Device::GPU>());
-  }
-  else if (src_dev == Device::CPU && dst_dev == Device::GPU)
-  {
-    // No sync needed in this case: The CPU is always synchronized and
-    // the copy will be enqueued on the destination GPU stream.
-    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream<Device::GPU>());
-  }
-  else if (src_dev == Device::GPU && dst_dev == Device::CPU)
-  {
-    // No sync needed: Ditto.
-    gpu::mem_copy<T>(dst, src, count, src_stream.get_stream<Device::GPU>());
-  }
-#endif
-  else
-  {
-    throw H2Exception("Unknown device combination ", src_dev, " and ", dst_dev);
-  }
-}
-
-// General copy routines:
 
 namespace internal
 {
@@ -109,6 +56,34 @@ void copy_same_type(Tensor<T>& dst, const Tensor<T>& src)
       src.const_data(),
       src.get_stream(),
       get_extent_from_strides(src.shape(), src.strides()));
+  }
+}
+
+template <typename T>
+void copy_same_type(DistTensor<T>& dst, const DistTensor<T>& src)
+{
+  dst.resize(src.shape(), src.dim_types(), src.distribution());
+  dst.ensure();
+  if (src.is_local_empty())
+  {
+    return;  // No local data to copy.
+  }
+  Tensor<T>& dst_local = dst.local_tensor();
+  const Tensor<T>& src_local = src.local_tensor();
+  if (src_local.is_contiguous())
+  {
+    copy_buffer<T>(dst_local.data(),
+                   dst_local.get_stream(),
+                   src_local.const_data(),
+                   src_local.get_stream(),
+                   src_local.numel());
+  }
+  else
+  {
+    // TODO: This requires support for resizing while specifying the
+    // strides of the local tensor, which we don't currently have.
+    throw H2Exception("Copying distributed tensors with non-contiguous local "
+                      "data is not supported");
   }
 }
 
@@ -143,6 +118,54 @@ void copy(Tensor<DstT>& dst, const Tensor<SrcT>& src)
   else
   {
     throw H2Exception("Data type conversion in Copy not currently supported");
+  }
+}
+
+/**
+ * Copy the contents of distributed tensor `src` to `dst`.
+ *
+ * `dst` will be resized and have its distribution and dimension types
+ * changed to match `src`. If `SrcT` and `DstT` differ, data will be
+ * converted, if possible. This will preserve strides in local tensors,
+ * similar to `copy` for `Tensor`s.
+ *
+ * If GPU buffers are involved, this will be asynchronous.
+ *
+ * Note this is a purely local operation, since it cannot change the
+ * distribution of data; any contents in `dst` are simply discarded.
+ * However, it should still be considered collective: every process in
+ * `src`'s processor grid must call this with the same `src` and `dst`
+ * tensors or things will become inconsistent. Further, `src` and `dst`
+ * must have congruent processor grids (if they do not, the previous
+ * requirement will not be satisfied).
+ *
+ * This will not change the processor grid of `dst`.
+ */
+template <typename DstT, typename SrcT>
+void copy(DistTensor<DstT>& dst, const DistTensor<SrcT>& src)
+{
+  // One could support copying between "similar" grids (same underlying
+  // processes, different shape), but I don't see a use for that right
+  // now.
+  H2_ASSERT_DEBUG(
+      src.proc_grid().is_congruent_to(dst.proc_grid()),
+      "Cannot copy between DistTensors on non-congruent processor grids");
+  // Copying an empty tensor simply clears it.
+  if (src.is_empty())
+  {
+    dst.empty();
+    return;
+  }
+  H2_ASSERT_ALWAYS(src.is_local_empty() || src.const_data() != nullptr,
+                   "Cannot copy a non-empty distributed tensor with no data");
+  if constexpr (std::is_same_v<SrcT, DstT>)
+  {
+    internal::copy_same_type<DstT>(dst, src);
+  }
+  else
+  {
+    throw H2Exception(
+        "Data type conversion is copy is not currently supported");
   }
 }
 

@@ -93,6 +93,14 @@ public:
         tensor_memory(other.tensor_memory, new_device, new_stream)
   {}
 
+  /** Internal constructor for cloning. */
+  Tensor(const StridedMemory<T>& mem_,
+         const ShapeTuple& shape_,
+         const DimensionTypeTuple& dim_types_,
+         Passkey2<Tensor<T>, DistTensor<T>>)
+      : BaseTensor(shape_, dim_types_), tensor_memory(mem_)
+  {}
+
   virtual ~Tensor() = default;
 
   /**
@@ -116,6 +124,25 @@ public:
 
   /** Move assignment */
   Tensor& operator=(Tensor&&) = default;
+
+  /**
+   * Return an exact copy of this tensor.
+   *
+   * The new tensor will always have distinct memory that it manages
+   * (i.e., unlike a view, memory is not shared). A clone is never a
+   * view, regardless of whether the original tensor is. If the tensor
+   * is viewing an external memory buffer, the new tensor will have a
+   * copy of the buffer, and will manage it directly. If the tensor is
+   * lazy, the clone will be as well; it will not be able to recover
+   * memory from existing views, if any.
+   */
+  std::unique_ptr<Tensor<T>> clone() const
+  {
+    // Abuses the view constructor.
+    StridedMemory<T> cloned_mem = tensor_memory.clone();
+    return std::make_unique<Tensor<T>>(
+        cloned_mem, shape(), dim_types(), Passkey<Tensor<T>>{});
+  }
 
   /** Output a short description of the tensor. */
   void short_describe(std::ostream& os) const override

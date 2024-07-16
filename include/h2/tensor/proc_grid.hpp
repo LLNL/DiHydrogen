@@ -174,6 +174,51 @@ public:
     return out_rank != MPI_UNDEFINED;
   }
 
+  /**
+   * Return true if rank in the provided grid is part of this grid.
+   */
+  bool participating(RankType rank, const ProcessorGrid& grid) const H2_NOEXCEPT
+  {
+    return participating(rank, *grid.grid_comm);
+  }
+
+  /**
+   * Return true if this grid is identical to the other grid.
+   *
+   * Two grids are identical if they have the same shape and use the
+   * same underlying communicator.
+   */
+  bool is_identical_to(const ProcessorGrid& other) const H2_NOEXCEPT
+  {
+    return (grid_shape == other.grid_shape)
+           && (grid_comm->GetMPIComm() == other.grid_comm->GetMPIComm());
+  }
+
+  /**
+   * Return true if this grid is congruent to the other grid.
+   *
+   * Two grids are congruent if they have the same shape and the
+   * underlying communicators consist of the same processes in the same
+   * order (i.e., they are `MPI_CONGRUENT`).
+   */
+  bool is_congruent_to(const ProcessorGrid& other) const H2_NOEXCEPT
+  {
+    if (grid_shape != other.grid_shape)
+    {
+      return false;
+    }
+    // MPI_Comm_compare does not handle MPI_COMM_NULL.
+    if (grid_comm->GetMPIComm() == MPI_COMM_NULL
+        && other.grid_comm->GetMPIComm() == MPI_COMM_NULL)
+    {
+      return true;
+    }
+    int result;
+    MPI_Comm_compare(
+        grid_comm->GetMPIComm(), other.grid_comm->GetMPIComm(), &result);
+    return result == MPI_IDENT || result == MPI_CONGRUENT;
+  }
+
 private:
   /** Underlying communicator for the grid. */
   std::shared_ptr<Comm> grid_comm;
@@ -189,15 +234,13 @@ private:
  */
 inline bool operator==(const ProcessorGrid& grid1, const ProcessorGrid& grid2)
 {
-  return (grid1.shape() == grid2.shape())
-    && (grid1.comm().GetMPIComm() == grid2.comm().GetMPIComm());
+  return grid1.is_identical_to(grid2);
 }
 
 /** Inequality for processor grids. */
 inline bool operator!=(const ProcessorGrid& grid1, const ProcessorGrid& grid2)
 {
-  return (grid1.shape() != grid2.shape())
-    || (grid1.comm().GetMPIComm() != grid2.comm().GetMPIComm());
+  return !grid1.is_identical_to(grid2);
 }
 
 }  // namespace h2
