@@ -74,7 +74,7 @@ prefix="${project_dir}/install-deps-${CI_JOB_NAME_SLUG:-${job_unique_id}}"
 export CMAKE_PREFIX_PATH=${prefix}/aluminum:${prefix}/catch2:${prefix}/hwloc:${prefix}/hydrogen:${prefix}/nccl:${prefix}/spdlog:${CMAKE_PREFIX_PATH}
 
 # Allow a user to force this
-rebuild_deps=${rebuild_deps:-""}
+rebuild_deps=${REBUILD_DEPS:-""}
 
 # Rebuild if the prefix doesn't exist.
 if [[ ! -d "${prefix}" ]]

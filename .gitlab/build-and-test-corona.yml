@@ -43,7 +43,7 @@ rocm-6-0-2-distconv-corona:
 rocm-6-0-2-coverage-corona:
   variables:
     COMPILER_FAMILY: amdclang
-    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/6.0.2 python"
+    MODULES: "gcc/10.3.1-magic mvapich2 rocm/6.0.2 python"
     WITH_COVERAGE: "1"
   extends: [.build-and-test-on-corona, .build-and-test-coverage]
 

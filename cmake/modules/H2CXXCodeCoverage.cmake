@@ -247,53 +247,70 @@ if (H2_HAVE_GCOV_COVERAGE_TOOLS)
 
     # Build out each toplevel target
     foreach (_tltgt IN LISTS _all_toplevel_tgts)
-      set(_INFO_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${_tltgt}/info")
-      set(_HTML_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${_tltgt}/html")
+      set(_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${_tltgt}")
+      set(_TMP_OUT_DIR "${_OUT_DIR}/tmp")
+      set(_INFO_OUT_DIR "${_OUT_DIR}/info")
+      set(_HTML_OUT_DIR "${_OUT_DIR}/html")
 
-      # Write a quick script to run all the executables. Note that
-      # this only works for non-MPI executables.
-      #
-      # FIXME (trb 2024/07/10): This needs to work for MPI executables
-      #                         as well.
-      set(_run_all_tgts_src "#!/bin/bash\n")
-      foreach (_tgt IN LISTS _cov_tgts_${_tltgt})
-        string(APPEND _run_all_tgts_src "$<TARGET_FILE:${_tgt}> &> /dev/null\n")
-      endforeach ()
-      file(GENERATE OUTPUT "${CMAKE_BINARY_DIR}/coverage_${_tltgt}_run_all_tgts.sh"
-        CONTENT "${_run_all_tgts_src}"
+      # Write a quick script to run an MPI process with rank-specific output.
+      string(REPLACE "/" ";" _build_dir_list "${CMAKE_BINARY_DIR}")
+      list(REMOVE_ITEM _build_dir_list "")
+      list(LENGTH _build_dir_list _build_dir_len)
+      set(_run_mpi_src "#!/bin/bash
+_mpi_rank=$(${CMAKE_SOURCE_DIR}/cmake/modules/print-rank.sh)
+_prefix=${_TMP_OUT_DIR}/gcov-\$\{_mpi_rank\}
+mkdir -p \$\{_prefix\}
+GCOV_PREFIX=\$\{_prefix\} GCOV_PREFIX_STRIP=${_build_dir_len} $@
+")
+      file(GENERATE OUTPUT "${_OUT_DIR}/run-mpi.sh"
+        CONTENT "${_run_mpi_src}"
         FILE_PERMISSIONS
         OWNER_READ OWNER_WRITE OWNER_EXECUTE
         GROUP_READ GROUP_EXECUTE
         WORLD_READ WORLD_EXECUTE
       )
 
-      # Build a target
+      # Get the launch pattern
+      if (DEFINED H2_MPI_LAUNCH_PATTERN)
+        set(_mpi_pattern "${H2_MPI_LAUNCH_PATTERN} ${_OUT_DIR}/run-mpi.sh <EXE>")
+      else ()
+        site_name(_hostname)
+        if (_hostname MATCHES "^corona.*" OR _hostname MATCHES "^tioga.*")
+          set(_mpi_pattern "flux run -N1 -n8 --exclusive --env=H2_SELECT_DEVICE_0=1 ${_OUT_DIR}/run-mpi.sh <EXE>")
+        elseif (_hostname MATCHES "^pascal")
+          set(_mpi_pattern "srun -N1 -n2 --ntasks-per-node=2 --mpibind=off ${_OUT_DIR}/run-mpi.sh <EXE>")
+        elseif (_hostname MATCHES "^lassen")
+          set(_mpi_pattern "jsrun -n1 -r1 -a4 -c40 -g4 -d packed -b packed:10 ${_OUT_DIR}/run-mpi.sh <EXE>")
+        else ()
+          message(WARNING
+            "Unknown host. Assuming mpiexec launcher and 2 ranks."
+            "Set H2_MPI_LAUNCH_PATTERN for more control.")
+          set(_mpi_pattern "mpiexec -n2 ${_OUT_DIR}/run-mpi.sh <EXE>")
+        endif ()
+      endif ()
+
       add_custom_target(
         ${_tltgt}-gen-lcov
-        # Reset lcov state
-        COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --directory ${CMAKE_BINARY_DIR} --zerocounters
-        # Fix files with no called functions
-        COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --directory ${CMAKE_BINARY_DIR} --capture --initial --output-file ${_INFO_OUT_DIR}/${_tltgt}.base
-        # Run exe and dump coverage data
-        COMMAND "${CMAKE_BINARY_DIR}/coverage_${_tltgt}_run_all_tgts.sh"
-        # Gather coverage data
-        COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} --capture --directory ${CMAKE_BINARY_DIR} --output-file ${_INFO_OUT_DIR}/${_tltgt}.info
-        # Add everything together
-        COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -a ${_INFO_OUT_DIR}/${_tltgt}.base -a ${_INFO_OUT_DIR}/${_tltgt}.info --output-file ${_INFO_OUT_DIR}/${_tltgt}.total.info.tmp
-        # Remove compiler stuff
-        # COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -r ${_INFO_OUT_DIR}/${_tltgt}.total.info.tmp "*v1/*" "${COMPILER_PREFIX}/*" "${EXTRA_COMPILER_PREFIX}/*" -o ${_INFO_OUT_DIR}/${_tltgt}.total.info.final
-        # Extract this project stuff
-        COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -e ${_INFO_OUT_DIR}/${_tltgt}.total.info.tmp "${CMAKE_SOURCE_DIR}/*" "${CMAKE_BINARY_DIR}/*" -o ${_INFO_OUT_DIR}/${_tltgt}.total.info.almost.final
-        # Remove CI stuff
-        COMMAND ${LCOV_PROGRAM} --gcov-tool ${GCOV_PROGRAM} -r ${_INFO_OUT_DIR}/${_tltgt}.total.info.almost.final "${CMAKE_SOURCE_DIR}/install-deps*" "${CMAKE_SOURCE_DIR}/test/*" -o ${_INFO_OUT_DIR}/${_tltgt}.total.info.final
-        BYPRODUCTS ${_INFO_OUT_DIR}/${_tltgt}.total.info.final
-        COMMENT "Generating coverage data for \"${_tltgt}\"."
+        COMMAND
+        ${CMAKE_COMMAND}
+        -D COVERAGE_TGT=${_tltgt}
+        -D SOURCE_DIR=${CMAKE_SOURCE_DIR}
+        -D BUILD_DIR=${CMAKE_BINARY_DIR}
+        -D OUTPUT_DIR=${_OUT_DIR}
+        -D MPI_LAUNCH_PATTERN="${_mpi_pattern}"
+        -D LCOV_PROGRAM=${LCOV_PROGRAM}
+        -D GCOV_PROGRAM=${GCOV_PROGRAM}
+        -D SEQ_COVERAGE_PROGRAMS=$<TARGET_FILE:SeqCatchTests>;$<TARGET_FILE:GPUCatchTests>
+        -D MPI_COVERAGE_PROGRAMS="${CMAKE_BINARY_DIR}/bin/MPICatchTests -r mpicumulative"
+        -P "${CMAKE_SOURCE_DIR}/cmake/modules/H2RunCoverage.cmake"
+        COMMENT "Generating coverage data for coverage target \"${_tltgt}\""
+        BYPRODUCTS "${_INFO_OUT_DIR}/${_tltgt}.final.info"
         VERBATIM)
 
       # Generate the HTML reports
       add_custom_target(
         ${_tltgt}-gen-coverage-html
-        COMMAND ${GENHTML_PROGRAM} ${_INFO_OUT_DIR}/${_tltgt}.total.info.final --demangle-cpp --output-directory ${_HTML_OUT_DIR}
+        COMMAND ${GENHTML_PROGRAM} ${_INFO_OUT_DIR}/${_tltgt}.final.info --demangle-cpp --output-directory ${_HTML_OUT_DIR}
         COMMENT "Generating HTML for ${_tltgt} coverage report."
         BYPRODUCTS ${_HTML_OUT_DIR}/index.html
         VERBATIM)
@@ -326,18 +343,35 @@ if (H2_HAVE_GCOV_COVERAGE_TOOLS)
       # The toplevel target depends on the dummy message target
       add_dependencies(${_tltgt} ${_tltgt}-coverage)
 
-      if (GCOVR_PROGRAM)
-        add_custom_target(
-          ${_tltgt}-gcovr
-          COMMAND ${GCOVR_PROGRAM} --cobertura-pretty --exclude-unreachable-branches --print-summary -o ${CMAKE_BINARY_DIR}/${_tltgt}-gcovr.xml --gcov-executable "${GCOV_PROGRAM} -b -c -f -r -s ${CMAKE_SOURCE_DIR}"
-          COMMENT "Generating Cobertura report for \"${_tltgt}\" with gcovr."
-          BYPRODUCTS ${CMAKE_BINARY_DIR}/${_tltgt}-gcovr.xml
-          VERBATIM)
-        # This comes *after* gen-coverage-html
-        add_dependencies(${_tltgt}-gcovr ${_tltgt}-gen-coverage-html)
-        # But is still driven by the coverage target
-        add_dependencies(${_tltgt}-coverage ${_tltgt}-gcovr)
-      endif ()
+      # FIXME: Decide the fate of gcovr. I don't think it's of much
+      # value to us, personally. The primary value-add seems to come
+      # from projects using Gitlab MRs to drive development. I haven't
+      # looked into exporting the result of this to a Github PR, but
+      # our testing workflow doesn't strongly (i.e., automatically)
+      # associate Github PRs with Gitlab CI pipelines. It would be
+      # better, instead, to perhaps put some effort into an external
+      # code coverage tool and adapt to whatever such a tool would
+      # need, rather than investing said effort to maintain this.
+
+      # if (GCOVR_PROGRAM)
+      #   add_custom_target(
+      #     ${_tltgt}-gcovr
+      #     COMMAND
+      #     ${GCOVR_PROGRAM}
+      #     --cobertura-pretty
+      #     --exclude-unreachable-branches
+      #     --print-summary
+      #     -o ${CMAKE_BINARY_DIR}/${_tltgt}-gcovr.xml
+      #     --gcov-executable "${GCOV_PROGRAM} -b -c -f -r -s ${CMAKE_SOURCE_DIR}"
+      #
+      #     COMMENT "Generating Cobertura report for \"${_tltgt}\" with gcovr."
+      #     BYPRODUCTS ${CMAKE_BINARY_DIR}/${_tltgt}-gcovr.xml
+      #     VERBATIM)
+      #   # This comes *after* gen-coverage-html
+      #   add_dependencies(${_tltgt}-gcovr ${_tltgt}-gen-coverage-html)
+      #   # But is still driven by the coverage target
+      #   add_dependencies(${_tltgt}-coverage ${_tltgt}-gcovr)
+      # endif ()
     endforeach ()
   endmacro()
 
