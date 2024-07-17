@@ -1265,6 +1265,56 @@ TEMPLATE_LIST_TEST_CASE("Cloning distributed tensors works",
   });
 }
 
+TEMPLATE_LIST_TEST_CASE("DistTensor get/set stream works",
+                        "[dist-tensor]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using DistTensorType = DistTensor<DataType>;
+
+  Comm& comm = get_comm_or_skip(1);
+  ProcessorGrid grid(comm, ShapeTuple{1});
+
+  ComputeStream stream1 = create_new_compute_stream<Dev>();
+  ComputeStream stream2 = create_new_compute_stream<Dev>();
+
+  SECTION("Get/set on regular tensor")
+  {
+    DistTensorType tensor{Dev,
+                          ShapeTuple{1},
+                          DTTuple{DT::Any},
+                          grid,
+                          DistTTuple{Distribution::Block},
+                          StrictAlloc,
+                          stream1};
+    REQUIRE(tensor.get_stream() == stream1);
+    tensor.set_stream(stream2);
+    REQUIRE(tensor.get_stream() == stream2);
+  }
+
+  SECTION("Get/set on view")
+  {
+    DistTensorType tensor{Dev,
+                          ShapeTuple{1},
+                          DTTuple{DT::Any},
+                          grid,
+                          DistTTuple{Distribution::Block},
+                          StrictAlloc,
+                          stream1};
+    auto view = tensor.view();
+    ComputeStream stream3 = create_new_compute_stream<Dev>();
+    // Changing the original should not impact the view.
+    REQUIRE(tensor.get_stream() == stream1);
+    REQUIRE(view->get_stream() == stream1);
+    tensor.set_stream(stream2);
+    REQUIRE(tensor.get_stream() == stream2);
+    REQUIRE(view->get_stream() == stream1);
+    view->set_stream(stream3);
+    REQUIRE(view->get_stream() == stream3);
+    REQUIRE(tensor.get_stream() == stream2);
+  }
+}
+
 TEMPLATE_LIST_TEST_CASE("Distributed tensors are printable",
                         "[dist-tensor]",
                         AllDevList)

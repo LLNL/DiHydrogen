@@ -790,6 +790,49 @@ TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
   }
 }
 
+TEMPLATE_LIST_TEST_CASE("StridedMemory get/set stream works",
+                        "[tensor][strided_memory]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
+
+  ComputeStream stream1 = create_new_compute_stream<Dev>();
+  ComputeStream stream2 = create_new_compute_stream<Dev>();
+
+  SECTION("No raw set")
+  {
+    MemType mem(Dev, {3, 5}, false, stream1);
+    REQUIRE(mem.get_stream() == stream1);
+    mem.set_stream(stream2, false);
+    REQUIRE(mem.get_stream() == stream2);
+  }
+
+  SECTION("Raw set")
+  {
+    MemType mem(Dev, {3, 5}, false, stream1);
+    REQUIRE(mem.get_stream() == stream1);
+    mem.set_stream(stream2, true);
+    REQUIRE(mem.get_stream() == stream2);
+  }
+
+  SECTION("No raw set with empty raw buffer")
+  {
+    MemType mem(Dev, false, stream1);
+    REQUIRE(mem.get_stream() == stream1);
+    mem.set_stream(stream2, false);
+    REQUIRE(mem.get_stream() == stream2);
+  }
+
+  SECTION("Raw set with empty raw buffer")
+  {
+    MemType mem(Dev, false, stream1);
+    REQUIRE(mem.get_stream() == stream1);
+    mem.set_stream(stream2, true);
+    REQUIRE(mem.get_stream() == stream2);
+  }
+}
+
 TEMPLATE_LIST_TEST_CASE("StridedMemory is printable",
                         "[tensor][strided_memory]",
                         AllDevList)

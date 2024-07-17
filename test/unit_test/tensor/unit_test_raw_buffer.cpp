@@ -220,6 +220,22 @@ TEMPLATE_LIST_TEST_CASE("Raw buffer release registration works",
   buf.release();
 }
 
+TEMPLATE_LIST_TEST_CASE("Raw buffer stream get/set works",
+                        "[tensor][raw_buffer]",
+                        AllDevList)
+{
+  using BufType = RawBuffer<DataType>;
+  constexpr Device Dev = TestType::value;
+
+  ComputeStream stream1 = create_new_compute_stream<Dev>();
+  ComputeStream stream2 = create_new_compute_stream<Dev>();
+
+  BufType buf(Dev, stream1);
+  REQUIRE(buf.get_stream() == stream1);
+  buf.set_stream(stream2);
+  REQUIRE(buf.get_stream() == stream2);
+}
+
 TEMPLATE_LIST_TEST_CASE("Raw buffers are printable",
                         "[tensor][raw_buffer]",
                         AllDevList)
