@@ -265,6 +265,8 @@ TEST_CASE("Moving GPU syncs clears handles", "[sync]")
   REQUIRE(event.get_event<Device::GPU>() == nullptr);
 }
 
+#endif  // H2_TEST_WITH_GPU
+
 TEMPLATE_LIST_TEST_CASE("MultiSyncs are sane", "[sync]", AllDevPairsList)
 {
   constexpr Device Dev1 = meta::tlist::At<TestType, 0>::value;
@@ -279,5 +281,3 @@ TEMPLATE_LIST_TEST_CASE("MultiSyncs are sane", "[sync]", AllDevPairsList)
   REQUIRE(static_cast<ComputeStream>(multi_sync) == stream1);
   REQUIRE(multi_sync.get_stream<Dev1>() == stream1.get_stream<Dev1>());
 }
-
-#endif  // H2_TEST_WITH_GPU
