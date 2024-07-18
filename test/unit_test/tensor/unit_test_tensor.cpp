@@ -838,6 +838,39 @@ TEMPLATE_LIST_TEST_CASE("Cloning tensors works",
   }
 }
 
+TEMPLATE_LIST_TEST_CASE("Tensor get/set stream works", "[tensor]", AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<DataType>;
+
+  ComputeStream stream1 = create_new_compute_stream<Dev>();
+  ComputeStream stream2 = create_new_compute_stream<Dev>();
+
+  SECTION("Get/set on regular tensor")
+  {
+    TensorType tensor(Dev, {3, 5}, {DT::Any, DT::Any}, StrictAlloc, stream1);
+    REQUIRE(tensor.get_stream() == stream1);
+    tensor.set_stream(stream2);
+    REQUIRE(tensor.get_stream() == stream2);
+  }
+
+  SECTION("Get/set on view")
+  {
+    TensorType tensor(Dev, {3, 5}, {DT::Any, DT::Any}, StrictAlloc, stream1);
+    auto view = tensor.view();
+    ComputeStream stream3 = create_new_compute_stream<Dev>();
+    // Changing the original should not impact the view.
+    REQUIRE(tensor.get_stream() == stream1);
+    REQUIRE(view->get_stream() == stream1);
+    tensor.set_stream(stream2);
+    REQUIRE(tensor.get_stream() == stream2);
+    REQUIRE(view->get_stream() == stream1);
+    view->set_stream(stream3);
+    REQUIRE(view->get_stream() == stream3);
+    REQUIRE(tensor.get_stream() == stream2);
+  }
+}
+
 TEMPLATE_LIST_TEST_CASE("Tensors are printable", "[tensor]", AllDevList)
 {
   constexpr Device Dev = TestType::value;

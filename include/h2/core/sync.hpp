@@ -685,7 +685,7 @@ public:
         // Add an event and wait on it.
         gpu::DeviceEvent event = internal::get_new_device_event();
         gpu::record_event(event, other_stream.get_stream<Device::GPU>());
-        gpu::sync(other_stream.get_stream<Device::GPU>(), event);
+        gpu::sync(gpu_stream, event);
         internal::release_device_event(event);
       }
     }
@@ -830,7 +830,7 @@ inline void destroy_compute_stream(ComputeStream& stream)
  * streams to complete.
  */
 template <typename... OtherStreams>
-inline void all_wait_on_stream(const ComputeStream& main,
+inline void stream_wait_on_all(const ComputeStream& main,
                                const OtherStreams&... others)
 {
   (main.wait_for(others), ...);
@@ -841,7 +841,7 @@ inline void all_wait_on_stream(const ComputeStream& main,
  * stream to complete.
  */
 template <typename... OtherStreams>
-inline void stream_wait_on_all(const ComputeStream& main,
+inline void all_wait_on_stream(const ComputeStream& main,
                                const OtherStreams&... others)
 {
   (others.wait_for(main), ...);
@@ -881,9 +881,17 @@ public:
    *
    * This enables a MultiSync to be passed in place of the main stream.
    */
-  operator const ComputeStream&() const H2_NOEXCEPT
+  operator const ComputeStream&() const H2_NOEXCEPT { return main_stream; }
+
+  /** Return the main stream associated with this MultiSync. */
+  ComputeStream get_main_stream() const H2_NOEXCEPT { return main_stream; }
+
+  /** Return the underlying raw stream associated with the main stream. */
+  template <Device ThisDev>
+  typename internal::RawComputeStream<ThisDev>::type
+  get_stream() const H2_NOEXCEPT
   {
-    return main_stream;
+    return main_stream.get_stream<ThisDev>();
   }
 
 private:

@@ -266,3 +266,18 @@ TEST_CASE("Moving GPU syncs clears handles", "[sync]")
 }
 
 #endif  // H2_TEST_WITH_GPU
+
+TEMPLATE_LIST_TEST_CASE("MultiSyncs are sane", "[sync]", AllDevPairsList)
+{
+  constexpr Device Dev1 = meta::tlist::At<TestType, 0>::value;
+  constexpr Device Dev2 = meta::tlist::At<TestType, 1>::value;
+
+  ComputeStream stream1 = create_new_compute_stream<Dev1>();
+  ComputeStream stream2 = create_new_compute_stream<Dev2>();
+
+  auto multi_sync = create_multi_sync(stream1, stream2);
+
+  REQUIRE(multi_sync.get_main_stream() == stream1);
+  REQUIRE(static_cast<ComputeStream>(multi_sync) == stream1);
+  REQUIRE(multi_sync.get_stream<Dev1>() == stream1.get_stream<Dev1>());
+}

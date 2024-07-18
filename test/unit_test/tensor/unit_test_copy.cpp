@@ -11,6 +11,7 @@
 #include "h2/tensor/tensor.hpp"
 #include "h2/tensor/copy.hpp"
 #include "utils.hpp"
+#include "../wait.hpp"
 
 using namespace h2;
 
@@ -213,3 +214,91 @@ TEMPLATE_LIST_TEST_CASE("MakeAccessibleOnDevice works",
     REQUIRE(dst_tensor->data() != src_tensor.data());
   }
 }
+
+#ifdef H2_TEST_WITH_GPU
+
+TEST_CASE("GPU-GPU copy synchronizes correctly", "[tensor][copy]")
+{
+  // We ping-pong a buffer between two streams and if they do not sync
+  // correctly, we may get an incorrect buffer.
+  constexpr std::size_t buf_size = 16;
+  constexpr std::size_t change_i = 1;
+
+  ComputeStream stream1 = create_new_compute_stream<Device::GPU>();
+  ComputeStream stream2 = create_new_compute_stream<Device::GPU>();
+
+  DeviceBuf<DataType, Device::GPU> buf1{buf_size};
+  DeviceBuf<DataType, Device::GPU> buf2{buf_size};
+
+  // Run this a few times since sync issues don't always show up.
+  for (int iter = 0; iter < 10; ++iter)
+  {
+    buf1.fill(static_cast<DataType>(1));
+    buf2.fill(static_cast<DataType>(2));
+    gpu_wait(0.001, stream1);
+    write_ele_nosync<Device::GPU>(
+        buf1.buf, change_i, static_cast<DataType>(3), stream1);
+    REQUIRE_NOTHROW(
+        copy_buffer(buf2.buf, stream2, buf1.buf, stream1, buf_size));
+    // read_ele syncs appropriately.
+    for (std::size_t i = 0; i < buf_size; ++i)
+    {
+      auto v1 = read_ele<Device::GPU>(buf1.buf, i, stream1);
+      auto v2 = read_ele<Device::GPU>(buf2.buf, i, stream2);
+      if (i == change_i)
+      {
+        REQUIRE(v1 == static_cast<DataType>(3));
+        REQUIRE(v2 == static_cast<DataType>(3));
+      }
+      else
+      {
+        REQUIRE(v1 == static_cast<DataType>(1));
+        REQUIRE(v2 == static_cast<DataType>(1));
+      }
+    }
+  }
+}
+
+TEST_CASE("GPU-CPU copy synchronzies correctly", "[tensor][copy]")
+{
+  // We attempt to copy a buffer from the GPU to the CPU.
+  // If the CPU copy doesn't sync with the stream correctly, it may get
+  // an old buffer.
+  constexpr std::size_t buf_size = 16;
+  constexpr std::size_t change_i = 1;
+
+  ComputeStream stream = create_new_compute_stream<Device::GPU>();
+
+  DeviceBuf<DataType, Device::GPU> buf_gpu{buf_size};
+  DeviceBuf<DataType, Device::CPU> buf_cpu{buf_size};
+
+  // Run a few times.
+  for (int iter = 0; iter < 10; ++iter)
+  {
+    buf_gpu.fill(static_cast<DataType>(1));
+    buf_cpu.fill(static_cast<DataType>(2));
+    gpu_wait(0.001, stream);
+    write_ele_nosync<Device::GPU>(
+        buf_gpu.buf, change_i, static_cast<DataType>(3), stream);
+    REQUIRE_NOTHROW(copy_buffer(buf_cpu.buf,
+                                ComputeStream{Device::CPU},
+                                buf_gpu.buf,
+                                stream,
+                                buf_size));
+    stream.wait_for_this();
+    // Verify only the CPU buffer.
+    for (std::size_t i = 0; i < buf_size; ++i)
+    {
+      if (i == change_i)
+      {
+        REQUIRE(buf_cpu.buf[i] == static_cast<DataType>(3));
+      }
+      else
+      {
+        REQUIRE(buf_cpu.buf[i] == static_cast<DataType>(1));
+      }
+    }
+  }
+}
+
+#endif  // H2_TEST_WITH_GPU

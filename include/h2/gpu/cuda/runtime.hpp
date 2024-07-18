@@ -1,23 +1,31 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2022 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
-#ifndef H2_INCLUDE_H2_GPU_RUNTIME_CUDA_HPP_INCLUDED
-#define H2_INCLUDE_H2_GPU_RUNTIME_CUDA_HPP_INCLUDED
 
 #include <cuda_runtime.h>
 
-#define H2_CHECK_CUDA(CMD)                                                     \
-    do                                                                         \
-    {                                                                          \
-        if (cudaSuccess != (CMD))                                              \
-        {                                                                      \
-            throw std::runtime_error("Something bad happened.");               \
-        }                                                                      \
-    } while (0)
+#include "h2/utils/Error.hpp"
+
+
+#define H2_CHECK_CUDA(CMD)                                              \
+  do                                                                    \
+  {                                                                     \
+    const auto status_H2_CHECK_CUDA = (CMD);                            \
+    if (status_H2_CHECK_CUDA != cudaSuccess)                            \
+    {                                                                   \
+      throw H2FatalException("CUDA error ",                             \
+                             ::h2::gpu::error_name(status_H2_CHECK_CUDA), \
+                             " (",                                      \
+                             status_H2_CHECK_CUDA,                      \
+                             "): ",                                     \
+                             ::h2::gpu::error_string(status_H2_CHECK_CUDA)); \
+    }                                                                   \
+  } while (0)
 
 namespace h2
 {
@@ -45,4 +53,3 @@ inline char const* error_string(DeviceError status) noexcept
 
 } // namespace gpu
 } // namespace h2
-#endif // H2_INCLUDE_H2_GPU_RUNTIME_CUDA_HPP_INCLUDED
