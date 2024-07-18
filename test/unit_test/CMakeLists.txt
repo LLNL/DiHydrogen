@@ -67,6 +67,10 @@ if (H2_HAS_GPU)
   # MPI testing always tests with GPUs when built with them.
   target_compile_definitions(MPICatchTests PRIVATE H2_TEST_WITH_GPU=1)
   target_sources(MPICatchTests PRIVATE wait.cu)
+  # Make CMake happy:
+  if (H2_ENABLE_ROCM)
+    set_source_files_properties(wait.cu PROPERTIES LANGUAGE HIP)
+  endif ()
 endif ()
 
 # Add Catch2 unit tests
