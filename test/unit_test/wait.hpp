@@ -21,6 +21,9 @@
  *
  * This is intended to be used in tests (or similar) where some work on
  * a stream is needed to simulate real work.
+ *
+ * @param[in] length Approximate kernel duration, in seconds.
+ * @param[in] stream The raw stream handle on which to enqueue the kernel.
  */
 void gpu_wait(double length, h2::gpu::DeviceStream stream);
 
