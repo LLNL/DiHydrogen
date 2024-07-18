@@ -56,7 +56,7 @@ set_target_properties(MPICatchTests
   CXX_STANDARD_REQUIRED ON)
 
 if (H2_HAS_GPU)
-  add_executable(GPUCatchTests GPUCatchMain.cpp)
+  add_executable(GPUCatchTests GPUCatchMain.cpp wait.cu)
   target_link_libraries(GPUCatchTests
     PRIVATE ${H2_LIBRARIES} Catch2::Catch2)
   target_compile_definitions(GPUCatchTests PRIVATE H2_TEST_WITH_GPU=1)
@@ -66,6 +66,7 @@ if (H2_HAS_GPU)
     CXX_STANDARD_REQUIRED ON)
   # MPI testing always tests with GPUs when built with them.
   target_compile_definitions(MPICatchTests PRIVATE H2_TEST_WITH_GPU=1)
+  target_sources(MPICatchTests PRIVATE wait.cu)
 endif ()
 
 # Add Catch2 unit tests

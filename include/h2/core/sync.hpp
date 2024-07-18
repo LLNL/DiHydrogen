@@ -685,7 +685,7 @@ public:
         // Add an event and wait on it.
         gpu::DeviceEvent event = internal::get_new_device_event();
         gpu::record_event(event, other_stream.get_stream<Device::GPU>());
-        gpu::sync(other_stream.get_stream<Device::GPU>(), event);
+        gpu::sync(gpu_stream, event);
         internal::release_device_event(event);
       }
     }
@@ -830,7 +830,7 @@ inline void destroy_compute_stream(ComputeStream& stream)
  * streams to complete.
  */
 template <typename... OtherStreams>
-inline void all_wait_on_stream(const ComputeStream& main,
+inline void stream_wait_on_all(const ComputeStream& main,
                                const OtherStreams&... others)
 {
   (main.wait_for(others), ...);
@@ -841,7 +841,7 @@ inline void all_wait_on_stream(const ComputeStream& main,
  * stream to complete.
  */
 template <typename... OtherStreams>
-inline void stream_wait_on_all(const ComputeStream& main,
+inline void all_wait_on_stream(const ComputeStream& main,
                                const OtherStreams&... others)
 {
   (others.wait_for(main), ...);
