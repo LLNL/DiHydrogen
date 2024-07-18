@@ -27,6 +27,7 @@
     paths:
       - "${CI_PROJECT_DIR}/*junit.*xml"
       - "${CI_PROJECT_DIR}/ci_environment.log"
+      - "${CI_PROJECT_DIR}/build-${CI_JOB_ID}/build-h2/build.ninja"
     reports:
       junit: "${CI_PROJECT_DIR}/*junit.*xml"
   extends: .build-and-test-base
@@ -35,14 +36,10 @@
   artifacts:
     when: always
     paths:
-      - "${CI_PROJECT_DIR}/*gcovr.xml"
       - "${CI_PROJECT_DIR}/*junit.*xml"
       - "${CI_PROJECT_DIR}/ci_environment.log"
+      - "${CI_PROJECT_DIR}/build-${CI_JOB_ID}/build-h2/build.ninja"
       - "${CI_PROJECT_DIR}/build-${CI_JOB_ID}/build-h2/coverage/"
-      - "${CI_PROJECT_DIR}/build-${CI_JOB_ID}/build-h2/*gcovr.xml"
     reports:
       junit: "${CI_PROJECT_DIR}/*junit.*xml"
-      coverage_report:
-        coverage_format: cobertura
-        path: "${CI_PROJECT_DIR}/coverage-gcovr.xml"
   extends: .build-and-test-base
