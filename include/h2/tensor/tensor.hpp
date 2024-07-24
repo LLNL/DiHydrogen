@@ -466,6 +466,11 @@ public:
   /** Return a pointer to the tensor at a particular coordinate. */
   T* get(const ScalarIndexTuple& coords)
   {
+    H2_ASSERT_DEBUG(is_index_in_shape(coords, shape()),
+                    "Cannot get index ",
+                    coords,
+                    " in tensor with shape ",
+                    shape());
     return tensor_memory.get(coords);
   }
 
@@ -474,6 +479,11 @@ public:
    */
   const T* get(const ScalarIndexTuple& coords) const
   {
+    H2_ASSERT_DEBUG(is_index_in_shape(coords, shape()),
+                    "Cannot get index ",
+                    coords,
+                    " in tensor with shape ",
+                    shape());
     return tensor_memory.get(coords);
   }
 
