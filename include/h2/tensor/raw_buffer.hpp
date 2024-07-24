@@ -14,71 +14,22 @@
 
 #include <algorithm>
 #include <memory>
-#include <new>
 #include <ostream>
 #include <unordered_map>
 #include <cstddef>
 
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/utils/typename.hpp"
+#include "h2/core/allocator.hpp"
 #include "h2/core/sync.hpp"
 #include "h2/core/device.hpp"
 
 #ifdef H2_HAS_GPU
-#include "h2/gpu/memory_utils.hpp"
+#include "h2/gpu/runtime.hpp"
 #endif
 
-namespace h2 {
-
-namespace internal
+namespace h2
 {
-
-// TODO: Use proper memory pools (probably Hydrogen's).
-
-template <typename T, Device Dev>
-struct Allocator {
-  static T* allocate(std::size_t size, const ComputeStream& stream);
-  static void deallocate(T* buf, const ComputeStream& stream);
-};
-
-template <typename T>
-struct Allocator<T, Device::CPU> {
-  static T* allocate(std::size_t size, const ComputeStream&) {
-    return new T[size];
-  }
-
-  static void deallocate(T* buf, const ComputeStream&) {
-    delete[] buf;
-  }
-};
-
-#ifdef H2_HAS_GPU
-template <typename T>
-struct Allocator<T, Device::GPU>
-{
-  static T* allocate(std::size_t size, const ComputeStream& stream)
-  {
-    T* buf = nullptr;
-    // FIXME: add H2_CHECK_GPU...
-    H2_ASSERT(gpu::default_cub_allocator().DeviceAllocate(
-                  reinterpret_cast<void**>(&buf),
-                  size*sizeof(T),
-                  stream.get_stream<Device::GPU>()) == 0,
-              std::runtime_error,
-              "CUB allocation failed.");
-    return buf;
-  }
-
-  static void deallocate(T* buf, const ComputeStream&)
-  {
-    H2_ASSERT(gpu::default_cub_allocator().DeviceFree(buf) == 0,
-              std::runtime_error,
-              "CUB deallocation failed.");
-  }
-};
-#endif
-
-}  // namespace internal
 
 /**
  * Manage a raw buffer of data on a device.
@@ -256,37 +207,67 @@ namespace internal
 template <typename T, Device Dev>
 struct DeviceBufferPrinter
 {
-  DeviceBufferPrinter(const T* buf_, std::size_t size_) : buf(buf_), size(size_) {}
-
-  void print(std::ostream& os)
-  {
-    os << "<" << Dev << " buffer of size " << size << ">";
-  }
-
-  const T* buf;
-  std::size_t size;
+  static void print(const T* buf,
+                    std::size_t size,
+                    const ComputeStream& stream,
+                    std::ostream& os);
 };
 
 template <typename T>
 struct DeviceBufferPrinter<T, Device::CPU>
 {
-  DeviceBufferPrinter(const T* buf_, std::size_t size_) : buf(buf_), size(size_) {}
-
-  void print(std::ostream& os)
+  static void
+  print(const T* buf, std::size_t size, const ComputeStream&, std::ostream& os)
   {
-    for (std::size_t i = 0; i < size; ++i)
+    H2_ASSERT_DEBUG(size == 0 || buf != nullptr,
+                    "Attempt to print null buffer");
+    if (size > 0)
     {
-      os << buf[i];
-      if (i != size - 1)
-      {
-        os << ", ";
-      }
+      os << buf[0];
+    }
+    for (std::size_t i = 1; i < size; ++i)
+    {
+      os << ", " << buf[i];
     }
   }
-
-  const T* buf;
-  std::size_t size;
 };
+
+#ifdef H2_HAS_GPU
+
+template <typename T>
+struct DeviceBufferPrinter<T, Device::GPU>
+{
+  static void print(const T* buf,
+                    std::size_t size,
+                    const ComputeStream& stream,
+                    std::ostream& os)
+  {
+    H2_ASSERT_DEBUG(size == 0 || buf != nullptr,
+                    "Attempt to print null buffer");
+    H2_ASSERT_DEBUG(stream.get_device() == Device::GPU, "Not a GPU stream");
+    if (size == 0)
+    {
+      return;
+    }
+    if (gpu::is_integrated())
+    {
+      stream.wait_for_this();
+      // Regular CPU printer is fine.
+      DeviceBufferPrinter<T, Device::CPU>::print(buf, size, stream, os);
+    }
+    else
+    {
+      internal::ManagedBuffer<T, Device::CPU> cpu_buf(size);
+      gpu::mem_copy(
+          cpu_buf.data(), buf, size, stream.get_stream<Device::GPU>());
+      stream.wait_for_this();
+      DeviceBufferPrinter<T, Device::CPU>::print(
+          cpu_buf.data(), size, stream, os);
+    }
+  }
+};
+
+#endif  // H2_HAS_GPU
 
 }  // namespace internal
 
@@ -296,8 +277,9 @@ inline std::ostream& raw_buffer_contents(std::ostream& os,
                                          const RawBuffer<T>& buf)
 {
   H2_DEVICE_DISPATCH_SAME(
-    buf.get_device(),
-    (internal::DeviceBufferPrinter<T, Dev>(buf.const_data(), buf.size()).print(os)));
+      buf.get_device(),
+      (internal::DeviceBufferPrinter<T, Dev>::print(
+          buf.const_data(), buf.size(), buf.get_stream(), os)));
   return os;
 }
 

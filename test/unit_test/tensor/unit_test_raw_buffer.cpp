@@ -258,3 +258,51 @@ TEMPLATE_LIST_TEST_CASE("Raw buffers are printable",
   REQUIRE_THAT(ss.str(),
                Catch::Matchers::EndsWith(std::to_string(buf_size) + ")"));
 }
+
+TEMPLATE_LIST_TEST_CASE("Raw buffer contents print",
+                        "[tensor][raw_buffer]",
+                        AllDevList)
+{
+  using BufType = RawBuffer<DataType>;
+  constexpr Device Dev = TestType::value;
+
+  SECTION("Printing empty raw buffers works")
+  {
+    BufType buf(Dev, ComputeStream{Dev});
+    std::stringstream ss;
+    raw_buffer_contents(ss, buf);
+    REQUIRE(ss.str() == "");
+  }
+
+  SECTION("Printing single-element buffers works")
+  {
+    BufType buf(Dev, 1, false, ComputeStream{Dev});
+    write_ele<Dev>(buf.data(), 0, static_cast<DataType>(1), buf.get_stream());
+    std::stringstream ss;
+    raw_buffer_contents(ss, buf);
+    REQUIRE(ss.str() == "1");
+  }
+
+  SECTION("Printing multi-element buffers works")
+  {
+    constexpr std::size_t buf_size = 32;
+
+    BufType buf(Dev, buf_size, false, ComputeStream{Dev});
+    std::stringstream expected_ss;
+    for (std::size_t i = 0; i < buf_size; ++i)
+    {
+      write_ele<Dev>(buf.data(), i, static_cast<DataType>(i), buf.get_stream());
+      expected_ss << static_cast<DataType>(i);
+      if (i != buf_size - 1)
+      {
+        expected_ss << ", ";
+      }
+    }
+
+    std::stringstream ss;
+    raw_buffer_contents(ss, buf);
+
+    REQUIRE(ss.str() == expected_ss.str());
+  }
+
+}
