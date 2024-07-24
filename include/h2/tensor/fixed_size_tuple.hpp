@@ -80,6 +80,27 @@ struct FixedSizeTuple {
   FixedSizeTuple& operator=(const FixedSizeTuple& other) = default;
   FixedSizeTuple& operator=(FixedSizeTuple&& other) = default;
 
+  /**
+   * Construct a tuple from another tuple with data type that is
+   * convertible to T.
+   */
+  template <typename U, typename OtherSizeType, OtherSizeType M>
+  static constexpr FixedSizeTuple
+  convert_from(const FixedSizeTuple<U, OtherSizeType, M>& other)
+  {
+    static_assert(
+        std::is_convertible_v<U, T>,
+        "Cannot construct a tuple from another with unconvertible type");
+    static_assert(N >= M,
+                  "Cannot construct a tuple from another that may be larger");
+    FixedSizeTuple new_tuple;
+    for (SizeType i = 0; i < other.size_; ++i)
+    {
+      new_tuple.append(other[i]);
+    }
+    return new_tuple;
+  }
+
   /** Return the number of valid elements in the tuple. */
   constexpr SizeType size() const H2_NOEXCEPT { return size_; }
 
@@ -93,6 +114,32 @@ struct FixedSizeTuple {
 
   /** Return a constant raw pointer to the tuple. */
   const T* const_data() const H2_NOEXCEPT { return data_.data(); }
+
+  /** Return a reference to the first element in the tuple. */
+  constexpr T& front() H2_NOEXCEPT
+  {
+    H2_ASSERT_DEBUG(size_ > 0, "Cannot access front in empty tuple");
+    return data_[0];
+  }
+
+  constexpr const T& front() const H2_NOEXCEPT
+  {
+    H2_ASSERT_DEBUG(size_ > 0, "Cannot access front in empty tuple");
+    return data_[0];
+  }
+
+  /** Return a reference to the last element in the tuple. */
+  constexpr T& back() H2_NOEXCEPT
+  {
+    H2_ASSERT_DEBUG(size_ > 0, "Cannot access back in empty tuple");
+    return data_[size_ - 1];
+  }
+
+  constexpr const T& back() const H2_NOEXCEPT
+  {
+    H2_ASSERT_DEBUG(size_ > 0, "Cannot access back in empty tuple");
+    return data_[size_ - 1];
+  }
 
   /** Return an iterator to the first element of the tuple. */
   constexpr iterator begin() H2_NOEXCEPT { return data_.begin(); }
