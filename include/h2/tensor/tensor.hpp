@@ -93,6 +93,13 @@ public:
         tensor_memory(other.tensor_memory, new_device, new_stream)
   {}
 
+  Tensor(const Tensor<T>& other,
+         Device new_device,
+         const ComputeStream& new_stream)
+      : BaseTensor(ViewType::Const, other.shape(), other.dim_types()),
+        tensor_memory(other.tensor_memory, new_device, new_stream)
+  {}
+
   /** Internal constructor for cloning. */
   Tensor(const StridedMemory<T>& mem_,
          const ShapeTuple& shape_,

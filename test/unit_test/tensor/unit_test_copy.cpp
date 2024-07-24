@@ -215,6 +215,45 @@ TEMPLATE_LIST_TEST_CASE("MakeAccessibleOnDevice works",
   }
 }
 
+TEMPLATE_LIST_TEST_CASE("MakeAccessibleOnDevice works with constant tensors",
+                        "[tensor][copy]",
+                        AllDevPairsList)
+{
+  constexpr Device SrcDev = meta::tlist::At<TestType, 0>::value;
+  constexpr Device DstDev = meta::tlist::At<TestType, 1>::value;
+  using SrcTensorType = Tensor<DataType>;
+  using DstTensorType = Tensor<DataType>;
+
+  const SrcTensorType src_tensor(SrcDev, {4, 6}, {DT::Sample, DT::Any});
+
+  auto dst_tensor = make_accessible_on_device(src_tensor, DstDev);
+
+  REQUIRE(dst_tensor->shape() == src_tensor.shape());
+  REQUIRE(dst_tensor->dim_types() == src_tensor.dim_types());
+  REQUIRE(dst_tensor->strides() == src_tensor.strides());
+  REQUIRE(dst_tensor->get_device() == DstDev);
+
+  if (SrcDev == DstDev)
+  {
+    // dst_tensor should be a view of src_tensor.
+    REQUIRE(dst_tensor->get_view_type() == ViewType::Const);
+    REQUIRE(dst_tensor->const_data() == src_tensor.const_data());
+  }
+#ifdef H2_TEST_WITH_GPU
+  else if (gpu::is_integrated())
+  {
+    // Should also have a view.
+    REQUIRE(dst_tensor->get_view_type() == ViewType::Const);
+    REQUIRE(dst_tensor->const_data() == src_tensor.const_data());
+  }
+#endif
+  else
+  {
+    REQUIRE_FALSE(dst_tensor->is_view());
+    REQUIRE(dst_tensor->const_data() != src_tensor.const_data());
+  }
+}
+
 #ifdef H2_TEST_WITH_GPU
 
 TEST_CASE("GPU-GPU copy synchronizes correctly", "[tensor][copy]")
