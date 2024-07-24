@@ -869,3 +869,75 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory is printable",
     REQUIRE_THAT(ss.str(), Catch::Matchers::EndsWith("{3, 5})"));
   }
 }
+
+TEMPLATE_LIST_TEST_CASE("StridedMemory contents print",
+                        "[tensor][strided_memory]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
+
+  SECTION("Printing empty StridedBuffers works")
+  {
+    MemType mem{Dev, false, ComputeStream{Dev}};
+    std::stringstream ss;
+    strided_memory_contents(ss, mem);
+    REQUIRE(ss.str() == "");
+  }
+
+  SECTION("Printing single-element StridedBuffers works")
+  {
+    MemType mem{Dev, ShapeTuple{1}, false, ComputeStream{Dev}};
+    write_ele<Dev>(mem.data(), 0, static_cast<DataType>(1), mem.get_stream());
+    std::stringstream ss;
+    strided_memory_contents(ss, mem);
+    REQUIRE(ss.str() == "1");
+  }
+
+  SECTION("Printing contiguous StridedBuffers works")
+  {
+    MemType mem{Dev, ShapeTuple{2, 3}, false, ComputeStream{Dev}};
+    std::stringstream expected_ss;
+    std::size_t size = product<std::size_t>(mem.shape());
+    for (std::size_t i = 0; i < size; ++i)
+    {
+      write_ele<Dev>(mem.data(), i, static_cast<DataType>(i), mem.get_stream());
+      expected_ss << static_cast<DataType>(i);
+      if (i != size - 1)
+      {
+        expected_ss << ", ";
+      }
+    }
+
+    std::stringstream ss;
+    strided_memory_contents(ss, mem);
+    REQUIRE(ss.str() == expected_ss.str());
+  }
+
+  SECTION("Printing non-contiguous StridedBuffers works")
+  {
+    MemType mem{
+        Dev, ShapeTuple{2, 3}, StrideTuple{2, 4}, false, ComputeStream{Dev}};
+    std::stringstream expected_ss;
+    std::size_t size = product<std::size_t>(mem.shape());
+    DataIndexType v = 0;
+    for (DimType j = 0; j < mem.shape(1); ++j)
+    {
+      for (DimType i = 0; i < mem.shape(0); ++i)
+      {
+        write_ele<Dev>(
+            mem.get({i, j}), 0, static_cast<DataType>(v), mem.get_stream());
+        expected_ss << static_cast<DataType>(v);
+        if (v != size - 1)
+        {
+          expected_ss << ", ";
+        }
+        ++v;
+      }
+    }
+
+    std::stringstream ss;
+    strided_memory_contents(ss, mem);
+    REQUIRE(ss.str() == expected_ss.str());
+  }
+}
