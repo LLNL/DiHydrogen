@@ -213,15 +213,33 @@ intersect_index_ranges(const IndexRangeTuple& ir1,
  * @todo In the future, we could specialize for specific dimensions.
  */
 template <typename Func>
-void for_ndim(const ShapeTuple& shape, Func f)
+void for_ndim(const ShapeTuple& shape,
+              Func f,
+              const ScalarIndexTuple& start = ScalarIndexTuple())
 {
+  H2_ASSERT_DEBUG(start.is_empty() || start.size() == shape.size(),
+                  "Start index ",
+                  start,
+                  " must be same size as shape ",
+                  shape);
   if (shape.is_empty())
   {
     return;
   }
-  ScalarIndexTuple coord(TuplePad<ScalarIndexTuple>(shape.size(), 0));
+  ScalarIndexTuple coord =
+      start.is_empty()
+          ? ScalarIndexTuple(TuplePad<ScalarIndexTuple>(shape.size(), 0))
+          : start;
+  // Upper-bound is the number of elements in shape.
   const DataIndexType ub = product<DataIndexType>(shape);
-  for (DataIndexType i = 0; i < ub; ++i)
+  // Determine the start by computing the number of skipped indices,
+  // essentially by computing an index in a contiguous shape.
+  // (Skip this if we know we start from 0.)
+  const DataIndexType start_index =
+      start.is_empty() ? 0
+                       : inner_product<DataIndexType>(
+                           coord, prefix_product<DataIndexType>(shape));
+  for (DataIndexType i = start_index; i < ub; ++i)
   {
     f(coord);
     coord[0] += 1;

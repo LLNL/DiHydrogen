@@ -93,6 +93,17 @@ TEST_CASE("for_ndim", "[tensor]")
     });
   }
 
+  SECTION("1 with start")
+  {
+    ShapeTuple shape{4};
+    std::vector<ScalarIndexTuple> v = {{1}, {2}, {3}};
+    DataIndexType i = 0;
+    for_ndim(shape, [&](ScalarIndexTuple c) {
+      REQUIRE(c == v[i]);
+      ++i;
+    }, {1});
+  }
+
   SECTION("2d")
   {
     ShapeTuple shape{4, 2};
@@ -103,6 +114,17 @@ TEST_CASE("for_ndim", "[tensor]")
       REQUIRE(c == v[i]);
       ++i;
     });
+  }
+
+  SECTION("2d with start")
+  {
+    ShapeTuple shape{4, 2};
+    std::vector<ScalarIndexTuple> v = {{2, 1}, {3, 1}};
+    DataIndexType i = 0;
+    for_ndim(shape, [&](ScalarIndexTuple c) {
+      REQUIRE(c == v[i]);
+      ++i;
+    }, {2, 1});
   }
 
   SECTION("3d")
@@ -121,6 +143,25 @@ TEST_CASE("for_ndim", "[tensor]")
       REQUIRE(c == v[i]);
       ++i;
     });
+  }
+
+  SECTION("3d with start")
+  {
+    ShapeTuple shape{2, 2, 2};
+    std::vector<ScalarIndexTuple> v = {{1, 0, 1}, {0, 1, 1}, {1, 1, 1}};
+    DataIndexType i = 0;
+    for_ndim(shape, [&](ScalarIndexTuple c) {
+      REQUIRE(c == v[i]);
+      ++i;
+    }, {1, 0, 1});
+  }
+
+  SECTION("Out-of-range start works")
+  {
+    ShapeTuple shape{4, 2};
+    for_ndim(shape,
+             [&](ScalarIndexTuple c) { FAIL("Should not be executed"); },
+             {4, 2});
   }
 }
 
