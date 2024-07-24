@@ -11,6 +11,7 @@
 #include <h2_config.hpp>
 
 #include <exception>
+#include <iostream>
 #include <memory>
 #include <string>
 
@@ -170,6 +171,47 @@ H2_DEFINE_FORWARDING_EXCEPTION(H2Exception, H2FatalException);
  * @param ... Message to pass to the exception if the condition fails.
  */
 #define H2_ASSERT_ALWAYS(cond, ...) H2_ASSERT(cond, H2FatalException, __VA_ARGS__)
+
+/**
+ * Execute the given code block and terminate the application if an
+ * exception is thrown.
+ *
+ * This is primarily intended for use in destructors.
+ *
+ * @warning Beware of unprotected commas, you may want to enclose your
+ * code in parens.
+ *
+ * @param code Code to evaluate.
+ */
+#define H2_TERMINATE_ON_THROW_ALWAYS(code)                                     \
+  do                                                                           \
+  {                                                                            \
+    try                                                                        \
+    {                                                                          \
+      code;                                                                    \
+    }                                                                          \
+    catch (const std::exception& e)                                            \
+    {                                                                          \
+      std::cerr << "Caught exception and terminating immediately\n"            \
+                << e.what() << std::endl;                                      \
+      std::terminate();                                                        \
+    }                                                                          \
+  }                                                                            \
+ while (0)
+#ifdef H2_DEBUG
+/**
+ * Behave exactly like H2_TERMINATE_ON_THROW_ALWAYS, except only check
+ * for exceptions in debug mode.
+ */
+#define H2_TERMINATE_ON_THROW_DEBUG(code) H2_TERMINATE_ON_THROW_ALWAYS(code)
+#else
+#define H2_TERMINATE_ON_THROW_DEBUG(code)                                      \
+  do                                                                           \
+  {                                                                            \
+    code;                                                                      \
+  }                                                                            \
+  while (0)
+#endif  // H2_DEBUG
 
 namespace h2
 {

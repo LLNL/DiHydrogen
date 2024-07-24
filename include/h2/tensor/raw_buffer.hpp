@@ -69,7 +69,7 @@ public:
         stream(stream_)
   {}
 
-  ~RawBuffer() { release(); }
+  ~RawBuffer() { H2_TERMINATE_ON_THROW_ALWAYS(release()); }
 
   /** Allocate memory if the buffer is not present. */
   void ensure()

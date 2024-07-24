@@ -115,10 +115,8 @@ public:
   {
     if (buf)
     {
-      try {
-        H2_DEVICE_DISPATCH_SAME(device,
-                                (Allocator<T, Dev>::deallocate(buf, stream)));
-      } catch (...) {}
+      H2_TERMINATE_ON_THROW_DEBUG(H2_DEVICE_DISPATCH_SAME(
+          device, (Allocator<T, Dev>::deallocate(buf, stream))));
     }
   }
 
