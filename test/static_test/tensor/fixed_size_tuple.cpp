@@ -196,14 +196,6 @@ static_assert(test_sized_tuple_pad3[2] == 0);
 static_assert(test_sized_tuple_pad3[3] == 0);
 }
 
-namespace last_test
-{
-
-constexpr TestFixedSizeTuple test_last{1, 2, 3};
-static_assert(last(test_last) == 3);
-
-} // namespace last_test
-
 namespace init_test
 {
 

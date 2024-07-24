@@ -51,10 +51,10 @@ auto as_h_mat_impl(BufferT buf, Tensor<T> const& tensor)
     }
     auto const& shape = tensor.shape();
     auto const& strides = tensor.strides();
-    auto const width = safe_as<h_size_type>(last(shape));
+    auto const width = safe_as<h_size_type>(shape.back());
     auto const height =
         safe_as<h_size_type>(product<std::uint64_t>(init(shape)));
-    auto const ldim = safe_as<h_size_type>(last(strides));
+    auto const ldim = safe_as<h_size_type>(strides.back());
     return MatrixType{height, width, buf, ldim};
 }
 

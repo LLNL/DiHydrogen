@@ -16,28 +16,28 @@
 
 using namespace h2;
 
-TEST_CASE("last(FixedSizeTuple)", "[utilities]")
+TEST_CASE("FixedSizeTuple::back", "[utilities]")
 {
-    using TupleType = h2::FixedSizeTuple<int, unsigned, 8U>;
+  using TupleType = h2::FixedSizeTuple<int, unsigned, 8U>;
 #ifdef H2_DEBUG
-    SECTION("last of a zero-element (empty) tuple is error")
-    {
-        TupleType x;
-        CHECK_THROWS(h2::last(x));
-    }
+  SECTION("back of a zero-element (empty) tuple is error")
+  {
+    TupleType x;
+    CHECK_THROWS(x.back());
+  }
 #endif
 
-    SECTION("last of a single-element tuple returns only element")
-    {
-        TupleType x = {1};
-        CHECK(h2::last(x) == 1);
-    }
+  SECTION("back of a single-element tuple returns only element")
+  {
+    TupleType x = {1};
+    CHECK(x.back() == 1);
+  }
 
-    SECTION("last of multi-element tuple returns last element")
-    {
-        TupleType x = {1, 2, 3, 4, 5};
-        CHECK(h2::last(x) == 5);
-    }
+  SECTION("back of multi-element tuple returns last element")
+  {
+    TupleType x = {1, 2, 3, 4, 5};
+    CHECK(x.back() == 5);
+  }
 }
 
 TEST_CASE("init(FixedSizeTuple)", "[utilities]")
