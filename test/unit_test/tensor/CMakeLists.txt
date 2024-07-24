@@ -8,6 +8,7 @@
 target_sources(SeqCatchTests PRIVATE
   unit_test_copy.cpp
   unit_test_dist_utils_nompi.cpp
+  unit_test_io.cpp
   unit_test_raw_buffer.cpp
   unit_test_strided_memory.cpp
   unit_test_tensor.cpp
@@ -17,6 +18,7 @@ target_sources(SeqCatchTests PRIVATE
 if (H2_HAS_GPU)
   target_sources(GPUCatchTests PRIVATE
     unit_test_copy.cpp
+    unit_test_io.cpp
     unit_test_raw_buffer.cpp
     unit_test_strided_memory.cpp
     unit_test_tensor.cpp
