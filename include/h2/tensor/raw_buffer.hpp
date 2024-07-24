@@ -257,7 +257,7 @@ struct DeviceBufferPrinter<T, Device::GPU>
     }
     else
     {
-      internal::ManagedBuffer<T, Device::CPU> cpu_buf(size);
+      internal::ManagedBuffer<T> cpu_buf(size, Device::CPU);
       gpu::mem_copy(
           cpu_buf.data(), buf, size, stream.get_stream<Device::GPU>());
       stream.wait_for_this();

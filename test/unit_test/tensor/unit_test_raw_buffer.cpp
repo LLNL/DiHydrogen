@@ -304,5 +304,4 @@ TEMPLATE_LIST_TEST_CASE("Raw buffer contents print",
 
     REQUIRE(ss.str() == expected_ss.str());
   }
-
 }

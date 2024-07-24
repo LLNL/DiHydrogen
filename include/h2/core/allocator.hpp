@@ -84,17 +84,30 @@ struct Allocator<T, Device::GPU>
 /**
  * Helper class to wrap an allocation in RAII semantics.
  */
-template <typename T, Device Dev>
+template <typename T>
 class ManagedBuffer
 {
 public:
-  ManagedBuffer(std::size_t size_,
+  ManagedBuffer(Device dev,
                 const std::optional<ComputeStream> stream_ = std::nullopt)
-    : buf(nullptr), buf_size(size_), stream(stream_.value_or(ComputeStream{Dev}))
+    : buf(nullptr),
+      buf_size(0),
+      device(dev),
+      stream(stream_.value_or(ComputeStream{dev}))
+  {}
+
+  ManagedBuffer(std::size_t size_,
+                Device dev,
+                const std::optional<ComputeStream> stream_ = std::nullopt)
+    : buf(nullptr),
+      buf_size(size_),
+      device(dev),
+      stream(stream_.value_or(ComputeStream{dev}))
   {
     if (buf_size)
     {
-      buf = Allocator<T, Dev>::allocate(buf_size, stream);
+      H2_DEVICE_DISPATCH_SAME(
+          device, (buf = Allocator<T, Dev>::allocate(buf_size, stream)));
     }
   }
 
@@ -102,15 +115,36 @@ public:
   {
     if (buf)
     {
-      Allocator<T, Dev>::deallocate(buf, stream);
+      try {
+        H2_DEVICE_DISPATCH_SAME(device,
+                                (Allocator<T, Dev>::deallocate(buf, stream)));
+      } catch (...) {}
     }
   }
 
   ManagedBuffer(const ManagedBuffer&) = delete;
   ManagedBuffer& operator=(const ManagedBuffer&) = delete;
 
-  ManagedBuffer(ManagedBuffer&&) = default;
-  ManagedBuffer& operator=(ManagedBuffer&&) = default;
+  ManagedBuffer(ManagedBuffer&& other)
+      : buf(other.buf),
+        buf_size(other.buf_size),
+        device(other.device),
+        stream(other.stream)
+  {
+    other.buf = nullptr;
+    other.buf_size = 0;
+  }
+
+  ManagedBuffer& operator=(ManagedBuffer&& other)
+  {
+    buf = other.buf;
+    buf_size = other.buf_size;
+    device = other.device;
+    stream = other.stream;
+    other.buf = nullptr;
+    other.buf_size = 0;
+    return *this;
+  }
 
   T* data() H2_NOEXCEPT { return buf; }
 
@@ -120,11 +154,14 @@ public:
 
   std::size_t size() const H2_NOEXCEPT { return size; }
 
+  const Device get_device() const H2_NOEXCEPT { return device; }
+
   const ComputeStream& get_stream() const H2_NOEXCEPT { return stream; }
 
 private:
   T* buf;
   std::size_t buf_size;
+  Device device;
   ComputeStream stream;
 };
 
