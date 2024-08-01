@@ -104,4 +104,46 @@ TEMPLATE_LIST_TEST_CASE("Printing tensors works", "[tensor][io]", AllDevList)
       REQUIRE(ss.str() == expected[ndims - 1]);
     }
   }
+
+  SECTION("Printing a contiguous view works")
+  {
+    TensorType tensor{Dev, {2, 2, 4}, {DT::Any, DT::Any, DT::Any}};
+    for (DataIndexType i = 0; i < tensor.numel(); ++i)
+    {
+      write_ele<Dev>(
+          tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
+    }
+    auto view = tensor.view();
+    std::stringstream ss;
+    print(ss, *view);
+    const char* expected = "[\n"
+                           " [\n"
+                           "  [0, 4, 8, 12]\n"
+                           "  [2, 6, 10, 14]\n"
+                           " ]\n"
+                           " [\n"
+                           "  [1, 5, 9, 13]\n"
+                           "  [3, 7, 11, 15]\n"
+                           " ]\n"
+                           "]";
+    REQUIRE(ss.str() == expected);
+  }
+
+  SECTION("Printing a sub-view works")
+  {
+    TensorType tensor{Dev, {2, 4}, {DT::Any, DT::Any}};
+    for (DataIndexType i = 0; i < tensor.numel(); ++i)
+    {
+      write_ele<Dev>(
+          tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
+    }
+    auto view = tensor.view({ALL, IRng(1, 3)});
+    std::stringstream ss;
+    print(ss, *view);
+    const char* expected = "[\n"
+                           " [2, 4]\n"
+                           " [3, 5]\n"
+                           "]";
+    REQUIRE(ss.str() == expected);
+  }
 }

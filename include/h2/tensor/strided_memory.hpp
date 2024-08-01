@@ -161,7 +161,8 @@ public:
     }
     else
     {
-      mem_offset = base.get_index(get_index_range_start(coords));
+      mem_offset =
+          base.get_index(get_index_range_start(coords)) + base.mem_offset;
       mem_shape = get_index_range_shape(coords, base.shape());
       if (mem_shape.is_empty())
       {

@@ -414,6 +414,30 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
   }
 }
 
+TEMPLATE_LIST_TEST_CASE("StridedMemory views of subviews work",
+                        "[tensor][strided_memory]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
+
+  MemType base_mem =
+    MemType(Dev, ShapeTuple{4, 6}, false, ComputeStream{Dev});
+  for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
+  {
+    write_ele<Dev>(
+      base_mem.data(), i, static_cast<DataType>(i), base_mem.get_stream());
+  }
+
+  auto view_orig = MemType(base_mem, {ALL, IRng(1, 3)});
+  auto view = MemType(view_orig, {ALL, ALL});
+
+  REQUIRE(view.shape() == view_orig.shape());
+  REQUIRE(view.strides() == view_orig.strides());
+  REQUIRE(view.size() == view_orig.size());
+  REQUIRE(view.data() == view_orig.data());
+}
+
 TEMPLATE_LIST_TEST_CASE("Lazy StridedMemory works",
                         "[tensor][strided_memory]",
                         AllDevList)
@@ -787,6 +811,75 @@ TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
     REQUIRE(clone.strides() == mem.strides());
     REQUIRE(clone.shape() == mem.shape());
     REQUIRE(clone.is_lazy() == mem.is_lazy());
+  }
+}
+
+TEMPLATE_LIST_TEST_CASE("StridedMemory get works",
+                        "[tensor][strided_memory]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using MemType = StridedMemory<DataType>;
+
+  SECTION("Get from contiguous StridedMemory")
+  {
+    MemType mem{Dev, {2, 4}, false, ComputeStream{Dev}};
+    for (std::size_t i = 0; i < product<std::size_t>(mem.shape()); ++i)
+    {
+      write_ele<Dev>(mem.data(), i, static_cast<DataType>(i), mem.get_stream());
+    }
+
+    std::size_t v = 0;
+    for (typename ShapeTuple::type j = 0; j < mem.shape(1); ++j)
+    {
+      for (typename ShapeTuple::type i = 0; i < mem.shape(0); ++i)
+      {
+        REQUIRE(read_ele<Dev>(mem.get({i, j}), mem.get_stream())
+                == static_cast<DataType>(v));
+        ++v;
+      }
+    }
+  }
+
+  SECTION("Get from non-contiguous StridedMemory")
+  {
+    MemType mem{Dev, {2, 4}, {1, 4}, false, ComputeStream{Dev}};
+    std::size_t v = 0;
+    for (std::size_t j = 0; j < mem.shape(1); ++j)
+    {
+      for (std::size_t i = 0; i < mem.shape(0); ++i)
+      {
+        write_ele<Dev>(
+            mem.data(), i + 4 * j, static_cast<DataType>(v), mem.get_stream());
+        ++v;
+      }
+    }
+
+    v = 0;
+    for (typename ShapeTuple::type j = 0; j < mem.shape(1); ++j)
+    {
+      for (typename ShapeTuple::type i = 0; i < mem.shape(0); ++i)
+      {
+        REQUIRE(read_ele<Dev>(mem.get({i, j}), mem.get_stream())
+                == static_cast<DataType>(v));
+        ++v;
+      }
+    }
+  }
+
+  SECTION("Get from a non-contiguous StridedMemory view")
+  {
+    MemType mem{Dev, {2, 4}, false, ComputeStream{Dev}};
+    for (std::size_t i = 0; i < product<std::size_t>(mem.shape()); ++i)
+    {
+      write_ele<Dev>(mem.data(), i, static_cast<DataType>(i), mem.get_stream());
+    }
+
+    MemType mem_view{mem, {ALL, IRng{1, 3}}};
+    REQUIRE(read_ele<Dev>(mem_view.get({0, 0}), mem_view.get_stream()) == 2);
+    REQUIRE(read_ele<Dev>(mem_view.get({0, 1}), mem_view.get_stream()) == 4);
+    REQUIRE(read_ele<Dev>(mem_view.get({1, 0}), mem_view.get_stream()) == 3);
+    REQUIRE(read_ele<Dev>(mem_view.get({1, 1}), mem_view.get_stream()) == 5);
   }
 }
 

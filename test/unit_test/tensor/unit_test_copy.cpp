@@ -176,7 +176,7 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
   }
 }
 
-TEMPLATE_LIST_TEST_CASE("MakeAccessibleOnDevice works",
+TEMPLATE_LIST_TEST_CASE("make_accessible_on_device works",
                         "[tensor][copy]",
                         AllDevPairsList)
 {
@@ -215,7 +215,7 @@ TEMPLATE_LIST_TEST_CASE("MakeAccessibleOnDevice works",
   }
 }
 
-TEMPLATE_LIST_TEST_CASE("MakeAccessibleOnDevice works with constant tensors",
+TEMPLATE_LIST_TEST_CASE("make_accessible_on_device works with constant tensors",
                         "[tensor][copy]",
                         AllDevPairsList)
 {
@@ -251,6 +251,46 @@ TEMPLATE_LIST_TEST_CASE("MakeAccessibleOnDevice works with constant tensors",
   {
     REQUIRE_FALSE(dst_tensor->is_view());
     REQUIRE(dst_tensor->const_data() != src_tensor.const_data());
+  }
+}
+
+TEMPLATE_LIST_TEST_CASE("make_accessible_on_device works with subviews",
+                        "[tensor][copy]",
+                        AllDevPairsList)
+{
+  constexpr Device SrcDev = meta::tlist::At<TestType, 0>::value;
+  constexpr Device DstDev = meta::tlist::At<TestType, 1>::value;
+  using SrcTensorType = Tensor<DataType>;
+  using DstTensorType = Tensor<DataType>;
+
+  SrcTensorType src_tensor(SrcDev, {4, 6}, {DT::Sample, DT::Any});
+  auto src_view = src_tensor.view({ALL, IRng{1, 3}});
+
+  auto dst_tensor = make_accessible_on_device(*src_view, DstDev);
+
+  REQUIRE(dst_tensor->shape() == src_view->shape());
+  REQUIRE(dst_tensor->dim_types() == src_view->dim_types());
+  REQUIRE(dst_tensor->strides() == src_view->strides());
+  REQUIRE(dst_tensor->get_device() == DstDev);
+
+  if (SrcDev == DstDev)
+  {
+    // dst_tensor should be a view of src_tensor.
+    REQUIRE(dst_tensor->get_view_type() == ViewType::Mutable);
+    REQUIRE(dst_tensor->data() == src_view->data());
+  }
+#ifdef H2_TEST_WITH_GPU
+  else if (gpu::is_integrated())
+  {
+    // Should also have a view.
+    REQUIRE(dst_tensor->get_view_type() == ViewType::Mutable);
+    REQUIRE(dst_tensor->data() == src_view->data());
+  }
+#endif
+  else
+  {
+    REQUIRE_FALSE(dst_tensor->is_view());
+    REQUIRE(dst_tensor->data() != src_view->data());
   }
 }
 

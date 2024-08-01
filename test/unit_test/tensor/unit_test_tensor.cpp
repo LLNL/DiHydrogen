@@ -531,7 +531,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
     REQUIRE_THROWS(view->data());
     REQUIRE(view->is_contiguous());
   }
-  SECTION("Viewing a subtensor works")
+  SECTION("Viewing a (1, ALL) subtensor works")
   {
     std::unique_ptr<TensorType> view = tensor.view({IRng(1), ALL});
     REQUIRE(view->shape() == ShapeTuple{6});
@@ -546,6 +546,26 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
     for (DimType i = 0; i < view->shape(0); ++i)
     {
       REQUIRE(read_ele<Dev>(view->get({i}), view->get_stream()) == (1 + 4*i));
+    }
+  }
+  SECTION("Viewing a (ALL, (1, 3)) subtensor works")
+  {
+    std::unique_ptr<TensorType> view = tensor({ALL, IRng(1, 3)});
+    REQUIRE(view->shape() == ShapeTuple{4, 2});
+    REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
+    REQUIRE(view->strides() == StrideTuple{1, 4});
+    REQUIRE(view->ndim() == 2);
+    REQUIRE(view->numel() == 4 * 2);
+    REQUIRE(view->is_view());
+    REQUIRE(view->data() == (tensor.data() + 4));
+    REQUIRE(view->is_contiguous());
+    for (DimType j = 0; j < view->shape(1); ++j)
+    {
+      for (DimType i = 0; i < view->shape(0); ++i)
+      {
+        REQUIRE(read_ele<Dev>(view->get({i, j}), view->get_stream())
+                == (i + (j+1) * 4));
+      }
     }
   }
   SECTION("Operator-style views work")
@@ -613,6 +633,28 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
     for (DataIndexType i = 0; i < view->numel(); ++i)
     {
       REQUIRE(read_ele<Dev>(view->data(), i, view->get_stream()) == i);
+    }
+  }
+  SECTION("Viewing a subview works")
+  {
+    std::unique_ptr<TensorType> view_orig = tensor.view({ALL, IRng{1, 3}});
+    std::unique_ptr<TensorType> view = view_orig->view();
+    REQUIRE(view->shape() == view_orig->shape());
+    REQUIRE(view->dim_types() == view_orig->dim_types());
+    REQUIRE(view->strides() == view_orig->strides());
+    REQUIRE(view->ndim() == 2);
+    REQUIRE(view->numel() == view_orig->numel());
+    REQUIRE(view->is_view());
+    REQUIRE(view->data() == view_orig->data());
+    REQUIRE(view->is_contiguous());
+
+    for (DimType j = 0; j < view->shape(1); ++j)
+    {
+      for (DimType i = 0; i < view->shape(0); ++i)
+      {
+        REQUIRE(read_ele<Dev>(view->get({i, j}), view->get_stream())
+                == (i + (j + 1) * 4));
+      }
     }
   }
   SECTION("Unviewing a view works")
