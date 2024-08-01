@@ -219,7 +219,7 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
         for (int row = 0; row < m; ++row)
         {
             INFO("ROW=" << row);
-            CHECK(tensor.get({row}) == mat.LockedBuffer(row, 0));
+            CHECK(tensor.const_get({row}) == mat.LockedBuffer(row, 0));
         }
     }
 
@@ -258,7 +258,7 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
         for (int col = 0; col < n; ++col)
         {
             INFO("COL=" << col);
-            CHECK(tensor.get({col}) == mat.LockedBuffer(0, col));
+            CHECK(tensor.const_get({col}) == mat.LockedBuffer(0, col));
         }
     }
 
@@ -299,7 +299,7 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
             for (int row = 0; row < m; ++row)
             {
                 INFO("ROW=" << row << ", COL=" << col);
-                CHECK(tensor.get({row, col}) == mat.LockedBuffer(row, col));
+                CHECK(tensor.const_get({row, col}) == mat.LockedBuffer(row, col));
             }
     }
 
@@ -340,7 +340,7 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
             for (int row = 0; row < m; ++row)
             {
                 INFO("ROW=" << row << ", COL=" << col);
-                CHECK(tensor.get({row, col}) == mat.LockedBuffer(row, col));
+                CHECK(tensor.const_get({row, col}) == mat.LockedBuffer(row, col));
             }
     }
 }

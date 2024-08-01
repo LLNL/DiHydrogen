@@ -52,7 +52,7 @@ inline std::ostream& print(std::ostream& os, const Tensor<T>& tensor)
     {
       os << std::string(indent, ' ') << "[";
     }
-    os << *(cpu_view->get(coord));
+    os << *(cpu_view->const_get(coord));
     // Close inner-most brace.
     if (coord.back() == tensor.shape().back() - 1)
     {

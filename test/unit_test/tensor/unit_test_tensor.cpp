@@ -210,6 +210,7 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(tensor.data() != nullptr);
   REQUIRE(tensor.const_data() != nullptr);
   REQUIRE(tensor.get({0, 0}) == tensor.data());
+  REQUIRE(tensor.const_get({0, 0}) == tensor.data());
   REQUIRE_FALSE(tensor.is_lazy());
 
   const TensorType const_tensor =
@@ -234,6 +235,7 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(const_tensor.data() != nullptr);
   REQUIRE(const_tensor.const_data() != nullptr);
   REQUIRE(const_tensor.get({0, 0}) == const_tensor.data());
+  REQUIRE(const_tensor.const_get({0, 0}) == const_tensor.data());
   REQUIRE_FALSE(const_tensor.is_lazy());
 }
 
@@ -332,6 +334,7 @@ TEMPLATE_LIST_TEST_CASE("Single element tensor metadata is sane",
   REQUIRE(tensor.data() != nullptr);
   REQUIRE(tensor.const_data() != nullptr);
   REQUIRE(tensor.get({0}) == tensor.data());
+  REQUIRE(tensor.const_get({0}) == tensor.data());
   REQUIRE_FALSE(tensor.is_lazy());
 }
 
@@ -528,7 +531,9 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
     REQUIRE(view->is_const_view());
     REQUIRE(view->get_view_type() == ViewType::Const);
     REQUIRE(view->const_data() == tensor.data());
+    REQUIRE(view->const_get({0, 0}) == tensor.data());
     REQUIRE_THROWS(view->data());
+    REQUIRE_THROWS(view->get({0, 0}));
     REQUIRE(view->is_contiguous());
   }
   SECTION("Viewing a (1, ALL) subtensor works")
