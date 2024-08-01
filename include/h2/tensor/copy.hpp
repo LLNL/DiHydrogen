@@ -222,7 +222,42 @@ std::unique_ptr<Tensor<T>> make_accessible_on_device(
 #else  // H2_HAS_GPU
   // No GPU support, but dev differs from the tensor's device.
   // This should not happen.
-  throw H2Exception("Unknown device ", dev);
+  throw H2FatalException("Unknown device ", dev);
+#endif  // H2_HAS_GPU
+}
+
+/** Version of `make_accessible_on_device` for const tensors. */
+template <typename T>
+std::unique_ptr<Tensor<T>> make_accessible_on_device(
+    const Tensor<T>& src,
+    Device dev,
+    const std::optional<ComputeStream> stream = std::nullopt)
+{
+  if (src.get_device() == dev)
+  {
+    auto view = src.const_view();
+    if (stream.has_value())
+    {
+      view->set_stream(stream.value());
+    }
+    return view;
+  }
+
+  ComputeStream real_stream = stream.value_or(ComputeStream{dev});
+#ifdef H2_HAS_GPU
+  if (gpu::is_integrated())
+  {
+    return std::make_unique<Tensor<T>>(src, dev, real_stream);
+  }
+  else
+  {
+    auto dst = std::make_unique<Tensor<T>>(
+        dev, src.shape(), src.dim_types(), StrictAlloc, real_stream);
+    copy(*dst, src);
+    return dst;
+  }
+#else  // H2_HAS_GPU
+  throw H2FatalException("Unknown device ", dev);
 #endif  // H2_HAS_GPU
 }
 

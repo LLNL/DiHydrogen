@@ -205,23 +205,107 @@ intersect_index_ranges(const IndexRangeTuple& ir1,
 }
 
 /**
+ * Return true if the given scalar index is a valid index within shape.
+ */
+constexpr inline bool is_index_in_shape(const ScalarIndexTuple& idx,
+                                        const ShapeTuple& shape) H2_NOEXCEPT
+{
+  H2_ASSERT_DEBUG(idx.size() == shape.size(),
+                  "Scalar indices ",
+                  idx,
+                  " and shape ",
+                  shape,
+                  " must be the same size");
+  for (typename ScalarIndexTuple::size_type dim = 0; dim < idx.size(); ++dim)
+  {
+    if (idx[dim] >= shape[dim])
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Return the next index after idx in a given shape.
+ *
+ * This gives the next index in the generalized column-major order.
+ *
+ * If idx is the last index, this will return an index one past the
+ * end.
+ */
+constexpr inline ScalarIndexTuple
+next_scalar_index(const ScalarIndexTuple& idx,
+                  const ShapeTuple& shape) H2_NOEXCEPT
+{
+  H2_ASSERT_DEBUG(idx.size() == shape.size(),
+                  "Scalar indices ",
+                  idx,
+                  " and shape ",
+                  shape,
+                  " must be the same size");
+  H2_ASSERT_DEBUG(!idx.is_empty(), "Cannot get next index from an empty index");
+  H2_ASSERT_DEBUG(is_index_in_shape(idx, shape),
+                  "Cannot get next index from index ",
+                  idx,
+                  " that is not in shape ",
+                  shape);
+  ScalarIndexTuple next_idx = idx;
+  next_idx[0] += 1;
+  for (typename ScalarIndexTuple::size_type dim = 0; dim < idx.size() - 1; ++dim)
+  {
+    if (next_idx[dim] == shape[dim])
+    {
+      next_idx[dim] = 0;
+      next_idx[dim + 1] += 1;
+    }
+  }
+  if (next_idx.back() == shape.back())
+  {
+    // Went past the end.
+    return ScalarIndexTuple::convert_from(shape);
+  }
+  return next_idx;
+}
+
+/**
  * Iterate over an n-dimensional region.
  *
  * The given function f will be called with a `ScalarIndexTuple` for
  * each index position.
  *
+ * The iteration is done in the generalized column-major order.
+ *
  * @todo In the future, we could specialize for specific dimensions.
  */
 template <typename Func>
-void for_ndim(const ShapeTuple& shape, Func f)
+void for_ndim(const ShapeTuple& shape,
+              Func f,
+              const ScalarIndexTuple& start = ScalarIndexTuple())
 {
+  H2_ASSERT_DEBUG(start.is_empty() || start.size() == shape.size(),
+                  "Start index ",
+                  start,
+                  " must be same size as shape ",
+                  shape);
   if (shape.is_empty())
   {
     return;
   }
-  ScalarIndexTuple coord(TuplePad<ScalarIndexTuple>(shape.size(), 0));
+  ScalarIndexTuple coord =
+      start.is_empty()
+          ? ScalarIndexTuple(TuplePad<ScalarIndexTuple>(shape.size(), 0))
+          : start;
+  // Upper-bound is the number of elements in shape.
   const DataIndexType ub = product<DataIndexType>(shape);
-  for (DataIndexType i = 0; i < ub; ++i)
+  // Determine the start by computing the number of skipped indices,
+  // essentially by computing an index in a contiguous shape.
+  // (Skip this if we know we start from 0.)
+  const DataIndexType start_index =
+      start.is_empty() ? 0
+                       : inner_product<DataIndexType>(
+                           coord, prefix_product<DataIndexType>(shape));
+  for (DataIndexType i = start_index; i < ub; ++i)
   {
     f(coord);
     coord[0] += 1;

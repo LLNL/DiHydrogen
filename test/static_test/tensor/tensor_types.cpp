@@ -143,3 +143,18 @@ static_assert(intersect_index_ranges(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
                                      IndexRangeTuple(IRng(0, 1), ALL))
               == IndexRangeTuple(IRng(0, 1), IRng(0, 2)));
 }  // namespace intersect_index_ranges_tests
+
+namespace is_index_in_shape_tests
+{
+static_assert(is_index_in_shape(ScalarIndexTuple{}, ShapeTuple{}));
+static_assert(is_index_in_shape(ScalarIndexTuple{0, 0}, ShapeTuple{2, 2}));
+static_assert(!is_index_in_shape(ScalarIndexTuple{2, 2}, ShapeTuple{2, 2}));
+}  // namespace is_index_in_shape_tests
+
+namespace next_scalar_index_tests
+{
+static_assert(next_scalar_index({0}, {2}) == ScalarIndexTuple{1});
+static_assert(next_scalar_index({0, 0}, {2, 2}) == ScalarIndexTuple{1, 0});
+static_assert(next_scalar_index({1, 0}, {2, 2}) == ScalarIndexTuple{0, 1});
+static_assert(next_scalar_index({1}, {2}) == ScalarIndexTuple{2});
+}  // namespace next_scalar_index_tests

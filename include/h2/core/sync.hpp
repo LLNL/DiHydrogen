@@ -682,6 +682,10 @@ public:
       }
       else if constexpr (StreamDev == Device::GPU)
       {
+        if (gpu_stream == other_stream.gpu_stream)
+        {
+          return;  // No need to sync when these are the same stream.
+        }
         // Add an event and wait on it.
         gpu::DeviceEvent event = internal::get_new_device_event();
         gpu::record_event(event, other_stream.get_stream<Device::GPU>());

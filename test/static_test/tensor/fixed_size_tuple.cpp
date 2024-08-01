@@ -20,6 +20,11 @@ constexpr TestFixedSizeTuple test_tuple;
 static_assert(test_tuple.size() == 0);
 static_assert(test_tuple.is_empty());
 
+constexpr auto converted_tuple =
+    h2::FixedSizeTuple<long long int, std::size_t, 4>::convert_from(test_tuple);
+static_assert(converted_tuple.size() == 0);
+static_assert(converted_tuple.is_empty());
+
 constexpr TestFixedSizeTuple test_tuple2;
 static_assert(test_tuple == test_tuple2);
 
@@ -77,6 +82,14 @@ static_assert(test_tuple == test_tuple2);
 constexpr TestFixedSizeTuple test_tuple3(2, 1);
 static_assert(test_tuple != test_tuple3);
 
+constexpr auto converted_tuple =
+    h2::FixedSizeTuple<long long int, std::size_t, 4>::convert_from(test_tuple);
+static_assert(converted_tuple.size() == 2);
+static_assert(converted_tuple[0] == 1);
+static_assert(converted_tuple[1] == 2);
+static_assert(!converted_tuple.is_empty());
+static_assert(converted_tuple == test_tuple);
+
 static_assert(h2::product<int>(test_tuple) == 2);
 static_assert(h2::inner_product<int>(test_tuple, test_tuple2) == 5);
 static_assert(h2::prefix_product<int>(test_tuple) == TestFixedSizeTuple(1, 1));
@@ -133,6 +146,9 @@ static_assert(*test_tuple.rbegin() == 2);
 static_assert(*std::next(test_tuple.rbegin()) == 1);
 static_assert(test_tuple.rbegin() + test_tuple.size() == test_tuple.rend());
 
+static_assert(test_tuple.front() == 1);
+static_assert(test_tuple.back() == 2);
+
 constexpr auto test_tuple_copy = test_tuple;
 static_assert(test_tuple_copy.size() == 2);
 static_assert(test_tuple_copy[0] == 1);
@@ -179,14 +195,6 @@ static_assert(test_sized_tuple_pad3[1] == 2);
 static_assert(test_sized_tuple_pad3[2] == 0);
 static_assert(test_sized_tuple_pad3[3] == 0);
 }
-
-namespace last_test
-{
-
-constexpr TestFixedSizeTuple test_last{1, 2, 3};
-static_assert(last(test_last) == 3);
-
-} // namespace last_test
 
 namespace init_test
 {

@@ -161,7 +161,8 @@ public:
     }
     else
     {
-      mem_offset = base.get_index(get_index_range_start(coords));
+      mem_offset =
+          base.get_index(get_index_range_start(coords)) + base.mem_offset;
       mem_shape = get_index_range_shape(coords, base.shape());
       if (mem_shape.is_empty())
       {
@@ -466,16 +467,51 @@ template <typename T>
 inline std::ostream& strided_memory_contents(std::ostream& os,
                                              const StridedMemory<T>& mem)
 {
-  DataIndexType size =
+  const DataIndexType size =
       mem.shape().size() ? product<DataIndexType>(mem.shape()) : 0;
-  for (DataIndexType i = 0; i < size; ++i)
+  if (size == 0)
   {
-    os << *mem.get(mem.get_coord(i));
-    if (i != size - 1)
+    return os;  // Skip if empty.
+  }
+  const T* buf = nullptr;
+  internal::ManagedBuffer<T> cpu_buf{Device::CPU};
+  if (mem.get_device() == Device::CPU)
+  {
+    buf = mem.data();
+  }
+#ifdef H2_HAS_GPU
+  else if (mem.get_device() == Device::GPU)
+  {
+    if (gpu::is_integrated())
     {
-      os << ", ";
+      buf = mem.data();
+    }
+    else
+    {
+      std::size_t extent = get_extent_from_strides(mem.shape(), mem.strides());
+      cpu_buf = internal::ManagedBuffer<T>(extent, Device::CPU);
+      gpu::mem_copy(cpu_buf.data(),
+                    mem.const_data(),
+                    extent,
+                    mem.get_stream().template get_stream<Device::GPU>());
+      buf = cpu_buf.data();
     }
   }
+#endif
+  else
+  {
+    throw H2FatalException("Unknown device ", mem.get_device());
+  }
+  mem.get_stream().wait_for_this();  // Ensure all operations have finished.
+
+  // We might try to nicely format this in the future.
+  // We know size > 0 if we are here.
+  ScalarIndexTuple start{TuplePad<ScalarIndexTuple>(mem.shape().size(), 0)};
+  os << buf[mem.get_index(start)];  // Print first entry.
+  start = next_scalar_index(start, mem.shape());
+  for_ndim(mem.shape(), [&](ScalarIndexTuple c) {
+    os << ", " << buf[mem.get_index(c)];
+  }, start);
   return os;
 }
 

@@ -202,14 +202,6 @@ init(FixedSizeTuple<T, SizeType, N> const& in) H2_NOEXCEPT
   return out;
 }
 
-/** @brief Get the last element of the input tuple */
-template <typename T, typename SizeType, SizeType N>
-constexpr T last(FixedSizeTuple<T, SizeType, N> const& in) H2_NOEXCEPT
-{
-  H2_ASSERT_DEBUG(!in.is_empty(), "Cannot get last of empty tuple");
-  return in[in.size() - 1];
-}
-
 /**
  * Return a tuple containing the first n elements of the given tuple.
  */

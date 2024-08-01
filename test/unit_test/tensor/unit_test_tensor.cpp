@@ -16,28 +16,28 @@
 
 using namespace h2;
 
-TEST_CASE("last(FixedSizeTuple)", "[utilities]")
+TEST_CASE("FixedSizeTuple::back", "[utilities]")
 {
-    using TupleType = h2::FixedSizeTuple<int, unsigned, 8U>;
+  using TupleType = h2::FixedSizeTuple<int, unsigned, 8U>;
 #ifdef H2_DEBUG
-    SECTION("last of a zero-element (empty) tuple is error")
-    {
-        TupleType x;
-        CHECK_THROWS(h2::last(x));
-    }
+  SECTION("back of a zero-element (empty) tuple is error")
+  {
+    TupleType x;
+    CHECK_THROWS(x.back());
+  }
 #endif
 
-    SECTION("last of a single-element tuple returns only element")
-    {
-        TupleType x = {1};
-        CHECK(h2::last(x) == 1);
-    }
+  SECTION("back of a single-element tuple returns only element")
+  {
+    TupleType x = {1};
+    CHECK(x.back() == 1);
+  }
 
-    SECTION("last of multi-element tuple returns last element")
-    {
-        TupleType x = {1, 2, 3, 4, 5};
-        CHECK(h2::last(x) == 5);
-    }
+  SECTION("back of multi-element tuple returns last element")
+  {
+    TupleType x = {1, 2, 3, 4, 5};
+    CHECK(x.back() == 5);
+  }
 }
 
 TEST_CASE("init(FixedSizeTuple)", "[utilities]")
@@ -93,6 +93,17 @@ TEST_CASE("for_ndim", "[tensor]")
     });
   }
 
+  SECTION("1 with start")
+  {
+    ShapeTuple shape{4};
+    std::vector<ScalarIndexTuple> v = {{1}, {2}, {3}};
+    DataIndexType i = 0;
+    for_ndim(shape, [&](ScalarIndexTuple c) {
+      REQUIRE(c == v[i]);
+      ++i;
+    }, {1});
+  }
+
   SECTION("2d")
   {
     ShapeTuple shape{4, 2};
@@ -103,6 +114,17 @@ TEST_CASE("for_ndim", "[tensor]")
       REQUIRE(c == v[i]);
       ++i;
     });
+  }
+
+  SECTION("2d with start")
+  {
+    ShapeTuple shape{4, 2};
+    std::vector<ScalarIndexTuple> v = {{2, 1}, {3, 1}};
+    DataIndexType i = 0;
+    for_ndim(shape, [&](ScalarIndexTuple c) {
+      REQUIRE(c == v[i]);
+      ++i;
+    }, {2, 1});
   }
 
   SECTION("3d")
@@ -121,6 +143,25 @@ TEST_CASE("for_ndim", "[tensor]")
       REQUIRE(c == v[i]);
       ++i;
     });
+  }
+
+  SECTION("3d with start")
+  {
+    ShapeTuple shape{2, 2, 2};
+    std::vector<ScalarIndexTuple> v = {{1, 0, 1}, {0, 1, 1}, {1, 1, 1}};
+    DataIndexType i = 0;
+    for_ndim(shape, [&](ScalarIndexTuple c) {
+      REQUIRE(c == v[i]);
+      ++i;
+    }, {1, 0, 1});
+  }
+
+  SECTION("Out-of-range start works")
+  {
+    ShapeTuple shape{4, 2};
+    for_ndim(shape,
+             [&](ScalarIndexTuple c) { FAIL("Should not be executed"); },
+             {4, 2});
   }
 }
 
@@ -169,6 +210,7 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(tensor.data() != nullptr);
   REQUIRE(tensor.const_data() != nullptr);
   REQUIRE(tensor.get({0, 0}) == tensor.data());
+  REQUIRE(tensor.const_get({0, 0}) == tensor.data());
   REQUIRE_FALSE(tensor.is_lazy());
 
   const TensorType const_tensor =
@@ -193,6 +235,7 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(const_tensor.data() != nullptr);
   REQUIRE(const_tensor.const_data() != nullptr);
   REQUIRE(const_tensor.get({0, 0}) == const_tensor.data());
+  REQUIRE(const_tensor.const_get({0, 0}) == const_tensor.data());
   REQUIRE_FALSE(const_tensor.is_lazy());
 }
 
@@ -291,6 +334,7 @@ TEMPLATE_LIST_TEST_CASE("Single element tensor metadata is sane",
   REQUIRE(tensor.data() != nullptr);
   REQUIRE(tensor.const_data() != nullptr);
   REQUIRE(tensor.get({0}) == tensor.data());
+  REQUIRE(tensor.const_get({0}) == tensor.data());
   REQUIRE_FALSE(tensor.is_lazy());
 }
 
@@ -487,10 +531,12 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
     REQUIRE(view->is_const_view());
     REQUIRE(view->get_view_type() == ViewType::Const);
     REQUIRE(view->const_data() == tensor.data());
+    REQUIRE(view->const_get({0, 0}) == tensor.data());
     REQUIRE_THROWS(view->data());
+    REQUIRE_THROWS(view->get({0, 0}));
     REQUIRE(view->is_contiguous());
   }
-  SECTION("Viewing a subtensor works")
+  SECTION("Viewing a (1, ALL) subtensor works")
   {
     std::unique_ptr<TensorType> view = tensor.view({IRng(1), ALL});
     REQUIRE(view->shape() == ShapeTuple{6});
@@ -505,6 +551,26 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
     for (DimType i = 0; i < view->shape(0); ++i)
     {
       REQUIRE(read_ele<Dev>(view->get({i}), view->get_stream()) == (1 + 4*i));
+    }
+  }
+  SECTION("Viewing a (ALL, (1, 3)) subtensor works")
+  {
+    std::unique_ptr<TensorType> view = tensor({ALL, IRng(1, 3)});
+    REQUIRE(view->shape() == ShapeTuple{4, 2});
+    REQUIRE(view->dim_types() == DTTuple{DT::Sample, DT::Any});
+    REQUIRE(view->strides() == StrideTuple{1, 4});
+    REQUIRE(view->ndim() == 2);
+    REQUIRE(view->numel() == 4 * 2);
+    REQUIRE(view->is_view());
+    REQUIRE(view->data() == (tensor.data() + 4));
+    REQUIRE(view->is_contiguous());
+    for (DimType j = 0; j < view->shape(1); ++j)
+    {
+      for (DimType i = 0; i < view->shape(0); ++i)
+      {
+        REQUIRE(read_ele<Dev>(view->get({i, j}), view->get_stream())
+                == (i + (j+1) * 4));
+      }
     }
   }
   SECTION("Operator-style views work")
@@ -572,6 +638,28 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
     for (DataIndexType i = 0; i < view->numel(); ++i)
     {
       REQUIRE(read_ele<Dev>(view->data(), i, view->get_stream()) == i);
+    }
+  }
+  SECTION("Viewing a subview works")
+  {
+    std::unique_ptr<TensorType> view_orig = tensor.view({ALL, IRng{1, 3}});
+    std::unique_ptr<TensorType> view = view_orig->view();
+    REQUIRE(view->shape() == view_orig->shape());
+    REQUIRE(view->dim_types() == view_orig->dim_types());
+    REQUIRE(view->strides() == view_orig->strides());
+    REQUIRE(view->ndim() == 2);
+    REQUIRE(view->numel() == view_orig->numel());
+    REQUIRE(view->is_view());
+    REQUIRE(view->data() == view_orig->data());
+    REQUIRE(view->is_contiguous());
+
+    for (DimType j = 0; j < view->shape(1); ++j)
+    {
+      for (DimType i = 0; i < view->shape(0); ++i)
+      {
+        REQUIRE(read_ele<Dev>(view->get({i, j}), view->get_stream())
+                == (i + (j + 1) * 4));
+      }
     }
   }
   SECTION("Unviewing a view works")

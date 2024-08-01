@@ -93,6 +93,13 @@ public:
         tensor_memory(other.tensor_memory, new_device, new_stream)
   {}
 
+  Tensor(const Tensor<T>& other,
+         Device new_device,
+         const ComputeStream& new_stream)
+      : BaseTensor(ViewType::Const, other.shape(), other.dim_types()),
+        tensor_memory(other.tensor_memory, new_device, new_stream)
+  {}
+
   /** Internal constructor for cloning. */
   Tensor(const StridedMemory<T>& mem_,
          const ShapeTuple& shape_,
@@ -459,6 +466,15 @@ public:
   /** Return a pointer to the tensor at a particular coordinate. */
   T* get(const ScalarIndexTuple& coords)
   {
+    H2_ASSERT_DEBUG(is_index_in_shape(coords, shape()),
+                    "Cannot get index ",
+                    coords,
+                    " in tensor with shape ",
+                    shape());
+    if (this->tensor_view_type == ViewType::Const)
+    {
+      throw H2Exception("Cannot access non-const buffer of const view");
+    }
     return tensor_memory.get(coords);
   }
 
@@ -467,7 +483,25 @@ public:
    */
   const T* get(const ScalarIndexTuple& coords) const
   {
+    H2_ASSERT_DEBUG(is_index_in_shape(coords, shape()),
+                    "Cannot get index ",
+                    coords,
+                    " in tensor with shape ",
+                    shape());
     return tensor_memory.get(coords);
+  }
+
+  /**
+   * Return a constant pointer to the tensor at a particular coordinate.
+   */
+  const T* const_get(const ScalarIndexTuple& coords) const
+  {
+    H2_ASSERT_DEBUG(is_index_in_shape(coords, shape()),
+                    "Cannot get index ",
+                    coords,
+                    " in tensor with shape ",
+                    shape());
+    return tensor_memory.const_get(coords);
   }
 
   ComputeStream get_stream() const H2_NOEXCEPT
