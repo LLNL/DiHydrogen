@@ -18,6 +18,7 @@
 #include <cstring>
 #include <type_traits>
 
+#include "h2/core/types.hpp"
 #include "h2/core/sync.hpp"
 
 #ifdef H2_HAS_GPU
@@ -43,8 +44,8 @@ void copy_buffer(T* dst,
                   "Null buffers");
   // TODO: Debug check: Assert buffers do not overlap.
   static_assert(
-      std::is_trivially_copyable_v<T>,
-      "Attempt to copy a buffer with a type that is not trivially copyable");
+    IsH2StorageType_v<T>,
+    "Attempt to copy a buffer with a non-storage type");
   const Device src_dev = src_stream.get_device();
   const Device dst_dev = dst_stream.get_device();
   if (src_dev == Device::CPU && dst_dev == Device::CPU)

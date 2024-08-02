@@ -15,6 +15,7 @@
 #include <memory>
 #include <optional>
 
+#include "h2/core/types.hpp"
 #include "h2/tensor/tensor_base.hpp"
 #include "h2/tensor/strided_memory.hpp"
 #include "h2/tensor/tensor_types.hpp"
@@ -32,6 +33,10 @@ template <typename T>
 class Tensor : public BaseTensor {
 public:
   using value_type = T;
+
+  static_assert(
+    IsH2StorageType_v<T>,
+    "Cannot create a tensor with a non-storage type");
 
   Tensor(Device device,
          const ShapeTuple& shape_,
