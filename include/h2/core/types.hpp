@@ -39,17 +39,19 @@ namespace h2
  * not a pointer type.
  */
 template <typename T>
-struct IsH2StorageType : std::bool_constant<std::is_trivially_copyable_v<T> && !std::is_pointer_v<T>> {};
+struct IsH2StorageType : std::bool_constant<std::is_trivially_copyable_v<T>
+                                            && !std::is_pointer_v<T>>
+{};
 
 /** Helper variable for `IsH2StorageType`. */
 template <typename T>
 inline constexpr bool IsH2StorageType_v = IsH2StorageType<T>::value;
 
 /** Assert that `type` is a storage type. */
-#define H2_ASSERT_STORAGE_TYPE_ALWAYS(type, ...) \
+#define H2_ASSERT_STORAGE_TYPE_ALWAYS(type, ...)                \
   H2_ASSERT_ALWAYS(IsH2StorageType_v<type>, __VA_ARGS__)
 /** Assert that `type` is a storage type only in debug mode. */
-#define H2_ASSERT_STORAGE_TYPE_DEBUG(type, ...) \
+#define H2_ASSERT_STORAGE_TYPE_DEBUG(type, ...)         \
   H2_ASSERT_DEBUG(IsH2StorageType_v<type>, __VA_ARGS__)
 
 // H2 compute types:
@@ -87,10 +89,10 @@ template <typename T>
 inline constexpr bool IsH2ComputeType_v = IsH2ComputeType<T>::value;
 
 /** Assert that `type` is a compute type. */
-#define H2_ASSERT_COMPUTE_TYPE_ALWAYS(type, ...) \
+#define H2_ASSERT_COMPUTE_TYPE_ALWAYS(type, ...)                \
   H2_ASSERT_ALWAYS(IsH2ComputeType_v<type>, __VA_ARGS__)
 /** Assert that `type` is a compute type in debug mode. */
-#define H2_ASSERT_COMPUTE_TYPE_DEBUG(type, ...) \
+#define H2_ASSERT_COMPUTE_TYPE_DEBUG(type, ...)         \
   H2_ASSERT_DEBUG(IsH2ComputeType_v<type>, __VA_ARGS__)
 
 // Helpers to explicitly enumerate compute types:
@@ -102,6 +104,7 @@ using FloatComputeTypes = meta::TL<float, double>;
 using IntegralComputeTypes = meta::TL<std::int32_t, std::uint32_t>;
 
 /** List of all compute types. */
-using ComputeTypes = meta::tlist::Append<FloatComputeTypes, IntegralComputeTypes>;
+using ComputeTypes =
+  meta::tlist::Append<FloatComputeTypes, IntegralComputeTypes>;
 
 }  // namespace h2
