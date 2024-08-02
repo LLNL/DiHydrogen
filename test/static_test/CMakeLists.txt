@@ -10,6 +10,7 @@
 # testing. As such, it is not installed and it is not exported in any
 # way.
 add_library(StaticTest MODULE "")
+add_subdirectory(core)
 add_subdirectory(meta)
 add_subdirectory(tensor)
 add_subdirectory(utils)
