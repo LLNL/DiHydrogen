@@ -52,10 +52,26 @@ namespace h2
  */
 using Device = El::Device;  // Leverage Hydrogen's device typing.
 
+/**
+ * Helper to support tagged dispatch based on the device.
+ */
+template <Device Dev>
+struct DeviceTag
+{
+  static constexpr Device device = Dev;
+  using device_t = std::integral_constant<Device, Dev>;
+  static constexpr device_t device_t_v = {};
+};
+
+/** Helper to get an instance of CPUDev_t or GPUDev_t. */
+template <Device Dev>
+inline constexpr typename DeviceTag<Dev>::device_t DeviceT_v =
+    DeviceTag<Dev>::device_t_v;
+
 // Support representing devices as generic types.
-using CPUDev_t = std::integral_constant<h2::Device, h2::Device::CPU>;
+using CPUDev_t = DeviceTag<Device::CPU>::device_t;
 #ifdef H2_HAS_GPU
-using GPUDev_t = std::integral_constant<h2::Device, h2::Device::GPU>;
+using GPUDev_t = DeviceTag<Device::GPU>::device_t;
 #endif
 
 #ifdef H2_HAS_GPU
