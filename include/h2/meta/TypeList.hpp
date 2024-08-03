@@ -9,6 +9,7 @@
 
 #include "typelist/Append.hpp"
 #include "typelist/At.hpp"
+#include "typelist/CartProd.hpp"
 #include "typelist/Expand.hpp"
 #include "typelist/Find.hpp"
 #include "typelist/Flatten.hpp"

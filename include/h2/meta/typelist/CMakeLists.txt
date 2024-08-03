@@ -15,6 +15,7 @@ h2_add_sources_to_target_and_install(
   SOURCES
   Append.hpp
   At.hpp
+  CartProd.hpp
   Expand.hpp
   Find.hpp
   Flatten.hpp
