@@ -199,12 +199,7 @@ public:
     return tensor_memory.get_device();
   }
 
-  /**
-   * Clear the tensor and reset it to empty.
-   *
-   * If this is a view, this is equivalent to `unview`.
-   */
-  void empty()
+  void empty() override
   {
     auto stream = tensor_memory.get_stream();
     tensor_memory =
@@ -216,25 +211,15 @@ public:
     }
   }
 
-  /**
-   * Resize the tensor to a new shape, keeping dimension types the same.
-   *
-   * It is an error to call this on a view.
-   */
-  void resize(const ShapeTuple& new_shape)
+  void resize(const ShapeTuple& new_shape) override
   {
     H2_ASSERT_ALWAYS(new_shape.size() <= this->tensor_shape.size(),
                      "Must provide dimension types to resize larger");
     resize(new_shape, init_n(this->tensor_dim_types, new_shape.size()));
   }
 
-  /**
-   * Resize the tensor to a new shape, also changing dimension types.
-   *
-   * It is an error to call this on a view.
-   */
   void resize(const ShapeTuple& new_shape,
-              const DimensionTypeTuple& new_dim_types)
+              const DimensionTypeTuple& new_dim_types) override
   {
     // We do not call the resize-with-new-strides version so we do not
     // have to compute the strides manually.
@@ -259,15 +244,9 @@ public:
     this->tensor_dim_types = new_dim_types;
   }
 
-  /**
-   * Resize the tensor to a new shape, also changing dimension types
-   * and specifying new strides.
-   *
-   * It is an error to call this on a view.
-   */
   void resize(const ShapeTuple& new_shape,
               const DimensionTypeTuple& new_dim_types,
-              const StrideTuple& new_strides)
+              const StrideTuple& new_strides) override
   {
     H2_ASSERT_ALWAYS(!this->is_view(), "Cannot resize a view");
     H2_ASSERT_ALWAYS(new_dim_types.size() == new_shape.size(),
@@ -317,50 +296,36 @@ public:
   }
 
   /** Return a raw constant pointer to the underlying storage. */
-  const T* const_data() const {
-    return tensor_memory.const_data();
+  const T* const_data() const { return tensor_memory.const_data(); }
+
+  void* storage_data() override { return static_cast<void*>(data()); }
+
+  const void* storage_data() const override
+  {
+    return static_cast<const void*>(const_data());
   }
 
-  /**
-   * Ensure memory is backing this tensor, allocating if necessary.
-   *
-   * This attempts to reuse existing memory from still-extant views of
-   * this tensor.
-   */
-  void ensure()
+  const void* const_storage_data() const override
+  {
+    return static_cast<const void*>(const_data());
+  }
+
+  void ensure() override
   {
     ensure(TensorAttemptRecovery);
   }
 
-  /**
-   * Ensure memory is backing this tensor, allocating if necessary.
-   *
-   * This does not attempt to reuse existing memory from still-extant
-   * views of this tensor.
-   */
-  void ensure(tensor_no_recovery_t)
+  void ensure(tensor_no_recovery_t) override
   {
     tensor_memory.ensure(false);
   }
 
-  /**
-   * Ensure memory is backing this tensor, allocating if necessary.
-   *
-   * This attempts to reuse existing memory from still-extant views of
-   * this tensor.
-   */
-  void ensure(tensor_attempt_recovery_t)
+  void ensure(tensor_attempt_recovery_t) override
   {
     tensor_memory.ensure(true);
   }
 
-  /**
-   * Release memory associated with this tensor.
-   *
-   * Note that if there are views, memory may not be deallocated
-   * immediately.
-   */
-  void release()
+  void release() override
   {
     tensor_memory.release();
   }
@@ -514,12 +479,12 @@ public:
     return tensor_memory.const_get(coords);
   }
 
-  ComputeStream get_stream() const H2_NOEXCEPT
+  ComputeStream get_stream() const H2_NOEXCEPT override
   {
     return tensor_memory.get_stream();
   }
 
-  void set_stream(const ComputeStream& stream)
+  void set_stream(const ComputeStream& stream) override
   {
     if (this->is_view())
     {

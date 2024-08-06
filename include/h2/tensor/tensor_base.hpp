@@ -133,6 +133,96 @@ public:
   /** Return the type of device this tensor is on. */
   virtual Device get_device() const H2_NOEXCEPT = 0;
 
+  /** Get the compute stream associated with this tensor. */
+  virtual ComputeStream get_stream() const H2_NOEXCEPT = 0;
+
+  /** Set the compute stream associated with this tensor. */
+  virtual void set_stream(const ComputeStream& stream) = 0;
+
+  /**
+   * Return a raw, generic pointer (void*) to the underlying storage.
+   *
+   * This is meant for working with storage (as opposed to compute)
+   * types.
+   */
+  virtual void* storage_data() = 0;
+
+  /**
+   * Return a raw, generic constant pointer (const void*) to the
+   * underlying storage.
+   */
+  virtual const void* storage_data() const = 0;
+
+  /**
+   * Return a raw, generic constant pointer (const void*) to the
+   * underlying storage.
+   */
+  virtual const void* const_storage_data() const = 0;
+
+  /**
+   * Ensure memory is backing this tensor, allocating if necessary.
+   *
+   * This attempts to reuse existing memory from still-extant views of
+   * this tensor.
+   */
+  virtual void ensure() = 0;
+
+  /**
+   * Ensure memory is backing this tensor, allocating if necessary.
+   *
+   * This does not attempt to reuse existing memory from still-extant
+   * views of this tensor.
+   */
+  virtual void ensure(tensor_no_recovery_t) = 0;
+
+  /**
+   * Ensure memory is backing this tensor, allocating if necessary.
+   *
+   * This attempts to reuse existing memory from still-extant views of
+   * this tensor.
+   */
+  virtual void ensure(tensor_attempt_recovery_t) = 0;
+
+  /**
+   * Release memory associated with this tensor.
+   *
+   * Note that if there are views, memory may not be deallocated
+   * immediately.
+   */
+  virtual void release() = 0;
+
+  /**
+   * Clear the tensor and reset it to empty.
+   *
+   * If this is a view, this is equivalent to `unview`.
+   */
+  virtual void empty() = 0;
+
+  /**
+   * Resize the tensor to a new shape, keeping dimension types the same.
+   *
+   * It is an error to call this on a view.
+   */
+  virtual void resize(const ShapeTuple& new_shape) = 0;
+
+  /**
+   * Resize the tensor to a new shape, also changing dimension types.
+   *
+   * It is an error to call this on a view.
+   */
+  virtual void resize(const ShapeTuple& new_shape,
+                      const DimensionTypeTuple& new_dim_types) = 0;
+
+  /**
+   * Resize the tensor to a new shape, also changing dimension types
+   * and specifying new strides.
+   *
+   * It is an error to call this on a view.
+   */
+  virtual void resize(const ShapeTuple& new_shape,
+                      const DimensionTypeTuple& new_dim_types,
+                      const StrideTuple& new_strides) = 0;
+
 protected:
   ShapeTuple tensor_shape;  /**< Shape of the tensor. */
   DimensionTypeTuple tensor_dim_types;  /**< Type of each dimension. */

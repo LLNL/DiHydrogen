@@ -33,31 +33,7 @@ namespace h2
 namespace internal
 {
 
-template <typename T>
-void copy_same_type(Tensor<T>& dst, const Tensor<T>& src)
-{
-  dst.resize(src.shape(), src.dim_types(), src.strides());
-  dst.ensure();
-  if (src.is_contiguous())
-  {
-    copy_buffer<T>(dst.data(),
-                   dst.get_stream(),
-                   src.const_data(),
-                   src.get_stream(),
-                   src.numel());
-  }
-  else
-  {
-    // TODO: We may be able to optimize the non-contiguous case.
-    // For now, we just copy the entire buffer.
-    copy_buffer<T>(
-      dst.data(),
-      dst.get_stream(),
-      src.const_data(),
-      src.get_stream(),
-      get_extent_from_strides(src.shape(), src.strides()));
-  }
-}
+void copy_same_type(BaseTensor& dst, const BaseTensor& src);
 
 template <typename T>
 void copy_same_type(DistTensor<T>& dst, const DistTensor<T>& src)
@@ -113,7 +89,7 @@ void copy(Tensor<DstT>& dst, const Tensor<SrcT>& src)
                    "Cannot copy a non-empty tensor with no data");
   if constexpr (std::is_same_v<SrcT, DstT>)
   {
-    internal::copy_same_type<DstT>(dst, src);
+    internal::copy_same_type(dst, src);
   }
   else
   {
