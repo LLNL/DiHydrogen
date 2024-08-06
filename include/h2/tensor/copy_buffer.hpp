@@ -44,30 +44,37 @@ void copy_buffer(T* dst,
                   "Null buffers");
   // TODO: Debug check: Assert buffers do not overlap.
   static_assert(
-    IsH2StorageType_v<T>,
+    IsH2StorageType_v<T> || std::is_same_v<T*, void*>,
     "Attempt to copy a buffer with a non-storage type");
   const Device src_dev = src_stream.get_device();
   const Device dst_dev = dst_stream.get_device();
   if (src_dev == Device::CPU && dst_dev == Device::CPU)
   {
-    std::memcpy(dst, src, count * sizeof(T));
+    if constexpr (std::is_same_v<T*, void*>)
+    {
+      std::memcpy(dst, src, count);
+    }
+    else
+    {
+      std::memcpy(dst, src, count * sizeof(T));
+    }
   }
 #ifdef H2_HAS_GPU
   else if (src_dev == Device::GPU && dst_dev == Device::GPU)
   {
     auto stream = create_multi_sync(dst_stream, src_stream);
-    gpu::mem_copy<T>(dst, src, count, stream.get_stream<Device::GPU>());
+    gpu::mem_copy(dst, src, count, stream.get_stream<Device::GPU>());
   }
   else if (src_dev == Device::CPU && dst_dev == Device::GPU)
   {
     // No sync needed in this case: The CPU is always synchronized and
     // the copy will be enqueued on the destination GPU stream.
-    gpu::mem_copy<T>(dst, src, count, dst_stream.get_stream<Device::GPU>());
+    gpu::mem_copy(dst, src, count, dst_stream.get_stream<Device::GPU>());
   }
   else if (src_dev == Device::GPU && dst_dev == Device::CPU)
   {
     // No sync needed: Ditto.
-    gpu::mem_copy<T>(dst, src, count, src_stream.get_stream<Device::GPU>());
+    gpu::mem_copy(dst, src, count, src_stream.get_stream<Device::GPU>());
   }
 #endif
   else

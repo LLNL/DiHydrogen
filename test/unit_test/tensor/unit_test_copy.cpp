@@ -35,15 +35,35 @@ TEMPLATE_LIST_TEST_CASE("Buffer copy works", "[tensor][copy]", AllDevPairsList)
     write_ele<DstDev>(dst.buf, i, dst_val, dst_stream);
   }
 
-  REQUIRE_NOTHROW(copy_buffer(
-      dst.buf, dst_stream, src.buf, src_stream, buf_size));
-
-  for (std::size_t i = 0; i < buf_size; ++i)
+  SECTION("Copy buffer works with real type")
   {
-    // Source is unchanged:
-    REQUIRE(read_ele<SrcDev>(src.buf, i, src_stream) == src_val);
-    // Destination has the source value:
-    REQUIRE(read_ele<DstDev>(dst.buf, i, dst_stream) == src_val);
+    REQUIRE_NOTHROW(copy_buffer(
+                      dst.buf, dst_stream, src.buf, src_stream, buf_size));
+
+    for (std::size_t i = 0; i < buf_size; ++i)
+    {
+      // Source is unchanged:
+      REQUIRE(read_ele<SrcDev>(src.buf, i, src_stream) == src_val);
+      // Destination has the source value:
+      REQUIRE(read_ele<DstDev>(dst.buf, i, dst_stream) == src_val);
+    }
+  }
+
+  SECTION("Copy buffer works with void*")
+  {
+    REQUIRE_NOTHROW(copy_buffer(static_cast<void*>(dst.buf),
+                                dst_stream,
+                                static_cast<const void*>(src.buf),
+                                src_stream,
+                                buf_size * sizeof(DataType)));
+
+    for (std::size_t i = 0; i < buf_size; ++i)
+    {
+      // Source is unchanged:
+      REQUIRE(read_ele<SrcDev>(src.buf, i, src_stream) == src_val);
+      // Destination has the source value:
+      REQUIRE(read_ele<DstDev>(dst.buf, i, dst_stream) == src_val);
+    }
   }
 }
 
