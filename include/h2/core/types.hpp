@@ -14,6 +14,7 @@
 
 #include <h2_config.hpp>
 
+#include <limits>
 #include <type_traits>
 
 #include <cstdint>
@@ -105,6 +106,96 @@ using IntegralComputeTypes = meta::TL<std::int32_t, std::uint32_t>;
 
 /** List of all compute types. */
 using ComputeTypes =
-  meta::tlist::Append<FloatComputeTypes, IntegralComputeTypes>;
+    meta::tlist::Append<FloatComputeTypes, IntegralComputeTypes>;
+
+// Wrap types for runtime dispatch:
+
+/** Manage runtime type information for H2. */
+struct H2TypeInfo
+{
+  /** Type used to represent tokens for dynamic dispatch. */
+  using TokenType = std::uint8_t;
+  /** Max value for a token. */
+  static constexpr TokenType max_token = std::numeric_limits<TokenType>::max();
+
+  /** Helper to construct H2TypeInfo with a given token and type. */
+  template <typename T>
+  static H2TypeInfo make(TokenType token_)
+  {
+    static_assert(!std::is_same_v<T, void>,
+                  "Cannot construct type info for void");
+    return H2TypeInfo(token_, sizeof(T), &typeid(T));
+  }
+
+  /** Get the type token. */
+  inline TokenType get_token() const noexcept { return token; }
+  /** Get the size of the type. */
+  inline std::size_t get_size() const noexcept { return type_size; }
+  /** Get the associated type_info. */
+  inline const std::type_info* get_type_info() const noexcept
+  {
+    return type_info;
+  }
+
+private:
+  H2TypeInfo(TokenType token_,
+             std::size_t type_size_,
+             const std::type_info* type_info_)
+    : token(token_), type_size(type_size_), type_info(type_info_)
+  {
+    H2_ASSERT_DEBUG(token_ <= max_token,
+                    "Cannot construct type info with a token ",
+                    token,
+                    " that exceeds the max ",
+                    max_token);
+  }
+
+  /** Token representing the type for dynamic dispatch. */
+  TokenType token;
+  /** Size of the type (i.e., `sizeof(T)`). */
+  std::size_t type_size;
+  /** Pointer to the `std::type_info` associated with the type. */
+  const std::type_info* type_info;
+};
+
+/** Equality for H2TypeInfo. */
+inline bool operator==(const H2TypeInfo& t1, const H2TypeInfo& t2)
+{
+  return *t1.get_type_info() == *t2.get_type_info();
+}
+
+/** Inequality for H2TypeInfo. */
+inline bool operator!=(const H2TypeInfo& t1, const H2TypeInfo& t2)
+{
+  return *t1.get_type_info() != *t2.get_type_info();
+}
+
+/** Get the H2TypeInfo for a given type. */
+template <typename T>
+inline H2TypeInfo get_h2_type()
+{
+  return H2TypeInfo::make<T>(H2TypeInfo::max_token);
+}
+
+template <>
+inline H2TypeInfo get_h2_type<float>()
+{
+  return H2TypeInfo::make<float>(0);
+}
+template <>
+inline H2TypeInfo get_h2_type<double>()
+{
+  return H2TypeInfo::make<double>(1);
+}
+template <>
+inline H2TypeInfo get_h2_type<std::int32_t>()
+{
+  return H2TypeInfo::make<std::int32_t>(2);
+}
+template <>
+inline H2TypeInfo get_h2_type<std::uint32_t>()
+{
+  return H2TypeInfo::make<std::uint32_t>(3);
+}
 
 }  // namespace h2
