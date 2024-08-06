@@ -175,6 +175,11 @@ public:
     os << ")";
   }
 
+  H2TypeInfo get_type_info() const H2_NOEXCEPT override
+  {
+    return get_h2_type<T>();
+  }
+
   StrideTuple strides() const H2_NOEXCEPT override {
     return tensor_memory.strides();
   }

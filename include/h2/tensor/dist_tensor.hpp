@@ -205,6 +205,11 @@ public:
     os << ")";
   }
 
+  H2TypeInfo get_type_info() const H2_NOEXCEPT override
+  {
+    return get_h2_type<T>();
+  }
+
   Device get_device() const H2_NOEXCEPT override
   {
     return tensor_local.get_device();

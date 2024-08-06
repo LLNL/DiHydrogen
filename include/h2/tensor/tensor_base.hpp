@@ -12,6 +12,7 @@
  * This defines the public API for local (non-distributed) tensors.
  */
 
+#include "h2/core/types.hpp"
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/utils/Describable.hpp"
 #include "h2/utils/typename.hpp"
@@ -67,6 +68,9 @@ public:
   BaseTensor() : BaseTensor(ShapeTuple(), DimensionTypeTuple()) {}
 
   virtual ~BaseTensor() = default;
+
+  /** Return information on the type the tensor stores. */
+  virtual H2TypeInfo get_type_info() const H2_NOEXCEPT = 0;
 
   /** Return the shape of the tensor. */
   ShapeTuple shape() const H2_NOEXCEPT {

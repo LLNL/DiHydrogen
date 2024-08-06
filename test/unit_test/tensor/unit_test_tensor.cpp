@@ -190,6 +190,7 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
 
   TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
 
+  REQUIRE(tensor.get_type_info() == get_h2_type<DataType>());
   REQUIRE(tensor.shape() == ShapeTuple{4, 6});
   REQUIRE(tensor.shape(0) == 4);
   REQUIRE(tensor.shape(1) == 6);
@@ -215,6 +216,7 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
 
   const TensorType const_tensor =
       TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
+  REQUIRE(const_tensor.get_type_info() == get_h2_type<DataType>());
   REQUIRE(const_tensor.shape() == ShapeTuple{4, 6});
   REQUIRE(const_tensor.shape(0) == 4);
   REQUIRE(const_tensor.shape(1) == 6);
@@ -248,6 +250,7 @@ TEMPLATE_LIST_TEST_CASE("Base tensor metadata is sane",
 
   std::unique_ptr<BaseTensor> tensor = std::make_unique<TensorType>(
       Dev, ShapeTuple{4, 6}, DTTuple{DT::Sample, DT::Any});
+  REQUIRE(tensor->get_type_info() == get_h2_type<DataType>());
   REQUIRE(tensor->shape() == ShapeTuple{4, 6});
   REQUIRE(tensor->shape(0) == 4);
   REQUIRE(tensor->shape(1) == 6);
@@ -269,6 +272,7 @@ TEMPLATE_LIST_TEST_CASE("Base tensor metadata is sane",
   std::unique_ptr<const BaseTensor> const_tensor =
       std::make_unique<const TensorType>(
           Dev, ShapeTuple{4, 6}, DTTuple{DT::Sample, DT::Any});
+  REQUIRE(const_tensor->get_type_info() == get_h2_type<DataType>());
   REQUIRE(const_tensor->shape() == ShapeTuple{4, 6});
   REQUIRE(const_tensor->shape(0) == 4);
   REQUIRE(const_tensor->shape(1) == 6);
@@ -295,6 +299,7 @@ TEMPLATE_LIST_TEST_CASE("Empty tensor metadata is sane", "[tensor]", AllDevList)
 
   TensorType tensor = TensorType(Dev);
 
+  REQUIRE(tensor.get_type_info() == get_h2_type<DataType>());
   REQUIRE(tensor.shape() == ShapeTuple{});
   REQUIRE(tensor.dim_types() == DTTuple{});
   REQUIRE(tensor.strides() == StrideTuple{});
@@ -320,6 +325,7 @@ TEMPLATE_LIST_TEST_CASE("Single element tensor metadata is sane",
 
   TensorType tensor = TensorType(Dev, {1}, {DT::Any});
 
+  REQUIRE(tensor.get_type_info() == get_h2_type<DataType>());
   REQUIRE(tensor.shape() == ShapeTuple{1});
   REQUIRE(tensor.dim_types() == DTTuple{DT::Any});
   REQUIRE(tensor.strides() == StrideTuple{1});

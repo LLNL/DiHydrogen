@@ -74,6 +74,7 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
           local_shape = ShapeTuple();
         }
 
+        REQUIRE(tensor.get_type_info() == get_h2_type<DataType>());
         REQUIRE(tensor.shape() == tensor_shape);
         REQUIRE(tensor.dim_types() == tensor_dim_types);
         REQUIRE(tensor.local_shape() == local_shape);
@@ -135,6 +136,7 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
         // Compute the local shape.
         ShapeTuple local_shape = tensor_shape;
 
+        REQUIRE(tensor.get_type_info() == get_h2_type<DataType>());
         REQUIRE(tensor.shape() == tensor_shape);
         REQUIRE(tensor.dim_types() == tensor_dim_types);
         REQUIRE(tensor.local_shape() == local_shape);
@@ -192,6 +194,7 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
           local_numel = product<DataIndexType>(local_shape);
         }
 
+        REQUIRE(tensor.get_type_info() == get_h2_type<DataType>());
         REQUIRE(tensor.shape() == tensor_shape);
         REQUIRE(tensor.dim_types() == tensor_dim_types);
         REQUIRE(tensor.local_shape() == local_shape);
@@ -274,6 +277,7 @@ TEMPLATE_LIST_TEST_CASE("Distributed tensor metadata is sane",
           local_shape = ShapeTuple{};
         }
 
+        REQUIRE(tensor.get_type_info() == get_h2_type<DataType>());
         REQUIRE(tensor.shape() == tensor_shape);
         REQUIRE(tensor.dim_types() == tensor_dim_types);
         REQUIRE(tensor.local_shape() == local_shape);
@@ -336,6 +340,7 @@ TEMPLATE_LIST_TEST_CASE("Base distributed tensor metadata is sane",
                                        DTTuple{DT::Any},
                                        grid,
                                        DistTTuple{Distribution::Block});
+  REQUIRE(tensor->get_type_info() == get_h2_type<DataType>());
   REQUIRE(tensor->shape() == ShapeTuple{8});
   REQUIRE(tensor->dim_types() == DTTuple{DT::Any});
   REQUIRE(tensor->local_shape() == ShapeTuple{8});
@@ -368,6 +373,7 @@ TEMPLATE_LIST_TEST_CASE("Empty distributed tensor metadata is sane",
       ProcessorGrid grid = ProcessorGrid(comm, grid_shape);
       DistTensorType tensor = DistTensorType(Dev, grid);
 
+      REQUIRE(tensor.get_type_info() == get_h2_type<DataType>());
       REQUIRE(tensor.shape() == ShapeTuple{});
       REQUIRE(tensor.dim_types() == DTTuple{});
       REQUIRE(tensor.distribution() == DistTTuple{});
