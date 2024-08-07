@@ -74,6 +74,9 @@ void copy_same_type(DistTensor<T>& dst, const DistTensor<T>& src)
  * contiguous, then `dst` will be too.
  *
  * If GPU buffers are involved, this will be asynchronous.
+ *
+ * Conversion will only be performed if `SrcT` and `DstT` are
+ * dynamically dispatchable.
  */
 template <typename DstT, typename SrcT>
 void copy(Tensor<DstT>& dst, const Tensor<SrcT>& src)
@@ -93,7 +96,26 @@ void copy(Tensor<DstT>& dst, const Tensor<SrcT>& src)
   }
   else
   {
-    throw H2Exception("Data type conversion in Copy not currently supported");
+    throw H2Exception("Data type conversion in copy not currently supported");
+  }
+}
+
+inline void copy(BaseTensor& dst, const BaseTensor& src)
+{
+  if (src.is_empty())
+  {
+    dst.empty();
+    return;
+  }
+  H2_ASSERT_ALWAYS(src.const_storage_data() != nullptr,
+                   "Cannot copy a non-empty tensor with no data");
+  if (src.get_type_info() == dst.get_type_info())
+  {
+    internal::copy_same_type(dst, src);
+  }
+  else
+  {
+    throw H2Exception("Data type conversion in copy not currently supported");
   }
 }
 
