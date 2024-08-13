@@ -150,7 +150,7 @@ public:
 
   const T* const_data() const H2_NOEXCEPT { return buf; }
 
-  std::size_t size() const H2_NOEXCEPT { return size; }
+  std::size_t size() const H2_NOEXCEPT { return buf_size; }
 
   Device get_device() const H2_NOEXCEPT { return device; }
 
