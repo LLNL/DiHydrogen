@@ -27,5 +27,6 @@
 #include "typelist/Size.hpp"
 #include "typelist/Sort.hpp"
 #include "typelist/Unique.hpp"
+#include "typelist/zip.hpp"
 
 #endif // H2_META_TYPELIST_HPP_

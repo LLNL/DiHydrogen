@@ -34,4 +34,5 @@ h2_add_sources_to_target_and_install(
   Sort.hpp
   TypeList.hpp
   Unique.hpp
+  zip.hpp
   )
