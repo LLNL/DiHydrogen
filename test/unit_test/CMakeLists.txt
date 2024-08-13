@@ -77,6 +77,7 @@ endif ()
 add_subdirectory(core)
 add_subdirectory(patterns/factory)
 add_subdirectory(patterns/multimethods)
+add_subdirectory(meta)
 add_subdirectory(utils)
 add_subdirectory(tensor)
 

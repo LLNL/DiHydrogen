@@ -18,6 +18,7 @@
 #include "typelist/LispAccessors.hpp"
 #include "typelist/Map.hpp"
 #include "typelist/Member.hpp"
+#include "typelist/print.hpp"
 #include "typelist/Remove.hpp"
 #include "typelist/Replace.hpp"
 #include "typelist/ReplaceAll.hpp"
