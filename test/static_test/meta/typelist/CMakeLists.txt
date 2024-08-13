@@ -15,6 +15,7 @@ target_sources(StaticTest
   static_test_flatten.cpp
   static_test_length.cpp
   static_test_member.cpp
+  static_test_reduce.cpp
   static_test_remove.cpp
   static_test_removeall.cpp
   static_test_replace.cpp
