@@ -31,6 +31,6 @@ static_assert(
     EqV<tlist::FoldlTL<Add, AccInit, List>, Result>(), "Foldl returns the correct result.");
 
 static_assert(
-    EqV<tlist::FoldrTL<Add, AccInit, tlist::Empty>, AccInit>(), "Foldl of nothing returns the initial accumulator.");
+    EqV<tlist::FoldrTL<Add, AccInit, tlist::Empty>, AccInit>(), "Foldr of nothing returns the initial accumulator.");
 static_assert(
-    EqV<tlist::FoldrTL<Add, AccInit, List>, Result>(), "Foldl returns the correct result.");
+    EqV<tlist::FoldrTL<Add, AccInit, List>, Result>(), "Foldr returns the correct result.");
