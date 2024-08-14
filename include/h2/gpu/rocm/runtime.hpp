@@ -51,5 +51,20 @@ inline char const* error_string(DeviceError status) noexcept
     return hipGetErrorString(status);
 }
 
+template <typename... KernelArgs, typename... Args>
+void launch_kernel_internal(void (*kernel)(KernelArgs...),
+                            const dim3& grid_dim,
+                            const dim3& block_dim,
+                            std::size_t shared_mem,
+                            DeviceStream stream,
+                            Args&&... args)
+{
+  // Assumes Args and KernelArgs have been checked.
+  H2_CHECK_HIP(hipGetLastError());
+  hipLaunchKernelGGL(
+      kernel, grid_dim, block_dim, shared_mem, stream, std::forward(args)...);
+  H2_CHECK_HIP(hipGetLastError());
+}
+
 } // namespace gpu
 } // namespace h2

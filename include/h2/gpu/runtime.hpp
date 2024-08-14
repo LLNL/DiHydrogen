@@ -40,9 +40,16 @@
  *  void sync();             // Device Sync
  *  void sync(DeviceEvent);  // Sync on event.
  *  void sync(DeviceStream); // Sync on stream.
+ *
+ *  void launch_kernel(...)
  */
 
 #include "h2_config.hpp"
+
+#include <type_traits>
+
+#include "h2/gpu/logger.hpp"
+#include "h2/meta/TypeList.hpp"
 
 // This adds the runtime-specific stuff.
 #if H2_HAS_CUDA
@@ -82,6 +89,84 @@ void sync();             // Device Sync
 void sync(DeviceEvent);  // Sync on event.
 void sync(DeviceStream); // Sync on stream.
 void sync(DeviceStream, DeviceEvent);  // Sync stream on event.
+
+namespace internal
+{
+
+template <typename TL>
+struct is_convertible_t;
+
+template <typename T1, typename T2>
+struct is_convertible_t<meta::TL<T1, T2>>
+    : std::bool_constant<std::is_convertible_v<std::remove_reference_t<T1>,
+                                               std::remove_reference_t<T2>>>
+{};
+
+template <typename TL>
+using is_convertible = meta::Force<is_convertible_t<TL>>;
+
+template <typename T>
+const T& convert_for_fmt(const T& v) noexcept
+{
+  return v;
+}
+
+template <typename T>
+void* convert_for_fmt(T* const v) noexcept
+{
+  return reinterpret_cast<void*>(v);
+}
+
+template <typename T>
+const void* convert_for_fmt(const T* const v) noexcept
+{
+  return reinterpret_cast<const void*>(v);
+}
+
+}  // namespace internal
+
+template <typename... KernelArgs, typename... Args>
+inline void launch_kernel(void (*kernel)(KernelArgs...),
+                          const dim3& grid_dim,
+                          const dim3& block_dim,
+                          std::size_t shared_mem,
+                          DeviceStream stream,
+                          Args&&... args)
+{
+  static_assert(sizeof...(KernelArgs) == sizeof...(Args),
+                "Number of arguments provided to launch_kernel does not match "
+                "the number of expected kernel arguments");
+  static_assert(
+      meta::tlist::FoldlTL<
+          meta::And,
+          std::bool_constant<true>,
+          meta::tlist::MapTL<internal::is_convertible,
+                             meta::tlist::ZipTL<meta::TL<KernelArgs...>,
+                                                meta::TL<Args...>>>>::value,
+      "Provided kernel arguments are not convertible to formal arguments");
+
+  H2_GPU_TRACE("launch_kernel(kernel={} ("
+                   + meta::tlist::print(meta::TL<KernelArgs...>{})
+                   + "), grid_dim=({}, {}, {}), block_dim=({}, "
+                     "{}, {}), shared_mem={}, stream={}, args=( "
+                   + (((void) args, std::string("{} ")) + ...) + "))",
+               (void*) kernel,
+               grid_dim.x,
+               grid_dim.y,
+               grid_dim.z,
+               block_dim.x,
+               block_dim.y,
+               block_dim.z,
+               shared_mem,
+               (void*) stream,
+               internal::convert_for_fmt(std::forward<Args>(args))...);
+  launch_kernel_internal(kernel,
+                         grid_dim,
+                         block_dim,
+                         shared_mem,
+                         stream,
+                         std::forward<Args>(args)...);
+}
 
 } // namespace gpu
 } // namespace h2
