@@ -19,7 +19,6 @@ class Describable
 {
 public:
     Describable() = default;
-    virtual ~Describable() = default;
 
     /** @brief Print a short (one-line) description to the stream.
      *
@@ -51,6 +50,9 @@ public:
         this->describe(os);
         return os.str();
     }
+
+protected:
+    ~Describable() = default;
 }; // class Describable
 
 namespace internal
