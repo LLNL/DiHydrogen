@@ -99,13 +99,13 @@ TEMPLATE_LIST_TEST_CASE("Self-moving syncs works", "[sync]", AllDevList)
 
   ComputeStream stream = create_new_compute_stream<Dev>();
   auto raw_stream = stream.get_stream<Dev>();
-  stream = std::move(stream);
-  REQUIRE(stream.get_stream<Dev>() == raw_stream);
+  ComputeStream moved_stream = std::move(stream);
+  REQUIRE(moved_stream.get_stream<Dev>() == raw_stream);
 
   SyncEvent event = create_new_sync_event<Dev>();
   auto raw_event = event.get_event<Dev>();
-  event = std::move(event);
-  REQUIRE(event.get_event<Dev>() == raw_event);
+  SyncEvent moved_event = std::move(event);
+  REQUIRE(moved_event.get_event<Dev>() == raw_event);
 }
 
 TEMPLATE_LIST_TEST_CASE("Sync helpers work", "[sync]", AllDevList)

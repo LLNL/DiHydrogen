@@ -176,7 +176,7 @@ constexpr TestFixedSizeTuple test_empty_tuple_pad(h2::TuplePad<TestFixedSizeTupl
 static_assert(test_empty_tuple_pad.size() == 0);
 
 constexpr TestFixedSizeTuple test_empty_tuple_pad2(h2::TuplePad<TestFixedSizeTuple>(0, 1));
-static_assert(test_empty_tuple_pad.size() == 0);
+static_assert(test_empty_tuple_pad2.size() == 0);
 
 constexpr TestFixedSizeTuple test_sized_tuple_pad1(h2::TuplePad<TestFixedSizeTuple>(2));
 static_assert(test_sized_tuple_pad1.size() == 2);
