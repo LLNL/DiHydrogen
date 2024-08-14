@@ -22,7 +22,7 @@ struct Storable { int foo; };
 static_assert(IsH2StorageType_v<Storable>);
 static_assert(!IsH2StorageType_v<Storable*>);
 
-struct NotStorable { virtual void foo(); };
+struct NotStorable { virtual void foo(); virtual ~NotStorable() = default; };
 static_assert(!IsH2StorageType_v<NotStorable>);
 static_assert(!IsH2StorageType_v<NotStorable*>);
 
