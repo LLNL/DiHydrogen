@@ -124,7 +124,7 @@ static void warn(char const* const msg)
     std::clog << msg << std::endl;
 }
 
-static void warn(std::string const& msg)
+[[maybe_unused]] static void warn(std::string const& msg)
 {
     std::clog << msg << std::endl;
 }
@@ -135,7 +135,7 @@ static void error(char const* const msg)
     std::terminate();
 }
 
-static void error(std::string const& msg)
+[[maybe_unused]] static void error(std::string const& msg)
 {
     std::clog << msg << std::endl;
     std::terminate();
