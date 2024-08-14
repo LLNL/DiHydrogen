@@ -19,6 +19,7 @@ class Describable
 {
 public:
     Describable() = default;
+    virtual ~Describable() = default;
 
     /** @brief Print a short (one-line) description to the stream.
      *
