@@ -42,6 +42,12 @@
  *  void sync(DeviceStream); // Sync on stream.
  *
  *  void launch_kernel(...)
+ *
+ *  Constants that may be useful:
+ *  unsigned int max_grid_x, max_grid_y, max_grid_z
+ *  unsigned int max_block_x, max_block_y, max_block_z
+ *  unsigned int max_threads_per_block
+ *  unsigned int warp_size
  */
 
 #include "h2_config.hpp"

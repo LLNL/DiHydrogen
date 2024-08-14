@@ -36,6 +36,15 @@ typedef hipStream_t DeviceStream;
 typedef hipEvent_t DeviceEvent;
 typedef hipError_t DeviceError;
 
+constexpr unsigned int max_grid_x = 2147483647;
+constexpr unsigned int max_grid_y = 65536;
+constexpr unsigned int max_grid_z = 65536;
+constexpr unsigned int max_block_x = 1024;
+constexpr unsigned int max_block_y = 1024;
+constexpr unsigned int max_block_z = 1024;
+constexpr unsigned int max_threads_per_block = 1024;
+constexpr unsigned int warp_size = 32;
+
 inline bool ok(DeviceError status) noexcept
 {
     return (status == hipSuccess);
