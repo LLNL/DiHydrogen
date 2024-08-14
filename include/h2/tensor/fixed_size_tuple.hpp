@@ -70,7 +70,9 @@ struct FixedSizeTuple {
     // Note: This does not check if sizeof...(args) > pad_arg.size_.
     // While that won't cause issues, it might indicate a correctness
     // problem in the caller's code.
-    for (std::size_t i = sizeof...(args); i < pad_arg.size_; ++i) {
+    for (SizeType i = static_cast<SizeType>(sizeof...(args)); i < pad_arg.size_;
+         ++i)
+    {
       data_[i] = pad_arg.pad_value_;
     }
   }

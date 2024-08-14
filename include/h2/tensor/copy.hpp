@@ -203,8 +203,8 @@ std::unique_ptr<Tensor<T>> make_accessible_on_device(
     return view;
   }
 
-  ComputeStream real_stream = stream.value_or(ComputeStream{dev});
 #ifdef H2_HAS_GPU
+  ComputeStream real_stream = stream.value_or(ComputeStream{dev});
   if (gpu::is_integrated())
   {
     // Return a view with the device changed.
@@ -243,8 +243,8 @@ std::unique_ptr<Tensor<T>> make_accessible_on_device(
     return view;
   }
 
-  ComputeStream real_stream = stream.value_or(ComputeStream{dev});
 #ifdef H2_HAS_GPU
+  ComputeStream real_stream = stream.value_or(ComputeStream{dev});
   if (gpu::is_integrated())
   {
     return std::make_unique<Tensor<T>>(src, dev, real_stream);

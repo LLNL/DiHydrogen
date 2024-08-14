@@ -35,7 +35,8 @@ inline std::ostream& print(std::ostream& os, const Tensor<T>& tensor)
   // Ensure any copy is completed.
   cpu_view->get_stream().wait_for(tensor.get_stream());
 
-  std::size_t indent = 0;  // Number of spaces to prepend.
+  // Number of spaces to prepend.
+  typename ScalarIndexTuple::size_type indent = 0;
 
   // Note: We traverse in a row-major order because that makes printing
   // nicer.

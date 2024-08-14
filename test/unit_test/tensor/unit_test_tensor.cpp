@@ -473,7 +473,7 @@ TEMPLATE_LIST_TEST_CASE("Attaching tensors to existing buffers works",
   REQUIRE_FALSE(tensor.is_const_view());
   REQUIRE(tensor.get_view_type() == ViewType::Mutable);
 
-  for (std::size_t i = 0; i < tensor.numel(); ++i)
+  for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
     REQUIRE(read_ele<Dev>(tensor.data(), i, tensor.get_stream()) == i);
   }

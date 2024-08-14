@@ -9,7 +9,7 @@
 
 #include "h2/utils/Describable.hpp"
 
-class Foo : public h2::Describable
+class Foo final : public h2::Describable
 {
 public:
     void short_describe(std::ostream& os) const final

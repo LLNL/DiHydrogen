@@ -44,7 +44,7 @@ namespace h2
  * \note There is no attempt at "topology-aware" mapping here (e.g., `MPI_Cart_create`).
  *       Users should manually manage this on the input communicator if desired.
  */
-class ProcessorGrid : public Describable
+class ProcessorGrid final : public Describable
 {
 private:
   /** Strides on the grid. */
@@ -96,7 +96,7 @@ public:
   }
 
   /** Output a short description of the processor grid. */
-  void short_describe(std::ostream& os) const override
+  void short_describe(std::ostream& os) const final
   {
     os << "Grid";
     print_tuple(os, shape(), "(", ")", " x ");

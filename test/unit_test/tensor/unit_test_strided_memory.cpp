@@ -313,7 +313,6 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
     {
       for (DimType j = 0; j < mem.shape(1); ++j)
       {
-        DataIndexType idx = 0;
         for (DimType i = 0; i < mem.shape(0); ++i)
         {
           REQUIRE(read_ele<Dev>(mem.get({i, j, k}), mem.get_stream())
@@ -323,7 +322,6 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
                          0,
                          static_cast<DataType>(1337),
                          mem.get_stream());
-          ++idx;
         }
       }
     }
@@ -845,9 +843,9 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory get works",
   {
     MemType mem{Dev, {2, 4}, {1, 4}, false, ComputeStream{Dev}};
     std::size_t v = 0;
-    for (std::size_t j = 0; j < mem.shape(1); ++j)
+    for (typename ShapeTuple::type j = 0; j < mem.shape(1); ++j)
     {
-      for (std::size_t i = 0; i < mem.shape(0); ++i)
+      for (typename ShapeTuple::type i = 0; i < mem.shape(0); ++i)
       {
         write_ele<Dev>(
             mem.data(), i + 4 * j, static_cast<DataType>(v), mem.get_stream());
@@ -1012,7 +1010,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory contents print",
     MemType mem{
         Dev, ShapeTuple{2, 3}, StrideTuple{2, 4}, false, ComputeStream{Dev}};
     std::stringstream expected_ss;
-    std::size_t size = product<std::size_t>(mem.shape());
+    DataIndexType size = product<DataIndexType>(mem.shape());
     DataIndexType v = 0;
     for (DimType j = 0; j < mem.shape(1); ++j)
     {

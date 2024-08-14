@@ -152,7 +152,7 @@ public:
 
   std::size_t size() const H2_NOEXCEPT { return size; }
 
-  const Device get_device() const H2_NOEXCEPT { return device; }
+  Device get_device() const H2_NOEXCEPT { return device; }
 
   const ComputeStream& get_stream() const H2_NOEXCEPT { return stream; }
 

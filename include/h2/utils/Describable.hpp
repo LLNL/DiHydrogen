@@ -50,6 +50,9 @@ public:
         this->describe(os);
         return os.str();
     }
+
+protected:
+    ~Describable() = default;
 }; // class Describable
 
 namespace internal

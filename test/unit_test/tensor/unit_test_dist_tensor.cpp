@@ -641,10 +641,10 @@ TEMPLATE_LIST_TEST_CASE(
       }
       DTTuple tensor_dim_types(TuplePad<DTTuple>(grid.ndim(), DT::Any));
       DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), Distribution::Block));
-      std::size_t buf_size = product<std::size_t>(tensor_local_shape);
+      DataIndexType buf_size = product<DataIndexType>(tensor_local_shape);
 
       DeviceBuf<DataType, Dev> buf(buf_size);
-      for (std::size_t i = 0; i < buf_size; ++i)
+      for (DataIndexType i = 0; i < buf_size; ++i)
       {
         write_ele<Dev>(
           buf.buf, i, static_cast<DataType>(i), ComputeStream{Dev});
@@ -677,7 +677,7 @@ TEMPLATE_LIST_TEST_CASE(
           tensor.local_tensor();
       REQUIRE(local_tensor.shape() == tensor_local_shape);
       REQUIRE(local_tensor.strides() == tensor_local_strides);
-      for (std::size_t i = 0; i < local_tensor.numel(); ++i)
+      for (DataIndexType i = 0; i < local_tensor.numel(); ++i)
       {
         REQUIRE(read_ele<Dev>(local_tensor.data(), i, tensor.get_stream())
                 == i);
@@ -1045,8 +1045,6 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
           DistTensorType tensor = DistTensorType(
               Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
-          typename DistTensorType::local_tensor_type& local_tensor =
-            tensor.local_tensor();
 
           DataType* buf = tensor.data();
           for (DataIndexType i = 0; i < tensor.local_numel(); ++i)
@@ -1088,8 +1086,6 @@ TEMPLATE_LIST_TEST_CASE("Viewing distributed tensors works",
           DistTTuple tensor_dist(TuplePad<DistTTuple>(grid.ndim(), dist));
           DistTensorType tensor = DistTensorType(
               Dev, tensor_shape, tensor_dim_types, grid, tensor_dist);
-          typename DistTensorType::local_tensor_type& local_tensor =
-            tensor.local_tensor();
 
           DataType* buf = tensor.data();
           for (DataIndexType i = 0; i < tensor.local_numel(); ++i)

@@ -41,10 +41,12 @@ inline std::string build_string(Args&&... args) noexcept(sizeof...(Args) == 0)
   {
     return std::string();
   }
-
-  std::ostringstream ss;
-  (ss << ... << args);
-  return ss.str();
+  else
+  {
+    std::ostringstream ss;
+    (ss << ... << args);
+    return ss.str();
+  }
 }
 
 inline std::string build_string(const char* s)

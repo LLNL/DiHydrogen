@@ -209,7 +209,6 @@ TEMPLATE_LIST_TEST_CASE("Raw buffer release registration works",
   constexpr Device Dev1 = meta::tlist::At<TestType, 0>::value;
   constexpr Device Dev2 = meta::tlist::At<TestType, 1>::value;
   using BufType = RawBuffer<DataType>;
-  constexpr std::size_t buf_size = 32;
 
   ComputeStream stream1{Dev1};
   ComputeStream stream2{Dev2};

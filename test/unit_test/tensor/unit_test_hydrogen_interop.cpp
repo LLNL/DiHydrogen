@@ -164,7 +164,7 @@ TEMPLATE_LIST_TEST_CASE("Hydrogen to DiHydrogen conversion",
 {
     constexpr h2::Device Dev = TestType::value;
     constexpr hydrogen::Device HDev = h2::HydrogenDevice<Dev>;
-    using TensorType = h2::Tensor<DataType>;
+    //using TensorType = h2::Tensor<DataType>;
     using MatrixType = El::Matrix<DataType, HDev>;
 
     // Shapes to use, when needed
@@ -350,9 +350,9 @@ TEMPLATE_LIST_TEST_CASE("DiHydrogen to Hydrogen conversion",
                         AllDevList)
 {
     constexpr h2::Device Dev = TestType::value;
-    constexpr hydrogen::Device HDev = h2::HydrogenDevice<Dev>;
+    //constexpr hydrogen::Device HDev = h2::HydrogenDevice<Dev>;
     using TensorType = h2::Tensor<DataType>;
-    using MatrixType = El::Matrix<DataType, HDev>;
+    //using MatrixType = El::Matrix<DataType, HDev>;
 
     // Metadata checks ONLY
     DataType* const mock_data = reinterpret_cast<DataType* const>(1);
