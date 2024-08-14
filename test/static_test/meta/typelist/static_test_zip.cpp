@@ -16,19 +16,19 @@ using TList2 = TL<char, short, int>;
 using TList3 = TL<float, double, long double>;
 
 // Zip with an empty list always gives an empty list:
-static_assert(EqV<tlist::Zip<tlist::Empty, tlist::Empty>, tlist::Empty>());
-static_assert(EqV<tlist::Zip<tlist::Empty, TList1>, tlist::Empty>());
-static_assert(EqV<tlist::Zip<tlist::Empty, TList2>, tlist::Empty>());
-static_assert(EqV<tlist::Zip<TList1, tlist::Empty>, tlist::Empty>());
-static_assert(EqV<tlist::Zip<TList2, tlist::Empty>, tlist::Empty>());
+static_assert(EqV<tlist::ZipTL<tlist::Empty, tlist::Empty>, tlist::Empty>());
+static_assert(EqV<tlist::ZipTL<tlist::Empty, TList1>, tlist::Empty>());
+static_assert(EqV<tlist::ZipTL<tlist::Empty, TList2>, tlist::Empty>());
+static_assert(EqV<tlist::ZipTL<TList1, tlist::Empty>, tlist::Empty>());
+static_assert(EqV<tlist::ZipTL<TList2, tlist::Empty>, tlist::Empty>());
 
 // Zip with non-empty, equal-length lists:
-static_assert(EqV<tlist::Zip<TList1, TList1>, TL<TL<char, char>>>());
-static_assert(EqV<tlist::Zip<TList2, TList2>,
+static_assert(EqV<tlist::ZipTL<TList1, TList1>, TL<TL<char, char>>>());
+static_assert(EqV<tlist::ZipTL<TList2, TList2>,
                   TL<TL<char, char>, TL<short, short>, TL<int, int>>>());
 static_assert(
-    EqV<tlist::Zip<TList2, TList3>,
+    EqV<tlist::ZipTL<TList2, TList3>,
         TL<TL<char, float>, TL<short, double>, TL<int, long double>>>());
 
 // Zip with unequal-length lists:
-static_assert(EqV<tlist::Zip<TList1, TList3>, TL<TL<char, float>>>());
+static_assert(EqV<tlist::ZipTL<TList1, TList3>, TL<TL<char, float>>>());

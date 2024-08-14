@@ -27,11 +27,11 @@ using AllDevList = h2::meta::TL<CPUDev_t, GPUDev_t>;
 #else
 using AllDevList = h2::meta::TL<CPUDev_t>;
 #endif
-using AllDevPairsList = h2::meta::tlist::CartProd<AllDevList, AllDevList>;
+using AllDevPairsList = h2::meta::tlist::CartProdTL<AllDevList, AllDevList>;
 
 // All pairs of devices and compute types:
 using AllDevComputeTypePairsList =
-    h2::meta::tlist::CartProd<AllDevList, h2::ComputeTypes>;
+    h2::meta::tlist::CartProdTL<AllDevList, h2::ComputeTypes>;
 
 // Standard datatype to be used when testing.
 // Note: When used with integers, floats are exact for any integer with

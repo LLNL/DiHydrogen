@@ -22,36 +22,37 @@ namespace tlist
 
 /** @brief Zip two lists. */
 template <typename L1, typename L2>
-struct ZipT;
+struct ZipTLT;
 
 /** @brief Zip two lists. */
 template <typename L1, typename L2>
-using Zip = Force<ZipT<L1, L2>>;
+using ZipTL = Force<ZipTLT<L1, L2>>;
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 template <>
-struct ZipT<Empty, Empty>
+struct ZipTLT<Empty, Empty>
 {
   using type = Empty;
 };
 
 template <typename... List2Ts>
-struct ZipT<Empty, TL<List2Ts...>>
+struct ZipTLT<Empty, TL<List2Ts...>>
 {
   using type = Empty;
 };
 
 template <typename... List1Ts>
-struct ZipT<TL<List1Ts...>, Empty>
+struct ZipTLT<TL<List1Ts...>, Empty>
 {
   using type = Empty;
 };
 
 template <typename T1, typename... List1Ts, typename T2, typename... List2Ts>
-struct ZipT<TL<T1, List1Ts...>, TL<T2, List2Ts...>>
+struct ZipTLT<TL<T1, List1Ts...>, TL<T2, List2Ts...>>
 {
-  using type = Append<TL<TL<T1, T2>>, Force<ZipT<TL<List1Ts...>, TL<List2Ts...>>>>;
+  using type =
+      Append<TL<TL<T1, T2>>, Force<ZipTLT<TL<List1Ts...>, TL<List2Ts...>>>>;
 };
 
 #endif  // DOXYGEN_SHOULD_SKIP_THIS

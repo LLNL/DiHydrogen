@@ -16,17 +16,17 @@ using TList2 = TL<char, short, int>;
 using TList3 = TL<float, double, long double>;
 
 // CartProd with an empty list always gives an empty list:
-static_assert(EqV<tlist::CartProd<tlist::Empty, tlist::Empty>, tlist::Empty>());
-static_assert(EqV<tlist::CartProd<tlist::Empty, TList1>, tlist::Empty>());
-static_assert(EqV<tlist::CartProd<tlist::Empty, TList2>, tlist::Empty>());
-static_assert(EqV<tlist::CartProd<TList1, tlist::Empty>, tlist::Empty>());
-static_assert(EqV<tlist::CartProd<TList2, tlist::Empty>, tlist::Empty>());
+static_assert(EqV<tlist::CartProdTL<tlist::Empty, tlist::Empty>, tlist::Empty>());
+static_assert(EqV<tlist::CartProdTL<tlist::Empty, TList1>, tlist::Empty>());
+static_assert(EqV<tlist::CartProdTL<tlist::Empty, TList2>, tlist::Empty>());
+static_assert(EqV<tlist::CartProdTL<TList1, tlist::Empty>, tlist::Empty>());
+static_assert(EqV<tlist::CartProdTL<TList2, tlist::Empty>, tlist::Empty>());
 
 // CartProd with non-empty lists:
-static_assert(EqV<tlist::CartProd<TList1, TList1>, TL<TL<char, char>>>());
-static_assert(EqV<tlist::CartProd<TList1, TList2>,
+static_assert(EqV<tlist::CartProdTL<TList1, TList1>, TL<TL<char, char>>>());
+static_assert(EqV<tlist::CartProdTL<TList1, TList2>,
                   TL<TL<char, char>, TL<char, short>, TL<char, int>>>());
-static_assert(EqV<tlist::CartProd<TList2, TList3>,
+static_assert(EqV<tlist::CartProdTL<TList2, TList3>,
                   TL<TL<char, float>,
                      TL<char, double>,
                      TL<char, long double>,

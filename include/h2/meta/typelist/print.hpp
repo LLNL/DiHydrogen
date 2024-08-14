@@ -21,26 +21,26 @@ namespace tlist
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 template <typename L>
-struct PrintT;
+struct PrintTLT;
 
 template <>
-struct PrintT<Empty>
+struct PrintTLT<Empty>
 {
   static std::string to_string() { return ""; }
 };
 
 template <typename T>
-struct PrintT<TL<T>>
+struct PrintTLT<TL<T>>
 {
   static std::string to_string() { return TypeName<T>(); }
 };
 
 template <typename T, typename... Ts>
-struct PrintT<TL<T, Ts...>>
+struct PrintTLT<TL<T, Ts...>>
 {
   static std::string to_string()
   {
-    return TypeName<T>() + ", " + PrintT<TL<Ts...>>::to_string();
+    return TypeName<T>() + ", " + PrintTLT<TL<Ts...>>::to_string();
   }
 };
 
@@ -50,7 +50,7 @@ struct PrintT<TL<T, Ts...>>
 template <typename... Ts>
 std::string print(const TL<Ts...>&)
 {
-  return PrintT<TL<Ts...>>::to_string();
+  return PrintTLT<TL<Ts...>>::to_string();
 }
 
 }  // namespace tlist

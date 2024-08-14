@@ -22,27 +22,27 @@ namespace tlist
 
 /** @brief Construct the Cartesian product of two lists. */
 template <typename L1, typename L2>
-struct CartProdT;
+struct CartProdTLT;
 
 /** @brief Construct the Cartesian product of two lists. */
 template <typename L1, typename L2>
-using CartProd = Force<CartProdT<L1, L2>>;
+using CartProdTL = Force<CartProdTLT<L1, L2>>;
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 // Case with one empty list:
 template <typename... List2Ts>
-struct CartProdT<Empty, TL<List2Ts...>>
+struct CartProdTLT<Empty, TL<List2Ts...>>
 {
   using type = Empty;
 };
 
 // Two lists:
 template <typename T, typename... List1Ts, typename... List2Ts>
-struct CartProdT<TL<T, List1Ts...>, TL<List2Ts...>>
+struct CartProdTLT<TL<T, List1Ts...>, TL<List2Ts...>>
 {
   using type = Append<TL<TL<T, List2Ts>...>,
-                      Force<CartProdT<TL<List1Ts...>, TL<List2Ts...>>>>;
+                      Force<CartProdTLT<TL<List1Ts...>, TL<List2Ts...>>>>;
 };
 
 #endif  // DOXYGEN_SHOULD_SKIP_THIS
