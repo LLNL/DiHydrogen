@@ -248,17 +248,6 @@ if (H2_ENABLE_ROCM)
 
   find_package(hip CONFIG REQUIRED) # This must be first.
 
-  # Cleanup the hip targets
-  set(_hip_libs hip::host hip::device)
-  foreach (lib IN LISTS _hip_libs)
-    get_target_property(_lib_link_libs ${lib} INTERFACE_LINK_LIBRARIES)
-    list(FILTER _lib_link_libs EXCLUDE REGEX "clang_rt\.builtins")
-    set_target_properties(
-      ${lib}
-      PROPERTIES
-      INTERFACE_LINK_LIBRARIES ${_lib_link_libs})
-  endforeach ()
-
   # This is used to compile .cu files as HIP files.
   enable_language(HIP)
 
@@ -375,6 +364,19 @@ if (MPI_FOUND AND H2_HAS_ROCM)
       $<$<COMPILE_LANGUAGE:HIP>:${_MPI_CXX_INCL_DIRS}>)
   endif ()
 endif ()
+
+# Cleanup the hip targets
+set(_hip_libs hip::host hip::device hip-lang::host hip-lang::device)
+foreach (lib IN LISTS _hip_libs)
+  if (TARGET ${lib})
+    get_target_property(_lib_link_libs ${lib} INTERFACE_LINK_LIBRARIES)
+    list(FILTER _lib_link_libs EXCLUDE REGEX "clang_rt\.builtins")
+    set_target_properties(
+      ${lib}
+      PROPERTIES
+      INTERFACE_LINK_LIBRARIES "${_lib_link_libs}")
+  endif ()
+endforeach ()
 
 if (MPI_CXX_FOUND)
   message(STATUS "H2 HAS MPI_CXX")
