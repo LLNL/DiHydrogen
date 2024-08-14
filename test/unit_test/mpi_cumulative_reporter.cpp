@@ -172,10 +172,6 @@ public:
     {
         Catch::CumulativeReporterBase::testRunEnded(_testRunStats);
 
-        int rank, size;
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        MPI_Comm_size(MPI_COMM_WORLD, &size);
-
         bool const i_am_root = (rank == 0);
         std::vector<Catch::Totals> all_totals(i_am_root ? size : 0);
         MPI_Gather(&_testRunStats.totals,
