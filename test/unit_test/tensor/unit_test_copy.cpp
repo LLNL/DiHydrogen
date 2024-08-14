@@ -216,7 +216,7 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works with BaseTensor",
 
     DataType* dst_orig_data = dst_tensor_real.data();
 
-    for (std::size_t i = 0; i < src_tensor_real.numel(); ++i)
+    for (DataIndexType i = 0; i < src_tensor_real.numel(); ++i)
     {
       write_ele<SrcDev>(
           src_tensor_real.data(), i, src_val, src_tensor_real.get_stream());
@@ -236,7 +236,7 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works with BaseTensor",
     REQUIRE(src_tensor_real.data() != dst_tensor_real.data());
     REQUIRE(dst_tensor_real.data() == dst_orig_data);
 
-    for (std::size_t i = 0; i < src_tensor_real.numel(); ++i)
+    for (DataIndexType i = 0; i < src_tensor_real.numel(); ++i)
     {
       REQUIRE(read_ele<SrcDev>(
                   src_tensor_real.data(), i, src_tensor_real.get_stream())
