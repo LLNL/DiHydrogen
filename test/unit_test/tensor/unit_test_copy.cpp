@@ -65,7 +65,7 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
 
     DataType* dst_orig_data = dst_tensor.data();
 
-    for (std::size_t i = 0; i < src_tensor.numel(); ++i)
+    for (DataIndexType i = 0; i < src_tensor.numel(); ++i)
     {
       write_ele<SrcDev>(src_tensor.data(), i, src_val, src_tensor.get_stream());
       write_ele<DstDev>(dst_tensor.data(), i, dst_val, dst_tensor.get_stream());
@@ -83,7 +83,7 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
     REQUIRE(src_tensor.data() != dst_tensor.data());
     REQUIRE(dst_tensor.data() == dst_orig_data);
 
-    for (std::size_t i = 0; i < src_tensor.numel(); ++i)
+    for (DataIndexType i = 0; i < src_tensor.numel(); ++i)
     {
       REQUIRE(read_ele<SrcDev>(src_tensor.data(), i, src_tensor.get_stream())
               == src_val);
@@ -97,11 +97,11 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
     SrcTensorType src_tensor(SrcDev, {4, 6}, {DT::Sample, DT::Any});
     DstTensorType dst_tensor(DstDev, {2, 2}, {DT::Any, DT::Any});
 
-    for (std::size_t i = 0; i < src_tensor.numel(); ++i)
+    for (DataIndexType i = 0; i < src_tensor.numel(); ++i)
     {
       write_ele<SrcDev>(src_tensor.data(), i, src_val, src_tensor.get_stream());
     }
-    for (std::size_t i = 0; i < dst_tensor.numel(); ++i)
+    for (DataIndexType i = 0; i < dst_tensor.numel(); ++i)
     {
       write_ele<DstDev>(dst_tensor.data(), i, dst_val, dst_tensor.get_stream());
     }
@@ -117,12 +117,12 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
     REQUIRE_FALSE(dst_tensor.is_view());
     REQUIRE(src_tensor.data() != dst_tensor.data());
 
-    for (std::size_t i = 0; i < src_tensor.numel(); ++i)
+    for (DataIndexType i = 0; i < src_tensor.numel(); ++i)
     {
       REQUIRE(read_ele<SrcDev>(src_tensor.data(), i, src_tensor.get_stream())
               == src_val);
     }
-    for (std::size_t i = 0; i < src_tensor.numel(); ++i)
+    for (DataIndexType i = 0; i < src_tensor.numel(); ++i)
     {
       REQUIRE(read_ele<DstDev>(dst_tensor.data(), i, dst_tensor.get_stream())
               == src_val);
@@ -148,7 +148,7 @@ TEMPLATE_LIST_TEST_CASE("Same-type tensor copy works",
     src_tensor.resize(
         src_tensor.shape(), src_tensor.dim_types(), StrideTuple{2, 4});
 
-    for (std::size_t i = 0; i < src_tensor.numel(); ++i)
+    for (DataIndexType i = 0; i < src_tensor.numel(); ++i)
     {
       write_ele<DstDev>(dst_tensor.data(), i, dst_val, dst_tensor.get_stream());
     }
@@ -187,7 +187,8 @@ TEMPLATE_LIST_TEST_CASE("make_accessible_on_device works",
 
   SrcTensorType src_tensor(SrcDev, {4, 6}, {DT::Sample, DT::Any});
 
-  auto dst_tensor = make_accessible_on_device(src_tensor, DstDev);
+  std::unique_ptr<DstTensorType> dst_tensor =
+      make_accessible_on_device(src_tensor, DstDev);
 
   REQUIRE(dst_tensor->shape() == src_tensor.shape());
   REQUIRE(dst_tensor->dim_types() == src_tensor.dim_types());
@@ -226,7 +227,8 @@ TEMPLATE_LIST_TEST_CASE("make_accessible_on_device works with constant tensors",
 
   const SrcTensorType src_tensor(SrcDev, {4, 6}, {DT::Sample, DT::Any});
 
-  auto dst_tensor = make_accessible_on_device(src_tensor, DstDev);
+  std::unique_ptr<DstTensorType> dst_tensor =
+      make_accessible_on_device(src_tensor, DstDev);
 
   REQUIRE(dst_tensor->shape() == src_tensor.shape());
   REQUIRE(dst_tensor->dim_types() == src_tensor.dim_types());
@@ -264,9 +266,10 @@ TEMPLATE_LIST_TEST_CASE("make_accessible_on_device works with subviews",
   using DstTensorType = Tensor<DataType>;
 
   SrcTensorType src_tensor(SrcDev, {4, 6}, {DT::Sample, DT::Any});
-  auto src_view = src_tensor.view({ALL, IRng{1, 3}});
+  std::unique_ptr<SrcTensorType> src_view = src_tensor.view({ALL, IRng{1, 3}});
 
-  auto dst_tensor = make_accessible_on_device(*src_view, DstDev);
+  std::unique_ptr<DstTensorType> dst_tensor =
+      make_accessible_on_device(*src_view, DstDev);
 
   REQUIRE(dst_tensor->shape() == src_view->shape());
   REQUIRE(dst_tensor->dim_types() == src_view->dim_types());
