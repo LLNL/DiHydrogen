@@ -25,6 +25,7 @@ h2_add_sources_to_target_and_install(
   Map.hpp
   Member.hpp
   print.hpp
+  Reduce.hpp
   Remove.hpp
   RemoveAll.hpp
   Replace.hpp
@@ -36,4 +37,4 @@ h2_add_sources_to_target_and_install(
   TypeList.hpp
   Unique.hpp
   Zip.hpp
-  )
+)
