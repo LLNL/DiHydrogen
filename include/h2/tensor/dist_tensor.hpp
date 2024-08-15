@@ -205,7 +205,7 @@ public:
     os << ")";
   }
 
-  H2TypeInfo get_type_info() const H2_NOEXCEPT override
+  TypeInfo get_type_info() const H2_NOEXCEPT override
   {
     return get_h2_type<T>();
   }

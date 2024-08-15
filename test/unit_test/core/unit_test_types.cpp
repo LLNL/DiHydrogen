@@ -21,14 +21,14 @@ TEMPLATE_LIST_TEST_CASE("Runtime type info for compute types works",
 {
   using Type = TestType;
 
-  H2TypeInfo tinfo = get_h2_type<Type>();
-  H2TypeInfo tinfo_same = get_h2_type<Type>();
+  TypeInfo tinfo = get_h2_type<Type>();
+  TypeInfo tinfo_same = get_h2_type<Type>();
   // Pointers are never compute types.
-  H2TypeInfo tinfo_diff = get_h2_type<Type*>();
+  TypeInfo tinfo_diff = get_h2_type<Type*>();
 
   REQUIRE(tinfo.get_token() >= 0);
   // All compute types should have nice tokens.
-  REQUIRE(tinfo.get_token() < H2TypeInfo::max_token);
+  REQUIRE(tinfo.get_token() < TypeInfo::max_token);
   REQUIRE(tinfo.get_size() == sizeof(Type));
   REQUIRE(*tinfo.get_type_info() == typeid(Type));
 
@@ -46,7 +46,7 @@ TEST_CASE("Runtime type info works for any type", "[types]")
 {
   SECTION("H2TypeInfo works for non-compute standard types")
   {
-    H2TypeInfo tinfo = get_h2_type<char>();
+    TypeInfo tinfo = get_h2_type<char>();
     // In case something changes and we need to update this.
     static_assert(!IsH2ComputeType_v<char>);
     REQUIRE(tinfo.get_token() >= 0);
@@ -56,8 +56,8 @@ TEST_CASE("Runtime type info works for any type", "[types]")
 
   SECTION("H2TypeInfo works for non-compute non-standard types")
   {
-    H2TypeInfo tinfo = get_h2_type<TestStruct>();
-    REQUIRE(tinfo.get_token() == H2TypeInfo::max_token);
+    TypeInfo tinfo = get_h2_type<TestStruct>();
+    REQUIRE(tinfo.get_token() == TypeInfo::max_token);
     REQUIRE(tinfo.get_size() == sizeof(TestStruct));
     REQUIRE(*tinfo.get_type_info() == typeid(TestStruct));
   }

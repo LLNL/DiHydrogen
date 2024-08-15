@@ -96,7 +96,7 @@ public:
   virtual ~BaseDistTensor() = default;
 
   /** Return information on the type the tensor stores. */
-  virtual H2TypeInfo get_type_info() const H2_NOEXCEPT = 0;
+  virtual TypeInfo get_type_info() const H2_NOEXCEPT = 0;
 
   /** Return the shape of the tensor. */
   ShapeTuple shape() const H2_NOEXCEPT

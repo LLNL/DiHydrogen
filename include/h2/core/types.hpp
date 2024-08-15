@@ -111,7 +111,7 @@ using ComputeTypes =
 // Wrap types for runtime dispatch:
 
 /** Manage runtime type information for H2. */
-struct H2TypeInfo
+struct TypeInfo
 {
   /** Type used to represent tokens for dynamic dispatch. */
   using TokenType = std::uint8_t;
@@ -120,11 +120,11 @@ struct H2TypeInfo
 
   /** Helper to construct H2TypeInfo with a given token and type. */
   template <typename T>
-  static H2TypeInfo make(TokenType token_)
+  static TypeInfo make(TokenType token_)
   {
     static_assert(!std::is_same_v<T, void>,
                   "Cannot construct type info for void");
-    return H2TypeInfo(token_, sizeof(T), &typeid(T));
+    return TypeInfo(token_, sizeof(T), &typeid(T));
   }
 
   /** Get the type token. */
@@ -138,7 +138,7 @@ struct H2TypeInfo
   }
 
 private:
-  H2TypeInfo(TokenType token_,
+  TypeInfo(TokenType token_,
              std::size_t type_size_,
              const std::type_info* type_info_)
     : token(token_), type_size(type_size_), type_info(type_info_)
@@ -159,43 +159,43 @@ private:
 };
 
 /** Equality for H2TypeInfo. */
-inline bool operator==(const H2TypeInfo& t1, const H2TypeInfo& t2)
+inline bool operator==(const TypeInfo& t1, const TypeInfo& t2)
 {
   return *t1.get_type_info() == *t2.get_type_info();
 }
 
 /** Inequality for H2TypeInfo. */
-inline bool operator!=(const H2TypeInfo& t1, const H2TypeInfo& t2)
+inline bool operator!=(const TypeInfo& t1, const TypeInfo& t2)
 {
   return *t1.get_type_info() != *t2.get_type_info();
 }
 
 /** Get the H2TypeInfo for a given type. */
 template <typename T>
-inline H2TypeInfo get_h2_type()
+inline TypeInfo get_h2_type()
 {
-  return H2TypeInfo::make<T>(H2TypeInfo::max_token);
+  return TypeInfo::make<T>(TypeInfo::max_token);
 }
 
 template <>
-inline H2TypeInfo get_h2_type<float>()
+inline TypeInfo get_h2_type<float>()
 {
-  return H2TypeInfo::make<float>(0);
+  return TypeInfo::make<float>(0);
 }
 template <>
-inline H2TypeInfo get_h2_type<double>()
+inline TypeInfo get_h2_type<double>()
 {
-  return H2TypeInfo::make<double>(1);
+  return TypeInfo::make<double>(1);
 }
 template <>
-inline H2TypeInfo get_h2_type<std::int32_t>()
+inline TypeInfo get_h2_type<std::int32_t>()
 {
-  return H2TypeInfo::make<std::int32_t>(2);
+  return TypeInfo::make<std::int32_t>(2);
 }
 template <>
-inline H2TypeInfo get_h2_type<std::uint32_t>()
+inline TypeInfo get_h2_type<std::uint32_t>()
 {
-  return H2TypeInfo::make<std::uint32_t>(3);
+  return TypeInfo::make<std::uint32_t>(3);
 }
 
 }  // namespace h2
