@@ -6,7 +6,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "h2/meta/Core.hpp"
-#include "h2/meta/typelist/zip.hpp"
+#include "h2/meta/typelist/Zip.hpp"
 
 using namespace h2::meta;
 
