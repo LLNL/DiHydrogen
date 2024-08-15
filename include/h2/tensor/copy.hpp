@@ -33,31 +33,7 @@ namespace h2
 namespace internal
 {
 
-template <typename T>
-void copy_same_type(Tensor<T>& dst, const Tensor<T>& src)
-{
-  dst.resize(src.shape(), src.dim_types(), src.strides());
-  dst.ensure();
-  if (src.is_contiguous())
-  {
-    copy_buffer<T>(dst.data(),
-                   dst.get_stream(),
-                   src.const_data(),
-                   src.get_stream(),
-                   src.numel());
-  }
-  else
-  {
-    // TODO: We may be able to optimize the non-contiguous case.
-    // For now, we just copy the entire buffer.
-    copy_buffer<T>(
-      dst.data(),
-      dst.get_stream(),
-      src.const_data(),
-      src.get_stream(),
-      get_extent_from_strides(src.shape(), src.strides()));
-  }
-}
+void copy_same_type(BaseTensor& dst, const BaseTensor& src);
 
 template <typename T>
 void copy_same_type(DistTensor<T>& dst, const DistTensor<T>& src)
@@ -98,6 +74,9 @@ void copy_same_type(DistTensor<T>& dst, const DistTensor<T>& src)
  * contiguous, then `dst` will be too.
  *
  * If GPU buffers are involved, this will be asynchronous.
+ *
+ * Conversion will only be performed if `SrcT` and `DstT` are
+ * dynamically dispatchable.
  */
 template <typename DstT, typename SrcT>
 void copy(Tensor<DstT>& dst, const Tensor<SrcT>& src)
@@ -113,11 +92,30 @@ void copy(Tensor<DstT>& dst, const Tensor<SrcT>& src)
                    "Cannot copy a non-empty tensor with no data");
   if constexpr (std::is_same_v<SrcT, DstT>)
   {
-    internal::copy_same_type<DstT>(dst, src);
+    internal::copy_same_type(dst, src);
   }
   else
   {
-    throw H2Exception("Data type conversion in Copy not currently supported");
+    throw H2Exception("Data type conversion in copy not currently supported");
+  }
+}
+
+inline void copy(BaseTensor& dst, const BaseTensor& src)
+{
+  if (src.is_empty())
+  {
+    dst.empty();
+    return;
+  }
+  H2_ASSERT_ALWAYS(src.const_storage_data() != nullptr,
+                   "Cannot copy a non-empty tensor with no data");
+  if (src.get_type_info() == dst.get_type_info())
+  {
+    internal::copy_same_type(dst, src);
+  }
+  else
+  {
+    throw H2Exception("Data type conversion in copy not currently supported");
   }
 }
 
@@ -259,6 +257,67 @@ std::unique_ptr<Tensor<T>> make_accessible_on_device(
 #else  // H2_HAS_GPU
   throw H2FatalException("Unknown device ", dev);
 #endif  // H2_HAS_GPU
+}
+
+namespace impl
+{
+
+template <typename DstT, typename SrcT>
+void cast_impl(CPUDev_t, Tensor<DstT>& dst, const Tensor<SrcT>& src);
+#ifdef H2_HAS_GPU
+template <typename DstT, typename SrcT>
+void cast_impl(GPUDev_t, Tensor<DstT>& dst, const Tensor<SrcT>& src);
+#endif
+
+}  // namespace impl
+
+/**
+ * Return a version of tensor `src` with its type converted to `DstT`.
+ *
+ * If `DstT` is the same as `SrcT`, this will return a view of `src`.
+ * Otherwise, a new Tensor will be created that is the same as `src`
+ * except for its type, and each element of `src` will be converted to
+ * an element of `DstT`.
+ *
+ * This requires `SrcT` and `DstT` to be compute types.
+ */
+template <typename DstT, typename SrcT>
+std::unique_ptr<Tensor<DstT>> cast(Tensor<SrcT>& src)
+{
+  if constexpr (std::is_same_v<SrcT, DstT>)
+  {
+    return src.view();
+  }
+
+  auto dst = std::make_unique<Tensor<DstT>>(src.get_device(),
+                                            src.shape(),
+                                            src.dim_types(),
+                                            src.strides(),
+                                            StrictAlloc,
+                                            src.get_stream());
+  H2_DEVICE_DISPATCH_SAME(src.get_device(),
+                          impl::cast_impl(DeviceT_v<Dev>, *dst, src));
+  return dst;
+}
+
+/** Version of `cast` for const tensors. */
+template <typename DstT, typename SrcT>
+std::unique_ptr<Tensor<DstT>> cast(const Tensor<SrcT>& src)
+{
+  if constexpr (std::is_same_v<SrcT, DstT>)
+  {
+    return src.const_view();
+  }
+
+  auto dst = std::make_unique<Tensor<DstT>>(src.get_device(),
+                                            src.shape(),
+                                            src.dim_types(),
+                                            src.strides(),
+                                            StrictAlloc,
+                                            src.get_stream());
+  H2_DEVICE_DISPATCH_SAME(src.get_device(),
+                          impl::cast_impl(DeviceT_v<Dev>, *dst, src));
+  return dst;
 }
 
 }

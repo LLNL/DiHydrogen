@@ -11,6 +11,7 @@
 
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/core/device.hpp"
+#include "h2/core/types.hpp"
 #include "h2/meta/TypeList.hpp"
 
 #ifdef H2_HAS_GPU
@@ -23,14 +24,20 @@ using h2::CPUDev_t;
 #ifdef H2_TEST_WITH_GPU
 using h2::GPUDev_t;
 using AllDevList = h2::meta::TL<CPUDev_t, GPUDev_t>;
-using AllDevPairsList = h2::meta::TL<h2::meta::TL<CPUDev_t, CPUDev_t>,
-                                     h2::meta::TL<GPUDev_t, GPUDev_t>,
-                                     h2::meta::TL<CPUDev_t, GPUDev_t>,
-                                     h2::meta::TL<GPUDev_t, CPUDev_t>>;
 #else
 using AllDevList = h2::meta::TL<CPUDev_t>;
-using AllDevPairsList = h2::meta::TL<h2::meta::TL<CPUDev_t, CPUDev_t>>;
 #endif
+using AllDevPairsList = h2::meta::tlist::CartProdTL<AllDevList, AllDevList>;
+
+// All pairs of compute types:
+using AllComputeTypePairsList =
+    h2::meta::tlist::CartProdTL<h2::ComputeTypes, h2::ComputeTypes>;
+// All pairs of devices and compute types:
+using AllDevComputeTypePairsList =
+    h2::meta::tlist::CartProdTL<AllDevList, h2::ComputeTypes>;
+// All devices x pairs of types:
+using AllDevComputeTypePairsPairsList =
+    h2::meta::tlist::CartProdTL<AllDevList, AllComputeTypePairsList>;
 
 // Standard datatype to be used when testing.
 // Note: When used with integers, floats are exact for any integer with

@@ -10,6 +10,7 @@ target_sources(StaticTest
   static_test_accessors.cpp
   static_test_append.cpp
   static_test_at.cpp
+  static_test_cartprod.cpp
   static_test_expand.cpp
   static_test_find.cpp
   static_test_flatten.cpp
@@ -24,4 +25,5 @@ target_sources(StaticTest
   static_test_selectall.cpp
   static_test_sort.cpp
   static_test_unique.cpp
+  static_test_zip.cpp
   )

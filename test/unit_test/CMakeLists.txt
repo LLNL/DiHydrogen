@@ -67,18 +67,32 @@ if (H2_HAS_GPU)
   # MPI testing always tests with GPUs when built with them.
   target_compile_definitions(MPICatchTests PRIVATE H2_TEST_WITH_GPU=1)
   target_sources(MPICatchTests PRIVATE wait.cu)
-  # Make CMake happy:
-  if (H2_ENABLE_ROCM)
-    set_source_files_properties(wait.cu PROPERTIES LANGUAGE HIP)
-  endif ()
 endif ()
 
 # Add Catch2 unit tests
 add_subdirectory(core)
+add_subdirectory(gpu)
 add_subdirectory(patterns/factory)
 add_subdirectory(patterns/multimethods)
+add_subdirectory(meta)
 add_subdirectory(utils)
 add_subdirectory(tensor)
+
+# Set the appropriate property for .cu files.
+if (H2_HAS_GPU AND H2_ENABLE_ROCM)
+  get_target_property(GPU_SOURCES GPUCatchTests SOURCES)
+  foreach (SOURCE_FILE ${GPU_SOURCES})
+    if (SOURCE_FILE MATCHES "\\.(cu)$")
+      set_source_files_properties(${SOURCE_FILE} PROPERTIES LANGUAGE HIP)
+    endif ()
+  endforeach ()
+  get_target_property(MPI_SOURCES MPICatchTests SOURCES)
+  foreach (SOURCE_FILE ${MPI_SOURCES})
+    if (SOURCE_FILE MATCHES "\\.(cu)$")
+      set_source_files_properties(${SOURCE_FILE} PROPERTIES LANGUAGE HIP)
+    endif ()
+  endforeach ()
+endif ()
 
 target_link_libraries(SeqCatchTests
   PRIVATE ${H2_LIBRARIES} Catch2::Catch2WithMain)

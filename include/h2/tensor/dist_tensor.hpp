@@ -15,6 +15,7 @@
 #include <memory>
 #include <optional>
 
+#include "h2/core/types.hpp"
 #include "h2/tensor/dist_tensor_base.hpp"
 #include "h2/tensor/dist_types.hpp"
 #include "h2/tensor/proc_grid.hpp"
@@ -33,6 +34,10 @@ public:
 
   using value_type = T;
   using local_tensor_type = Tensor<T>;
+
+  static_assert(
+    IsH2StorageType_v<T>,
+    "Cannot create a tensor with a non-storage type");
 
   DistTensor(Device device,
              const ShapeTuple& shape_,
@@ -198,6 +203,11 @@ public:
       }
     }
     os << ")";
+  }
+
+  TypeInfo get_type_info() const H2_NOEXCEPT override
+  {
+    return get_h2_type<T>();
   }
 
   Device get_device() const H2_NOEXCEPT override

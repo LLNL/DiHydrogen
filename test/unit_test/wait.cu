@@ -6,6 +6,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "wait.hpp"
+#include "h2/gpu/runtime.hpp"
 
 
 namespace
@@ -46,8 +47,8 @@ void gpu_wait(double length, h2::gpu::DeviceStream stream)
     freq_hz = static_cast<long long int>(freq_khz) * 1000ll;  // KHz -> Hz
   }
   const long long int cycles = length * freq_hz;
-  // TODO: Check for launch errors when we have kernel launch infra.
-  wait_kernel<<<1, 1, 0, stream>>>(cycles);
+
+  h2::gpu::launch_kernel(wait_kernel, 1, 1, 0, stream, cycles);
 }
 
 void gpu_wait(double length, const h2::ComputeStream& stream)

@@ -36,6 +36,15 @@ typedef hipStream_t DeviceStream;
 typedef hipEvent_t DeviceEvent;
 typedef hipError_t DeviceError;
 
+constexpr unsigned int max_grid_x = 2147483647;
+constexpr unsigned int max_grid_y = 65536;
+constexpr unsigned int max_grid_z = 65536;
+constexpr unsigned int max_block_x = 1024;
+constexpr unsigned int max_block_y = 1024;
+constexpr unsigned int max_block_z = 1024;
+constexpr unsigned int max_threads_per_block = 1024;
+constexpr unsigned int warp_size = 32;
+
 inline bool ok(DeviceError status) noexcept
 {
     return (status == hipSuccess);
@@ -49,6 +58,21 @@ inline char const* error_name(DeviceError status) noexcept
 inline char const* error_string(DeviceError status) noexcept
 {
     return hipGetErrorString(status);
+}
+
+template <typename... KernelArgs, typename... Args>
+void launch_kernel_internal(void (*kernel)(KernelArgs...),
+                            const dim3& grid_dim,
+                            const dim3& block_dim,
+                            std::size_t shared_mem,
+                            DeviceStream stream,
+                            Args&&... args)
+{
+  // Assumes Args and KernelArgs have been checked.
+  H2_CHECK_HIP(hipGetLastError());
+  hipLaunchKernelGGL(
+     kernel, grid_dim, block_dim, shared_mem, stream, std::forward<Args>(args)...);
+  H2_CHECK_HIP(hipGetLastError());
 }
 
 } // namespace gpu

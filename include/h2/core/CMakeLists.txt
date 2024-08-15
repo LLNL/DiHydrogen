@@ -15,5 +15,7 @@ h2_add_sources_to_target_and_install(
   SOURCES
   allocator.hpp
   device.hpp
+  dispatch.hpp
   sync.hpp
+  types.hpp
   )
