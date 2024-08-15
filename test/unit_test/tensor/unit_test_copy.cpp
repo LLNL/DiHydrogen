@@ -526,3 +526,53 @@ TEMPLATE_LIST_TEST_CASE("Different-type cast works",
             == dst_val);
   }
 }
+
+TEMPLATE_LIST_TEST_CASE("Different-type cast works with constant tensors",
+                        "[tensor][copy]",
+                        AllDevComputeTypePairsPairsList)
+{
+  constexpr Device Dev = meta::tlist::At<TestType, 0>::value;
+  using SrcType = meta::tlist::At<meta::tlist::At<TestType, 1>, 0>;
+  using DstType = meta::tlist::At<meta::tlist::At<TestType, 1>, 1>;
+  using SrcTensorType = Tensor<SrcType>;
+  using DstTensorType = Tensor<DstType>;
+  constexpr SrcType src_val = static_cast<SrcType>(42);
+  constexpr DstType dst_val = static_cast<DstType>(42);
+
+  SrcTensorType src_tensor_orig{Dev, {4, 6}, {DT::Sample, DT::Any}};
+  const SrcTensorType& src_tensor = src_tensor_orig;
+
+  for (DataIndexType i = 0; i < src_tensor.numel(); ++i)
+  {
+    write_ele<Dev>(src_tensor_orig.data(), i, src_val, src_tensor.get_stream());
+  }
+
+  std::unique_ptr<DstTensorType> cast_tensor = cast<DstType>(src_tensor);
+
+  REQUIRE(cast_tensor->shape() == src_tensor.shape());
+  REQUIRE(cast_tensor->dim_types() == src_tensor.dim_types());
+  REQUIRE(cast_tensor->strides() == src_tensor.strides());
+  REQUIRE(cast_tensor->get_device() == src_tensor.get_device());
+  // Since it is a cross-product, SrcType may equal DstType.
+  if constexpr (std::is_same_v<SrcType, DstType>)
+  {
+    REQUIRE(cast_tensor->is_view());
+    REQUIRE(cast_tensor->const_data() == src_tensor.const_data());
+  }
+  else
+  {
+    REQUIRE_FALSE(cast_tensor->is_view());
+    REQUIRE(reinterpret_cast<const void*>(cast_tensor->const_data())
+            != reinterpret_cast<const void*>(src_tensor.const_data()));
+  }
+  REQUIRE(cast_tensor->get_type_info() == get_h2_type<DstType>());
+
+  for (DataIndexType i = 0; i < cast_tensor->numel(); ++i)
+  {
+    REQUIRE(read_ele<Dev>(src_tensor.const_data(), i, src_tensor.get_stream())
+            == src_val);
+    REQUIRE(
+        read_ele<Dev>(cast_tensor->const_data(), i, cast_tensor->get_stream())
+        == dst_val);
+  }
+}

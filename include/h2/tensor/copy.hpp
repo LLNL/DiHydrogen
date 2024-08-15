@@ -300,5 +300,24 @@ std::unique_ptr<Tensor<DstT>> cast(Tensor<SrcT>& src)
   return dst;
 }
 
+/** Version of `cast` for const tensors. */
+template <typename DstT, typename SrcT>
+std::unique_ptr<Tensor<DstT>> cast(const Tensor<SrcT>& src)
+{
+  if constexpr (std::is_same_v<SrcT, DstT>)
+  {
+    return src.const_view();
+  }
+
+  auto dst = std::make_unique<Tensor<DstT>>(src.get_device(),
+                                            src.shape(),
+                                            src.dim_types(),
+                                            src.strides(),
+                                            StrictAlloc,
+                                            src.get_stream());
+  H2_DEVICE_DISPATCH_SAME(src.get_device(),
+                          impl::cast_impl(DeviceT_v<Dev>, *dst, src));
+  return dst;
+}
 
 }
