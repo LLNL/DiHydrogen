@@ -24,6 +24,7 @@ h2_add_sources_to_target_and_install(
   LispAccessors.hpp
   Map.hpp
   Member.hpp
+  print.hpp
   Remove.hpp
   RemoveAll.hpp
   Replace.hpp
