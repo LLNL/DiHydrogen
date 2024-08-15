@@ -398,6 +398,16 @@ add_library(H2Core
 add_subdirectory(include/h2)
 add_subdirectory(src)
 
+# If using ROCm, set the appropriate property for all .cu files.
+if (H2_HAS_GPU AND H2_ENABLE_ROCM)
+  get_target_property(CORE_SOURCES H2Core SOURCES)
+  foreach (SOURCE_FILE ${CORE_SOURCES})
+    if (SOURCE_FILE MATCHES "\\.(cu)$")
+      set_source_files_properties(${SOURCE_FILE} PROPERTIES LANGUAGE HIP)
+    endif ()
+  endforeach ()
+endif ()
+
 target_include_directories(
   H2Core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_GENERATED_INCLUDE_DIRECTORY}>

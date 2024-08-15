@@ -10,7 +10,4 @@ if (H2_HAS_GPU)
     unit_test_launch_kernel.cpp
     test_kernel.cu
   )
-  if (H2_ENABLE_ROCM)
-    set_source_files_properties(test_kernel.cu PROPERTIES LANGUAGE HIP)
-  endif ()
 endif ()
