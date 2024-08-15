@@ -7,3 +7,8 @@
 
 target_sources(H2Core PRIVATE
   copy.cpp)
+
+if (H2_HAS_GPU)
+  target_sources(H2Core PRIVATE
+    copy.cu)
+endif ()

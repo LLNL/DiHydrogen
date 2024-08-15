@@ -259,4 +259,46 @@ std::unique_ptr<Tensor<T>> make_accessible_on_device(
 #endif  // H2_HAS_GPU
 }
 
+namespace impl
+{
+
+template <typename DstT, typename SrcT>
+void cast_impl(CPUDev_t, Tensor<DstT>& dst, const Tensor<SrcT>& src);
+#ifdef H2_HAS_GPU
+template <typename DstT, typename SrcT>
+void cast_impl(GPUDev_t, Tensor<DstT>& dst, const Tensor<SrcT>& src);
+#endif
+
+}  // namespace impl
+
+/**
+ * Return a version of tensor `src` with its type converted to `DstT`.
+ *
+ * If `DstT` is the same as `SrcT`, this will return a view of `src`.
+ * Otherwise, a new Tensor will be created that is the same as `src`
+ * except for its type, and each element of `src` will be converted to
+ * an element of `DstT`.
+ *
+ * This requires `SrcT` and `DstT` to be compute types.
+ */
+template <typename DstT, typename SrcT>
+std::unique_ptr<Tensor<DstT>> cast(Tensor<SrcT>& src)
+{
+  if constexpr (std::is_same_v<SrcT, DstT>)
+  {
+    return src.view();
+  }
+
+  auto dst = std::make_unique<Tensor<DstT>>(src.get_device(),
+                                            src.shape(),
+                                            src.dim_types(),
+                                            src.strides(),
+                                            StrictAlloc,
+                                            src.get_stream());
+  H2_DEVICE_DISPATCH_SAME(src.get_device(),
+                          impl::cast_impl(DeviceT_v<Dev>, *dst, src));
+  return dst;
+}
+
+
 }

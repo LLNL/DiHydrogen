@@ -456,3 +456,73 @@ TEST_CASE("GPU-CPU copy synchronzies correctly", "[tensor][copy]")
 }
 
 #endif  // H2_TEST_WITH_GPU
+
+TEMPLATE_LIST_TEST_CASE("Same-type cast works",
+                        "[tensor][copy]",
+                        AllDevComputeTypePairsList)
+{
+  constexpr Device Dev = meta::tlist::At<TestType, 0>::value;
+  using Type = meta::tlist::At<TestType, 1>;
+  using TensorType = Tensor<Type>;
+
+  TensorType tensor{Dev, {4, 6}, {DT::Sample, DT::Any}};
+  auto cast_tensor = cast<Type>(tensor);
+
+  REQUIRE(cast_tensor->shape() == tensor.shape());
+  REQUIRE(cast_tensor->dim_types() == tensor.dim_types());
+  REQUIRE(cast_tensor->strides() == tensor.strides());
+  REQUIRE(cast_tensor->get_device() == tensor.get_device());
+  REQUIRE(cast_tensor->is_view());
+  REQUIRE(cast_tensor->get_view_type() == ViewType::Mutable);
+  REQUIRE(cast_tensor->data() == tensor.data());
+  REQUIRE(cast_tensor->get_type_info() == tensor.get_type_info());
+  REQUIRE(cast_tensor->get_type_info() == get_h2_type<Type>());
+}
+
+TEMPLATE_LIST_TEST_CASE("Different-type cast works",
+                        "[tensor][copy]",
+                        AllDevComputeTypePairsPairsList)
+{
+  constexpr Device Dev = meta::tlist::At<TestType, 0>::value;
+  using SrcType = meta::tlist::At<meta::tlist::At<TestType, 1>, 0>;
+  using DstType = meta::tlist::At<meta::tlist::At<TestType, 1>, 1>;
+  using SrcTensorType = Tensor<SrcType>;
+  using DstTensorType = Tensor<DstType>;
+  constexpr SrcType src_val = static_cast<SrcType>(42);
+  constexpr DstType dst_val = static_cast<DstType>(42);
+
+  SrcTensorType src_tensor{Dev, {4, 6}, {DT::Sample, DT::Any}};
+
+  for (DataIndexType i = 0; i < src_tensor.numel(); ++i)
+  {
+    write_ele<Dev>(src_tensor.data(), i, src_val, src_tensor.get_stream());
+  }
+
+  std::unique_ptr<DstTensorType> cast_tensor = cast<DstType>(src_tensor);
+
+  REQUIRE(cast_tensor->shape() == src_tensor.shape());
+  REQUIRE(cast_tensor->dim_types() == src_tensor.dim_types());
+  REQUIRE(cast_tensor->strides() == src_tensor.strides());
+  REQUIRE(cast_tensor->get_device() == src_tensor.get_device());
+  // Since it is a cross-product, SrcType may equal DstType.
+  if constexpr (std::is_same_v<SrcType, DstType>)
+  {
+    REQUIRE(cast_tensor->is_view());
+    REQUIRE(cast_tensor->data() == src_tensor.data());
+  }
+  else
+  {
+    REQUIRE_FALSE(cast_tensor->is_view());
+    REQUIRE(reinterpret_cast<void*>(cast_tensor->data())
+            != reinterpret_cast<void*>(src_tensor.data()));
+  }
+  REQUIRE(cast_tensor->get_type_info() == get_h2_type<DstType>());
+
+  for (DataIndexType i = 0; i < cast_tensor->numel(); ++i)
+  {
+    REQUIRE(read_ele<Dev>(src_tensor.data(), i, src_tensor.get_stream())
+            == src_val);
+    REQUIRE(read_ele<Dev>(cast_tensor->data(), i, cast_tensor->get_stream())
+            == dst_val);
+  }
+}

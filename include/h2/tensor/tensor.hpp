@@ -57,6 +57,20 @@ public:
   {}
 
   Tensor(Device device,
+         const ShapeTuple& shape_,
+         const DimensionTypeTuple& dim_types_,
+         const StrideTuple& strides_,
+         TensorAllocationStrategy alloc_type = StrictAlloc,
+         const std::optional<ComputeStream> stream = std::nullopt)
+      : BaseTensor(shape_, dim_types_),
+        tensor_memory(device,
+                      shape_,
+                      strides_,
+                      alloc_type == LazyAlloc,
+                      stream.value_or(ComputeStream{device}))
+  {}
+
+  Tensor(Device device,
          T* buffer,
          const ShapeTuple& shape_,
          const DimensionTypeTuple& dim_types_,
