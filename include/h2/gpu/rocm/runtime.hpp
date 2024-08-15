@@ -71,7 +71,7 @@ void launch_kernel_internal(void (*kernel)(KernelArgs...),
   // Assumes Args and KernelArgs have been checked.
   H2_CHECK_HIP(hipGetLastError());
   hipLaunchKernelGGL(
-      kernel, grid_dim, block_dim, shared_mem, stream, std::forward(args)...);
+     kernel, grid_dim, block_dim, shared_mem, stream, std::forward<Args>(args)...);
   H2_CHECK_HIP(hipGetLastError());
 }
 
