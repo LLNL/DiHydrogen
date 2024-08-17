@@ -108,6 +108,9 @@ using IntegralComputeTypes = meta::TL<std::int32_t, std::uint32_t>;
 using ComputeTypes =
     meta::tlist::Append<FloatComputeTypes, IntegralComputeTypes>;
 
+/** Number of compute types. */
+constexpr unsigned long NumComputeTypes = meta::tlist::Length<ComputeTypes>;
+
 // Wrap types for runtime dispatch:
 
 /** Manage runtime type information for H2. */
@@ -174,28 +177,19 @@ inline bool operator!=(const TypeInfo& t1, const TypeInfo& t2)
 template <typename T>
 inline TypeInfo get_h2_type()
 {
-  return TypeInfo::make<T>(TypeInfo::max_token);
+  if constexpr (IsH2ComputeType_v<T>)
+  {
+    return TypeInfo::make<T>(meta::tlist::Find<ComputeTypes, T>);
+  }
+  else
+  {
+    return TypeInfo::make<T>(TypeInfo::max_token);
+  }
 }
 
-template <>
-inline TypeInfo get_h2_type<float>()
+inline bool is_h2_type(const TypeInfo& ti)
 {
-  return TypeInfo::make<float>(0);
-}
-template <>
-inline TypeInfo get_h2_type<double>()
-{
-  return TypeInfo::make<double>(1);
-}
-template <>
-inline TypeInfo get_h2_type<std::int32_t>()
-{
-  return TypeInfo::make<std::int32_t>(2);
-}
-template <>
-inline TypeInfo get_h2_type<std::uint32_t>()
-{
-  return TypeInfo::make<std::uint32_t>(3);
+  return ti.get_token() < 4;
 }
 
 }  // namespace h2
