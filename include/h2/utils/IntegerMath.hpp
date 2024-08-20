@@ -84,6 +84,18 @@ struct IntegerTraits<uint64_t>
     static constexpr int nbits = 64;
 };
 
+/** @brief Determine a type that will store the given number of bytes. */
+template <int Bytes>
+struct UTypeForBytes;
+template <> struct UTypeForBytes<1> { using type = std::uint8_t; };
+template <> struct UTypeForBytes<2> { using type = std::uint16_t; };
+template <> struct UTypeForBytes<3> { using type = std::uint32_t; };
+template <> struct UTypeForBytes<4> { using type = std::uint32_t; };
+template <> struct UTypeForBytes<5> { using type = std::uint64_t; };
+template <> struct UTypeForBytes<6> { using type = std::uint64_t; };
+template <> struct UTypeForBytes<7> { using type = std::uint64_t; };
+template <> struct UTypeForBytes<8> { using type = std::uint64_t; };
+
 template <typename IType>
 using SType = typename IntegerTraits<IType>::signed_type;
 
@@ -105,11 +117,10 @@ inline constexpr bool IsUnsigned = meta::EqV<UType<IType>, IType>();
  *  function to return 0 when `d=0`.
  */
 template <typename IType, typename = meta::EnableWhen<IsUnsigned<IType>>>
-H2_GPU_FORCE_INLINE H2_GPU_HOST_DEVICE auto ceillog2(IType const& d)
+constexpr H2_GPU_FORCE_INLINE H2_GPU_HOST_DEVICE auto ceillog2(IType const& d)
 {
-    static constexpr auto nbits = NBits<IType>;
     int ell = 0;
-    for (ell = 0; ell < nbits; ++ell)
+    for (ell = 0; ell < NBits<IType>; ++ell)
         if ((static_cast<IType>(1) << ell) >= d)
             break;
     return ell;
@@ -117,9 +128,17 @@ H2_GPU_FORCE_INLINE H2_GPU_HOST_DEVICE auto ceillog2(IType const& d)
 
 /** @brief Determine if n is a power of 2. */
 template <typename IType, typename = meta::EnableWhen<IsUnsigned<IType>>>
-H2_GPU_FORCE_INLINE H2_GPU_HOST_DEVICE auto ispow2(IType const& d)
+constexpr H2_GPU_FORCE_INLINE H2_GPU_HOST_DEVICE auto ispow2(IType const& d)
 {
     return (d & (d - 1)) == 0;
+}
+
+/** @brief Determine the minimum number of bytes needed to store bits. */
+template <typename IType, typename = meta::EnableWhen<IsUnsigned<IType>>>
+constexpr H2_GPU_FORCE_INLINE H2_GPU_HOST_DEVICE auto
+byteceil(IType const& bits)
+{
+  return (bits / 8) + (bits % 8 > 0);
 }
 
 /** @brief Computes the upper 32 bits of `x*y`. */
