@@ -397,7 +397,7 @@ public:
    *
    * The `coords` given may omit dimensions on the right. In this case,
    * they are assumed to have their full range. However, if `coords` is
-   * fully empty, the view iwll be empty.
+   * fully empty, the view will be empty.
    *
    * If dimensions in `coords` are given as scalars, these dimensions
    * are eliminated from the tensor. If all dimensions are eliminated,
