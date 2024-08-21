@@ -249,6 +249,12 @@ def process_file(infile: str, outfile: str) -> None:
             get_device = parse_get_device_line(line)
         elif start.startswith('// H2_DISPATCH_ON'):
             dispatch_on_args = parse_dispatch_on_line(line)
+            if len(dispatch_on_args) != num_types:
+                raise RuntimeError(
+                    'Dispatch generation error:'
+                    f' expected number of types {num_types}'
+                    ' does not match number of dispatch arguments:'
+                    f' {len(dispatch_on_args)} ({dispatch_on_args})')
         elif start.startswith('// H2_DISPATCH_ARGS'):
             dispatch_args.update(parse_dispatch_args_line(line))
         elif start.startswith('// H2_DO_DISPATCH'):
