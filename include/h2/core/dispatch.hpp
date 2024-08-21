@@ -339,17 +339,29 @@ get_native_dispatch_key(const TypeInfoHavers&... args)
   return get_native_dispatch_key(tokens);
 }
 
+/** Add a dispatch entry to the dispatch table for the name and key. */
 void add_dispatch_entry(const std::string& name,
                         const DispatchKeyT& dispatch_key,
                         const DispatchFunctionEntry& dispatch_entry);
 
+/** Return true if a dispatch entry exists for the name and key. */
 bool has_dispatch_entry(const std::string& name,
                         const DispatchKeyT& dispatch_key);
 
+/**
+ * Return the dispatch entry for name and key.
+ *
+ * Throws if the entry is not present.
+ */
 const DispatchFunctionEntry&
 get_dispatch_entry(const std::string& name,
                    const DispatchKeyT& dispatch_key);
 
+/**
+ * Call the dispatch entry for name and key with the given arguments.
+ *
+ * Throws if the entry is not present.
+ */
 template <typename... Args>
 void call_dispatch_entry(const std::string& name,
                          const DispatchKeyT& dispatch_key,
@@ -366,12 +378,12 @@ get_dispatch_key(const std::array<TypeInfo::TokenType, N>& tokens)
 {
   static_assert(N <= max_dispatch_types,
                 "Attempt to get dispatch key for too many types");
-  DispatchKeyT dispatch_key = N << internal::dispatch_key_top_byte_shift;
+  DispatchKeyT dispatch_key = N << dispatch_key_top_byte_shift;
   // Shift tokens, with the first being leftmost, to construct the key.
   for (std::size_t i = 0; i < N; ++i)
   {
     dispatch_key |= tokens[i]
-                    << (internal::dispatch_bits_per_compute_type * (N - 1 - i));
+                    << (dispatch_bits_per_compute_type * (N - 1 - i));
   }
   return dispatch_key;
 }
