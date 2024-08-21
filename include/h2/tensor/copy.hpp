@@ -320,4 +320,11 @@ std::unique_ptr<Tensor<DstT>> cast(const Tensor<SrcT>& src)
   return dst;
 }
 
-}
+/** Version of `cast` for `BaseTensor`s. */
+template <typename DstT>
+std::unique_ptr<Tensor<DstT>> cast(BaseTensor& src);
+
+/** Fully runtime version of `cast`. */
+std::unique_ptr<BaseTensor> cast(const TypeInfo& type, BaseTensor& src);
+
+}  // namespace h2
