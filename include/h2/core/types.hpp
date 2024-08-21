@@ -120,8 +120,10 @@ struct TypeInfo
   using TokenType = std::uint8_t;
   /** Max value for a token. */
   static constexpr TokenType max_token = std::numeric_limits<TokenType>::max();
+  /** Minimum value for user-defined tokens. */
+  static constexpr TokenType min_user_token = 32;
 
-  /** Helper to construct H2TypeInfo with a given token and type. */
+  /** Helper to construct TypeInfo with a given token and type. */
   template <typename T>
   static TypeInfo make(TokenType token_)
   {
@@ -161,19 +163,19 @@ private:
   const std::type_info* type_info;
 };
 
-/** Equality for H2TypeInfo. */
+/** Equality for TypeInfo. */
 inline bool operator==(const TypeInfo& t1, const TypeInfo& t2)
 {
   return *t1.get_type_info() == *t2.get_type_info();
 }
 
-/** Inequality for H2TypeInfo. */
+/** Inequality for TypeInfo. */
 inline bool operator!=(const TypeInfo& t1, const TypeInfo& t2)
 {
   return *t1.get_type_info() != *t2.get_type_info();
 }
 
-/** Get the H2TypeInfo for a given type. */
+/** Get the TypeInfo for a given type. */
 template <typename T>
 inline TypeInfo get_h2_type()
 {
@@ -187,9 +189,20 @@ inline TypeInfo get_h2_type()
   }
 }
 
-inline bool is_h2_type(const TypeInfo& ti)
+/** True if a type is a native H2 compute type. */
+inline bool is_h2_compute_type(const TypeInfo& ti)
 {
-  return ti.get_token() < 4;
+  return ti.get_token() < NumComputeTypes;
+}
+
+/**
+ * True if a type is a compute type.
+ *
+ * This is any type that has a token other than the max token.
+ */
+inline bool is_compute_type(const TypeInfo& ti)
+{
+  return ti.get_token() < TypeInfo::max_token;
 }
 
 }  // namespace h2

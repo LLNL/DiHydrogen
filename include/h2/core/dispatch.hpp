@@ -188,33 +188,63 @@ void dispatch_call(DispatchFunctionEntry& func, Args&&... args)
   func.caller(func.func_ptr, func_args);
 }
 
+// Note: "Native" dispatch keys are only for use with native H2 compute
+// types. Regular dispatch keys work with anything with a token from
+// h2::TypeInfo (including native compute types).
+// A native dispatch key may *not* be converted to a regular one, or
+// vice-versa.
 
-/** Number of bits needed to uniquely represent all compute types. */
-constexpr std::size_t dispatch_bits_per_compute_type =
+/**
+ * Number of bits needed to uniquely represent all native compute types.
+ */
+constexpr std::size_t dispatch_bits_per_native_compute_type =
     ceillog2(NumComputeTypes);
+/**
+ * Number of bits needed to uniquely represent all compute types.
+ */
+constexpr std::size_t dispatch_bits_per_compute_type =
+    ceillog2(static_cast<std::size_t>(TypeInfo::max_token - 1));
 
 /** Helper to construct a dispatch key with sanity checking. */
-template <unsigned int num_types>
+template <unsigned int num_types, std::size_t bits_per_compute_type>
 struct DispatchKeyT_impl
 {
   /** Number of bits needed to represent the dispatch key. */
   static constexpr unsigned int num_bits =
-      dispatch_bits_per_compute_type * num_types;
+      bits_per_compute_type * num_types;
   /** Number of bytes needed to represent the dispatch key. */
   static constexpr unsigned int num_bytes = byteceil(num_bits);
   static_assert(
       num_bytes <= 8,
-      "Cannot create a dispatch key that would require more than8 bytes");
+      "Cannot create a dispatch key that would require more than 8 bytes");
   /** Type to use for the dispatch key. */
   using type = typename UTypeForBytes<num_bytes>::type;
 };
 
-/** Type for a dispatch key that dispatches over num_types types. */
+/**
+ * Type for a native dispatch key that dispatches over num_types types.
+ */
 template <unsigned int num_types>
-using DispatchKeyT = typename DispatchKeyT_impl<num_types>::type;
+using NativeDispatchKeyT = typename DispatchKeyT_impl<
+    num_types,
+    dispatch_bits_per_native_compute_type>::type;
+/** Type for the largest native dispach key supported. */
+using MaxNativeDispatchKeyT = typename UTypeForBytes<8>::type;
+/** Maximum number of native dispatch types supported. */
+constexpr std::size_t max_native_dispatch_types =
+    sizeof(MaxNativeDispatchKeyT) * 8 / dispatch_bits_per_native_compute_type;
 
-// TODO: Handle case where it's not a compute type.
-// TODO: Versions with TypeInfo(const?).
+/**
+ * Type for a dispatch key that dispatches over num_types types.
+ */
+template <unsigned int num_types>
+using DispatchKeyT =
+    typename DispatchKeyT_impl<num_types, dispatch_bits_per_compute_type>::type;
+/** Type for the largest dispatch key supported. */
+using MaxDispatchKeyT = typename UTypeForBytes<8>::type;
+/** Maximum number of dispatch types supported. */
+constexpr std::size_t max_dispatch_types =
+    sizeof(MaxDispatchKeyT) * 8 / dispatch_bits_per_compute_type;
 
 /**
  * Extract the `TypeInfo` from something.
@@ -234,13 +264,6 @@ inline TypeInfo get_type_info<TypeInfo>(const TypeInfo& tinfo)
   return tinfo;
 }
 
-/** True if all arguments have a runtime type that is a compute type. */
-template <typename... TypeInfoHavers>
-bool all_h2_compute_types(const TypeInfoHavers&... args)
-{
-  return (is_h2_type(get_type_info(args)) && ...);
-}
-
 /**
  * Get the type token for x, which must meet the same requirements as
  * in `get_type_info`.
@@ -252,25 +275,123 @@ inline TypeInfo::TokenType get_type_token(const TypeInfoHaver& x)
 }
 
 /**
- * Return the dispatch key for dispatching over args.
+ * True if all arguments have a runtime type that is a native H2
+ * compute type.
  */
 template <typename... TypeInfoHavers>
-constexpr DispatchKeyT<sizeof...(TypeInfoHavers)>
-get_dispatch_key(const TypeInfoHavers&... args)
+bool all_h2_compute_types(const TypeInfoHavers&... args)
 {
+  return (is_h2_compute_type(get_type_info(args)) && ...);
+}
+
+/**
+ * True if all arguments have a runtime type that is a compute type
+ * (whether or not it is a native H2 compute type).
+ */
+template <typename... TypeInfoHavers>
+bool all_compute_types(const TypeInfoHavers&... args)
+{
+  return (is_compute_type(get_type_info(args)) && ...);
+}
+
+/**
+ * True if a non-native H2 compute type is present.
+ */
+template <typename... TypeInfoHavers>
+bool contains_nonnative_compute_type(const TypeInfoHavers&... args)
+{
+  H2_ASSERT_DEBUG(all_compute_types(std::forward<TypeInfoHavers>(args)...),
+                  "Cannot check for non-native compute types when non-compute "
+                  "types are present");
+  return ((is_compute_type(get_type_info(args)) && !is_h2_compute_type(args))
+          && ...);
+}
+
+/** Construct a native dispatch key for dispatching on args. */
+template <typename... TypeInfoHavers>
+constexpr NativeDispatchKeyT<sizeof...(TypeInfoHavers)>
+get_native_dispatch_key(const TypeInfoHavers&... args)
+{
+  H2_ASSERT_DEBUG(
+      all_h2_compute_types(args...),
+      "Cannot construct native dispatch keys for non-native compute types");
   std::array<TypeInfo::TokenType, sizeof...(TypeInfoHavers)> tokens = {
       {get_type_token(args)...}};
-  DispatchKeyT<sizeof...(TypeInfoHavers)> dispatch_key = 0;
+  NativeDispatchKeyT<sizeof...(TypeInfoHavers)> dispatch_key = 0;
   // Shift tokens, with the first being leftmost, to construct the key.
   for (std::size_t i = 0; i < sizeof...(args); ++i)
   {
-    dispatch_key |= tokens[i] << (dispatch_bits_per_compute_type
-                                  * (sizeof...(TypeInfoHavers) - 1 - i));
+    dispatch_key |= tokens[i]
+                    << (dispatch_bits_per_native_compute_type
+                        * (sizeof...(TypeInfoHavers) - 1 - i));
   }
   return dispatch_key;
 }
 
+void add_dispatch_entry(const std::string& name,
+                        const MaxNativeDispatchKeyT& dispatch_key,
+                        const DispatchFunctionEntry& dispatch_entry);
+
+bool has_dispatch_entry(const std::string& name,
+                        const MaxDispatchKeyT& dispatch_key);
+
+const DispatchFunctionEntry&
+get_dispatch_entry(const std::string& name,
+                   const MaxDispatchKeyT& dispatch_key);
+
+template <typename... Args>
+void call_dispatch_entry(const std::string& name,
+                         const MaxDispatchKeyT& dispatch_key,
+                         Args&&... args)
+{
+  auto entry = get_dispatch_entry(name, dispatch_key);
+  dispatch_call(entry, std::forward<Args>(args)...);
+}
+
 }  // namespace internal
+
+/** Construct a dispatch key for dispatching on args. */
+template <typename... TypeInfoHavers>
+constexpr internal::DispatchKeyT<sizeof...(TypeInfoHavers)>
+get_dispatch_key(const TypeInfoHavers&... args)
+{
+  H2_ASSERT_DEBUG(internal::all_compute_types(args...),
+                  "Cannot construct dispatch keys for non-compute types");
+  std::array<TypeInfo::TokenType, sizeof...(TypeInfoHavers)> tokens = {
+    {internal::get_type_token(args)...}};
+  internal::DispatchKeyT<sizeof...(TypeInfoHavers)> dispatch_key = 0;
+  // Shift tokens, with the first being leftmost, to construct the key.
+  for (std::size_t i = 0; i < sizeof...(args); ++i)
+  {
+    dispatch_key |= tokens[i]
+                    << (internal::dispatch_bits_per_compute_type
+                        * (sizeof...(TypeInfoHavers) - 1 - i));
+  }
+  return dispatch_key;
+}
+
+/**
+ * Register a function for dynamic dispatch.
+ *
+ * @param name[in] Name for the dispatch registry.
+ * @param dispatch_key[in] Dispatch key representing the types this
+ * function should be dispatched for.
+ * @param func[in] Pointer to the function to dispatch to.
+ */
+template <typename... Args>
+void dispatch_register(const std::string& name,
+                       const internal::MaxDispatchKeyT& dispatch_key,
+                       void (*func)(Args...))
+{
+  internal::DispatchFunctionEntry dispatch_entry{
+      reinterpret_cast<void*>(func),
+      &internal::DispatchFunctionWrapper<void, Args...>::call};
+  add_dispatch_entry(name, dispatch_key, dispatch_entry);
+}
+
+/** Unregister a dynamic dispatch entry. */
+void dispatch_unregister(const std::string& name,
+                         const internal::MaxDispatchKeyT& dispatch_key);
 
 }  // namespace h2
 
