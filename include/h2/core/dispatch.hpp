@@ -77,7 +77,82 @@
  *
  * Dynamic (runtime) dispatch:
  *
- * Documentation TODO.
+ * This supports methods that need to operate on `BaseTensor`s (or
+ * `BaseDistTensor`s), or runtime `TypeInfo` objects, but for which
+ * virtual inheritance is not suitable (e.g., because we need to handle
+ * multiple dispatch). Dynamic dispatch is managed through several
+ * mechanisms. By default, H2 will manage dynamic dispatch for all
+ * native H2 compute types. We do not extensively discuss
+ * implementation details here, but rather focus on users.
+ *
+ * To see examples of dynamic dispatch, check the dispatch unit tests
+ * or some of the simpler API methods (e.g., `cast`).
+ *
+ * If you are writing new H2 API methods:
+ * First, define your implementation methods, whatever they may be. In
+ * many cases, you can reuse the ones for static dispatch, if you have
+ * them. Then, declare your API method. In its implementation, you
+ * should add two sets of comments, which will result in dispatch code
+ * being automatically generated at build time:
+ *
+ * 1. Dispatch initialization: These should typically be at the top of
+ * your method (note: spacing, capitalization, etc., must be exact):
+ * // H2_DISPATCH_NAME: <unique name to identify this method>
+ * // H2_DISPATCH_NUM_TYPES: <the number of types to dispatch on>
+ * // H2_DISPATCH_INIT{<blank>, _CPU, _GPU}: The pattern for the function
+ * to invoke when dispatching. It should be of the form
+ *     function_name("type1", "type2", ...)
+ * Note the quotes around types are required.
+ * In both the function name and types, you may write "{TN}", where the
+ * braces and "T" are literal and "N" is replaced with a positive
+ * integer. The "{TN}" will be replaced with the Nth type being
+ * dispatched on. The function will be instantiated with the Cartesian
+ * product of all H2 compute types. Additionally, dispatch tables will
+ * be automatically built and inserted into your function. (These are
+ * static and so should not blow up your stack.)
+ *
+ * 2. Actual dispatch: For style reasons, these should go where you
+ * intend the dispatch call to be. In all cases, double-quotes are
+ * literal and required.
+ * // H2_DISPATCH_GET_DEVICE: "<code snippet to get the device>"
+ * This is optional, and only needed if you need separate dispatch
+ * paths for devices.
+ * // H2_DISPATCH_ON: "<snippet 1>", "<snippet 2>", ...
+ * Expressions to dispatch on. These should provide the actual types or
+ * variables to dispatch on. Any `TypeInfo` object or object with a
+ * `get_type_info` method that returns a `TypeInfo` is acceptable.
+ * There should be exactly as many of these as specified in NUM_TYPES
+ * above.
+ * // H2_DISPATCH_ARGS{<blank>, _CPU, _GPU}: "arg1", "arg2", ...
+ * Arguments to pass to the function on dispatch.
+ * // H2_DO_DISPATCH
+ * Dispatch code will be generated here.
+ *
+ * To handle code that needs separate paths for CPUs and GPUs, the
+ * H2_DISPATCH_INIT and H2_DISPATCH_ARGS may take CPU and GPU versions.
+ * The name given in H2_DISPATCH_NAME will be used to form the name
+ * that users can register custom methods with, should they wish to
+ * support custom compute types. If there are CPU and GPU versions, the
+ * name will have "_cpu" and "_gpu" appended (respectively).
+ *
+ * The dispatch code is generated in a preprocessing pass during the
+ * build by `scripts/dispatch_gen.py`. This runs *only on source files*
+ * so make sure your dispatch code is there and not in a header.
+ *
+ * If you want H2 to dispatch to your own type:
+ * First, define your own implementation. Then, identify the name used
+ * to dispatch the particular API method you wish to provide an
+ * implementation for (remembering there may be CPU and GPU versions).
+ * Then all you need to do is register the method with
+ *     `dispatch_register(name, dispatch_key, &func)`
+ * where:
+ * - name is the dispatch name.
+ * - dispatch_key is a key identifying the types to dispatch on,
+ * generated with `get_dispatch_key`.
+ * - func is a function pointer to the method.
+ * The function may be unregistered with `dispatch_unregister`.
+ * Note that this will not allow you to override internal H2
+ * implementations of functions.
  */
 
 #define H2_INSTANTIATE_DEV_1(device)            \
