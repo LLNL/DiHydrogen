@@ -10,7 +10,9 @@
 
 #include "h2/core/dispatch.hpp"
 #include "h2/core/device.hpp"
+#include "h2/core/types.hpp"
 #include "h2/tensor/tensor.hpp"
+#include <cstdint>
 
 #include "../tensor/utils.hpp"
 
@@ -71,6 +73,19 @@ TEMPLATE_LIST_TEST_CASE("Static dispatch works for new types",
 }
 
 // Dynamic dispatch test:
+using dyndist_cust_type_t = std::uint8_t;
+
+namespace h2
+{
+
+static_assert(!IsH2ComputeType_v<dyndist_cust_type_t>);
+template <>
+TypeInfo get_h2_type<dyndist_cust_type_t>()
+{
+  return TypeInfo::make<dyndist_cust_type_t>(TypeInfo::min_user_token);
+}
+
+}
 
 namespace
 {
@@ -81,6 +96,16 @@ void dyndist_test(CPUDev_t, Tensor<T1>& dst, const Tensor<T2>& src)
   for (DataIndexType i = 0; i < src.numel(); ++i)
   {
     dst.data()[i] += src.const_data()[i];
+  }
+}
+
+void dyndist_cust_test(CPUDev_t,
+                       Tensor<dyndist_cust_type_t>& dst,
+                       const Tensor<dyndist_cust_type_t>& src)
+{
+  for (DataIndexType i = 0; i < src.numel(); ++i)
+  {
+    dst.data()[i] += src.const_data()[i] + 1;
   }
 }
 
@@ -96,6 +121,22 @@ void dyndist_test(GPUDev_t, Tensor<T1>& dst, const Tensor<T2>& src)
         static_cast<T1>(
             read_ele<Device::GPU>(dst.data(), i, dst.get_stream())
             + read_ele<Device::GPU>(src.const_data(), i, src.get_stream())),
+        dst.get_stream());
+  }
+}
+
+void dyndist_cust_test(GPUDev_t,
+                       Tensor<dyndist_cust_type_t>& dst,
+                       const Tensor<dyndist_cust_type_t>& src)
+{
+  for (DataIndexType i = 0; i < src.numel(); ++i)
+  {
+    write_ele<Device::GPU>(
+        dst.data(),
+        i,
+        static_cast<dyndist_cust_type_t>(
+            read_ele<Device::GPU>(dst.data(), i, dst.get_stream())
+            + read_ele<Device::GPU>(src.const_data(), i, src.get_stream()) + 1),
         dst.get_stream());
   }
 }
@@ -393,24 +434,19 @@ void dyndist_tester(BaseTensor& dst, const BaseTensor& src)
       }};
 #endif
 
-  if (!h2::internal::all_h2_compute_types(dst, src))
-  {
-    throw H2FatalException("Attempt to dispatch on non-H2 compute type");
-  }
-  const auto dispatch_key = h2::internal::get_dispatch_key(dst, src);
-  H2_ASSERT_DEBUG(dispatch_key < _dispatch_table_dyndist_tester_cpu.size(),
-                  "Bad dispatch key");
   H2_DEVICE_DISPATCH(src.get_device(),
-                     h2::internal::dispatch_call(
-                         _dispatch_table_dyndist_tester_cpu[dispatch_key],
-                         CPUDev_t{},
-                         dst,
-                         src),
-                     h2::internal::dispatch_call(
-                         _dispatch_table_dyndist_tester_gpu[dispatch_key],
-                         GPUDev_t{},
-                         dst,
-                         src));
+                     do_dispatch(_dispatch_table_dyndist_tester_cpu,
+                                 "dyndist_tester_cpu",
+                                 DispatchOn<2>(dst, src),
+                                 CPUDev_t{},
+                                 dst,
+                                 src),
+                     do_dispatch(_dispatch_table_dyndist_tester_gpu,
+                                 "dyndist_tester_gpu",
+                                 DispatchOn<2>(dst, src),
+                                 GPUDev_t{},
+                                 dst,
+                                 src));
 }
 
 }  // anonymous namespace
@@ -446,4 +482,63 @@ TEMPLATE_LIST_TEST_CASE("Dynamic dispatch works for H2 compute types",
     REQUIRE(read_ele<Dev>(dst_tensor.data(), i, dst_tensor.get_stream())
             == final_dst_val);
   }
+}
+
+TEMPLATE_LIST_TEST_CASE("Dynamic dispatch to non-native compute type works",
+                        "[dispatch]",
+                        AllDevList)
+{
+  constexpr Device Dev = TestType::value;
+  using TensorType = Tensor<dyndist_cust_type_t>;
+  constexpr dyndist_cust_type_t src_val = static_cast<dyndist_cust_type_t>(20);
+  constexpr dyndist_cust_type_t dst_val = static_cast<dyndist_cust_type_t>(22);
+  constexpr dyndist_cust_type_t final_dst_val =
+      static_cast<dyndist_cust_type_t>(43);
+
+  // Register for dispatch:
+  dispatch_register("dyndist_tester_cpu",
+                    get_dispatch_key(get_h2_type<dyndist_cust_type_t>(),
+                                     get_h2_type<dyndist_cust_type_t>()),
+                    static_cast<void (*)(CPUDev_t,
+                                         Tensor<dyndist_cust_type_t>&,
+                                         const Tensor<dyndist_cust_type_t>&)>(
+                        dyndist_cust_test));
+#ifdef H2_TEST_WITH_GPU
+  dispatch_register("dyndist_tester_gpu",
+                    get_dispatch_key(get_h2_type<dyndist_cust_type_t>(),
+                                     get_h2_type<dyndist_cust_type_t>()),
+                    static_cast<void (*)(GPUDev_t,
+                                         Tensor<dyndist_cust_type_t>&,
+                                         const Tensor<dyndist_cust_type_t>&)>(
+                        dyndist_cust_test));
+#endif
+
+  TensorType src_tensor{Dev, {4, 6}, {DT::Sample, DT::Any}};
+  TensorType dst_tensor{Dev, {4, 6}, {DT::Sample, DT::Any}};
+
+  for (DataIndexType i = 0; i < src_tensor.numel(); ++i)
+  {
+    write_ele<Dev>(src_tensor.data(), i, src_val, src_tensor.get_stream());
+    write_ele<Dev>(dst_tensor.data(), i, dst_val, dst_tensor.get_stream());
+  }
+
+  REQUIRE_NOTHROW(dyndist_tester(dst_tensor, src_tensor));
+
+  for (DataIndexType i = 0; i < src_tensor.numel(); ++i)
+  {
+    REQUIRE(read_ele<Dev>(src_tensor.data(), i, src_tensor.get_stream())
+            == src_val);
+    REQUIRE(read_ele<Dev>(dst_tensor.data(), i, dst_tensor.get_stream())
+            == final_dst_val);
+  }
+
+  // Unregister from dispatch:
+  dispatch_unregister("dyndist_tester_cpu",
+                      get_dispatch_key(get_h2_type<dyndist_cust_type_t>(),
+                                       get_h2_type<dyndist_cust_type_t>()));
+#ifdef H2_TEST_WITH_GPU
+  dispatch_unregister("dyndist_tester_gpu",
+                      get_dispatch_key(get_h2_type<dyndist_cust_type_t>(),
+                                       get_h2_type<dyndist_cust_type_t>()));
+#endif
 }

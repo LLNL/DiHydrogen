@@ -12,7 +12,7 @@ namespace
 {
 
 using KeyToEntryMap =
-    std::unordered_map<MaxDispatchKeyT, DispatchFunctionEntry>;
+    std::unordered_map<DispatchKeyT, DispatchFunctionEntry>;
 // Dispatch table with dynamic registration.
 // Maps from names to a lookup table of dispatch keys -> dispatch entries.
 std::unordered_map<std::string, KeyToEntryMap> dispatch_table;
@@ -20,7 +20,7 @@ std::unordered_map<std::string, KeyToEntryMap> dispatch_table;
 }  // anonymous namespace
 
 void add_dispatch_entry(const std::string& name,
-                        const MaxDispatchKeyT& dispatch_key,
+                        const DispatchKeyT& dispatch_key,
                         const DispatchFunctionEntry& dispatch_entry)
 {
   if (dispatch_table.count(name) == 0)
@@ -31,14 +31,14 @@ void add_dispatch_entry(const std::string& name,
 }
 
 bool has_dispatch_entry(const std::string& name,
-                        const MaxDispatchKeyT& dispatch_key)
+                        const DispatchKeyT& dispatch_key)
 {
   return (dispatch_table.count(name) > 0)
          && (dispatch_table[name].count(dispatch_key) > 0);
 }
 
 const DispatchFunctionEntry&
-get_dispatch_entry(const std::string& name, const MaxDispatchKeyT& dispatch_key)
+get_dispatch_entry(const std::string& name, const DispatchKeyT& dispatch_key)
 {
   if (!has_dispatch_entry(name, dispatch_key))
   {
@@ -54,7 +54,7 @@ get_dispatch_entry(const std::string& name, const MaxDispatchKeyT& dispatch_key)
 }  // namespace internal
 
 void dispatch_unregister(const std::string& name,
-                         const internal::MaxDispatchKeyT& dispatch_key)
+                         const internal::DispatchKeyT& dispatch_key)
 {
   if (internal::has_dispatch_entry(name, dispatch_key))
   {
