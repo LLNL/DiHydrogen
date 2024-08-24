@@ -17,6 +17,7 @@ h2_add_sources_to_target_and_install(
   Describable.hpp
   environment_vars.hpp
   Error.hpp
+  function_traits.hpp
   IntegerMath.hpp
   Logger.hpp
   passkey.hpp
