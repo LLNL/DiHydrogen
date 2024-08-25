@@ -66,10 +66,12 @@ TEMPLATE_LIST_TEST_CASE("Static dispatch works for new types",
   constexpr Device Dev = TestType::value;
   using DispatchType = bool;
 
+  ComputeStream stream{Dev};
+
   DeviceBuf<DispatchType, Dev> buf{1};
   buf.fill(static_cast<DispatchType>(false));
   dispatch_test(Dev, buf.buf);
-  REQUIRE(read_ele<Dev>(buf.buf, 0) == true);
+  REQUIRE(read_ele<Dev>(buf.buf, stream) == true);
 }
 
 // Dynamic dispatch test:
