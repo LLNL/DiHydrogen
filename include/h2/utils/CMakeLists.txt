@@ -14,6 +14,7 @@ h2_add_sources_to_target_and_install(
   SOURCES
   As.hpp
   Cloneable.hpp
+  const_for.hpp
   Describable.hpp
   environment_vars.hpp
   Error.hpp
