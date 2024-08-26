@@ -43,7 +43,12 @@ constexpr unsigned int max_block_x = 1024;
 constexpr unsigned int max_block_y = 1024;
 constexpr unsigned int max_block_z = 1024;
 constexpr unsigned int max_threads_per_block = 1024;
-constexpr unsigned int warp_size = 32;
+constexpr unsigned int warp_size = 64;
+
+// Useful defaults for decomposing work:
+constexpr unsigned int num_threads_per_block = 256;
+constexpr unsigned int work_per_thread = 4;
+constexpr unsigned int work_per_block = work_per_thread * num_threads_per_block;
 
 inline bool ok(DeviceError status) noexcept
 {
