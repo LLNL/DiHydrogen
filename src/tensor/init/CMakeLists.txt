@@ -6,12 +6,9 @@
 ################################################################################
 
 target_sources(H2Core PRIVATE
-  base_utils.cpp
-  copy.cpp)
+  fill.cpp)
 
 if (H2_HAS_GPU)
   target_sources(H2Core PRIVATE
-    copy.cu)
+    fill.cu)
 endif ()
-
-add_subdirectory(init)

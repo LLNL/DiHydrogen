@@ -5,13 +5,14 @@
 ## SPDX-License-Identifier: Apache-2.0
 ################################################################################
 
-target_sources(H2Core PRIVATE
-  base_utils.cpp
-  copy.cpp)
+# Append this directory to the current install prefix
+set(H2_CURRENT_INSTALL_PREFIX
+  "${H2_CURRENT_INSTALL_PREFIX}/init")
 
-if (H2_HAS_GPU)
-  target_sources(H2Core PRIVATE
-    copy.cu)
-endif ()
+# Setup this directory's files
+h2_add_sources_to_target_and_install(
+  TARGET H2Core COMPONENT CORE SCOPE INTERFACE
+  INSTALL_PREFIX "${H2_CURRENT_INSTALL_PREFIX}"
+  SOURCES
 
-add_subdirectory(init)
+)
