@@ -29,49 +29,41 @@ namespace cpu
 {
 
 template <typename FuncT, typename... Args>
-void inplace_elementwise_loop(FuncT&& func,
-                              std::size_t size,
-                              Args* __restrict__... args)
-{
-  using traits = FunctionTraits<FuncT>;
-  static_assert(traits::arity == sizeof...(args), "Argument number mismatch");
-  static_assert(std::is_same_v<typename traits::RetT, void>,
-                "Would discard return");
-  // TODO: Check args is convertible to function args.
-
-  std::tuple<Args* __restrict__...> args_ptrs{args...};
-  typename traits::ArgsTuple loaded_args;
-
-  for (std::size_t i = 0; i < size; ++i)
-  {
-    const_for<std::size_t{0}, sizeof...(Args), std::size_t{1}>([&](auto arg_i) {
-      std::get<arg_i.value>(loaded_args) = std::get<arg_i.value>(args_ptrs)[i];
-    });
-    std::apply(func, loaded_args);
-  }
-}
-
-template <typename FuncT, typename OutT, typename... Args>
 void elementwise_loop(FuncT&& func,
                       std::size_t size,
-                      OutT* __restrict__ out,
-                      Args* __restrict__... args)
+                      Args... args)
 {
   using traits = FunctionTraits<FuncT>;
-  static_assert(traits::arity == sizeof...(args), "Argument number mismatch");
-  static_assert(std::is_convertible_v<typename traits::RetT, OutT>,
-                "Cannot convert return value to output type");
+  constexpr bool has_return = !std::is_same_v<typename traits::RetT, void>;
+  constexpr std::size_t arg_offset = has_return ? 1 : 0;
+  static_assert(traits::arity + arg_offset == sizeof...(args),
+                "Argument number mismatch");
   // TODO: Check args is convertible to function args.
 
-  std::tuple<Args* __restrict__...> args_ptrs{args...};
+  std::tuple<Args...> args_ptrs{args...};
   typename traits::ArgsTuple loaded_args;
+
+  static_assert(!has_return
+                    || std::is_convertible_v<
+                        typename traits::RetT,
+                        std::remove_pointer_t<
+                            std::tuple_element_t<0, decltype(args_ptrs)>>>,
+                "Cannt convert return value to output");
 
   for (std::size_t i = 0; i < size; ++i)
   {
-    const_for<std::size_t{0}, sizeof...(Args), std::size_t{1}>([&](auto arg_i) {
-      std::get<arg_i.value>(loaded_args) = std::get<arg_i.value>(args_ptrs)[i];
+    const_for<arg_offset, sizeof...(Args), std::size_t{1}>([&](auto arg_i) {
+      std::get<arg_i.value - arg_offset>(loaded_args) =
+          std::get<arg_i.value>(args_ptrs)[i];
     });
-    out[i] = std::apply(func, loaded_args);
+    if constexpr (has_return)
+    {
+      std::get<0>(args_ptrs)[i] = std::apply(func, loaded_args);
+    }
+    else
+    {
+      std::apply(func, loaded_args);
+    }
   }
 }
 

@@ -12,6 +12,7 @@
 #include "h2/core/dispatch.hpp"
 #include "h2/tensor/base_utils.hpp"
 #include "h2/utils/unique_ptr_cast.hpp"
+#include "h2/loops/cpu_loops.hpp"
 
 namespace h2
 {
@@ -118,14 +119,15 @@ void cast_impl(CPUDev_t, Tensor<DstT>& dst, const Tensor<SrcT>& src)
 {
   static_assert(std::is_convertible_v<SrcT, DstT>,
                 "Attempt to cast between inconvertible types");
-  const SrcT* src_buf = src.const_data();
-  DstT* dst_buf = dst.data();
+  const SrcT* __restrict__ src_buf = src.const_data();
+  DstT* __restrict__ dst_buf = dst.data();
   if (src.is_contiguous())
   {
-    for (DataIndexType i = 0; i < product<DataIndexType>(src.shape()); ++i)
-    {
-      dst_buf[i] = static_cast<DstT>(src_buf[i]);
-    }
+    h2::cpu::elementwise_loop(
+        [](const SrcT val) -> DstT { return static_cast<DstT>(val); },
+        dst.numel(),
+        dst_buf,
+        src_buf);
   }
   else
   {

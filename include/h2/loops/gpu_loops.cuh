@@ -51,7 +51,7 @@ namespace kernels
  * args (except the output, if present) provided.
  */
 template <typename FuncT, typename... Args>
-H2_GPU_GLOBAL void elementwise_loop(const FuncT& f,
+H2_GPU_GLOBAL void elementwise_loop(const FuncT& func,
                                     std::size_t size,
                                     Args... args)
 {
@@ -84,11 +84,11 @@ H2_GPU_GLOBAL void elementwise_loop(const FuncT& f,
         });
     if constexpr (has_return)
     {
-      std::get<0>(args_ptrs)[i] = std::apply(f, loaded_args);
+      std::get<0>(args_ptrs)[i] = std::apply(func, loaded_args);
     }
     else
     {
-      std::apply(f, loaded_args);
+      std::apply(func, loaded_args);
     }
   }
 }
