@@ -8,6 +8,7 @@
 #include "h2/tensor/copy.hpp"
 
 #include "h2/core/dispatch.hpp"
+#include "h2/loops/gpu_loops.cuh"
 
 namespace h2
 {
@@ -16,38 +17,21 @@ namespace impl
 {
 
 template <typename DstT, typename SrcT>
-__global__ void
-cast_kernel_contiguous(DstT* dst, const SrcT* src, std::size_t len)
-{
-  const std::size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
-  if (idx < len)
-  {
-    dst[idx] = static_cast<DstT>(src[idx]);
-  }
-}
-
-template <typename DstT, typename SrcT>
 void cast_impl(GPUDev_t, Tensor<DstT>& dst, const Tensor<SrcT>& src)
 {
   static_assert(std::is_convertible_v<SrcT, DstT>,
                 "Attempt to cast between inconvertible types");
-  const SrcT* src_buf = src.const_data();
-  DstT* dst_buf = dst.data();
+  const SrcT* __restrict__ src_buf = src.const_data();
+  DstT* __restrict__ dst_buf = dst.data();
   auto stream = create_multi_sync(dst.get_stream(), src.get_stream());
   if (src.is_contiguous())
   {
-    // TODO: Do not hardcode these.
-    // TODO: Switch to using a general unary kernel when we have one.
-    constexpr std::size_t threads_per_block = 256ull;
-    const auto blocks = (dst.numel() + threads_per_block - 1) / threads_per_block;
-    gpu::launch_kernel(cast_kernel_contiguous<DstT, SrcT>,
-                       blocks,
-                       threads_per_block,
-                       0,
-                       stream.template get_stream<Device::GPU>(),
-                       dst.data(),
-                       src.const_data(),
-                       dst.numel());
+    h2::gpu::launch_elementwise_loop(
+        [] H2_GPU_LAMBDA(const SrcT val) -> DstT { return static_cast<DstT>(val); },
+        stream,
+        dst.numel(),
+        dst_buf,
+        src_buf);
   }
   else
   {
