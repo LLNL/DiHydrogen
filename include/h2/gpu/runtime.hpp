@@ -209,8 +209,8 @@ inline void launch_kernel(void (*kernel)(KernelArgs...),
                block_dim.y,
                block_dim.z,
                shared_mem,
-               (void*) stream,
-               internal::convert_for_fmt(std::forward<Args>(args))...);
+               (void*) stream);
+               //internal::convert_for_fmt(std::forward<Args>(args))...);
   launch_kernel_internal(kernel,
                          grid_dim,
                          block_dim,
