@@ -15,6 +15,7 @@ h2_add_sources_to_target_and_install(
   SOURCES
   error.hpp
   logger.hpp
+  macros.hpp
   memory_utils.hpp
   runtime.hpp
   )

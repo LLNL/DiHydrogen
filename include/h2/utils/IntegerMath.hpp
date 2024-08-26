@@ -14,31 +14,11 @@
 #include <cstdint>
 #include <stdexcept>
 
-// TODO: Move this elsewhere.
-#if defined H2_HAS_GPU
-
-#if (defined __CUDA_ARCH__ && __CUDA_ARCH__)                                   \
-    || (defined __HIP_DEVICE_COMPILE__ && __HIP_DEVICE_COMPILE__)
-#define H2_GPU_DEVICE_COMPILING 1
-#else
-#define H2_GPU_DEVICE_COMPILING 0
-#endif
-
-#endif // H2_HAS_GPU
-
-// TODO: Move these defines elsewhere
-#if H2_GPU_DEVICE_COMPILING
+#ifdef H2_HAS_GPU
+#include "h2/gpu/macros.hpp"
 #include "h2/gpu/runtime.hpp"
-#define H2_GPU_DEVICE __device__
-#define H2_GPU_FORCE_INLINE __forceinline__
-#define H2_GPU_HOST __host__
-#define H2_GPU_HOST_DEVICE __host__ __device__
-#else
-#define H2_GPU_DEVICE
-#define H2_GPU_FORCE_INLINE inline
-#define H2_GPU_HOST
-#define H2_GPU_HOST_DEVICE
 #endif
+
 
 namespace h2
 {
