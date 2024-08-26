@@ -175,6 +175,14 @@ inline bool operator!=(const TypeInfo& t1, const TypeInfo& t2)
   return *t1.get_type_info() != *t2.get_type_info();
 }
 
+/** Support printing TypeInfo. */
+inline std::ostream& operator<<(std::ostream& os, const TypeInfo& tinfo)
+{
+  os << "TypeInfo(" << tinfo.get_type_info()->name()
+     << ", token=" << tinfo.get_token() << ")";
+  return os;
+}
+
 /** Get the TypeInfo for a given type. */
 template <typename T>
 inline TypeInfo get_h2_type()
