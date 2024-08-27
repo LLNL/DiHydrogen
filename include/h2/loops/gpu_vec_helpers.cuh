@@ -26,9 +26,12 @@
 #include <cuda_runtime.h>
 
 #include "h2/gpu/macros.hpp"
+#include "h2/utils/const_for.hpp"
 
 
 namespace h2
+{
+namespace gpu
 {
 
 /**
@@ -164,26 +167,80 @@ struct VectorTypeForT<double, 4>
   using type = double4;
 };
 
-template <typename T, std::size_t vec_width>
-using VectorType_t = typename VectorTypeForT<T, vec_width>::type;
-
-/**
- * Aligned data suitable for vectorization over vec_width elements.
- */
-template <typename T, std::size_t vec_width>
-struct alignas(sizeof(T) * vec_width) aligned_data
+template <typename T>
+struct VectorTypeForT<const T, 2>
 {
-  T data[vec_width];
+  using type = const typename VectorTypeForT<T, 2>::type;
+};
+template <typename T>
+struct VectorTypeForT<const T, 4>
+{
+  using type = const typename VectorTypeForT<T, 4>::type;
 };
 
-/** Load a vector of data from the given offset. */
-template <std::size_t vec_width, typename T>
-H2_GPU_DEVICE VectorType_t<T, vec_width> load_vector(const T* data,
-                                                     std::size_t offset)
+template <typename T, std::size_t vec_width>
+using VectorType_t =
+    typename VectorTypeForT<std::remove_pointer_t<std::remove_reference_t<T>>,
+                            vec_width>::type;
+
+template <std::size_t i, std::size_t vec_width, typename T>
+H2_GPU_HOST_DEVICE T& index_vector(VectorType_t<T, vec_width>& vec)
 {
-  auto vec_data = reinterpret_cast<const VectorType_t<T, vec_width>*>(data);
-  return vec_data[offset];
+  static_assert(i < vec_width, "Invalid vector index");
+  static_assert(vec_width <= 4, "Invalid vector width");
+
+  if constexpr (vec_width == 1)
+  {
+    return vec;
+  }
+  else
+  {
+    if constexpr (i == 0)
+    {
+      return vec.x;
+    }
+    else if constexpr (i == 1)
+    {
+      return vec.y;
+    }
+    else if constexpr (i == 2)
+    {
+      return vec.z;
+    }
+    else if constexpr (i == 3)
+    {
+      return vec.w;
+    }
+  }
 }
+
+template <std::size_t vec_width, typename Tuple>
+struct VectorTupleTypeT;
+template <std::size_t vec_width, typename... Ts>
+struct VectorTupleTypeT<vec_width, std::tuple<Ts...>>
+{
+  using type = std::tuple<VectorType_t<Ts, vec_width>...>;
+};
+template <std::size_t vec_width, typename Tuple>
+using VectorTupleType_t = typename VectorTupleTypeT<vec_width, Tuple>::type;
+
+template <std::size_t i, std::size_t vec_width, typename VecTuple>
+struct LoadVectorTuple;
+template <std::size_t i, std::size_t vec_width, typename... Ts>
+struct LoadVectorTuple<i, vec_width, std::tuple<Ts...>>
+{
+  static H2_GPU_HOST_DEVICE std::tuple<Ts...>
+  load(VectorTupleType_t<vec_width, std::tuple<Ts...>>& vec_tuple)
+  {
+    std::tuple<Ts...> ret;
+    const_for<std::size_t{0}, sizeof...(Ts), std::size_t{1}>([&](auto arg_i) {
+      using T = std::tuple_element_t<arg_i, std::tuple<Ts...>>;
+      std::get<arg_i>(ret) =
+          index_vector<i, vec_width, T>(std::get<arg_i>(vec_tuple));
+    });
+    return ret;
+  }
+};
 
 /**
  * Return the maximum vector width for ptr, based on its alignment.
@@ -205,4 +262,5 @@ H2_GPU_HOST_DEVICE std::size_t max_vectorization_amount(const T* ptr)
   return 1;
 }
 
+}  // namespace gpu
 }  // namespace h2
