@@ -158,36 +158,60 @@ inline void launch_kernel(void (*kernel)(KernelArgs...),
                   ") exceeds maximum (",
                   max_grid_x,
                   ")");
+  H2_ASSERT_DEBUG(grid_dim.x > 0,
+                  "Grid dimension x (",
+                  grid_dim.x,
+                  ") must be > 0");
   H2_ASSERT_DEBUG(grid_dim.y <= max_grid_y,
                   "Grid dimension y (",
                   grid_dim.y,
                   ") exceeds maximum (",
                   max_grid_y,
                   ")");
+  H2_ASSERT_DEBUG(grid_dim.y > 0,
+                  "Grid dimension y (",
+                  grid_dim.y,
+                  ") must be > 0");
   H2_ASSERT_DEBUG(grid_dim.z <= max_grid_z,
                   "Grid dimension z (",
                   grid_dim.z,
                   ") exceeds maximum (",
                   max_grid_z,
                   ")");
+  H2_ASSERT_DEBUG(grid_dim.z > 0,
+                  "Grid dimension z (",
+                  grid_dim.z,
+                  ") must be > 0");
   H2_ASSERT_DEBUG(block_dim.x <= max_block_x,
                   "Block dimension x (",
                   block_dim.x,
                   ") exceeds maximum (",
                   max_block_x,
                   ")");
+  H2_ASSERT_DEBUG(block_dim.x > 0,
+                  "Block dimension x (",
+                  block_dim.x,
+                  ") must be > 0");
   H2_ASSERT_DEBUG(block_dim.y <= max_block_y,
                   "Block dimension y (",
                   block_dim.y,
                   ") exceeds maximum (",
                   max_block_y,
                   ")");
+  H2_ASSERT_DEBUG(block_dim.y > 0,
+                  "Block dimension y (",
+                  block_dim.y,
+                  ") must be > 0");
   H2_ASSERT_DEBUG(block_dim.z <= max_block_z,
                   "Block dimension z (",
                   block_dim.z,
                   ") exceeds maximum (",
                   max_block_z,
                   ")");
+  H2_ASSERT_DEBUG(block_dim.z > 0,
+                  "Block dimension z (",
+                  block_dim.z,
+                  ") must be > 0");
   H2_ASSERT_DEBUG(block_dim.x * block_dim.y * block_dim.z
                       <= max_threads_per_block,
                   "Total threads in a block (",
