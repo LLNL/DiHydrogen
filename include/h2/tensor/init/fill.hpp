@@ -89,6 +89,14 @@ void fill_impl(GPUDev_t, Tensor<T>& tensor, const T& val);
 
 }  // namespace impl
 
+/**
+ * Fill tensor with a given value.
+ *
+ * This is usable only for compute types.
+ *
+ * If the tensor is on a GPU, this will be asynchronous. `val` does not
+ * need to be on the GPU.
+ */
 template <typename T>
 void fill(Tensor<T>& tensor, const T& val)
 {
@@ -96,6 +104,14 @@ void fill(Tensor<T>& tensor, const T& val)
                           impl::fill_impl(DeviceT_v<Dev>, tensor, val));
 }
 
+/**
+ * Fill tensor with a given value.
+ *
+ * This is usable only for compute types.
+ *
+ * If the tensor is on a GPU, this will be asynchronous. `val` does not
+ * need to be on the GPU.
+ */
 template <typename T>
 void fill(BaseTensor& tensor, const T& val);
 
