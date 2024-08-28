@@ -14,6 +14,8 @@
 
 #include <h2_config.hpp>
 
+// Note: This file should be safe to include when not building with GPU
+// support.
 
 #if defined H2_HAS_GPU
 

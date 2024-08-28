@@ -14,8 +14,8 @@
 #include <cstdint>
 #include <stdexcept>
 
-#ifdef H2_HAS_GPU
 #include "h2/gpu/macros.hpp"
+#ifdef H2_HAS_GPU
 #include "h2/gpu/runtime.hpp"
 #endif
 
