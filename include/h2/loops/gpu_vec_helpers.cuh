@@ -23,8 +23,7 @@
 #include <cstddef>
 #include <cstdint>
 
-#include <cuda_runtime.h>
-
+#include "h2/gpu/runtime.hpp"
 #include "h2/gpu/macros.hpp"
 #include "h2/utils/const_for.hpp"
 
