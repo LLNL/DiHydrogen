@@ -28,6 +28,13 @@ namespace h2
 namespace cpu
 {
 
+/**
+ * Naive n-ary element-wise loop.
+ *
+ * If func returns a value, the first pointer in args is required to be
+ * an output buffer of a type which func's return type is convertible
+ * to. (The return value may not be discarded.)
+ */
 template <typename FuncT, typename... Args>
 void elementwise_loop(FuncT&& func,
                       std::size_t size,
