@@ -215,6 +215,8 @@ if (H2_ENABLE_CUDA)
       list(APPEND H2_CUDA_LIBS NVSHMEM::NVSHMEM)
     endif ()
   endif ()
+
+  set(CMAKE_CUDA_FLAGS "--expt-relaxed-constexpr ${CMAKE_CUDA_FLAGS}")
 endif (H2_ENABLE_CUDA)
 
 find_package(spdlog CONFIG REQUIRED)
