@@ -40,12 +40,12 @@ std::string safe_demangle(const char* mangled)
     auto error_str = demangle_errors.find(status);
     if (error_str != demangle_errors.end())
     {
-      throw H2Exception(std::string("Demangling failed: ")
-                        + error_str->second);
+      throw H2NonfatalException(std::string("Demangling failed: ")
+                                + error_str->second);
     }
     else
     {
-      throw H2Exception("Demangling failed: Unknown error");
+      throw H2NonfatalException("Demangling failed: Unknown error");
     }
   }
 
@@ -62,7 +62,14 @@ namespace internal
 std::string get_type_name(const std::type_info& tinfo)
 {
 #ifdef H2_HAS_CXXABI_H
-  return safe_demangle(tinfo.name());
+  try
+  {
+    return safe_demangle(tinfo.name());
+  }
+  catch (const H2NonfatalException&)
+  {
+    return tinfo.name();  // Getting a type name should not kill us.
+  }
 #else
   return tinfo.name();
 #endif
