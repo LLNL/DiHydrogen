@@ -29,6 +29,7 @@
 #include "h2/gpu/macros.hpp"
 #include "h2/loops/gpu_vec_helpers.cuh"
 #include "h2/utils/const_for.hpp"
+#include "h2/utils/tuple_utils.hpp"
 #include "h2/utils/function_traits.hpp"
 
 
@@ -40,6 +41,12 @@ namespace gpu
 namespace kernels
 {
 
+/**
+ * Vectorized n-ary element-wise loop.
+ *
+ * See `elementwise_loop` for basic details. This assumes data are all
+ * appropriately aligned for the vector width.
+ */
 template <typename SizeT,
           std::size_t vec_width,
           std::size_t unroll_factor,
@@ -123,6 +130,118 @@ vectorized_elementwise_loop(const FuncT& func, SizeT size, Args... args)
     {
       const_for<arg_offset, sizeof...(Args), std::size_t{1}>([&](auto arg_i) {
         std::get<arg_i.value - arg_offset>(loaded_args) =
+            std::get<arg_i.value>(args_ptrs)[i];
+      });
+      if constexpr (has_return)
+      {
+        std::get<0>(args_ptrs)[i] = std::apply(func, loaded_args);
+      }
+      else
+      {
+        std::apply(func, loaded_args);
+      }
+    }
+  }
+}
+
+/**
+ * Vectorized n-ary element-wise loop.
+ *
+ * See `elementwise_loop_with_immediate` for basic details. This
+ * assumes data are all appropriately aligned for the vector width.
+ */
+template <typename SizeT,
+          std::size_t vec_width,
+          std::size_t unroll_factor,
+          typename FuncT,
+          typename ImmediateT,
+          typename... Args>
+H2_GPU_GLOBAL void vectorized_elementwise_loop_with_immediate(const FuncT& func,
+                                                              SizeT size,
+                                                              ImmediateT imm,
+                                                              Args... args)
+{
+  using traits = FunctionTraits<FuncT>;
+  using ArgsTupleWithoutImmediate =
+      TupleRemoveFirst_t<typename traits::ArgsTuple>;
+  constexpr bool has_return = !std::is_same_v<typename traits::RetT, void>;
+  constexpr std::size_t arg_offset = has_return ? 1 : 0;
+  static_assert(traits::arity + arg_offset == sizeof...(args) + 1,
+                "Argument number mismatch");
+  static_assert(
+      std::is_convertible_v<ImmediateT, typename traits::template arg<0>>,
+      "Cannot pass immediate to first argument");
+  static_assert(!has_return
+                    || std::is_convertible_v<
+                        typename traits::RetT,
+                        std::remove_pointer_t<
+                std::tuple_element_t<0, std::tuple<Args...>>>>,
+                "Cannot convert return value to output");
+
+  constexpr SizeT ele_per_iter = vec_width * unroll_factor;
+  const unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
+  const unsigned int grid_stride = blockDim.x * gridDim.x;
+  const SizeT stride = grid_stride * ele_per_iter;
+  const SizeT num_iter = (size / ele_per_iter) * ele_per_iter;
+
+  // Main vectorized/unrolled loop. Only run if this thread has a
+  // complete iteration.
+  if ((tid + 1) * ele_per_iter <= num_iter) {
+    std::tuple<VectorType_t<Args, vec_width>*...> args_ptrs{
+        reinterpret_cast<VectorType_t<Args, vec_width>*>(args)...};
+    // The immediate is loaded in `load_with_immediate`.
+    VectorTupleType_t<vec_width, ArgsTupleWithoutImmediate>
+        loaded_args[unroll_factor];
+
+    for (SizeT i = tid * ele_per_iter; i < num_iter; i += stride)
+    {
+      #pragma unroll
+      for (int u = 0; u < unroll_factor; ++u)
+      {
+        const SizeT idx = (i + u * vec_width) / vec_width;
+        // Vector load.
+        const_for<arg_offset, sizeof...(args), std::size_t{1}>([&](auto arg_i) {
+            std::get<arg_i.value - arg_offset>(loaded_args[u]) =
+                std::get<arg_i.value>(args_ptrs)[idx];
+          });
+        // Apply function to each vector element.
+        if constexpr (has_return)
+        {
+          VectorType_t<typename traits::RetT, vec_width> result;
+          const_for<std::size_t{0}, vec_width, std::size_t{1}>([&](auto arg_i) {
+            index_vector<arg_i, vec_width, typename traits::RetT>(result) =
+                std::apply(func,
+                           LoadVectorTuple<arg_i,
+                                           vec_width,
+                                           ArgsTupleWithoutImmediate>::
+                               load_with_immediate(imm, loaded_args[u]));
+          });
+          // Vector store.
+          std::get<0>(args_ptrs)[idx] = result;
+        }
+        else
+        {
+          const_for<std::size_t{0}, vec_width, std::size_t{1}>([&](auto arg_i) {
+            std::apply(
+                func,
+                LoadVectorTuple<arg_i, vec_width, ArgsTupleWithoutImmediate>::
+                    load_with_immediate(imm, loaded_args[u]));
+          });
+        }
+      }
+    }
+  }
+
+  // Handle remainder.
+  {
+    std::tuple<Args...> args_ptrs{args...};
+    typename traits::ArgsTuple loaded_args;
+    std::get<0>(loaded_args) = imm;  // Store immediate in first arg.
+
+    for (SizeT i = num_iter + tid; i < size; i += grid_stride)
+    {
+      const_for<arg_offset, sizeof...(Args), std::size_t{1}>([&](auto arg_i) {
+        std::get<arg_i.value + 1 - arg_offset>(loaded_args) =
             std::get<arg_i.value>(args_ptrs)[i];
       });
       if constexpr (has_return)
@@ -265,59 +384,60 @@ void launch_elementwise_loop(const FuncT& func,
     return;
   }
 
-  // TODO: Select size type based on size.
+  #define DO_LAUNCH(st, vec)                                                   \
+  gpu::launch_kernel(                                                          \
+      kernels::vectorized_elementwise_loop<st,                                 \
+                                           vec,                                \
+                                           gpu::work_per_thread,               \
+                                           FuncT,                              \
+                                           Args...>,                           \
+      num_blocks,                                                              \
+      block_size,                                                              \
+      0,                                                                       \
+      stream.template get_stream<Device::GPU>(),                               \
+      func,                                                                    \
+      static_cast<st>(size),                                                   \
+      args...)
 
-  std::size_t vec_width = std::min({max_vectorization_amount(args)...});
-  switch (vec_width)
+  const std::size_t vec_width = std::min({max_vectorization_amount(args)...});
+  const bool needs_size_t = size > std::numeric_limits<unsigned int>::max();
+
+  if (needs_size_t)
   {
-  case 4:
-    gpu::launch_kernel(
-        kernels::vectorized_elementwise_loop<std::size_t,
-                                             4,
-                                             gpu::work_per_thread,
-                                             FuncT,
-                                             Args...>,
-        num_blocks,
-        block_size,
-        0,
-        stream.template get_stream<Device::GPU>(),
-        func,
-        size,
-        args...);
-    break;
-  case 2:
-    gpu::launch_kernel(
-        kernels::vectorized_elementwise_loop<std::size_t,
-                                             2,
-                                             gpu::work_per_thread,
-                                             FuncT,
-                                             Args...>,
-        num_blocks,
-        block_size,
-        0,
-        stream.template get_stream<Device::GPU>(),
-        func,
-        size,
-        args...);
-    break;
-  case 1:
-    gpu::launch_kernel(
-        kernels::vectorized_elementwise_loop<std::size_t,
-                                             1,
-                                             gpu::work_per_thread,
-                                             FuncT,
-                                             Args...>,
-        num_blocks,
-        block_size,
-        0,
-        stream.template get_stream<Device::GPU>(),
-        func,
-        size,
-        args...);
-    break;
-  default:
-    throw H2FatalException("Unexpected vectorization size, ", vec_width);
+    switch (vec_width)
+    {
+    case 4:
+      DO_LAUNCH(std::size_t, 4);
+      break;
+    case 2:
+      DO_LAUNCH(std::size_t, 2);
+      break;
+    case 1:
+      DO_LAUNCH(std::size_t, 1);
+      break;
+    default:
+      throw H2FatalException("Unexpected vectorization size, ", vec_width);
+    }
   }
+  else
+  {
+    switch (vec_width)
+    {
+    case 4:
+      DO_LAUNCH(unsigned int, 4);
+      break;
+    case 2:
+      DO_LAUNCH(unsigned int, 2);
+      break;
+    case 1:
+      DO_LAUNCH(unsigned int, 1);
+      break;
+    default:
+      throw H2FatalException("Unexpected vectorization size, ", vec_width);
+    }
+  }
+
+  #undef DO_LAUNCH
 }
 
 template <typename FuncT, typename ImmediateT, typename... Args>
@@ -330,18 +450,68 @@ void launch_elementwise_loop_with_immediate(const FuncT& func,
   const unsigned int block_size = gpu::num_threads_per_block;
   const unsigned int num_blocks = (size + block_size - 1) / block_size;
 
-  gpu::launch_kernel(
-      kernels::elementwise_loop_with_immediate<FuncT,
-                                               ImmediateT,
-                                               Args...>,
-      num_blocks,
-      block_size,
-      0,
-      stream.template get_stream<Device::GPU>(),
-      func,
-      size,
-      imm,
-      args...);
+  // Check if there is no work.
+  if (size == 0)
+  {
+    return;
+  }
+
+#define DO_LAUNCH(st, vec)                                                     \
+  gpu::launch_kernel(kernels::vectorized_elementwise_loop_with_immediate<      \
+                         st,                                                   \
+                         vec,                                                  \
+                         gpu::work_per_thread,                                 \
+                         FuncT,                                                \
+                         ImmediateT,                                           \
+                         Args...>,                                             \
+                     num_blocks,                                               \
+                     block_size,                                               \
+                     0,                                                        \
+                     stream.template get_stream<Device::GPU>(),                \
+                     func,                                                     \
+                     static_cast<st>(size),                                    \
+                     imm,                                                      \
+                     args...)
+
+  const std::size_t vec_width = std::min({max_vectorization_amount(args)...});
+  const bool needs_size_t = size > std::numeric_limits<unsigned int>::max();
+
+  if (needs_size_t)
+  {
+    switch (vec_width)
+    {
+    case 4:
+      DO_LAUNCH(std::size_t, 4);
+      break;
+    case 2:
+      DO_LAUNCH(std::size_t, 2);
+      break;
+    case 1:
+      DO_LAUNCH(std::size_t, 1);
+      break;
+    default:
+      throw H2FatalException("Unexpected vectorization size, ", vec_width);
+    }
+  }
+  else
+  {
+    switch (vec_width)
+    {
+    case 4:
+      DO_LAUNCH(unsigned int, 4);
+      break;
+    case 2:
+      DO_LAUNCH(unsigned int, 2);
+      break;
+    case 1:
+      DO_LAUNCH(unsigned int, 1);
+      break;
+    default:
+      throw H2FatalException("Unexpected vectorization size, ", vec_width);
+    }
+  }
+
+  #undef DO_LAUNCH
 }
 
 }  // namespace gpu

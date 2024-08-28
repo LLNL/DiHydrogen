@@ -240,6 +240,20 @@ struct LoadVectorTuple<i, vec_width, std::tuple<Ts...>>
     });
     return ret;
   }
+
+  template <typename ImmediateT>
+  static H2_GPU_HOST_DEVICE std::tuple<ImmediateT, Ts...> load_with_immediate(
+      ImmediateT& imm, VectorTupleType_t<vec_width, std::tuple<Ts...>>& vec_tuple)
+  {
+    std::tuple<ImmediateT, Ts...> ret;
+    std::get<0>(ret) = imm;
+    const_for<std::size_t{0}, sizeof...(Ts), std::size_t{1}>([&](auto arg_i) {
+      using T = std::tuple_element_t<arg_i, std::tuple<Ts...>>;
+      std::get<arg_i + 1>(ret) =
+          index_vector<i, vec_width, T>(std::get<arg_i>(vec_tuple));
+    });
+    return ret;
+  }
 };
 
 /**
