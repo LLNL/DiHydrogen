@@ -11,6 +11,6 @@ target_sources(SeqCatchTests PRIVATE
 
 if (H2_HAS_GPU)
   target_sources(GPUCatchTests PRIVATE
-
+    unit_test_gpu_loops.cu
   )
 endif ()

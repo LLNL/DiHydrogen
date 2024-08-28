@@ -53,6 +53,12 @@ vectorized_elementwise_loop(const FuncT& func, SizeT size, Args... args)
   constexpr std::size_t arg_offset = has_return ? 1 : 0;
   static_assert(traits::arity + arg_offset == sizeof...(args),
                 "Argument number mismatch");
+  static_assert(!has_return
+                    || std::is_convertible_v<
+                        typename traits::RetT,
+                        std::remove_pointer_t<
+                std::tuple_element_t<0, std::tuple<Args...>>>>,
+                "Cannot convert return value to output");
 
   constexpr SizeT ele_per_iter = vec_width * unroll_factor;
   const unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -163,7 +169,7 @@ H2_GPU_GLOBAL void elementwise_loop(const FuncT& func,
                     || std::is_convertible_v<
                         typename traits::RetT,
                         std::remove_pointer_t<
-                            std::tuple_element_t<0, decltype(args_ptrs)>>>,
+                std::tuple_element_t<0, std::tuple<Args...>>>>,
                 "Cannot convert return value to output");
 
   for (std::size_t i = tid; i < size; i += stride)
@@ -253,14 +259,14 @@ void launch_elementwise_loop(const FuncT& func,
   const unsigned int block_size = gpu::num_threads_per_block;
   const unsigned int num_blocks = (size + block_size - 1) / block_size;
 
-  /*gpu::launch_kernel(kernels::elementwise_loop<FuncT, Args...>,
-                     num_blocks,
-                     block_size,
-                     0,
-                     stream.template get_stream<Device::GPU>(),
-                     func,
-                     size,
-                     args...);*/
+  // Check if there is no work.
+  if (size == 0)
+  {
+    return;
+  }
+
+  // TODO: Select size type based on size.
+
   std::size_t vec_width = std::min({max_vectorization_amount(args)...});
   switch (vec_width)
   {
