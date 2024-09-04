@@ -6,15 +6,18 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "h2/meta/Core.hpp"
-#include "h2/meta/typelist/At.hpp"
+#include "h2/meta/typelist/Reverse.hpp"
 
 using namespace h2::meta;
 
-using TList = TL<int, float, bool>;
+static_assert(
+    Eq<tlist::Reverse<tlist::Empty>, tlist::Empty>,
+    "Reversing an empty tlist is valid and returns an empty tlist.");
 
-static_assert(EqV<tlist::At<TL<int>, 0>, int>(), "At index in bounds.");
-static_assert(EqV<tlist::At<TList, 1>, float>(), "At index in bounds.");
 static_assert(
-    EqV<tlist::At<tlist::Empty, 5>, tlist::Nil>(), "At index out of bounds.");
+    Eq<tlist::Reverse<TL<int>>, TL<int>>,
+    "Reversing a single-element list returns a single-element list.");
+
 static_assert(
-    EqV<tlist::At<TList, 5>, tlist::Nil>(), "At index out of bounds.");
+    Eq<tlist::Reverse<TL<char, short, int, long>>, TL<long, int, short, char>>,
+    "Reversing a nontrivial list returns the reversed list.");

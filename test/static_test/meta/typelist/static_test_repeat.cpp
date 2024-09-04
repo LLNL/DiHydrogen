@@ -5,14 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_CORE_HPP_
-#define H2_META_CORE_HPP_
+#include "h2/meta/Core.hpp"
+#include "h2/meta/typelist/Repeat.hpp"
 
-#include "core/Eq.hpp"
-#include "core/IfThenElse.hpp"
-#include "core/Invocable.hpp"
-#include "core/Lazy.hpp"
-#include "core/SFINAE.hpp"
-#include "core/ValueAsType.hpp"
+using namespace h2::meta;
 
-#endif // H2_META_CORE_HPP_
+static_assert(
+    Eq<tlist::Repeat<int, 0>, tlist::Empty>,
+    "Repeating zero times gives an empty list.");
+
+static_assert(
+    Eq<tlist::Repeat<int, 3>, TL<int, int, int>>,
+    "Repeating a nonzero times gives the correct type list.");

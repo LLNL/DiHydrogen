@@ -17,33 +17,40 @@ namespace meta
 {
 namespace tlist
 {
-/** @brief Remove all instances of a type from a typelist. */
-template <typename List, typename T>
-struct RemoveAllT;
+/** @brief Reverse a typelist. */
+template <typename List>
+struct ReverseT;
 
-/** @brief Remove all instances of a type from a typelist. */
-template <typename List, typename T>
-using RemoveAll = Force<RemoveAllT<List, T>>;
+/** @brief Reverse a typelist. */
+template <typename List>
+using Reverse = Force<ReverseT<List>>;
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
-// Base Case
-template <typename T>
-struct RemoveAllT<Empty, T>
+namespace internal
 {
-    using type = Empty;
+template <typename L, typename RL>
+struct ReverseImpl;
+
+template <typename RL>
+struct ReverseImpl<Empty, RL>
+{
+    using type = RL;
 };
 
-// Match case
-template <typename T, typename... Ts>
-struct RemoveAllT<TypeList<T, Ts...>, T> : RemoveAllT<TypeList<Ts...>, T>
-{};
+template <typename T, typename... Ts, typename RL>
+struct ReverseImpl<TL<T, Ts...>, RL>
+{
+    using type = Force<ReverseImpl<TL<Ts...>, Cons<T, RL>>>;
+};
 
-// Recursive call
-template <typename S, typename... Ts, typename T>
-struct RemoveAllT<TypeList<S, Ts...>, T>
-    : ConsT<S, RemoveAll<TypeList<Ts...>, T>>
-{};
+} // namespace internal
+
+template <typename List>
+struct ReverseT
+{
+    using type = Force<internal::ReverseImpl<List, Empty>>;
+};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 } // namespace tlist

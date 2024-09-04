@@ -1,12 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_TYPELIST_SELECT_HPP_
-#define H2_META_TYPELIST_SELECT_HPP_
+#pragma once
 
 #include "LispAccessors.hpp"
 #include "TypeList.hpp"
@@ -52,4 +51,3 @@ public:
 } // namespace tlist
 } // namespace meta
 } // namespace h2
-#endif // H2_META_TYPELIST_SELECT_HPP_

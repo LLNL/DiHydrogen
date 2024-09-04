@@ -17,33 +17,27 @@ namespace meta
 {
 namespace tlist
 {
-/** @brief Remove all instances of a type from a typelist. */
-template <typename List, typename T>
-struct RemoveAllT;
 
-/** @brief Remove all instances of a type from a typelist. */
-template <typename List, typename T>
-using RemoveAll = Force<RemoveAllT<List, T>>;
+/** @brief Create a type list with N copies of T */
+template <typename T, unsigned long N>
+struct RepeatT;
+
+/** @brief Create a type list with N copies of T */
+template <typename T, unsigned long N>
+using Repeat = Force<RepeatT<T, N>>;
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-
-// Base Case
 template <typename T>
-struct RemoveAllT<Empty, T>
+struct RepeatT<T, 0UL>
 {
     using type = Empty;
 };
 
-// Match case
-template <typename T, typename... Ts>
-struct RemoveAllT<TypeList<T, Ts...>, T> : RemoveAllT<TypeList<Ts...>, T>
-{};
-
-// Recursive call
-template <typename S, typename... Ts, typename T>
-struct RemoveAllT<TypeList<S, Ts...>, T>
-    : ConsT<S, RemoveAll<TypeList<Ts...>, T>>
-{};
+template <typename T, unsigned long N>
+struct RepeatT
+{
+    using type = Cons<T, Repeat<T, N - 1UL>>;
+};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 } // namespace tlist

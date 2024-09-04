@@ -10,7 +10,6 @@
 #include "TypeList.hpp"
 #include "h2/utils/typename.hpp"
 
-
 namespace h2
 {
 namespace meta

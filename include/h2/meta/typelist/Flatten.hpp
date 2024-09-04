@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_TYPELIST_FLATTEN_HPP_
-#define H2_META_TYPELIST_FLATTEN_HPP_
+#pragma once
 
 #include "Append.hpp"
 #include "Map.hpp"
@@ -65,4 +64,3 @@ struct FlattenT
 } // namespace tlist
 } // namespace meta
 } // namespace h2
-#endif // H2_META_TYPELIST_FLATTEN_HPP_

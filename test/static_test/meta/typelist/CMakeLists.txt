@@ -1,5 +1,5 @@
 ################################################################################
-## Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+## Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 ## DiHydrogen Project Developers. See the top-level LICENSE file for details.
 ##
 ## SPDX-License-Identifier: Apache-2.0
@@ -19,11 +19,14 @@ target_sources(StaticTest
   static_test_reduce.cpp
   static_test_remove.cpp
   static_test_removeall.cpp
+  static_test_repeat.cpp
   static_test_replace.cpp
   static_test_replaceall.cpp
+  static_test_reverse.cpp
   static_test_select.cpp
   static_test_selectall.cpp
   static_test_sort.cpp
+  static_test_tofromtuple.cpp
   static_test_unique.cpp
   static_test_zip.cpp
   )

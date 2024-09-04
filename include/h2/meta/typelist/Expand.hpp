@@ -1,12 +1,11 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright 2019-2020 Lawrence Livermore National Security, LLC and other
+// Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
 // DiHydrogen Project Developers. See the top-level LICENSE file for details.
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_TYPELIST_EXPAND_HPP_
-#define H2_META_TYPELIST_EXPAND_HPP_
+#pragma once
 
 #include "TypeList.hpp"
 #include "h2/meta/core/Lazy.hpp"
@@ -17,22 +16,31 @@ namespace meta
 {
 namespace tlist
 {
-/** @brief Expand a template and parameters into a typelist */
+/** @brief Expand a template and parameters into a typelist.
+ *
+ *  Users should prefer `MapT` for a more relatable name.
+ */
 template <template <typename> class UnaryT, typename... Ts>
 struct ExpandT;
 
-/** @brief Expand a template and parameters into a typelist */
+/** @brief Expand a template and parameters into a typelist.
+ *  Users should prefer `Map` for a more relatable name.
+ */
 template <template <typename> class UnaryT, typename... Ts>
 using Expand = Force<ExpandT<UnaryT, Ts...>>;
 
 /** @brief Expand a template and parameters stored in a typelist into
  *  a typelist.
+ *
+ *  Users should prefer `MapTLT` for a more relatable name.
  */
 template <template <typename> class UnaryT, typename TList>
 struct ExpandTLT;
 
 /** @brief Expand a template and parameters stored in a typelist into
  *  a typelist.
+ *
+ *  Users should prefer `MapTL` for a more relatable name.
  */
 template <template <typename> class UnaryT, typename TList>
 using ExpandTL = Force<ExpandTLT<UnaryT, TList>>;
@@ -55,4 +63,3 @@ struct ExpandTLT<UnaryT, TL<Ts...>>
 } // namespace tlist
 } // namespace meta
 } // namespace h2
-#endif // H2_META_TYPELIST_EXPAND_HPP_

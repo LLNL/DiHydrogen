@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include "LispAccessors.hpp"
 #include "TypeList.hpp"
 #include "h2/meta/core/Lazy.hpp"
 
@@ -17,25 +16,36 @@ namespace meta
 {
 namespace tlist
 {
-/** @brief Extract the type at the given index (0-based) in the list. */
-template <typename List, unsigned long Idx>
-struct AtT;
 
-/**  @brief Extract the type at the given index (0-based) in the list. */
-template <typename List, unsigned long Idx>
-using At = Force<AtT<List, Idx>>;
+/** @brief Produce a tuple from a TypeList */
+template <typename List>
+struct ToTupleT;
+
+/** @brief Produce a tuple from a TypeList */
+template <typename List>
+using ToTuple = Force<ToTupleT<List>>;
+
+/** @brief Produce a TypeList from a tuple */
+template <typename Tup>
+struct FromTupleT;
+
+/** @brief Produce a TypeList from a tuple */
+template <typename Tup>
+using FromTuple = Force<FromTupleT<Tup>>;
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
-// Base case
-template <typename List>
-struct AtT<List, 0UL> : CarT<List>
-{};
+template <typename... Ts>
+struct ToTupleT<TL<Ts...>>
+{
+    using type = std::tuple<Ts...>;
+};
 
-// Recursive case
-template <typename List, unsigned long Idx>
-struct AtT : AtT<Cdr<List>, Idx - 1>
-{};
+template <typename... Ts>
+struct FromTupleT<std::tuple<Ts...>>
+{
+    using type = TL<Ts...>;
+};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 } // namespace tlist
