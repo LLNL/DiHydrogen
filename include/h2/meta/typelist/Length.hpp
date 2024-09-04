@@ -18,11 +18,11 @@ namespace meta
 {
 namespace tlist
 {
-/** @brief Get the index of a given type in the list. */
+/** @brief Get the length of the given typelist. */
 template <typename List>
 struct LengthVT;
 
-/** @brief Get the index of a given type in the list. */
+/** @brief Get the length of the given typelist. */
 template <typename List>
 constexpr unsigned long LengthV()
 {

@@ -19,7 +19,7 @@ namespace tlist
 template <typename List>
 using SizeVT = LengthVT<List>;
 
-/** @brief Get the index of a given type in the list. */
+/** @brief Get the length of the given typelist. */
 template <typename List>
 constexpr unsigned long SizeV()
 {

@@ -16,22 +16,31 @@ namespace meta
 {
 namespace tlist
 {
-/** @brief Expand a template and parameters into a typelist */
+/** @brief Expand a template and parameters into a typelist.
+ *
+ *  Users should prefer `MapT` for a more relatable name.
+ */
 template <template <typename> class UnaryT, typename... Ts>
 struct ExpandT;
 
-/** @brief Expand a template and parameters into a typelist */
+/** @brief Expand a template and parameters into a typelist.
+ *  Users should prefer `Map` for a more relatable name.
+ */
 template <template <typename> class UnaryT, typename... Ts>
 using Expand = Force<ExpandT<UnaryT, Ts...>>;
 
 /** @brief Expand a template and parameters stored in a typelist into
  *  a typelist.
+ *
+ *  Users should prefer `MapTLT` for a more relatable name.
  */
 template <template <typename> class UnaryT, typename TList>
 struct ExpandTLT;
 
 /** @brief Expand a template and parameters stored in a typelist into
  *  a typelist.
+ *
+ *  Users should prefer `MapTL` for a more relatable name.
  */
 template <template <typename> class UnaryT, typename TList>
 using ExpandTL = Force<ExpandTLT<UnaryT, TList>>;
