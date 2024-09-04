@@ -46,7 +46,13 @@ namespace h2
 // FIXME (trb 03/16/2023): These should continue migrating elsewhere,
 // perhaps to the meta directory?
 template <typename T>
-struct IntegerTraits;
+struct IntegerTraits
+{
+    using type = T;
+    using signed_type = std::make_signed_t<T>;
+    using unsigned_type = std::make_unsigned_t<T>;
+    static constexpr int nbits = static_cast<int>(sizeof(T) * 8);
+};
 
 template <>
 struct IntegerTraits<int32_t>
