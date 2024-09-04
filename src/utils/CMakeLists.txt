@@ -9,6 +9,7 @@
 target_sources(H2Core PRIVATE
   environment_vars.cpp
   Error.cpp
+  logger_internals.hpp
   Logger.cpp
   typename.cpp
   )

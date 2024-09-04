@@ -15,4 +15,5 @@ target_sources(SeqCatchTests PRIVATE
   unit_test_logging.cpp
   unit_test_strings.cpp
   unit_test_typename.cpp
+  unit_test_unique_ptr_cast.cpp
   )

@@ -372,6 +372,13 @@ else ()
   set(H2_HAS_MPI FALSE)
 endif ()
 
+# Python is needed during the build process to preprocess files.
+find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
+message(STATUS "Using ${Python3_EXECUTABLE} for preprocessing")
+
+# Decide where to put preprocessed files.
+set(H2_PREPROCESSED_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/preprocessed")
+
 # Decide where to put generated include files.
 set(CMAKE_GENERATED_INCLUDE_DIRECTORY
   "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
@@ -397,6 +404,44 @@ add_library(H2Core
 
 add_subdirectory(include/h2)
 add_subdirectory(src)
+
+# Preprocess all source files for dynamic dispatch.
+set(H2_DISPATCH_GEN_SCRIPT "${CMAKE_SOURCE_DIR}/scripts/dispatch_gen.py")
+if (NOT EXISTS "${H2_DISPATCH_GEN_SCRIPT}")
+  message(FATAL_ERROR
+    "Could not find dispatch generation script ${H2_DISPATCH_GEN_SCRIPT}")
+endif ()
+get_target_property(SOURCES_TO_PREPROCESS H2Core SOURCES)
+set(PREPROCESSED_SOURCES "")
+foreach (SOURCE_FILE ${SOURCES_TO_PREPROCESS})
+  if (SOURCE_FILE MATCHES ".*h2_config\\.hpp$")
+    # Skip h2_config.hpp.
+    list(APPEND PREPROCESSED_SOURCES ${SOURCE_FILE})
+    continue()
+  endif ()
+
+  cmake_path(RELATIVE_PATH SOURCE_FILE BASE_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE SOURCE_FILE_REL)
+  set(PREPROCESSED_SOURCE_FILE
+    "${H2_PREPROCESSED_OUTPUT_DIRECTORY}/${SOURCE_FILE_REL}")
+  #message(STATUS "Preprocessing: ${SOURCE_FILE_REL} -> ${PREPROCESSED_SOURCE_FILE}")
+  cmake_path(REMOVE_FILENAME PREPROCESSED_SOURCE_FILE OUTPUT_VARIABLE OUTPUT_DIR)
+  file(MAKE_DIRECTORY ${OUTPUT_DIR})
+
+  add_custom_command(
+    OUTPUT ${PREPROCESSED_SOURCE_FILE}
+    COMMAND ${Python3_EXECUTABLE} ${H2_DISPATCH_GEN_SCRIPT}
+    "--infile" ${SOURCE_FILE} "--outfile" ${PREPROCESSED_SOURCE_FILE}
+    DEPENDS ${SOURCE_FILE} ${H2_DISPATCH_GEN_SCRIPT}
+    COMMENT "Preprocessing ${SOURCE_FILE} -> ${PREPROCESSED_SOURCE_FILE}"
+  )
+
+  list(APPEND PREPROCESSED_SOURCES ${PREPROCESSED_SOURCE_FILE})
+endforeach ()
+add_custom_target(H2Core_preprocess ALL DEPENDS ${PREPROCESSED_SOURCES})
+add_dependencies(H2Core H2Core_preprocess)
+# Replace the sources with preprocessed ones.
+set_target_properties(H2Core PROPERTIES SOURCES "")
+target_sources(H2Core PRIVATE ${PREPROCESSED_SOURCES})
 
 # If using ROCm, set the appropriate property for all .cu files.
 if (H2_HAS_GPU AND H2_ENABLE_ROCM)

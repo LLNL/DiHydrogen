@@ -10,6 +10,8 @@
 #include <type_traits>
 
 #include "h2/core/dispatch.hpp"
+#include "h2/tensor/base_utils.hpp"
+#include "h2/utils/unique_ptr_cast.hpp"
 
 namespace h2
 {
@@ -43,6 +45,70 @@ void copy_same_type(BaseTensor& dst, const BaseTensor& src)
 }
 
 }  // namespace internal
+
+template <typename DstT>
+std::unique_ptr<Tensor<DstT>> cast(BaseTensor& src)
+{
+  // H2_DISPATCH_NAME: cast
+  // H2_DISPATCH_NUM_TYPES: 1
+  // H2_DISPATCH_INIT_CPU: impl::cast_impl("CPUDev_t", "Tensor<DstT>&", "const Tensor<{T1}>&")
+  // H2_DISPATCH_INIT_GPU: impl::cast_impl("GPUDev_t", "Tensor<DstT>&", "const Tensor<{T1}>&")
+
+  if (src.get_type_info() == get_h2_type<DstT>())
+  {
+    auto view = base::view(src);
+    return downcast_uptr<Tensor<DstT>>(view);
+  }
+
+  auto dst = std::make_unique<Tensor<DstT>>(src.get_device(),
+                                            src.shape(),
+                                            src.dim_types(),
+                                            src.strides(),
+                                            StrictAlloc,
+                                            src.get_stream());
+
+  // H2_DISPATCH_GET_DEVICE: "src.get_device()"
+  // H2_DISPATCH_ON: "src"
+  // H2_DISPATCH_ARGS_CPU: "CPUDev_t{}", "*dst", "src"
+  // H2_DISPATCH_ARGS_GPU: "GPUDev_t{}", "*dst", "src"
+  // H2_DO_DISPATCH
+
+  return dst;
+}
+
+#define PROTO(device, t1)                                       \
+  template std::unique_ptr<Tensor<t1>> cast<t1>(BaseTensor&)
+H2_INSTANTIATE_DEV_1(none)
+#undef PROTO
+
+std::unique_ptr<BaseTensor> cast(const TypeInfo& type, BaseTensor& src)
+{
+  // H2_DISPATCH_NAME: cast
+  // H2_DISPATCH_NUM_TYPES: 2
+  // H2_DISPATCH_INIT_CPU: impl::cast_impl("CPUDev_t", "Tensor<{T1}>&", "const Tensor<{T2}>&")
+  // H2_DISPATCH_INIT_GPU: impl::cast_impl("GPUDev_t", "Tensor<{T1}>&", "const Tensor<{T2}>&")
+
+  if (src.get_type_info() == type)
+  {
+    return base::view(src);
+  }
+
+  auto dst = base::make_tensor(type,
+                               src.get_device(),
+                               src.shape(),
+                               src.dim_types(),
+                               src.strides(),
+                               StrictAlloc,
+                               src.get_stream());
+
+  // H2_DISPATCH_GET_DEVICE: "src.get_device()"
+  // H2_DISPATCH_ON: "type", "src"
+  // H2_DISPATCH_ARGS_CPU: "CPUDev_t{}", "*dst", "src"
+  // H2_DISPATCH_ARGS_GPU: "GPUDev_t{}", "*dst", "src"
+  // H2_DO_DISPATCH
+
+  return dst;
+};
 
 namespace impl
 {
