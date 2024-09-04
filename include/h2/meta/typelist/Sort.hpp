@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_TYPELIST_SORT_HPP_
-#define H2_META_TYPELIST_SORT_HPP_
+#pragma once
 
 #include "LispAccessors.hpp"
 #include "TypeList.hpp"
@@ -88,4 +87,3 @@ struct SortT<TL<Head, Tail...>, Compare>
 } // namespace tlist
 } // namespace meta
 } // namespace h2
-#endif // H2_META_TYPELIST_SORT_HPP_

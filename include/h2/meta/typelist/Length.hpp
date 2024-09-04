@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_TYPELIST_LENGTH_HPP_
-#define H2_META_TYPELIST_LENGTH_HPP_
+#pragma once
 
 #include "LispAccessors.hpp"
 #include "TypeList.hpp"
@@ -35,19 +34,12 @@ inline constexpr unsigned long Length = LengthV<List>();
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
-// Base case
-template <>
-struct LengthVT<Empty> : ValueAsType<unsigned long, 0>
-{};
-
-// Recursive case
-template <typename T, typename... Ts>
-struct LengthVT<TL<T, Ts...>>
-    : ValueAsType<unsigned long, 1 + LengthV<TL<Ts...>>()>
+template <typename... Ts>
+struct LengthVT<TL<Ts...>>
+    : ValueAsType<unsigned long, sizeof...(Ts)>
 {};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 } // namespace tlist
 } // namespace meta
 } // namespace h2
-#endif // H2_META_TYPELIST_LENGTH_HPP_

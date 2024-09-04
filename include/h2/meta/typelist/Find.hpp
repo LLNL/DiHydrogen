@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_TYPELIST_FIND_HPP_
-#define H2_META_TYPELIST_FIND_HPP_
+#pragma once
 
 #include "LispAccessors.hpp"
 #include "TypeList.hpp"
@@ -61,4 +60,3 @@ public:
 } // namespace tlist
 } // namespace meta
 } // namespace h2
-#endif // H2_META_TYPELIST_FIND_HPP_

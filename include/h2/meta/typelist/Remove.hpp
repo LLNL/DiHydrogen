@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_TYPELIST_REMOVE_HPP_
-#define H2_META_TYPELIST_REMOVE_HPP_
+#pragma once
 
 #include "LispAccessors.hpp"
 #include "TypeList.hpp"
@@ -50,4 +49,3 @@ struct RemoveT<TypeList<S, Ts...>, T> : ConsT<S, Remove<TypeList<Ts...>, T>>
 } // namespace tlist
 } // namespace meta
 } // namespace h2
-#endif // H2_META_TYPELIST_REMOVE_HPP_

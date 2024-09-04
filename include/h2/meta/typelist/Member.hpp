@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_TYPELIST_MEMBER_HPP_
-#define H2_META_TYPELIST_MEMBER_HPP_
+#pragma once
 
 #include "TypeList.hpp"
 #include "h2/meta/core/ValueAsType.hpp"
@@ -52,4 +51,3 @@ struct MemberVT<T, TL<Head, Tail...>> : MemberVT<T, TL<Tail...>>
 } // namespace tlist
 } // namespace meta
 } // namespace h2
-#endif // H2_META_TYPELIST_MEMBER_HPP_

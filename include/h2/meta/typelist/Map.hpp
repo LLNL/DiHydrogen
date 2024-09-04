@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_TYPELIST_MAP_HPP_
-#define H2_META_TYPELIST_MAP_HPP_
+#pragma once
 
 #include "Expand.hpp"
 
@@ -27,4 +26,3 @@ using MapTL = ExpandTL<F, List>;
 } // namespace tlist
 } // namespace meta
 } // namespace h2
-#endif // H2_META_TYPELIST_MAP_HPP_

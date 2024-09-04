@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_TYPELIST_SIZE_HPP_
-#define H2_META_TYPELIST_SIZE_HPP_
+#pragma once
 
 #include "Length.hpp"
 
@@ -33,4 +32,3 @@ inline constexpr unsigned long Size = SizeV<List>();
 } // namespace tlist
 } // namespace meta
 } // namespace h2
-#endif // H2_META_TYPELIST_SIZE_HPP_

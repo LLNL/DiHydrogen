@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_TYPELIST_REPLACE_HPP_
-#define H2_META_TYPELIST_REPLACE_HPP_
+#pragma once
 
 #include "LispAccessors.hpp"
 #include "TypeList.hpp"
@@ -55,4 +54,3 @@ struct ReplaceT : ConsT<Car<List>, Replace<Cdr<List>, Old, New>>
 } // namespace tlist
 } // namespace meta
 } // namespace h2
-#endif // H2_META_TYPELIST_REPLACE_HPP_
