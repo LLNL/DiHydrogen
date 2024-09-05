@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_PATTERNS_FACTORY_DEFAULTERRORPOLICY_HPP_
-#define H2_PATTERNS_FACTORY_DEFAULTERRORPOLICY_HPP_
+#pragma once
 
 #include <memory>
 #include <stdexcept>
@@ -37,4 +36,3 @@ struct DefaultErrorPolicy
 
 } // namespace factory
 } // namespace h2
-#endif // H2_PATTERNS_FACTORY_DEFAULTERRORPOLICY_HPP_

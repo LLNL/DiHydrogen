@@ -4,9 +4,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
-#ifndef H2_LEGACY_INCLUDE_DISTCONV_RUNTIME_GPU_HPP_INCLUDED
-#define H2_LEGACY_INCLUDE_DISTCONV_RUNTIME_GPU_HPP_INCLUDED
 
 #include "distconv/util/util_gpu.hpp"
 #include "distconv_config.hpp"
@@ -66,4 +65,3 @@ using RuntimeGPU = RuntimeHIP;
 
 } // namespace internal
 } // namespace distconv
-#endif // H2_LEGACY_INCLUDE_DISTCONV_RUNTIME_GPU_HPP_INCLUDED

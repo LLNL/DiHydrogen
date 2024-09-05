@@ -4,9 +4,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
-#ifndef H2_INCLUDE_H2_GPU_ERROR_HPP_INCLUDED
-#define H2_INCLUDE_H2_GPU_ERROR_HPP_INCLUDED
 
 /** @file
  *
@@ -63,4 +62,3 @@ public:
 
 } // namespace gpu
 } // namespace h2
-#endif // H2_INCLUDE_H2_GPU_ERROR_HPP_INCLUDED

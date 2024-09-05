@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_PARTIAL_FUNCTIONS_PLACEHOLDERS_HPP_
-#define H2_META_PARTIAL_FUNCTIONS_PLACEHOLDERS_HPP_
+#pragma once
 
 #include "h2/meta/Core.hpp"
 #include "h2/meta/typelist/At.hpp"
@@ -130,4 +129,3 @@ using placeholders::_9;
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 } // namespace meta
 } // namespace h2
-#endif // H2_META_PARTIAL_FUNCTIONS_PLACEHOLDERS_HPP_

@@ -4,9 +4,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
-#ifndef H2_INCLUDE_H2_GPU_LOGGER_HPP_INCLUDED
-#define H2_INCLUDE_H2_GPU_LOGGER_HPP_INCLUDED
 
 #include "h2_config.hpp"
 
@@ -78,4 +77,3 @@ spdlog::logger& logger();
 
 } // namespace gpu
 } // namespace h2
-#endif // H2_INCLUDE_H2_GPU_LOGGER_HPP_INCLUDED

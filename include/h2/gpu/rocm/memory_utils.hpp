@@ -4,9 +4,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
-#ifndef H2_INCLUDE_H2_GPU_ROCM_MEMORY_UTILS_HPP_INCLUDED
-#define H2_INCLUDE_H2_GPU_ROCM_MEMORY_UTILS_HPP_INCLUDED
 
 /** @file
  *
@@ -75,4 +74,3 @@ inline void mem_zero(void* mem, size_t bytes, DeviceStream stream)
 
 } // namespace gpu
 } // namespace h2
-#endif // H2_INCLUDE_H2_GPU_ROCM_MEMORY_UTILS_HPP_INCLUDED

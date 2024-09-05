@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_PARTIAL_FUNCTIONS_APPLY_HPP_
-#define H2_META_PARTIAL_FUNCTIONS_APPLY_HPP_
+#pragma once
 
 #include "Placeholders.hpp"
 #include "h2/meta/Core.hpp"
@@ -55,4 +54,3 @@ struct ApplyT<F<Params...>, TL<Args...>>
 } // namespace pfunctions
 } // namespace meta
 } // namespace h2
-#endif // H2_META_PARTIAL_FUNCTIONS_APPLY_HPP_

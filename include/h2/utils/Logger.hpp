@@ -6,8 +6,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
-#ifndef H2_UTILS_LOGGER_HPP_INCLUDED
-#define H2_UTILS_LOGGER_HPP_INCLUDED
 
 #include "spdlog/pattern_formatter.h"
 #include "spdlog/spdlog.h"
@@ -99,5 +97,3 @@ void setup_masks(std::vector<Logger*>& loggers,
 spdlog::level::level_enum to_spdlog_level(Logger::LogLevelType level);
 
 } // namespace h2
-
-#endif // H2_UTILS_LOGGER_HPP_INCLUDED

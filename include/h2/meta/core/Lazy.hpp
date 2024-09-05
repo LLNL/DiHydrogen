@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_CORE_LAZY_HPP_
-#define H2_META_CORE_LAZY_HPP_
+#pragma once
 
 namespace h2
 {
@@ -25,4 +24,3 @@ using Force = typename SuspT::type;
 
 } // namespace meta
 } // namespace h2
-#endif // H2_META_CORE_LAZY_HPP_

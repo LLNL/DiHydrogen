@@ -28,12 +28,15 @@ h2_add_sources_to_target_and_install(
   Reduce.hpp
   Remove.hpp
   RemoveAll.hpp
+  Repeat.hpp
   Replace.hpp
   ReplaceAll.hpp
+  Reverse.hpp
   Select.hpp
   SelectAll.hpp
   Size.hpp
   Sort.hpp
+  ToFromTuple.hpp
   TypeList.hpp
   Unique.hpp
   Zip.hpp
