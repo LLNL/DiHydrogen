@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_CORE_EQ_HPP_
-#define H2_META_CORE_EQ_HPP_
+#pragma once
 
 #include "Lazy.hpp"
 #include "ValueAsType.hpp"
@@ -42,4 +41,3 @@ struct EqVT<T, T> : TrueType
 
 } // namespace meta
 } // namespace h2
-#endif // H2_META_CORE_EQ_HPP_

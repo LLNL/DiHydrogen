@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_PATTERNS_FACTORY_PROTOTYPEFACTORY_HPP_
-#define H2_PATTERNS_FACTORY_PROTOTYPEFACTORY_HPP_
+#pragma once
 
 #include "DefaultErrorPolicy.hpp"
 
@@ -127,4 +126,3 @@ private:
 
 } // namespace factory
 } // namespace h2
-#endif /* H2_PATTERNS_FACTORY_PROTOTYPEFACTORY_HPP_ */

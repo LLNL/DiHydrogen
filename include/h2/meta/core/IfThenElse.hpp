@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_CORE_IFTHENELSE_HPP_
-#define H2_META_CORE_IFTHENELSE_HPP_
+#pragma once
 
 #include "Lazy.hpp"
 
@@ -36,4 +35,3 @@ struct IfThenElseT<true, T, F>
 
 } // namespace meta
 } // namespace h2
-#endif // H2_META_CORE_IFTHENELSE_HPP_

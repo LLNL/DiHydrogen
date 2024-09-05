@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_PATTERNS_MULTIMETHODS_SWITCHDISPATCHER_HPP_
-#define H2_PATTERNS_MULTIMETHODS_SWITCHDISPATCHER_HPP_
+#pragma once
 
 #include "h2/meta/Core.hpp"
 #include "h2/meta/TypeList.hpp"
@@ -307,4 +306,3 @@ public:
 
 } // namespace multimethods
 } // namespace h2
-#endif // H2_PATTERNS_MULTIMETHODS_SWITCHDISPATCHER_HPP_

@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_CORE_INVOCABLE_HPP_
-#define H2_META_CORE_INVOCABLE_HPP_
+#pragma once
 
 #include "SFINAE.hpp"
 
@@ -62,4 +61,3 @@ struct IsInvocableVT
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 } // namespace meta
 } // namespace h2
-#endif // H2_META_CORE_INVOCABLE_HPP_

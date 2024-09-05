@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_META_PARTIAL_FUNCTIONS_MAKEFUNCTION_HPP_
-#define H2_META_PARTIAL_FUNCTIONS_MAKEFUNCTION_HPP_
+#pragma once
 
 // TODO: Needs basic ValueList support
 
@@ -71,4 +70,3 @@ struct MakeNaryFunctionT
 } // namespace pfunctions
 } // namespace meta
 } // namespace h2
-#endif // H2_META_PARTIAL_FUNCTIONS_MAKEFUNCTION_HPP_
