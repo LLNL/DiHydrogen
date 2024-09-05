@@ -6,8 +6,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
-#ifndef H2_LEGACY_INCLUDE_DISTCONV_BACKEND_HPP_INCLUDED
-#define H2_LEGACY_INCLUDE_DISTCONV_BACKEND_HPP_INCLUDED
 
 #include <distconv_config.hpp>
 
@@ -44,5 +42,3 @@ using Options = ::distconv::Options;
 #define GPU_PROFILE_RANGE_PUSH roctxRangePushA
 
 #endif
-
-#endif // H2_LEGACY_INCLUDE_DISTCONV_CUDNN_BACKEND_HPP_INCLUDED
