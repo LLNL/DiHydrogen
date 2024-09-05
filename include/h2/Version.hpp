@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_VERSION_HPP_
-#define H2_VERSION_HPP_
+#pragma once
 
 #include <string>
 
@@ -22,4 +21,3 @@ namespace h2
 std::string Version() noexcept;
 
 } // namespace h2
-#endif // H2_VERSION_HPP_

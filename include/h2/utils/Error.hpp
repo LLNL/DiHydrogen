@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_UTILS_ERROR_HPP_
-#define H2_UTILS_ERROR_HPP_
+#pragma once
 
 #include <h2_config.hpp>
 
@@ -223,4 +222,3 @@ namespace h2
 void break_on_me(std::string const& msg = "");
 
 } // namespace h2
-#endif // H2_UTILS_ERROR_HPP_

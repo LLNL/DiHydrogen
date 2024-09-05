@@ -5,8 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef H2_UTILS_LOGGING_SIZE_PATTERN_HPP_INCLUDED
-#define H2_UTILS_LOGGING_SIZE_PATTERN_HPP_INCLUDED
+#pragma once
 
 #include "spdlog/pattern_formatter.h"
 
@@ -46,5 +45,3 @@ public:
 }; // class SizeFlag
 
 } // namespace
-
-#endif // H2_UTILS_LOGGING_SIZE_PATTERN_HPP_INCLUDED

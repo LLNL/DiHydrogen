@@ -5,11 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "spdlog/spdlog.h"
-
 #pragma once
-#ifndef H2_UTILS_LOGGER_INTERNALS_HPP_INCLUDED
-#define H2_UTILS_LOGGER_INTERNALS_HPP_INCLUDED
+
+#include "spdlog/spdlog.h"
 
 namespace h2_internal
 {
@@ -47,5 +45,3 @@ MaskMapType get_keys_and_masks(std::string const& str);
 LevelMapType get_keys_and_levels(std::string const& str);
 
 }
-
-#endif // H2_UTILS_LOGGER_INTERNALS_HPP_INCLUDED
