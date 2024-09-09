@@ -64,40 +64,40 @@ using Init = Force<InitT<List>>;
 template <typename T, typename... Ts>
 struct PrependT<T, TL<Ts...>>
 {
-    using type = TL<T, Ts...>;
+  using type = TL<T, Ts...>;
 };
 
 // Head
 template <typename T, typename... Ts>
 struct HeadT<TL<T, Ts...>>
 {
-    using type = T;
+  using type = T;
 };
 
 template <>
 struct HeadT<Empty>
 {
-    using type = Nil;
+  using type = Nil;
 };
 
 // Tail
 template <typename T, typename... Ts>
 struct TailT<TL<T, Ts...>>
 {
-    using type = TL<Ts...>;
+  using type = TL<Ts...>;
 };
 
 template <>
 struct TailT<Empty>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
 // Last
 template <typename T>
 struct LastT<TL<T>>
 {
-    using type = T;
+  using type = T;
 };
 
 template <typename T, typename... Ts>
@@ -108,14 +108,14 @@ struct LastT<TL<T, Ts...>> : LastT<TL<Ts...>>
 template <>
 struct LastT<Empty>
 {
-    using type = Nil;
+  using type = Nil;
 };
 
 // Init
 template <typename T>
 struct InitT<TL<T>>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
 template <typename T, typename... Ts>
@@ -126,7 +126,7 @@ struct InitT<TL<T, Ts...>> : PrependT<T, Init<TL<Ts...>>>
 template <>
 struct InitT<Empty>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

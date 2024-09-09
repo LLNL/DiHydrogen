@@ -15,7 +15,7 @@ namespace meta
 template <typename T>
 struct Susp
 {
-    using type = T;
+  using type = T;
 };
 
 /** @brief Extract the internal type from a suspended type. */

@@ -12,17 +12,18 @@
  * Manages memory and an associated stride.
  */
 
-#include <memory>
-#include <utility>
-#include <cstddef>
-
 #include "h2/tensor/copy_buffer.hpp"
+#include "h2/tensor/raw_buffer.hpp"
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/tensor/tensor_utils.hpp"
-#include "h2/tensor/raw_buffer.hpp"
 #include "h2/utils/typename.hpp"
 
-namespace h2 {
+#include <cstddef>
+#include <memory>
+#include <utility>
+
+namespace h2
+{
 
 /**
  * Return the strides needed for a tensor of the given shape to be
@@ -33,8 +34,9 @@ get_contiguous_strides(const ShapeTuple& shape) H2_NOEXCEPT
 {
   StrideTuple strides(TuplePad<StrideTuple>(shape.size(), 1));
   // Just need a prefix-product.
-  for (typename ShapeTuple::size_type i = 1; i < shape.size(); ++i) {
-    strides[i] = shape[i-1] * strides[i-1];
+  for (typename ShapeTuple::size_type i = 1; i < shape.size(); ++i)
+  {
+    strides[i] = shape[i - 1] * strides[i - 1];
   }
   return strides;
 }
@@ -42,9 +44,10 @@ get_contiguous_strides(const ShapeTuple& shape) H2_NOEXCEPT
 /**
  * Return true if the given strides are contiguous.
  */
-constexpr inline bool are_strides_contiguous(
-  const ShapeTuple& shape,
-  const StrideTuple& strides) H2_NOEXCEPT {
+constexpr inline bool
+are_strides_contiguous(const ShapeTuple& shape,
+                       const StrideTuple& strides) H2_NOEXCEPT
+{
   H2_ASSERT_DEBUG(shape.size() == strides.size(),
                   "Shape (",
                   shape,
@@ -56,14 +59,14 @@ constexpr inline bool are_strides_contiguous(
   typename ShapeTuple::size_type i = 1;
   for (; i < shape.size(); ++i)
   {
-    if (prod != strides[i-1])
+    if (prod != strides[i - 1])
     {
       return false;
     }
-    prod *= shape[i-1];
+    prod *= shape[i - 1];
   }
   // Check the last entry and handle empty tuples.
-  return (strides.size() == 0) || (prod == strides[i-1]);
+  return (strides.size() == 0) || (prod == strides[i - 1]);
 }
 
 /**
@@ -83,7 +86,7 @@ get_extent_from_strides(const ShapeTuple& shape,
   // Think of this as getting the offset of the last index in shape,
   // then adding 1 to account for the last element.
   return inner_product<std::size_t>(
-             map(shape, [](ShapeTuple::type x) { return x - 1; }), strides)
+           map(shape, [](ShapeTuple::type x) { return x - 1; }), strides)
          + 1;
 }
 
@@ -97,7 +100,6 @@ private:
   static constexpr std::size_t INVALID_OFFSET = static_cast<std::size_t>(-1);
 
 public:
-
   /** Allocate empty memory. */
   StridedMemory(Device device, bool lazy, const ComputeStream& stream_)
     : raw_buffer(nullptr),
@@ -133,9 +135,11 @@ public:
                     ") must be the same size");
     if (!shape.is_empty())
     {
-      H2_ASSERT_DEBUG(
-        get_extent_from_strides(shape, strides) >= product<std::size_t>(shape),
-        "Provided strides (", strides, ") are not sane");
+      H2_ASSERT_DEBUG(get_extent_from_strides(shape, strides)
+                        >= product<std::size_t>(shape),
+                      "Provided strides (",
+                      strides,
+                      ") are not sane");
       mem_strides = strides;
       mem_shape = shape;
       make_raw_buffer(lazy);
@@ -145,12 +149,12 @@ public:
 
   /** View a subregion of an existing memory region. */
   StridedMemory(const StridedMemory<T>& base, const IndexRangeTuple& coords)
-      : raw_buffer(base.raw_buffer),
-        mem_offset(INVALID_OFFSET),
-        mem_device(base.mem_device),
-        // mem_shape and mem_strides are set below.
-        stream(base.stream),
-        is_mem_lazy(base.is_lazy())
+    : raw_buffer(base.raw_buffer),
+      mem_offset(INVALID_OFFSET),
+      mem_device(base.mem_device),
+      // mem_shape and mem_strides are set below.
+      stream(base.stream),
+      is_mem_lazy(base.is_lazy())
   {
     H2_ASSERT_DEBUG(coords.size() <= base.mem_strides.size(),
                     "coords size not compatible with strides");
@@ -162,7 +166,7 @@ public:
     else
     {
       mem_offset =
-          base.get_index(get_index_range_start(coords)) + base.mem_offset;
+        base.get_index(get_index_range_start(coords)) + base.mem_offset;
       mem_shape = get_index_range_shape(coords, base.shape());
       if (mem_shape.is_empty())
       {
@@ -200,13 +204,13 @@ public:
   StridedMemory(const StridedMemory<T>& base,
                 Device device,
                 const ComputeStream& stream_)
-      : raw_buffer(base.raw_buffer),
-        mem_offset(base.mem_offset),
-        mem_strides(base.mem_strides),
-        mem_shape(base.mem_shape),
-        mem_device(device),
-        stream(stream_),
-        is_mem_lazy(base.is_lazy())
+    : raw_buffer(base.raw_buffer),
+      mem_offset(base.mem_offset),
+      mem_strides(base.mem_strides),
+      mem_shape(base.mem_shape),
+      mem_device(device),
+      stream(stream_),
+      is_mem_lazy(base.is_lazy())
   {}
 
   /** Wrap an existing memory buffer. */
@@ -223,14 +227,16 @@ public:
       stream(stream_),
       is_mem_lazy(false)
   {
-    H2_ASSERT_DEBUG(buffer
-                    || shape.is_empty()
-                    || any_of(shape, [](ShapeTuple::type x) { return x == 0; }),
-                    "Null buffer but non-zero shape provided to StridedMemory");
+    H2_ASSERT_DEBUG(
+      buffer || shape.is_empty()
+        || any_of(shape, [](ShapeTuple::type x) { return x == 0; }),
+      "Null buffer but non-zero shape provided to StridedMemory");
     H2_ASSERT_DEBUG(shape.is_empty()
-                        || get_extent_from_strides(shape, strides)
-                               >= product<std::size_t>(shape),
-                    "Provided strides (", strides, ") are not sane");
+                      || get_extent_from_strides(shape, strides)
+                           >= product<std::size_t>(shape),
+                    "Provided strides (",
+                    strides,
+                    ") are not sane");
     std::size_t size = get_extent_from_strides(shape, strides);
     raw_buffer = std::make_shared<RawBuffer<T>>(device, buffer, size, stream);
   }
@@ -254,7 +260,7 @@ public:
   StridedMemory<T> clone() const
   {
     StridedMemory<T> new_sm(
-        mem_device, mem_shape, mem_strides, is_mem_lazy, stream);
+      mem_device, mem_shape, mem_strides, is_mem_lazy, stream);
     // Only copy if we have already ensure'd memory.
     if (const_data() != nullptr)
     {
@@ -277,7 +283,7 @@ public:
       {
         raw_buffer->ensure();
       }
-      return;  // Data is already allocated.
+      return; // Data is already allocated.
     }
     if (attempt_recover)
     {
@@ -289,7 +295,7 @@ public:
       // Either not attempting to recover or no old raw buffer.
       make_raw_buffer(false);
     }
-    old_raw_buffer.reset();  // Drop reference to old raw buffer.
+    old_raw_buffer.reset(); // Drop reference to old raw buffer.
   }
 
   void release()
@@ -319,15 +325,9 @@ public:
     return 0;
   }
 
-  T* data() H2_NOEXCEPT
-  {
-    return const_cast<T*>(std::as_const(*this).data());
-  }
+  T* data() H2_NOEXCEPT { return const_cast<T*>(std::as_const(*this).data()); }
 
-  const T* data() const H2_NOEXCEPT
-  {
-    return const_data();
-  }
+  const T* data() const H2_NOEXCEPT { return const_data(); }
 
   const T* const_data() const H2_NOEXCEPT
   {
@@ -356,7 +356,8 @@ public:
   }
 
   /** Get the index of coords in the buffer. */
-  DataIndexType get_index(const ScalarIndexTuple& coords) const H2_NOEXCEPT {
+  DataIndexType get_index(const ScalarIndexTuple& coords) const H2_NOEXCEPT
+  {
     return inner_product<DataIndexType>(coords, mem_strides);
   }
 
@@ -375,25 +376,25 @@ public:
   }
 
   /** Return a pointer to the memory at the given coordinates. */
-  T* get(const ScalarIndexTuple& coords) H2_NOEXCEPT {
+  T* get(const ScalarIndexTuple& coords) H2_NOEXCEPT
+  {
     H2_ASSERT_DEBUG(data(), "No memory");
     return &(data()[get_index(coords)]);
   }
 
-  const T* get(const ScalarIndexTuple& coords) const H2_NOEXCEPT {
+  const T* get(const ScalarIndexTuple& coords) const H2_NOEXCEPT
+  {
     H2_ASSERT_DEBUG(data(), "No memory");
     return &(data()[get_index(coords)]);
   }
 
-  const T* const_get(const ScalarIndexTuple& coords) const H2_NOEXCEPT {
+  const T* const_get(const ScalarIndexTuple& coords) const H2_NOEXCEPT
+  {
     H2_ASSERT_DEBUG(const_data(), "No memory");
     return &(const_data()[get_index(coords)]);
   }
 
-  ComputeStream get_stream() const H2_NOEXCEPT
-  {
-    return stream;
-  }
+  ComputeStream get_stream() const H2_NOEXCEPT { return stream; }
 
   void set_stream(const ComputeStream& new_stream, bool set_raw = false)
   {
@@ -423,17 +424,17 @@ private:
    * we work with offsets instead of direct pointers into it.
    */
   std::shared_ptr<RawBuffer<T>> raw_buffer;
-  std::size_t mem_offset;  /**< Offset to start of raw_buffer. */
+  std::size_t mem_offset; /**< Offset to start of raw_buffer. */
   /**
    * Reference to the prior `raw_buffer`, which may be used when
    * recovering existing memory from views using `ensure`.
    */
   std::weak_ptr<RawBuffer<T>> old_raw_buffer;
-  StrideTuple mem_strides;  /**< Strides associated with the memory. */
-  ShapeTuple mem_shape;  /**< Shape describing the extent of the memory. */
-  Device mem_device;     /**< Device the memory is on. */
-  ComputeStream stream;  /**< Compute stream for operations. */
-  bool is_mem_lazy;  /**< Whether allocation is lazy. */
+  StrideTuple mem_strides; /**< Strides associated with the memory. */
+  ShapeTuple mem_shape;    /**< Shape describing the extent of the memory. */
+  Device mem_device;       /**< Device the memory is on. */
+  ComputeStream stream;    /**< Compute stream for operations. */
+  bool is_mem_lazy;        /**< Whether allocation is lazy. */
 
   /** Helper to create a raw buffer if size is non-empty. */
   void make_raw_buffer(bool lazy)
@@ -442,9 +443,10 @@ private:
     if (!mem_shape.is_empty())
     {
       const std::size_t size = get_extent_from_strides(mem_shape, mem_strides);
-      if (size) {
+      if (size)
+      {
         raw_buffer =
-            std::make_shared<RawBuffer<T>>(mem_device, size, lazy, stream);
+          std::make_shared<RawBuffer<T>>(mem_device, size, lazy, stream);
       }
     }
   }
@@ -452,13 +454,11 @@ private:
 
 /** Support printing StridedMemory. */
 template <typename T>
-inline std::ostream& operator<<(std::ostream& os,
-                                const StridedMemory<T>& mem)
+inline std::ostream& operator<<(std::ostream& os, const StridedMemory<T>& mem)
 {
   os << "StridedMemory<" << TypeName<T>() << ", " << mem.get_device() << ">("
-     << (mem.is_lazy() ? "lazy" : "not lazy") << ", "
-     << mem.data() << ", " << mem.strides()
-     << ", " << mem.shape() << ")";
+     << (mem.is_lazy() ? "lazy" : "not lazy") << ", " << mem.data() << ", "
+     << mem.strides() << ", " << mem.shape() << ")";
   return os;
 }
 
@@ -468,10 +468,10 @@ inline std::ostream& strided_memory_contents(std::ostream& os,
                                              const StridedMemory<T>& mem)
 {
   const DataIndexType size =
-      mem.shape().size() ? product<DataIndexType>(mem.shape()) : 0;
+    mem.shape().size() ? product<DataIndexType>(mem.shape()) : 0;
   if (size == 0)
   {
-    return os;  // Skip if empty.
+    return os; // Skip if empty.
   }
   const T* buf = nullptr;
   internal::ManagedBuffer<T> cpu_buf{Device::CPU};
@@ -502,17 +502,18 @@ inline std::ostream& strided_memory_contents(std::ostream& os,
   {
     throw H2FatalException("Unknown device ", mem.get_device());
   }
-  mem.get_stream().wait_for_this();  // Ensure all operations have finished.
+  mem.get_stream().wait_for_this(); // Ensure all operations have finished.
 
   // We might try to nicely format this in the future.
   // We know size > 0 if we are here.
   ScalarIndexTuple start{TuplePad<ScalarIndexTuple>(mem.shape().size(), 0)};
-  os << buf[mem.get_index(start)];  // Print first entry.
+  os << buf[mem.get_index(start)]; // Print first entry.
   start = next_scalar_index(start, mem.shape());
-  for_ndim(mem.shape(), [&](ScalarIndexTuple c) {
-    os << ", " << buf[mem.get_index(c)];
-  }, start);
+  for_ndim(
+    mem.shape(),
+    [&](ScalarIndexTuple c) { os << ", " << buf[mem.get_index(c)]; },
+    start);
   return os;
 }
 
-}  // namespace h2
+} // namespace h2

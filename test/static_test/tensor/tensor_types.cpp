@@ -6,6 +6,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "h2/tensor/tensor_types.hpp"
+
 #include "h2/tensor/tensor_utils.hpp"
 
 using namespace h2;
@@ -17,7 +18,7 @@ static_assert(scalar2range_tuple(ScalarIndexTuple{0})
               == IndexRangeTuple{IRng{0}});
 static_assert(scalar2range_tuple(ScalarIndexTuple{0, 3})
               == IndexRangeTuple{IRng{0}, IRng{3}});
-}  // namespace scalar2range_tuple_tests
+} // namespace scalar2range_tuple_tests
 
 namespace get_index_range_start_tests
 {
@@ -35,7 +36,7 @@ constexpr auto coords2_range_start = get_index_range_start(coords2);
 static_assert(coords2_range_start.size() == 2);
 static_assert(coords2_range_start[0] == 1);
 static_assert(coords2_range_start[1] == 0);
-}  // namespace get_index_range_start_tests
+} // namespace get_index_range_start_tests
 
 namespace is_index_range_empty_tests
 {
@@ -45,13 +46,14 @@ static_assert(is_index_range_empty(IndexRangeTuple{IRng{0, 2}, IRng{}}));
 static_assert(!is_index_range_empty(IndexRangeTuple{IRng{0}}));
 static_assert(!is_index_range_empty(IndexRangeTuple{IRng{0, 2}, ALL}));
 static_assert(!is_index_range_empty(IndexRangeTuple{ALL}));
-}  // namespace is_index_range_empty_tests
+} // namespace is_index_range_empty_tests
 
 namespace get_index_range_shape_tests
 {
 constexpr ShapeTuple empty_shape;
 constexpr IndexRangeTuple empty_coord;
-constexpr auto empty_range_shape = get_index_range_shape(empty_coord, empty_shape);
+constexpr auto empty_range_shape =
+  get_index_range_shape(empty_coord, empty_shape);
 static_assert(empty_range_shape.size() == 0);
 
 constexpr ShapeTuple shape1(8, 8);
@@ -86,7 +88,7 @@ constexpr IndexRangeTuple coord6(IRng(0), IRng(2, 4));
 constexpr auto range_shape6 = get_index_range_shape(coord6, shape1);
 static_assert(range_shape6.size() == 1);
 static_assert(range_shape6[0] == 2);
-}  // get_index_range_shape_tests
+} // namespace get_index_range_shape_tests
 
 namespace is_index_range_contained_tests
 {
@@ -106,7 +108,7 @@ static_assert(!is_index_range_contained(coord4, shape));
 
 constexpr IndexRangeTuple coord5(IRng(1, 3), ALL);
 static_assert(is_index_range_contained(coord5, shape));
-}  // namespace is_index_range_contained_tests
+} // namespace is_index_range_contained_tests
 
 namespace do_index_ranges_intersect_tests
 {
@@ -122,11 +124,11 @@ static_assert(do_index_ranges_intersect(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
                                         IndexRangeTuple(IRng(0, 2),
                                                         IRng(0, 1))));
 static_assert(
-    !do_index_ranges_intersect(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
-                               IndexRangeTuple(IRng(1, 2), IRng(0, 2))));
+  !do_index_ranges_intersect(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
+                             IndexRangeTuple(IRng(1, 2), IRng(0, 2))));
 static_assert(do_index_ranges_intersect(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
                                         IndexRangeTuple(IRng(0, 1), ALL)));
-}  // namespace do_index_ranges_intersect_tests
+} // namespace do_index_ranges_intersect_tests
 
 namespace intersect_index_ranges_tests
 {
@@ -142,14 +144,14 @@ static_assert(intersect_index_ranges(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
 static_assert(intersect_index_ranges(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
                                      IndexRangeTuple(IRng(0, 1), ALL))
               == IndexRangeTuple(IRng(0, 1), IRng(0, 2)));
-}  // namespace intersect_index_ranges_tests
+} // namespace intersect_index_ranges_tests
 
 namespace is_index_in_shape_tests
 {
 static_assert(is_index_in_shape(ScalarIndexTuple{}, ShapeTuple{}));
 static_assert(is_index_in_shape(ScalarIndexTuple{0, 0}, ShapeTuple{2, 2}));
 static_assert(!is_index_in_shape(ScalarIndexTuple{2, 2}, ShapeTuple{2, 2}));
-}  // namespace is_index_in_shape_tests
+} // namespace is_index_in_shape_tests
 
 namespace next_scalar_index_tests
 {
@@ -157,4 +159,4 @@ static_assert(next_scalar_index({0}, {2}) == ScalarIndexTuple{1});
 static_assert(next_scalar_index({0, 0}, {2, 2}) == ScalarIndexTuple{1, 0});
 static_assert(next_scalar_index({1, 0}, {2, 2}) == ScalarIndexTuple{0, 1});
 static_assert(next_scalar_index({1}, {2}) == ScalarIndexTuple{2});
-}  // namespace next_scalar_index_tests
+} // namespace next_scalar_index_tests

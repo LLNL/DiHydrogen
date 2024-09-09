@@ -26,10 +26,10 @@
 #endif
 
 #define H2_GPU_LOG(level, ...)                                                 \
-    ::h2::gpu::logger().log(                                                   \
-        ::spdlog::source_loc{__FILE__, __LINE__, H2_PRETTY_FUNCTION},          \
-        level,                                                                 \
-        __VA_ARGS__)
+  ::h2::gpu::logger().log(                                                     \
+    ::spdlog::source_loc{__FILE__, __LINE__, H2_PRETTY_FUNCTION},              \
+    level,                                                                     \
+    __VA_ARGS__)
 
 #if H2_GPU_LOG_ACTIVE_LEVEL <= H2_LOG_LEVEL_TRACE
 #define H2_GPU_TRACE(...) H2_GPU_LOG(::spdlog::level::trace, __VA_ARGS__)

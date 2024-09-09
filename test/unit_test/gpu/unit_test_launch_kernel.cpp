@@ -5,13 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_template_test_macros.hpp>
-
-
 #include "h2/gpu/runtime.hpp"
 
 #include "../tensor/utils.hpp"
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace h2;
 
@@ -24,6 +22,6 @@ TEST_CASE("Kernels successfully launch", "[gpu]")
   DeviceBuf<int, Device::GPU> buf(1);
   write_ele<Device::GPU>(buf.buf, 0, 0, stream);
   unit_test_gpu_launch_kernel_test(
-      buf.buf, 42, stream.get_stream<Device::GPU>());
+    buf.buf, 42, stream.get_stream<Device::GPU>());
   REQUIRE(read_ele<Device::GPU>(buf.buf, stream) == 42);
 }

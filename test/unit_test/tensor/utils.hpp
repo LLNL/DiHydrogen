@@ -7,12 +7,12 @@
 
 #pragma once
 
-#include <type_traits>
-
-#include "h2/tensor/tensor_types.hpp"
 #include "h2/core/device.hpp"
 #include "h2/core/types.hpp"
 #include "h2/meta/TypeList.hpp"
+#include "h2/tensor/tensor_types.hpp"
+
+#include <type_traits>
 
 #ifdef H2_HAS_GPU
 #include "h2/gpu/memory_utils.hpp"
@@ -31,13 +31,13 @@ using AllDevPairsList = h2::meta::tlist::CartProdTL<AllDevList, AllDevList>;
 
 // All pairs of compute types:
 using AllComputeTypePairsList =
-    h2::meta::tlist::CartProdTL<h2::ComputeTypes, h2::ComputeTypes>;
+  h2::meta::tlist::CartProdTL<h2::ComputeTypes, h2::ComputeTypes>;
 // All pairs of devices and compute types:
 using AllDevComputeTypePairsList =
-    h2::meta::tlist::CartProdTL<AllDevList, h2::ComputeTypes>;
+  h2::meta::tlist::CartProdTL<AllDevList, h2::ComputeTypes>;
 // All devices x pairs of types:
 using AllDevComputeTypePairsPairsList =
-    h2::meta::tlist::CartProdTL<AllDevList, AllComputeTypePairsList>;
+  h2::meta::tlist::CartProdTL<AllDevList, AllComputeTypePairsList>;
 
 // Standard datatype to be used when testing.
 // Note: When used with integers, floats are exact for any integer with
@@ -52,17 +52,21 @@ namespace internal
 template <typename T, h2::Device Dev>
 struct Accessor
 {
-  static T read_ele(
-    const T* buf, std::size_t i, const h2::ComputeStream& stream);
-  static void write_ele(
-    T* buf, std::size_t i, const T& val, const h2::ComputeStream& stream);
+  static T
+  read_ele(const T* buf, std::size_t i, const h2::ComputeStream& stream);
+  static void write_ele(T* buf,
+                        std::size_t i,
+                        const T& val,
+                        const h2::ComputeStream& stream);
 };
 
 template <typename T>
 struct Accessor<T, h2::Device::CPU>
 {
-  static T read_ele(
-    const T* buf, std::size_t i, const h2::ComputeStream&) { return buf[i]; }
+  static T read_ele(const T* buf, std::size_t i, const h2::ComputeStream&)
+  {
+    return buf[i];
+  }
   static void
   write_ele(T* buf, std::size_t i, const T& val, const h2::ComputeStream&)
   {
@@ -83,8 +87,8 @@ struct Accessor<T, h2::Device::CPU>
 template <typename T>
 struct Accessor<T, h2::Device::GPU>
 {
-  static T read_ele(
-    const T* buf, std::size_t i, const h2::ComputeStream& stream)
+  static T
+  read_ele(const T* buf, std::size_t i, const h2::ComputeStream& stream)
   {
     T val;
     ::h2::gpu::mem_copy(&val, buf + i, 1, stream.get_stream<h2::Device::GPU>());
@@ -105,12 +109,12 @@ struct Accessor<T, h2::Device::GPU>
                                const h2::ComputeStream& stream)
   {
     ::h2::gpu::mem_copy(
-        buf + i, &val, 1, stream.get_stream<::h2::Device::GPU>());
+      buf + i, &val, 1, stream.get_stream<::h2::Device::GPU>());
   }
 };
 #endif
 
-}  // namespace internal
+} // namespace internal
 
 // Helper to read a value from a buffer on a device.
 // Equivalent to buf[i].
@@ -130,8 +134,8 @@ inline T read_ele(const T* buf, const h2::ComputeStream& stream)
 // Helper to write a value from a buffer on a device.
 // Equivalent to buf[i] = val.
 template <h2::Device Dev, typename T>
-inline void write_ele(
-  T* buf, std::size_t i, const T& val, const h2::ComputeStream& stream)
+inline void
+write_ele(T* buf, std::size_t i, const T& val, const h2::ComputeStream& stream)
 {
   internal::Accessor<T, Dev>::write_ele(buf, i, val, stream);
 }
@@ -147,13 +151,13 @@ inline void write_ele_nosync(T* buf,
 
 // Simple class to manage a buffer on a device.
 template <typename T, h2::Device Dev>
-struct DeviceBuf {};
+struct DeviceBuf
+{};
 
 template <typename T>
 struct DeviceBuf<T, h2::Device::CPU>
 {
-  DeviceBuf(std::size_t size_)
-    : size(size_)
+  DeviceBuf(std::size_t size_) : size(size_)
   {
     if (size > 0)
     {
@@ -185,18 +189,17 @@ struct DeviceBuf<T, h2::Device::CPU>
 template <typename T>
 struct DeviceBuf<T, h2::Device::GPU>
 {
-  DeviceBuf(std::size_t size_)
-    : size(size_)
+  DeviceBuf(std::size_t size_) : size(size_)
   {
     if (size > 0)
     {
-      H2_ASSERT(
-          ::h2::gpu::default_cub_allocator().DeviceAllocate(
-              reinterpret_cast<void**>(&buf),
-              size*sizeof(T),
-              /*stream=*/0) == 0,
-          std::runtime_error,
-          "CUB allocation failed.");
+      H2_ASSERT(::h2::gpu::default_cub_allocator().DeviceAllocate(
+                  reinterpret_cast<void**>(&buf),
+                  size * sizeof(T),
+                  /*stream=*/0)
+                  == 0,
+                std::runtime_error,
+                "CUB allocation failed.");
     }
   }
   ~DeviceBuf()

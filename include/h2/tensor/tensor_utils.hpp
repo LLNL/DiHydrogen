@@ -8,6 +8,7 @@
 #pragma once
 
 #include "h2/tensor/tensor_types.hpp"
+
 #include "tensor_types.hpp"
 
 /** @file
@@ -41,7 +42,8 @@ constexpr inline ScalarIndexTuple
 get_index_range_start(const IndexRangeTuple& coords) H2_NOEXCEPT
 {
   ScalarIndexTuple coords_start(TuplePad<ScalarIndexTuple>(coords.size()));
-  for (typename IndexRangeTuple::size_type i = 0; i < coords.size(); ++i) {
+  for (typename IndexRangeTuple::size_type i = 0; i < coords.size(); ++i)
+  {
     // No special case for ALL, that starts at 0.
     coords_start[i] = coords[i].start();
   }
@@ -85,11 +87,15 @@ get_index_range_shape(const IndexRangeTuple& coords,
                   "get_index_range_shape does not work with empty ranges");
   ShapeTuple new_shape(TuplePad<ShapeTuple>(shape.size()));
   typename ShapeTuple::size_type j = 0;
-  for (typename ShapeTuple::size_type i = 0; i < shape.size(); ++i) {
-    if (i >= coords.size() || coords[i] == ALL) {
+  for (typename ShapeTuple::size_type i = 0; i < shape.size(); ++i)
+  {
+    if (i >= coords.size() || coords[i] == ALL)
+    {
       new_shape[j] = shape[i];
       ++j;
-    } else if (!coords[i].is_scalar()) {
+    }
+    else if (!coords[i].is_scalar())
+    {
       new_shape[j] = coords[i].end() - coords[i].start();
       ++j;
     }
@@ -173,7 +179,11 @@ constexpr inline IndexRange
 intersect_index_ranges(const IndexRange& ir1, const IndexRange& ir2) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(do_index_ranges_intersect(ir1, ir2),
-                  "Index ranges ", ir1, " and ", ir2, " must intersect");
+                  "Index ranges ",
+                  ir1,
+                  " and ",
+                  ir2,
+                  " must intersect");
   return IndexRange(std::max(ir1.start(), ir2.start()),
                     std::min(ir1.end(), ir2.end()));
 }
@@ -252,7 +262,8 @@ next_scalar_index(const ScalarIndexTuple& idx,
                   shape);
   ScalarIndexTuple next_idx = idx;
   next_idx[0] += 1;
-  for (typename ScalarIndexTuple::size_type dim = 0; dim < idx.size() - 1; ++dim)
+  for (typename ScalarIndexTuple::size_type dim = 0; dim < idx.size() - 1;
+       ++dim)
   {
     if (next_idx[dim] == shape[dim])
     {
@@ -293,18 +304,18 @@ void for_ndim(const ShapeTuple& shape,
     return;
   }
   ScalarIndexTuple coord =
-      start.is_empty()
-          ? ScalarIndexTuple(TuplePad<ScalarIndexTuple>(shape.size(), 0))
-          : start;
+    start.is_empty()
+      ? ScalarIndexTuple(TuplePad<ScalarIndexTuple>(shape.size(), 0))
+      : start;
   // Upper-bound is the number of elements in shape.
   const DataIndexType ub = product<DataIndexType>(shape);
   // Determine the start by computing the number of skipped indices,
   // essentially by computing an index in a contiguous shape.
   // (Skip this if we know we start from 0.)
   const DataIndexType start_index =
-      start.is_empty() ? 0
-                       : inner_product<DataIndexType>(
-                           coord, prefix_product<DataIndexType>(shape));
+    start.is_empty() ? 0
+                     : inner_product<DataIndexType>(
+                         coord, prefix_product<DataIndexType>(shape));
   for (DataIndexType i = start_index; i < ub; ++i)
   {
     f(coord);
@@ -321,4 +332,4 @@ void for_ndim(const ShapeTuple& shape,
   }
 }
 
-}  // namespace h2
+} // namespace h2

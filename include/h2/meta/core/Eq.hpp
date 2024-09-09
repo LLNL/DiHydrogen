@@ -21,7 +21,7 @@ struct EqVT;
 template <typename T, typename U>
 inline constexpr bool EqV()
 {
-    return EqVT<T, U>::value;
+  return EqVT<T, U>::value;
 }
 
 template <typename T, typename U>

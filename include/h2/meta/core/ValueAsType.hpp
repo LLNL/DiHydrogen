@@ -16,11 +16,11 @@ namespace meta
 template <typename T, T Value>
 struct ValueAsTypeT
 {
-    static constexpr T value = Value;
-    using value_type = T;
-    using type = ValueAsTypeT;
-    constexpr operator value_type() const noexcept { return value; }
-    constexpr value_type operator()() const noexcept { return value; }
+  static constexpr T value = Value;
+  using value_type = T;
+  using type = ValueAsTypeT;
+  constexpr operator value_type() const noexcept { return value; }
+  constexpr value_type operator()() const noexcept { return value; }
 };
 
 /** @brief A constexpr value represented as a type. */

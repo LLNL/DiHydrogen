@@ -14,11 +14,11 @@
 
 #include <h2_config.hpp>
 
-#include <type_traits>
+#include "h2/meta/TypeList.hpp"
 
 #include <El.hpp>
 
-#include "h2/meta/TypeList.hpp"
+#include <type_traits>
 
 namespace hydrogen
 {
@@ -28,21 +28,15 @@ inline std::ostream& operator<<(std::ostream& os, const Device& dev)
 {
   switch (dev)
   {
-  case Device::CPU:
-    os << "CPU";
-    break;
+  case Device::CPU: os << "CPU"; break;
 #ifdef H2_HAS_GPU
-  case Device::GPU:
-    os << "GPU";
-    break;
+  case Device::GPU: os << "GPU"; break;
 #endif
-  default:
-    os << "Unknown";
-    break;
+  default: os << "Unknown"; break;
   }
   return os;
 }
-}
+} // namespace hydrogen
 
 namespace h2
 {
@@ -50,7 +44,7 @@ namespace h2
 /**
  * Define the underlying compute device type.
  */
-using Device = El::Device;  // Leverage Hydrogen's device typing.
+using Device = El::Device; // Leverage Hydrogen's device typing.
 
 /**
  * Helper to support tagged dispatch based on the device.
@@ -66,7 +60,7 @@ struct DeviceTag
 /** Helper to get an instance of CPUDev_t or GPUDev_t. */
 template <Device Dev>
 inline constexpr typename DeviceTag<Dev>::device_t DeviceT_v =
-    DeviceTag<Dev>::device_t_v;
+  DeviceTag<Dev>::device_t_v;
 
 // Support representing devices as generic types.
 using CPUDev_t = DeviceTag<Device::CPU>::device_t;
@@ -94,66 +88,70 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
  */
 #ifdef H2_HAS_GPU
 #ifdef H2_DEBUG
-#define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)          \
-  do {                                                          \
-    if ((device) == Device::CPU)                                \
-    {                                                           \
-      [[maybe_unused]] constexpr Device Dev = Device::CPU;      \
-      cpu_code;                                                 \
-    }                                                           \
-    else if ((device) == Device::GPU)                           \
-    {                                                           \
-      [[maybe_unused]] constexpr Device Dev = Device::GPU;      \
-      gpu_code;                                                 \
-    }                                                           \
-    else                                                        \
-    {                                                           \
-      throw H2Exception("Unknown device");                      \
-    }                                                           \
+#define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)                         \
+  do                                                                           \
+  {                                                                            \
+    if ((device) == Device::CPU)                                               \
+    {                                                                          \
+      [[maybe_unused]] constexpr Device Dev = Device::CPU;                     \
+      cpu_code;                                                                \
+    }                                                                          \
+    else if ((device) == Device::GPU)                                          \
+    {                                                                          \
+      [[maybe_unused]] constexpr Device Dev = Device::GPU;                     \
+      gpu_code;                                                                \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+      throw H2Exception("Unknown device");                                     \
+    }                                                                          \
   } while (0);
-#else  // H2_DEBUG
-#define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)          \
-  do {                                                          \
-    if ((device) == Device::CPU)                                \
-    {                                                           \
-      [[maybe_unused]] constexpr Device Dev = Device::CPU;      \
-      cpu_code;                                                 \
-    }                                                           \
-    else                                                        \
-    {                                                           \
-      [[maybe_unused]] constexpr Device Dev = Device::GPU;      \
-      gpu_code;                                                 \
-    }                                                           \
+#else // H2_DEBUG
+#define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)                         \
+  do                                                                           \
+  {                                                                            \
+    if ((device) == Device::CPU)                                               \
+    {                                                                          \
+      [[maybe_unused]] constexpr Device Dev = Device::CPU;                     \
+      cpu_code;                                                                \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+      [[maybe_unused]] constexpr Device Dev = Device::GPU;                     \
+      gpu_code;                                                                \
+    }                                                                          \
   } while (0);
-#endif  // H2_DEBUG
+#endif // H2_DEBUG
 #else  // H2_HAS_GPU
 #ifdef H2_DEBUG
-#define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)          \
-  do {                                                          \
-    if ((device) == Device::CPU)                                \
-    {                                                           \
-      [[maybe_unused]] constexpr Device Dev = Device::CPU;      \
-      cpu_code;                                                 \
-    }                                                           \
-    else                                                        \
-    {                                                           \
-      throw H2Exception("Unknown device");                      \
-    }                                                           \
+#define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)                         \
+  do                                                                           \
+  {                                                                            \
+    if ((device) == Device::CPU)                                               \
+    {                                                                          \
+      [[maybe_unused]] constexpr Device Dev = Device::CPU;                     \
+      cpu_code;                                                                \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+      throw H2Exception("Unknown device");                                     \
+    }                                                                          \
   } while (0);
-#else  // H2_DEBUG
-#define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)          \
-  do {                                                          \
-    [[maybe_unused]] constexpr Device Dev = Device::CPU;        \
-    cpu_code;                                                   \
+#else // H2_DEBUG
+#define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)                         \
+  do                                                                           \
+  {                                                                            \
+    [[maybe_unused]] constexpr Device Dev = Device::CPU;                       \
+    cpu_code;                                                                  \
   } while (0);
-#endif  // H2_DEBUG
-#endif  // H2_HAS_GPU
+#endif // H2_DEBUG
+#endif // H2_HAS_GPU
 
 /**
  * Simplification of H2_DEVICE_DISPATCH when the code for both CPU and
  * GPU devices is the same.
  */
-#define H2_DEVICE_DISPATCH_SAME(device, code) \
+#define H2_DEVICE_DISPATCH_SAME(device, code)                                  \
   H2_DEVICE_DISPATCH(device, code, code)
 
 /**
@@ -161,33 +159,35 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
  * a constexpr value.
  */
 #ifdef H2_HAS_GPU
-#define H2_DEVICE_DISPATCH_CONST(device, cpu_code, gpu_code) \
-  do {                                                       \
-    if constexpr ((device) == Device::CPU)                   \
-    {                                                        \
-      cpu_code;                                              \
-    }                                                        \
-    else if constexpr ((device) == Device::GPU)              \
-    {                                                        \
-      gpu_code;                                              \
-    }                                                        \
-    else                                                     \
-    {                                                        \
-      throw H2Exception("Unknown device");                   \
-    }                                                        \
+#define H2_DEVICE_DISPATCH_CONST(device, cpu_code, gpu_code)                   \
+  do                                                                           \
+  {                                                                            \
+    if constexpr ((device) == Device::CPU)                                     \
+    {                                                                          \
+      cpu_code;                                                                \
+    }                                                                          \
+    else if constexpr ((device) == Device::GPU)                                \
+    {                                                                          \
+      gpu_code;                                                                \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+      throw H2Exception("Unknown device");                                     \
+    }                                                                          \
   } while (0);
-#else  // H2_HAS_GPU
-#define H2_DEVICE_DISPATCH_CONST(device, cpu_code, gpu_code) \
-  do {                                                       \
-    if constexpr ((device) == Device::CPU)                   \
-    {                                                        \
-      cpu_code;                                              \
-    }                                                        \
-    else                                                     \
-    {                                                        \
-      throw H2Exception("Unknown device");                   \
-    }                                                        \
+#else // H2_HAS_GPU
+#define H2_DEVICE_DISPATCH_CONST(device, cpu_code, gpu_code)                   \
+  do                                                                           \
+  {                                                                            \
+    if constexpr ((device) == Device::CPU)                                     \
+    {                                                                          \
+      cpu_code;                                                                \
+    }                                                                          \
+    else                                                                       \
+    {                                                                          \
+      throw H2Exception("Unknown device");                                     \
+    }                                                                          \
   } while (0);
-#endif  // H2_HAS_GPU
+#endif // H2_HAS_GPU
 
-}  // namespace h2
+} // namespace h2

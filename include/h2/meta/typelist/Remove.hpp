@@ -30,14 +30,14 @@ using Remove = Force<RemoveT<List, T>>;
 template <typename T>
 struct RemoveT<Empty, T>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
 // Match case
 template <typename T, typename... Ts>
 struct RemoveT<TypeList<T, Ts...>, T>
 {
-    using type = TypeList<Ts...>;
+  using type = TypeList<Ts...>;
 };
 
 // Recursive call

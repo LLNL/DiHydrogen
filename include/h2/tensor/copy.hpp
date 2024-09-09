@@ -12,16 +12,15 @@
  * Routines to copy data and tensors.
  */
 
-
 #include <h2_config.hpp>
+
+#include "h2/tensor/copy_buffer.hpp"
+#include "h2/tensor/dist_tensor.hpp"
+#include "h2/tensor/tensor.hpp"
+#include "h2/tensor/tensor_types.hpp"
 
 #include <memory>
 #include <type_traits>
-
-#include "h2/tensor/copy_buffer.hpp"
-#include "h2/tensor/tensor_types.hpp"
-#include "h2/tensor/tensor.hpp"
-#include "h2/tensor/dist_tensor.hpp"
 
 #ifdef H2_HAS_GPU
 #include "h2/gpu/runtime.hpp"
@@ -42,7 +41,7 @@ void copy_same_type(DistTensor<T>& dst, const DistTensor<T>& src)
   dst.ensure();
   if (src.is_local_empty())
   {
-    return;  // No local data to copy.
+    return; // No local data to copy.
   }
   Tensor<T>& dst_local = dst.local_tensor();
   const Tensor<T>& src_local = src.local_tensor();
@@ -63,7 +62,7 @@ void copy_same_type(DistTensor<T>& dst, const DistTensor<T>& src)
   }
 }
 
-}  // namespace internal
+} // namespace internal
 
 /**
  * Copy the contents of tensor `src` to `dst`.
@@ -146,8 +145,8 @@ void copy(DistTensor<DstT>& dst, const DistTensor<SrcT>& src)
   // processes, different shape), but I don't see a use for that right
   // now.
   H2_ASSERT_DEBUG(
-      src.proc_grid().is_congruent_to(dst.proc_grid()),
-      "Cannot copy between DistTensors on non-congruent processor grids");
+    src.proc_grid().is_congruent_to(dst.proc_grid()),
+    "Cannot copy between DistTensors on non-congruent processor grids");
   // Copying an empty tensor simply clears it.
   if (src.is_empty())
   {
@@ -163,7 +162,7 @@ void copy(DistTensor<DstT>& dst, const DistTensor<SrcT>& src)
   else
   {
     throw H2Exception(
-        "Data type conversion is copy is not currently supported");
+      "Data type conversion is copy is not currently supported");
   }
 }
 
@@ -187,9 +186,9 @@ void copy(DistTensor<DstT>& dst, const DistTensor<SrcT>& src)
  */
 template <typename T>
 std::unique_ptr<Tensor<T>> make_accessible_on_device(
-    Tensor<T>& src,
-    Device dev,
-    const std::optional<ComputeStream> stream = std::nullopt)
+  Tensor<T>& src,
+  Device dev,
+  const std::optional<ComputeStream> stream = std::nullopt)
 {
   if (src.get_device() == dev)
   {
@@ -213,7 +212,7 @@ std::unique_ptr<Tensor<T>> make_accessible_on_device(
     // Return a copy.
     // Create a new tensor on `dev` that has the same size.
     auto dst = std::make_unique<Tensor<T>>(
-        dev, src.shape(), src.dim_types(), StrictAlloc, real_stream);
+      dev, src.shape(), src.dim_types(), StrictAlloc, real_stream);
     copy(*dst, src);
     return dst;
   }
@@ -221,15 +220,15 @@ std::unique_ptr<Tensor<T>> make_accessible_on_device(
   // No GPU support, but dev differs from the tensor's device.
   // This should not happen.
   throw H2FatalException("Unknown device ", dev);
-#endif  // H2_HAS_GPU
+#endif // H2_HAS_GPU
 }
 
 /** Version of `make_accessible_on_device` for const tensors. */
 template <typename T>
 std::unique_ptr<Tensor<T>> make_accessible_on_device(
-    const Tensor<T>& src,
-    Device dev,
-    const std::optional<ComputeStream> stream = std::nullopt)
+  const Tensor<T>& src,
+  Device dev,
+  const std::optional<ComputeStream> stream = std::nullopt)
 {
   if (src.get_device() == dev)
   {
@@ -250,13 +249,13 @@ std::unique_ptr<Tensor<T>> make_accessible_on_device(
   else
   {
     auto dst = std::make_unique<Tensor<T>>(
-        dev, src.shape(), src.dim_types(), StrictAlloc, real_stream);
+      dev, src.shape(), src.dim_types(), StrictAlloc, real_stream);
     copy(*dst, src);
     return dst;
   }
 #else  // H2_HAS_GPU
   throw H2FatalException("Unknown device ", dev);
-#endif  // H2_HAS_GPU
+#endif // H2_HAS_GPU
 }
 
 namespace impl
@@ -269,7 +268,7 @@ template <typename DstT, typename SrcT>
 void cast_impl(GPUDev_t, Tensor<DstT>& dst, const Tensor<SrcT>& src);
 #endif
 
-}  // namespace impl
+} // namespace impl
 
 /**
  * Return a version of tensor `src` with its type converted to `DstT`.
@@ -327,4 +326,4 @@ std::unique_ptr<Tensor<DstT>> cast(BaseTensor& src);
 /** Fully runtime version of `cast`. */
 std::unique_ptr<BaseTensor> cast(const TypeInfo& type, BaseTensor& src);
 
-}  // namespace h2
+} // namespace h2

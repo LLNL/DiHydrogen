@@ -10,13 +10,13 @@
 
 using namespace h2::meta;
 
-
 using TList1 = TL<char>;
 using TList2 = TL<char, short, int>;
 using TList3 = TL<float, double, long double>;
 
 // CartProd with an empty list always gives an empty list:
-static_assert(EqV<tlist::CartProdTL<tlist::Empty, tlist::Empty>, tlist::Empty>());
+static_assert(
+  EqV<tlist::CartProdTL<tlist::Empty, tlist::Empty>, tlist::Empty>());
 static_assert(EqV<tlist::CartProdTL<tlist::Empty, TList1>, tlist::Empty>());
 static_assert(EqV<tlist::CartProdTL<tlist::Empty, TList2>, tlist::Empty>());
 static_assert(EqV<tlist::CartProdTL<TList1, tlist::Empty>, tlist::Empty>());

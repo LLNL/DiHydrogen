@@ -29,25 +29,20 @@ struct ValueLess : BoolT<(A::value < B::value)>
 } // namespace
 
 // Testing Sort
-static_assert(
-    EqV<tlist::Sort<Empty, ValueLess>, Empty>(),
-    "Sorting the empty list gives the empty list.");
+static_assert(EqV<tlist::Sort<Empty, ValueLess>, Empty>(),
+              "Sorting the empty list gives the empty list.");
+
+static_assert(EqV<tlist::Sort<IntList<13>, ValueLess>, IntList<13>>(),
+              "Sorting a singleton gives the singleton.");
 
 static_assert(
-    EqV<tlist::Sort<IntList<13>, ValueLess>, IntList<13>>(),
-    "Sorting a singleton gives the singleton.");
+  EqV<tlist::Sort<IntList<5, 4, 3, 2, 1>, ValueLess>, IntList<1, 2, 3, 4, 5>>(),
+  "Sorting a decreasing list; worst case.");
 
 static_assert(
-    EqV<tlist::Sort<IntList<5, 4, 3, 2, 1>, ValueLess>,
-        IntList<1, 2, 3, 4, 5>>(),
-    "Sorting a decreasing list; worst case.");
+  EqV<tlist::Sort<IntList<1, 2, 3, 4, 5>, ValueLess>, IntList<1, 2, 3, 4, 5>>(),
+  "Sorting an increasing list; best case.");
 
-static_assert(
-    EqV<tlist::Sort<IntList<1, 2, 3, 4, 5>, ValueLess>,
-        IntList<1, 2, 3, 4, 5>>(),
-    "Sorting an increasing list; best case.");
-
-static_assert(
-    EqV<tlist::Sort<IntList<4, 8, 2, 1, 3, 3, 9, 6>, ValueLess>,
-        IntList<1, 2, 3, 3, 4, 6, 8, 9>>(),
-    "Sort a random list.");
+static_assert(EqV<tlist::Sort<IntList<4, 8, 2, 1, 3, 3, 9, 6>, ValueLess>,
+                  IntList<1, 2, 3, 3, 4, 6, 8, 9>>(),
+              "Sort a random list.");

@@ -35,13 +35,13 @@ using ReplaceAll = Force<ReplaceAllT<List, Old, New>>;
 template <typename Old, typename New>
 struct ReplaceAllT<Empty, Old, New>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
 // Ret case
 template <typename Old, typename New, typename... Ts>
 struct ReplaceAllT<TypeList<Old, Ts...>, Old, New>
-    : ConsT<New, ReplaceAll<TypeList<Ts...>, Old, New>>
+  : ConsT<New, ReplaceAll<TypeList<Ts...>, Old, New>>
 {};
 
 // Recursive case

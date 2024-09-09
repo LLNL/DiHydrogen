@@ -20,14 +20,13 @@
 #if defined H2_HAS_GPU
 
 #if (defined __CUDA_ARCH__ && __CUDA_ARCH__)                                   \
-    || (defined __HIP_DEVICE_COMPILE__ && __HIP_DEVICE_COMPILE__)
+  || (defined __HIP_DEVICE_COMPILE__ && __HIP_DEVICE_COMPILE__)
 #define H2_GPU_DEVICE_COMPILING 1
 #else
 #define H2_GPU_DEVICE_COMPILING 0
 #endif
 
-#endif  // H2_HAS_GPU
-
+#endif // H2_HAS_GPU
 
 #if defined(__CUDACC__) || defined(__HIPCC__)
 
@@ -49,4 +48,4 @@
 #define H2_GPU_LAMBDA
 #define H2_GPU_FORCE_INLINE inline
 
-#endif  // defined(__CUDACC__) || defined(__HIPCC__)
+#endif // defined(__CUDACC__) || defined(__HIPCC__)

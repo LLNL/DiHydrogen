@@ -23,9 +23,12 @@ namespace h2
  * If the tuple is empty, returns start (default 1).
  */
 template <typename AccT, typename T, typename SizeType, SizeType N>
-constexpr AccT product(const FixedSizeTuple<T, SizeType, N>& tuple, const AccT start = AccT{1}) H2_NOEXCEPT {
+constexpr AccT product(const FixedSizeTuple<T, SizeType, N>& tuple,
+                       const AccT start = AccT{1}) H2_NOEXCEPT
+{
   AccT r = start;
-  for (SizeType i = 0; i < tuple.size(); ++i) {
+  for (SizeType i = 0; i < tuple.size(); ++i)
+  {
     r *= static_cast<AccT>(tuple[i]);
   }
   return r;
@@ -33,15 +36,22 @@ constexpr AccT product(const FixedSizeTuple<T, SizeType, N>& tuple, const AccT s
 
 /** Inner product for two FixedSizeTuples. */
 template <typename AccT,
-  typename T1, typename SizeType1, SizeType1 N1,
-  typename T2, typename SizeType2, SizeType2 N2>
-constexpr AccT inner_product(const FixedSizeTuple<T1, SizeType1, N1>& a,
-                             const FixedSizeTuple<T2, SizeType2, N2>& b) H2_NOEXCEPT {
+          typename T1,
+          typename SizeType1,
+          SizeType1 N1,
+          typename T2,
+          typename SizeType2,
+          SizeType2 N2>
+constexpr AccT
+inner_product(const FixedSizeTuple<T1, SizeType1, N1>& a,
+              const FixedSizeTuple<T2, SizeType2, N2>& b) H2_NOEXCEPT
+{
   static_assert(std::is_convertible<SizeType2, SizeType1>::value,
                 "Incompatible SizeTypes");
   H2_ASSERT_DEBUG(a.size() == b.size(), "Mismatched tuple sizes");
   AccT r = AccT{0};
-  for (SizeType1 i = 0; i < a.size(); ++i) {
+  for (SizeType1 i = 0; i < a.size(); ++i)
+  {
     r += static_cast<AccT>(a[i]) * static_cast<AccT>(b[i]);
   }
   return r;
@@ -49,15 +59,15 @@ constexpr AccT inner_product(const FixedSizeTuple<T1, SizeType1, N1>& a,
 
 /** Compute an exclusive prefix product of a FixedSizeTuple. */
 template <typename AccT, typename T, typename SizeType, SizeType N>
-constexpr FixedSizeTuple<AccT, SizeType, N> prefix_product(
-  const FixedSizeTuple<T, SizeType, N>& tuple,
-  const AccT start = AccT{1}) H2_NOEXCEPT
+constexpr FixedSizeTuple<AccT, SizeType, N>
+prefix_product(const FixedSizeTuple<T, SizeType, N>& tuple,
+               const AccT start = AccT{1}) H2_NOEXCEPT
 {
   using result_t = FixedSizeTuple<AccT, SizeType, N>;
   result_t result(TuplePad<result_t>(tuple.size(), start));
   for (SizeType i = 1; i < tuple.size(); ++i)
   {
-    result[i] = tuple[i-1] * result[i-1];
+    result[i] = tuple[i - 1] * result[i - 1];
   }
   return result;
 }
@@ -67,8 +77,8 @@ constexpr FixedSizeTuple<AccT, SizeType, N> prefix_product(
  * FixedSizeTuple; otherwise return false.
  */
 template <typename T, typename SizeType, SizeType N, typename Predicate>
-constexpr bool any_of(const FixedSizeTuple<T, SizeType, N>& tuple,
-                      Predicate p) {
+constexpr bool any_of(const FixedSizeTuple<T, SizeType, N>& tuple, Predicate p)
+{
   for (const auto& v : tuple)
   {
     if (p(v))
@@ -114,7 +124,7 @@ constexpr auto map(const FixedSizeTuple<T, SizeType, N>& tuple, UnaryF f)
 {
   using NewT = std::invoke_result_t<UnaryF, T>;
   FixedSizeTuple<NewT, SizeType, N> mapped_tuple(
-      TuplePad<FixedSizeTuple<NewT, SizeType, N>>(tuple.size()));
+    TuplePad<FixedSizeTuple<NewT, SizeType, N>>(tuple.size()));
   for (SizeType i = 0; i < tuple.size(); ++i)
   {
     mapped_tuple[i] = f(tuple[i]);
@@ -136,13 +146,12 @@ constexpr auto map(const FixedSizeTuple<T, SizeType, N>& tuple, UnaryF f)
  *           function to each index in the tuple.
  */
 template <typename T, typename SizeType, SizeType N, typename IndexF>
-constexpr auto map_index(const FixedSizeTuple<T, SizeType, N>& tuple,
-                         IndexF f)
+constexpr auto map_index(const FixedSizeTuple<T, SizeType, N>& tuple, IndexF f)
   -> FixedSizeTuple<std::invoke_result_t<IndexF, SizeType>, SizeType, N>
 {
   using NewT = std::invoke_result_t<IndexF, SizeType>;
   FixedSizeTuple<NewT, SizeType, N> mapped_tuple(
-      TuplePad<FixedSizeTuple<NewT, SizeType, N>>(tuple.size()));
+    TuplePad<FixedSizeTuple<NewT, SizeType, N>>(tuple.size()));
   for (SizeType i = 0; i < tuple.size(); ++i)
   {
     mapped_tuple[i] = f(i);
@@ -207,7 +216,8 @@ init(FixedSizeTuple<T, SizeType, N> const& in) H2_NOEXCEPT
  */
 template <typename T, typename SizeType, SizeType N>
 constexpr FixedSizeTuple<T, SizeType, N>
-init_n(const FixedSizeTuple<T, SizeType, N>& tuple, const SizeType n) H2_NOEXCEPT
+init_n(const FixedSizeTuple<T, SizeType, N>& tuple,
+       const SizeType n) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(n <= tuple.size(),
                   "Cannot get more elements than present in tuple");
@@ -216,4 +226,4 @@ init_n(const FixedSizeTuple<T, SizeType, N>& tuple, const SizeType n) H2_NOEXCEP
   return out;
 }
 
-}  // namespace h2
+} // namespace h2

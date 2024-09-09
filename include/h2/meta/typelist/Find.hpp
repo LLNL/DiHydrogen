@@ -26,7 +26,7 @@ struct FindVT;
 template <typename List, typename T>
 constexpr unsigned long FindV()
 {
-    return FindVT<List, T>::value;
+  return FindVT<List, T>::value;
 }
 
 template <typename List, typename T>
@@ -49,11 +49,11 @@ template <typename... ListTs, typename T, typename U>
 struct FindVT<TL<T, ListTs...>, U>
 {
 private:
-    static constexpr auto tmp_ = FindV<TL<ListTs...>, U>();
-    static constexpr auto invalid_ = static_cast<unsigned long>(-1);
+  static constexpr auto tmp_ = FindV<TL<ListTs...>, U>();
+  static constexpr auto invalid_ = static_cast<unsigned long>(-1);
 
 public:
-    static constexpr auto value = (tmp_ == invalid_ ? invalid_ : 1UL + tmp_);
+  static constexpr auto value = (tmp_ == invalid_ ? invalid_ : 1UL + tmp_);
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

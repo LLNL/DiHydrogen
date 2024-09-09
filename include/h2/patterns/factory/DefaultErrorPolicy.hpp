@@ -20,18 +20,18 @@ namespace factory
 template <typename IdType, class ObjectType>
 struct DefaultErrorPolicy
 {
-    struct UnknownIDError : public std::exception
+  struct UnknownIDError : public std::exception
+  {
+    const char* what() const noexcept override
     {
-        const char* what() const noexcept override
-        {
-            return "Unknown type identifier.";
-        }
-    };
-
-    std::unique_ptr<ObjectType> handle_unknown_id(IdType const&) const
-    {
-        throw UnknownIDError();
+      return "Unknown type identifier.";
     }
+  };
+
+  std::unique_ptr<ObjectType> handle_unknown_id(IdType const&) const
+  {
+    throw UnknownIDError();
+  }
 }; // struct DefaultErrorPolicy
 
 } // namespace factory

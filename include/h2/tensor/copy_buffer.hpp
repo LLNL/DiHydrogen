@@ -12,14 +12,13 @@
  * Low-level routines to copy raw buffers.
  */
 
-
 #include <h2_config.hpp>
+
+#include "h2/core/sync.hpp"
+#include "h2/core/types.hpp"
 
 #include <cstring>
 #include <type_traits>
-
-#include "h2/core/types.hpp"
-#include "h2/core/sync.hpp"
 
 #ifdef H2_HAS_GPU
 #include "h2/gpu/memory_utils.hpp"
@@ -43,9 +42,8 @@ void copy_buffer(T* dst,
   H2_ASSERT_DEBUG(count == 0 || (dst != nullptr && src != nullptr),
                   "Null buffers");
   // TODO: Debug check: Assert buffers do not overlap.
-  static_assert(
-    IsH2StorageType_v<T> || std::is_same_v<T*, void*>,
-    "Attempt to copy a buffer with a non-storage type");
+  static_assert(IsH2StorageType_v<T> || std::is_same_v<T*, void*>,
+                "Attempt to copy a buffer with a non-storage type");
   const Device src_dev = src_stream.get_device();
   const Device dst_dev = dst_stream.get_device();
   if (src_dev == Device::CPU && dst_dev == Device::CPU)
@@ -83,4 +81,4 @@ void copy_buffer(T* dst,
   }
 }
 
-}  // namespace h2
+} // namespace h2

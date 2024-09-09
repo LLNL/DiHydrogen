@@ -23,7 +23,7 @@ struct IsInvocableVT;
 template <typename F, typename... Args>
 inline constexpr bool IsInvocableV()
 {
-    return IsInvocableVT<F, Args...>::value;
+  return IsInvocableVT<F, Args...>::value;
 }
 
 /** @brief Test whether F can be invoked with the given arguments. */
@@ -39,13 +39,13 @@ template <typename F, typename... Args>
 struct GetInvocationResultT
 {
 private:
-    template <typename F_deduce, typename... Args_deduce>
-    static auto check(F_deduce f, Args_deduce&&... args)
-        -> decltype(f(std::forward<Args_deduce>(args)...));
-    static SubstitutionFailure check(...);
+  template <typename F_deduce, typename... Args_deduce>
+  static auto check(F_deduce f, Args_deduce&&... args)
+    -> decltype(f(std::forward<Args_deduce>(args)...));
+  static SubstitutionFailure check(...);
 
 public:
-    using type = decltype(check(std::declval<F>(), std::declval<Args>()...));
+  using type = decltype(check(std::declval<F>(), std::declval<Args>()...));
 };
 
 template <typename F, typename... Args>
@@ -55,7 +55,7 @@ using GetInvocationResult = meta::Force<GetInvocationResultT<F, Args...>>;
 
 template <typename F, typename... Args>
 struct IsInvocableVT
-    : SubstitutionSuccess<details::GetInvocationResult<F, Args...>>
+  : SubstitutionSuccess<details::GetInvocationResult<F, Args...>>
 {};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

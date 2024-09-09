@@ -44,64 +44,64 @@ namespace factory
  */
 template <typename AbstractType,
           typename BuilderType =
-              std::function<std::unique_ptr<AbstractType>(AbstractType const&)>,
+            std::function<std::unique_ptr<AbstractType>(AbstractType const&)>,
           template <typename, typename> class ErrorPolicy = DefaultErrorPolicy>
 class CopyFactory : private ErrorPolicy<std::type_info const&, AbstractType>
 {
 public:
-    using abstract_type = AbstractType;
-    using id_type = std::type_info;
-    using key_type = std::type_index;
-    using builder_type = BuilderType;
-    using map_type = std::unordered_map<key_type, builder_type>;
-    using size_type = typename map_type::size_type;
+  using abstract_type = AbstractType;
+  using id_type = std::type_info;
+  using key_type = std::type_index;
+  using builder_type = BuilderType;
+  using map_type = std::unordered_map<key_type, builder_type>;
+  using size_type = typename map_type::size_type;
 
 public:
-    /** @brief Register a new builder for things of type @c id */
-    bool register_builder(id_type const& id, builder_type builder)
-    {
-        return map_
-            .emplace(std::piecewise_construct,
-                     std::forward_as_tuple(std::type_index(id)),
-                     std::forward_as_tuple(std::move(builder)))
-            .second;
-    }
+  /** @brief Register a new builder for things of type @c id */
+  bool register_builder(id_type const& id, builder_type builder)
+  {
+    return map_
+      .emplace(std::piecewise_construct,
+               std::forward_as_tuple(std::type_index(id)),
+               std::forward_as_tuple(std::move(builder)))
+      .second;
+  }
 
-    /** @brief Unregister the current builder for things of type @c id. */
-    bool unregister(id_type const& id)
-    {
-        return (map_.erase(std::type_index(id)) == 1);
-    }
+  /** @brief Unregister the current builder for things of type @c id. */
+  bool unregister(id_type const& id)
+  {
+    return (map_.erase(std::type_index(id)) == 1);
+  }
 
-    /** @brief Construct a new object forwarding extra arguments to
-     *  the builder.
-     */
-    template <typename... Ts>
-    std::unique_ptr<AbstractType> copy_object(AbstractType const& other) const
-    {
-        auto const& id = typeid(other);
-        auto it = map_.find(std::type_index(id));
-        if (it != map_.end())
-            return (it->second)(other);
+  /** @brief Construct a new object forwarding extra arguments to
+   *  the builder.
+   */
+  template <typename... Ts>
+  std::unique_ptr<AbstractType> copy_object(AbstractType const& other) const
+  {
+    auto const& id = typeid(other);
+    auto it = map_.find(std::type_index(id));
+    if (it != map_.end())
+      return (it->second)(other);
 
-        return this->handle_unknown_id(id);
-    }
+    return this->handle_unknown_id(id);
+  }
 
-    /** @brief Get the names of all concrete products known to the factory. */
-    std::list<std::string> registered_types() const
-    {
-        std::list<std::string> names;
-        for (auto const& x : map_)
-            names.push_back(x.first.name());
+  /** @brief Get the names of all concrete products known to the factory. */
+  std::list<std::string> registered_types() const
+  {
+    std::list<std::string> names;
+    for (auto const& x : map_)
+      names.push_back(x.first.name());
 
-        return names;
-    }
+    return names;
+  }
 
-    /** @brief Get the number of products known to the factory. */
-    size_type size() const noexcept { return map_.size(); }
+  /** @brief Get the number of products known to the factory. */
+  size_type size() const noexcept { return map_.size(); }
 
 private:
-    map_type map_;
+  map_type map_;
 };
 
 } // namespace factory

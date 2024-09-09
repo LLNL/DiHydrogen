@@ -9,7 +9,8 @@
 
 using namespace h2;
 
-namespace get_contiguous_strides_tests {
+namespace get_contiguous_strides_tests
+{
 constexpr ShapeTuple shape1;
 constexpr auto strides1 = get_contiguous_strides(shape1);
 static_assert(strides1.size() == 0);
@@ -27,10 +28,10 @@ static_assert(strides3[0] == 1);
 static_assert(strides3[1] == 2);
 static_assert(strides3[2] == 4);
 
-}  // namespace get_contiguous_strides_tests
+} // namespace get_contiguous_strides_tests
 
-
-namespace are_strides_contiguous_tests {
+namespace are_strides_contiguous_tests
+{
 constexpr ShapeTuple shape1;
 constexpr StrideTuple strides1;
 static_assert(are_strides_contiguous(shape1, strides1));
@@ -53,4 +54,4 @@ static_assert(!are_strides_contiguous(shape4, strides5));
 constexpr StrideTuple strides6(1, 4, 4);
 static_assert(!are_strides_contiguous(shape4, strides6));
 
-}  // namespace are_strides_contiguous_tests
+} // namespace are_strides_contiguous_tests

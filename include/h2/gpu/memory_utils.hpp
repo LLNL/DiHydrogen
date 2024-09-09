@@ -44,6 +44,7 @@
  */
 
 #include "h2_config.hpp"
+
 #include "runtime.hpp"
 
 namespace h2
@@ -53,8 +54,8 @@ namespace gpu
 
 struct MemInfo
 {
-    size_t free;
-    size_t total;
+  size_t free;
+  size_t total;
 };
 
 } // namespace gpu
@@ -134,38 +135,38 @@ RawCUBAllocType make_allocator(unsigned int const gf = cub_growth_factor(),
 template <typename T>
 inline void mem_copy(T* dst, T const* src)
 {
-    mem_copy(reinterpret_cast<void*>(dst),
-             reinterpret_cast<void const*>(src),
-             sizeof(T));
+  mem_copy(reinterpret_cast<void*>(dst),
+           reinterpret_cast<void const*>(src),
+           sizeof(T));
 }
 
 template <typename T>
 inline void mem_copy(T* dst, T const* src, size_t n_elmts)
 {
-    mem_copy(reinterpret_cast<void*>(dst),
-             reinterpret_cast<void const*>(src),
-             n_elmts * sizeof(T));
+  mem_copy(reinterpret_cast<void*>(dst),
+           reinterpret_cast<void const*>(src),
+           n_elmts * sizeof(T));
 }
 
 template <typename T>
 inline void mem_copy(T* dst, T const* src, size_t n_elmts, DeviceStream stream)
 {
-    mem_copy(reinterpret_cast<void*>(dst),
-             reinterpret_cast<void const*>(src),
-             n_elmts * sizeof(T),
-             stream);
+  mem_copy(reinterpret_cast<void*>(dst),
+           reinterpret_cast<void const*>(src),
+           n_elmts * sizeof(T),
+           stream);
 }
 
 template <typename T>
 inline void mem_zero(T* mem, size_t n_elmts)
 {
-    mem_zero(reinterpret_cast<void*>(mem), n_elmts * sizeof(T));
+  mem_zero(reinterpret_cast<void*>(mem), n_elmts * sizeof(T));
 }
 
 template <typename T>
 inline void mem_zero(T* mem, size_t n_elmts, DeviceStream stream)
 {
-    mem_zero(reinterpret_cast<void*>(mem), n_elmts * sizeof(T), stream);
+  mem_zero(reinterpret_cast<void*>(mem), n_elmts * sizeof(T), stream);
 }
 
 } // namespace gpu

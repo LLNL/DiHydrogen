@@ -28,7 +28,7 @@ namespace static_test_core
 {
 struct Test
 {
-    using type = int;
+  using type = int;
 };
 
 static_assert(EqV<Force<Test>, int>(), "Force works.");

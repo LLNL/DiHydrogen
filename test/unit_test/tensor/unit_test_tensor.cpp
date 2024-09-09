@@ -5,14 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_template_test_macros.hpp>
-
-#include <memory>
-
 #include "h2/tensor/tensor.hpp"
 #include "h2/utils/typename.hpp"
 #include "utils.hpp"
+
+#include <memory>
+
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace h2;
 
@@ -42,26 +42,26 @@ TEST_CASE("FixedSizeTuple::back", "[utilities]")
 
 TEST_CASE("init(FixedSizeTuple)", "[utilities]")
 {
-    using TupleType = h2::FixedSizeTuple<int, unsigned, 8U>;
+  using TupleType = h2::FixedSizeTuple<int, unsigned, 8U>;
 #ifdef H2_DEBUG
-    SECTION("init of a zero-element (empty) tuple is error")
-    {
-        TupleType x;
-        CHECK_THROWS(h2::init(x));
-    }
+  SECTION("init of a zero-element (empty) tuple is error")
+  {
+    TupleType x;
+    CHECK_THROWS(h2::init(x));
+  }
 #endif
 
-    SECTION("init of a single-element tuple is empty")
-    {
-        TupleType x = {1};
-        CHECK(h2::init(x).size() == 0);
-    }
+  SECTION("init of a single-element tuple is empty")
+  {
+    TupleType x = {1};
+    CHECK(h2::init(x).size() == 0);
+  }
 
-    SECTION("init of multi-element tuple returns first n-1 elements")
-    {
-        TupleType x = {1, 2, 3, 4, 5};
-        CHECK(h2::init(x) == TupleType{1, 2, 3, 4});
-    }
+  SECTION("init of multi-element tuple returns first n-1 elements")
+  {
+    TupleType x = {1, 2, 3, 4, 5};
+    CHECK(h2::init(x) == TupleType{1, 2, 3, 4});
+  }
 }
 
 TEST_CASE("is_index_range_contained", "[tensor]")
@@ -78,7 +78,7 @@ TEST_CASE("for_ndim", "[tensor]")
   {
     ShapeTuple shape;
     for_ndim(shape, [&](ScalarIndexTuple c) {
-      REQUIRE(false);  // Should never be reached.
+      REQUIRE(false); // Should never be reached.
     });
   }
 
@@ -98,17 +98,19 @@ TEST_CASE("for_ndim", "[tensor]")
     ShapeTuple shape{4};
     std::vector<ScalarIndexTuple> v = {{1}, {2}, {3}};
     DataIndexType i = 0;
-    for_ndim(shape, [&](ScalarIndexTuple c) {
-      REQUIRE(c == v[i]);
-      ++i;
-    }, {1});
+    for_ndim(shape,
+             [&](ScalarIndexTuple c) {
+               REQUIRE(c == v[i]);
+               ++i;
+             },
+             {1});
   }
 
   SECTION("2d")
   {
     ShapeTuple shape{4, 2};
     std::vector<ScalarIndexTuple> v = {
-        {0, 0}, {1, 0}, {2, 0}, {3, 0}, {0, 1}, {1, 1}, {2, 1}, {3, 1}};
+      {0, 0}, {1, 0}, {2, 0}, {3, 0}, {0, 1}, {1, 1}, {2, 1}, {3, 1}};
     DataIndexType i = 0;
     for_ndim(shape, [&](ScalarIndexTuple c) {
       REQUIRE(c == v[i]);
@@ -121,10 +123,12 @@ TEST_CASE("for_ndim", "[tensor]")
     ShapeTuple shape{4, 2};
     std::vector<ScalarIndexTuple> v = {{2, 1}, {3, 1}};
     DataIndexType i = 0;
-    for_ndim(shape, [&](ScalarIndexTuple c) {
-      REQUIRE(c == v[i]);
-      ++i;
-    }, {2, 1});
+    for_ndim(shape,
+             [&](ScalarIndexTuple c) {
+               REQUIRE(c == v[i]);
+               ++i;
+             },
+             {2, 1});
   }
 
   SECTION("3d")
@@ -150,10 +154,12 @@ TEST_CASE("for_ndim", "[tensor]")
     ShapeTuple shape{2, 2, 2};
     std::vector<ScalarIndexTuple> v = {{1, 0, 1}, {0, 1, 1}, {1, 1, 1}};
     DataIndexType i = 0;
-    for_ndim(shape, [&](ScalarIndexTuple c) {
-      REQUIRE(c == v[i]);
-      ++i;
-    }, {1, 0, 1});
+    for_ndim(shape,
+             [&](ScalarIndexTuple c) {
+               REQUIRE(c == v[i]);
+               ++i;
+             },
+             {1, 0, 1});
   }
 
   SECTION("Out-of-range start works")
@@ -174,7 +180,7 @@ TEMPLATE_LIST_TEST_CASE("Tensors can be created", "[tensor]", AllDevList)
 
   DataType* null_buf = nullptr;
   REQUIRE_NOTHROW(
-      TensorType(Dev, null_buf, {0}, {DT::Any}, {1}, ComputeStream{Dev}));
+    TensorType(Dev, null_buf, {0}, {DT::Any}, {1}, ComputeStream{Dev}));
   REQUIRE_NOTHROW(TensorType(Dev,
                              const_cast<const DataType*>(null_buf),
                              {0},
@@ -201,7 +207,7 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(tensor.stride(0) == 1);
   REQUIRE(tensor.stride(1) == 4);
   REQUIRE(tensor.ndim() == 2);
-  REQUIRE(tensor.numel() == 4*6);
+  REQUIRE(tensor.numel() == 4 * 6);
   REQUIRE_FALSE(tensor.is_empty());
   REQUIRE(tensor.is_contiguous());
   REQUIRE_FALSE(tensor.is_view());
@@ -215,7 +221,7 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE_FALSE(tensor.is_lazy());
 
   const TensorType const_tensor =
-      TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
+    TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
   REQUIRE(const_tensor.get_type_info() == get_h2_type<DataType>());
   REQUIRE(const_tensor.shape() == ShapeTuple{4, 6});
   REQUIRE(const_tensor.shape(0) == 4);
@@ -227,7 +233,7 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(const_tensor.stride(0) == 1);
   REQUIRE(const_tensor.stride(1) == 4);
   REQUIRE(const_tensor.ndim() == 2);
-  REQUIRE(const_tensor.numel() == 4*6);
+  REQUIRE(const_tensor.numel() == 4 * 6);
   REQUIRE_FALSE(const_tensor.is_empty());
   REQUIRE(const_tensor.is_contiguous());
   REQUIRE_FALSE(const_tensor.is_view());
@@ -241,15 +247,13 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE_FALSE(const_tensor.is_lazy());
 }
 
-TEMPLATE_LIST_TEST_CASE("Base tensor metadata is sane",
-                        "[tensor]",
-                        AllDevList)
+TEMPLATE_LIST_TEST_CASE("Base tensor metadata is sane", "[tensor]", AllDevList)
 {
   constexpr Device Dev = TestType::value;
   using TensorType = Tensor<DataType>;
 
   std::unique_ptr<BaseTensor> tensor = std::make_unique<TensorType>(
-      Dev, ShapeTuple{4, 6}, DTTuple{DT::Sample, DT::Any});
+    Dev, ShapeTuple{4, 6}, DTTuple{DT::Sample, DT::Any});
   REQUIRE(tensor->get_type_info() == get_h2_type<DataType>());
   REQUIRE(tensor->shape() == ShapeTuple{4, 6});
   REQUIRE(tensor->shape(0) == 4);
@@ -261,7 +265,7 @@ TEMPLATE_LIST_TEST_CASE("Base tensor metadata is sane",
   REQUIRE(tensor->stride(0) == 1);
   REQUIRE(tensor->stride(1) == 4);
   REQUIRE(tensor->ndim() == 2);
-  REQUIRE(tensor->numel() == 4*6);
+  REQUIRE(tensor->numel() == 4 * 6);
   REQUIRE_FALSE(tensor->is_empty());
   REQUIRE(tensor->is_contiguous());
   REQUIRE_FALSE(tensor->is_view());
@@ -270,8 +274,8 @@ TEMPLATE_LIST_TEST_CASE("Base tensor metadata is sane",
   REQUIRE(tensor->get_device() == TestType::value);
 
   std::unique_ptr<const BaseTensor> const_tensor =
-      std::make_unique<const TensorType>(
-          Dev, ShapeTuple{4, 6}, DTTuple{DT::Sample, DT::Any});
+    std::make_unique<const TensorType>(
+      Dev, ShapeTuple{4, 6}, DTTuple{DT::Sample, DT::Any});
   REQUIRE(const_tensor->get_type_info() == get_h2_type<DataType>());
   REQUIRE(const_tensor->shape() == ShapeTuple{4, 6});
   REQUIRE(const_tensor->shape(0) == 4);
@@ -283,7 +287,7 @@ TEMPLATE_LIST_TEST_CASE("Base tensor metadata is sane",
   REQUIRE(const_tensor->stride(0) == 1);
   REQUIRE(const_tensor->stride(1) == 4);
   REQUIRE(const_tensor->ndim() == 2);
-  REQUIRE(const_tensor->numel() == 4*6);
+  REQUIRE(const_tensor->numel() == 4 * 6);
   REQUIRE_FALSE(const_tensor->is_empty());
   REQUIRE(const_tensor->is_contiguous());
   REQUIRE_FALSE(const_tensor->is_view());
@@ -356,7 +360,7 @@ TEMPLATE_LIST_TEST_CASE("Lazy and strict tensors are sane",
   REQUIRE(TensorType(Dev, LazyAlloc).is_lazy());
 
   REQUIRE_FALSE(
-      TensorType(Dev, {4, 6}, {DT::Sample, DT::Any}, StrictAlloc).is_lazy());
+    TensorType(Dev, {4, 6}, {DT::Sample, DT::Any}, StrictAlloc).is_lazy());
   REQUIRE(TensorType(Dev, {4, 6}, {DT::Sample, DT::Any}, LazyAlloc).is_lazy());
 }
 
@@ -367,29 +371,32 @@ TEMPLATE_LIST_TEST_CASE("Resizing tensors works", "[tensor]", AllDevList)
 
   TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
 
-  SECTION("Resizing without changing the number of dimensions") {
+  SECTION("Resizing without changing the number of dimensions")
+  {
     tensor.resize({2, 3});
     REQUIRE(tensor.shape() == ShapeTuple{2, 3});
     REQUIRE(tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(tensor.strides() == StrideTuple{1, 2});
     REQUIRE(tensor.ndim() == 2);
-    REQUIRE(tensor.numel() == 2*3);
+    REQUIRE(tensor.numel() == 2 * 3);
     REQUIRE(tensor.is_contiguous());
     REQUIRE(tensor.data() != nullptr);
     REQUIRE(tensor.const_data() != nullptr);
   }
-  SECTION("Resizing while adding dimensions") {
+  SECTION("Resizing while adding dimensions")
+  {
     tensor.resize({2, 3, 4}, {DT::Sample, DT::Sequence, DT::Any});
     REQUIRE(tensor.shape() == ShapeTuple{2, 3, 4});
     REQUIRE(tensor.dim_types() == DTTuple{DT::Sample, DT::Sequence, DT::Any});
     REQUIRE(tensor.strides() == StrideTuple{1, 2, 6});
     REQUIRE(tensor.ndim() == 3);
-    REQUIRE(tensor.numel() == 2*3*4);
+    REQUIRE(tensor.numel() == 2 * 3 * 4);
     REQUIRE(tensor.is_contiguous());
     REQUIRE(tensor.data() != nullptr);
     REQUIRE(tensor.const_data() != nullptr);
   }
-  SECTION("Resizing while adding dimensions requires dim types") {
+  SECTION("Resizing while adding dimensions requires dim types")
+  {
     REQUIRE_THROWS(tensor.resize({2, 3, 4}));
   }
   SECTION("Resizing while changing strides works")
@@ -399,12 +406,13 @@ TEMPLATE_LIST_TEST_CASE("Resizing tensors works", "[tensor]", AllDevList)
     REQUIRE(tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
     REQUIRE(tensor.strides() == StrideTuple{1, 8});
     REQUIRE(tensor.ndim() == 2);
-    REQUIRE(tensor.numel() == 4*6);
+    REQUIRE(tensor.numel() == 4 * 6);
     REQUIRE_FALSE(tensor.is_contiguous());
     REQUIRE(tensor.data() != nullptr);
     REQUIRE(tensor.const_data() != nullptr);
   }
-  SECTION("Emptying tensors") {
+  SECTION("Emptying tensors")
+  {
     tensor.empty();
     REQUIRE(tensor.shape() == ShapeTuple{});
     REQUIRE(tensor.dim_types() == DTTuple{});
@@ -416,13 +424,14 @@ TEMPLATE_LIST_TEST_CASE("Resizing tensors works", "[tensor]", AllDevList)
     REQUIRE(tensor.data() == nullptr);
     REQUIRE(tensor.const_data() == nullptr);
 
-    SECTION("Empty tensors can be resized") {
+    SECTION("Empty tensors can be resized")
+    {
       tensor.resize({2, 3}, {DT::Sample, DT::Any});
       REQUIRE(tensor.shape() == ShapeTuple{2, 3});
       REQUIRE(tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
       REQUIRE(tensor.strides() == StrideTuple{1, 2});
       REQUIRE(tensor.ndim() == 2);
-      REQUIRE(tensor.numel() == 2*3);
+      REQUIRE(tensor.numel() == 2 * 3);
       REQUIRE(tensor.is_contiguous());
       REQUIRE(tensor.data() != nullptr);
       REQUIRE(tensor.const_data() != nullptr);
@@ -460,7 +469,7 @@ TEMPLATE_LIST_TEST_CASE("Attaching tensors to existing buffers works",
 {
   constexpr Device Dev = TestType::value;
   using TensorType = Tensor<DataType>;
-  constexpr std::size_t buf_size = 4*6;
+  constexpr std::size_t buf_size = 4 * 6;
 
   DeviceBuf<DataType, Dev> buf(buf_size);
   for (std::size_t i = 0; i < buf_size; ++i)
@@ -469,7 +478,7 @@ TEMPLATE_LIST_TEST_CASE("Attaching tensors to existing buffers works",
   }
 
   TensorType tensor = TensorType(
-      Dev, buf.buf, {4, 6}, {DT::Sample, DT::Any}, {1, 4}, ComputeStream{Dev});
+    Dev, buf.buf, {4, 6}, {DT::Sample, DT::Any}, {1, 4}, ComputeStream{Dev});
   REQUIRE(tensor.shape() == ShapeTuple{4, 6});
   REQUIRE(tensor.dim_types() == DTTuple{DT::Sample, DT::Any});
   REQUIRE(tensor.strides() == StrideTuple{1, 4});
@@ -556,7 +565,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
 
     for (DimType i = 0; i < view->shape(0); ++i)
     {
-      REQUIRE(read_ele<Dev>(view->get({i}), view->get_stream()) == (1 + 4*i));
+      REQUIRE(read_ele<Dev>(view->get({i}), view->get_stream()) == (1 + 4 * i));
     }
   }
   SECTION("Viewing a (ALL, (1, 3)) subtensor works")
@@ -575,7 +584,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
       for (DimType i = 0; i < view->shape(0); ++i)
       {
         REQUIRE(read_ele<Dev>(view->get({i, j}), view->get_stream())
-                == (i + (j+1) * 4));
+                == (i + (j + 1) * 4));
       }
     }
   }
@@ -596,7 +605,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
       for (DimType i = 0; i < view->shape(0); ++i)
       {
         REQUIRE(read_ele<Dev>(view->get({i, j}), view->get_stream())
-                == (i+1 + j*4));
+                == (i + 1 + j * 4));
       }
     }
   }
@@ -705,8 +714,8 @@ TEMPLATE_LIST_TEST_CASE("Viewing tensors works", "[tensor]", AllDevList)
   {
     std::unique_ptr<TensorType> view = tensor.view();
     REQUIRE_THROWS(view->resize(ShapeTuple{2, 3}));
-    REQUIRE_THROWS(view->resize(ShapeTuple{2, 3, 4},
-                                DTTuple{DT::Sample, DT::Any, DT::Any}));
+    REQUIRE_THROWS(
+      view->resize(ShapeTuple{2, 3, 4}, DTTuple{DT::Sample, DT::Any, DT::Any}));
   }
   SECTION("Viewing an invalid range fails")
   {
@@ -893,14 +902,12 @@ TEMPLATE_LIST_TEST_CASE("Making tensors contiguous works",
     for (DimType i = 0; i < contig->shape(0); ++i)
     {
       REQUIRE(read_ele<Dev>(contig->get({i}), contig->get_stream())
-              == (1 + 4*i));
+              == (1 + 4 * i));
     }
   }
 }
 
-TEMPLATE_LIST_TEST_CASE("Cloning tensors works",
-                        "[tensor]",
-                        AllDevList)
+TEMPLATE_LIST_TEST_CASE("Cloning tensors works", "[tensor]", AllDevList)
 {
   constexpr Device Dev = TestType::value;
   using TensorType = Tensor<DataType>;
@@ -982,7 +989,7 @@ TEMPLATE_LIST_TEST_CASE("Tensors are printable", "[tensor]", AllDevList)
     ss << tensor;
     REQUIRE(ss.str()
             == std::string("Tensor<") + TypeName<DataType>() + ", "
-                   + dev_ss.str() + ">(Sample:3 x Any:5)");
+                 + dev_ss.str() + ">(Sample:3 x Any:5)");
   }
 
   SECTION("View")
@@ -991,6 +998,6 @@ TEMPLATE_LIST_TEST_CASE("Tensors are printable", "[tensor]", AllDevList)
     ss << *view;
     REQUIRE(ss.str()
             == std::string("Tensor<") + TypeName<DataType>() + ", "
-                   + dev_ss.str() + ">(View of Sample:3 x Any:5)");
+                 + dev_ss.str() + ">(View of Sample:3 x Any:5)");
   }
 }

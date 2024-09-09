@@ -10,5 +10,5 @@
 
 using namespace h2::meta;
 
-static_assert(
-    EqV<Force<Susp<int>>, int>(), "Force returns the type held in Susp.");
+static_assert(EqV<Force<Susp<int>>, int>(),
+              "Force returns the type held in Susp.");

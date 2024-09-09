@@ -23,7 +23,7 @@ using SizeVT = LengthVT<List>;
 template <typename List>
 constexpr unsigned long SizeV()
 {
-    return SizeVT<List>::value;
+  return SizeVT<List>::value;
 }
 
 template <typename List>

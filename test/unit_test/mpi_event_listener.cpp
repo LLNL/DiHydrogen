@@ -10,7 +10,6 @@
 #include <catch2/reporters/catch_reporter_event_listener.hpp>
 #include <catch2/reporters/catch_reporter_registrars.hpp>
 
-
 namespace internal
 {
 
@@ -29,8 +28,7 @@ void end_for_comms()
   in_for_comms = false;
 }
 
-}  // namespace internal
-
+} // namespace internal
 
 /**
  * Gracefully handle test case failures when not all ranks may see

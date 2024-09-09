@@ -14,11 +14,11 @@
 
 #include <h2_config.hpp>
 
-#include <cstring>
-
 #include "h2/core/sync.hpp"
 #include "h2/core/types.hpp"
 #include "h2/tensor/tensor.hpp"
+
+#include <cstring>
 
 #ifdef H2_HAS_GPU
 #include "h2/gpu/memory_utils.hpp"
@@ -42,10 +42,9 @@ void zero(T* data, const ComputeStream& stream, std::size_t count)
                 "Attempt to zero a buffer with a non-storage type");
 
   H2_DEVICE_DISPATCH(
-      stream.get_device(),
-      std::memset(
-          data, 0, std::is_same_v<T*, void*> ? count : count * sizeof(T)),
-      gpu::mem_zero(data, count, stream.get_stream<Dev>()));
+    stream.get_device(),
+    std::memset(data, 0, std::is_same_v<T*, void*> ? count : count * sizeof(T)),
+    gpu::mem_zero(data, count, stream.get_stream<Dev>()));
 }
 
 /**
@@ -87,7 +86,7 @@ template <typename T>
 void fill_impl(GPUDev_t, Tensor<T>& tensor, const T& val);
 #endif
 
-}  // namespace impl
+} // namespace impl
 
 /**
  * Fill tensor with a given value.
@@ -115,4 +114,4 @@ void fill(Tensor<T>& tensor, const T& val)
 template <typename T>
 void fill(BaseTensor& tensor, const T& val);
 
-}  // namespace h2
+} // namespace h2

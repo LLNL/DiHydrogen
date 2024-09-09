@@ -7,6 +7,6 @@
 
 #pragma once
 
+#include "hydrogen_interop/dist_tensor_interop.hpp"
 #include "hydrogen_interop/interop_utils.hpp"
 #include "hydrogen_interop/local_tensor_interop.hpp"
-#include "hydrogen_interop/dist_tensor_interop.hpp"

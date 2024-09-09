@@ -5,16 +5,14 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_test_macros.hpp>
+#include "h2/utils/strings.hpp"
 
 #include <cmath>
 #include <ostream>
 
-#include "h2/utils/strings.hpp"
-
+#include <catch2/catch_test_macros.hpp>
 
 using namespace h2;
-
 
 TEST_CASE("build_string works for empty args", "[utilities][strings]")
 {
@@ -103,7 +101,7 @@ TEST_CASE("from_string works for integers", "[utilities][strings]")
   REQUIRE_THROWS(from_string<char>("foo"));
   REQUIRE_THROWS(from_string<char>(""));
   REQUIRE_THROWS(from_string<char>(
-      std::to_string(as<long long>(std::numeric_limits<char>::max()) + 1ll)));
+    std::to_string(as<long long>(std::numeric_limits<char>::max()) + 1ll)));
   if constexpr (std::numeric_limits<char>::is_signed)
   {
     REQUIRE(from_string<char>("-42") == -42);
@@ -114,17 +112,17 @@ TEST_CASE("from_string works for integers", "[utilities][strings]")
   REQUIRE(from_string<signed char>("-42") == -42);
   REQUIRE_THROWS(from_string<signed char>("foo"));
   REQUIRE_THROWS(from_string<signed char>(""));
-  REQUIRE_THROWS(from_string<signed char>(
-                   std::to_string(as<long long>(std::numeric_limits<signed char>::max()) + 1ll)));
   REQUIRE_THROWS(from_string<signed char>(std::to_string(
-      as<long long>(std::numeric_limits<signed char>::min()) - 1ll)));
+    as<long long>(std::numeric_limits<signed char>::max()) + 1ll)));
+  REQUIRE_THROWS(from_string<signed char>(std::to_string(
+    as<long long>(std::numeric_limits<signed char>::min()) - 1ll)));
 
   // unsigned char:
   REQUIRE(from_string<unsigned char>("42") == 42);
   REQUIRE_THROWS(from_string<unsigned char>("foo"));
   REQUIRE_THROWS(from_string<unsigned char>(""));
   REQUIRE_THROWS(from_string<unsigned char>(std::to_string(
-      as<long long>(std::numeric_limits<unsigned char>::max()) + 1ll)));
+    as<long long>(std::numeric_limits<unsigned char>::max()) + 1ll)));
 
   // short:
   REQUIRE(from_string<short>("42") == 42);
@@ -132,16 +130,16 @@ TEST_CASE("from_string works for integers", "[utilities][strings]")
   REQUIRE_THROWS(from_string<short>("foo"));
   REQUIRE_THROWS(from_string<short>(""));
   REQUIRE_THROWS(from_string<short>(
-      std::to_string(as<long long>(std::numeric_limits<short>::max()) + 1ll)));
+    std::to_string(as<long long>(std::numeric_limits<short>::max()) + 1ll)));
   REQUIRE_THROWS(from_string<short>(
-      std::to_string(as<long long>(std::numeric_limits<short>::min()) - 1ll)));
+    std::to_string(as<long long>(std::numeric_limits<short>::min()) - 1ll)));
 
   // unsigned short:
   REQUIRE(from_string<unsigned short>("42") == 42);
   REQUIRE_THROWS(from_string<unsigned short>("foo"));
   REQUIRE_THROWS(from_string<unsigned short>(""));
-  REQUIRE_THROWS(from_string<unsigned short>(
-      std::to_string(as<long long>(std::numeric_limits<unsigned short>::max()) + 1ll)));
+  REQUIRE_THROWS(from_string<unsigned short>(std::to_string(
+    as<long long>(std::numeric_limits<unsigned short>::max()) + 1ll)));
 
   // int:
   REQUIRE(from_string<int>("42") == 42);
@@ -149,16 +147,16 @@ TEST_CASE("from_string works for integers", "[utilities][strings]")
   REQUIRE_THROWS(from_string<int>("foo"));
   REQUIRE_THROWS(from_string<int>(""));
   REQUIRE_THROWS(from_string<int>(
-      std::to_string(as<long long>(std::numeric_limits<int>::max()) + 1ll)));
+    std::to_string(as<long long>(std::numeric_limits<int>::max()) + 1ll)));
   REQUIRE_THROWS(from_string<int>(
-      std::to_string(as<long long>(std::numeric_limits<int>::min()) - 1ll)));
+    std::to_string(as<long long>(std::numeric_limits<int>::min()) - 1ll)));
 
   // unsigned int:
   REQUIRE(from_string<unsigned int>("42") == 42);
   REQUIRE_THROWS(from_string<unsigned int>("foo"));
   REQUIRE_THROWS(from_string<unsigned int>(""));
-  REQUIRE_THROWS(from_string<unsigned int>(
-      std::to_string(as<long long>(std::numeric_limits<unsigned int>::max()) + 1ll)));
+  REQUIRE_THROWS(from_string<unsigned int>(std::to_string(
+    as<long long>(std::numeric_limits<unsigned int>::max()) + 1ll)));
 
   // No further testing of max/min due to overflow concerns.
 
@@ -206,7 +204,7 @@ TEST_CASE("from_string works for floating point values", "[utilities][strings]")
   REQUIRE_THROWS(from_string<float>(""));
   REQUIRE_THROWS(from_string<float>("foo"));
   REQUIRE_THROWS(from_string<float>(
-      std::to_string(std::numeric_limits<long double>::max())));
+    std::to_string(std::numeric_limits<long double>::max())));
 
   // double:
   REQUIRE(from_string<double>("42") == 42.0);

@@ -14,17 +14,16 @@
 
 #include <h2_config.hpp>
 
-#include <new>
-#include <optional>
-#include <cstddef>
-
 #include "h2/core/device.hpp"
 #include "h2/core/sync.hpp"
+
+#include <cstddef>
+#include <new>
+#include <optional>
 
 #ifdef H2_HAS_GPU
 #include "h2/gpu/memory_utils.hpp"
 #endif
-
 
 namespace h2
 {
@@ -49,10 +48,7 @@ struct Allocator<T, Device::CPU>
     return new T[size];
   }
 
-  static void deallocate(T* buf, const ComputeStream&)
-  {
-    delete[] buf;
-  }
+  static void deallocate(T* buf, const ComputeStream&) { delete[] buf; }
 };
 
 #ifdef H2_HAS_GPU
@@ -64,9 +60,10 @@ struct Allocator<T, Device::GPU>
     T* buf = nullptr;
     // FIXME: add H2_CHECK_GPU...
     H2_ASSERT(gpu::default_cub_allocator().DeviceAllocate(
-                  reinterpret_cast<void**>(&buf),
-                  size*sizeof(T),
-                  stream.get_stream<Device::GPU>()) == 0,
+                reinterpret_cast<void**>(&buf),
+                size * sizeof(T),
+                stream.get_stream<Device::GPU>())
+                == 0,
               std::runtime_error,
               "CUB allocation failed.");
     return buf;
@@ -107,7 +104,7 @@ public:
     if (buf_size)
     {
       H2_DEVICE_DISPATCH_SAME(
-          device, (buf = Allocator<T, Dev>::allocate(buf_size, stream)));
+        device, (buf = Allocator<T, Dev>::allocate(buf_size, stream)));
     }
   }
 
@@ -116,7 +113,7 @@ public:
     if (buf)
     {
       H2_TERMINATE_ON_THROW_DEBUG(H2_DEVICE_DISPATCH_SAME(
-          device, (Allocator<T, Dev>::deallocate(buf, stream))));
+        device, (Allocator<T, Dev>::deallocate(buf, stream))));
     }
   }
 
@@ -124,10 +121,10 @@ public:
   ManagedBuffer& operator=(const ManagedBuffer&) = delete;
 
   ManagedBuffer(ManagedBuffer&& other)
-      : buf(other.buf),
-        buf_size(other.buf_size),
-        device(other.device),
-        stream(other.stream)
+    : buf(other.buf),
+      buf_size(other.buf_size),
+      device(other.device),
+      stream(other.stream)
   {
     other.buf = nullptr;
     other.buf_size = 0;
@@ -163,6 +160,6 @@ private:
   ComputeStream stream;
 };
 
-}  // namespace internal
+} // namespace internal
 
-}  // namespace h2
+} // namespace h2

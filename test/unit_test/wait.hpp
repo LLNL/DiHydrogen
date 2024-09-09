@@ -30,4 +30,4 @@ void gpu_wait(double length, h2::gpu::DeviceStream stream);
 /** Variant that takes a ComputeStream instead. */
 void gpu_wait(double length, const h2::ComputeStream& stream);
 
-#endif  // H2_HAS_GPU
+#endif // H2_HAS_GPU

@@ -14,13 +14,12 @@
 
 #include <h2_config.hpp>
 
-#include <type_traits>
-#include <utility>
-
-#include "h2/core/types.hpp"
 #include "h2/core/device.hpp"
+#include "h2/core/types.hpp"
 #include "h2/utils/IntegerMath.hpp"
 
+#include <type_traits>
+#include <utility>
 
 /**
  * Overview of H2 dispatch:
@@ -155,27 +154,27 @@
  * implementations of functions.
  */
 
-#define H2_INSTANTIATE_DEV_1(device)            \
-  PROTO(device, float);                         \
-  PROTO(device, double);                        \
-  PROTO(device, std::int32_t);                  \
+#define H2_INSTANTIATE_DEV_1(device)                                           \
+  PROTO(device, float);                                                        \
+  PROTO(device, double);                                                       \
+  PROTO(device, std::int32_t);                                                 \
   PROTO(device, std::uint32_t);
-#define H2_INSTANTIATE_DEV_2(device)            \
-  PROTO(device, float, float);                  \
-  PROTO(device, float, double);                 \
-  PROTO(device, float, std::int32_t);           \
-  PROTO(device, float, std::uint32_t);          \
-  PROTO(device, double, float);                 \
-  PROTO(device, double, double);                \
-  PROTO(device, double, std::int32_t);          \
-  PROTO(device, double, std::uint32_t);         \
-  PROTO(device, std::int32_t, float);           \
-  PROTO(device, std::int32_t, double);          \
-  PROTO(device, std::int32_t, std::int32_t);    \
-  PROTO(device, std::int32_t, std::uint32_t);   \
-  PROTO(device, std::uint32_t, float);          \
-  PROTO(device, std::uint32_t, double);         \
-  PROTO(device, std::uint32_t, std::int32_t);   \
+#define H2_INSTANTIATE_DEV_2(device)                                           \
+  PROTO(device, float, float);                                                 \
+  PROTO(device, float, double);                                                \
+  PROTO(device, float, std::int32_t);                                          \
+  PROTO(device, float, std::uint32_t);                                         \
+  PROTO(device, double, float);                                                \
+  PROTO(device, double, double);                                               \
+  PROTO(device, double, std::int32_t);                                         \
+  PROTO(device, double, std::uint32_t);                                        \
+  PROTO(device, std::int32_t, float);                                          \
+  PROTO(device, std::int32_t, double);                                         \
+  PROTO(device, std::int32_t, std::int32_t);                                   \
+  PROTO(device, std::int32_t, std::uint32_t);                                  \
+  PROTO(device, std::uint32_t, float);                                         \
+  PROTO(device, std::uint32_t, double);                                        \
+  PROTO(device, std::uint32_t, std::int32_t);                                  \
   PROTO(device, std::uint32_t, std::uint32_t);
 
 #define H2_INSTANTIATE_CPU_1 H2_INSTANTIATE_DEV_1(CPUDev_t)
@@ -186,21 +185,21 @@
 #define H2_INSTANTIATE_GPU_1 H2_INSTANTIATE_DEV_1(GPUDev_t)
 #define H2_INSTANTIATE_GPU_2 H2_INSTANTIATE_DEV_2(GPUDev_t)
 
-#define H2_INSTANTIATE_1                        \
-  H2_INSTANTIATE_CPU_1                          \
+#define H2_INSTANTIATE_1                                                       \
+  H2_INSTANTIATE_CPU_1                                                         \
   H2_INSTANTIATE_GPU_1
 
-#define H2_INSTANTIATE_2                        \
-  H2_INSTANTIATE_CPU_2                          \
+#define H2_INSTANTIATE_2                                                       \
+  H2_INSTANTIATE_CPU_2                                                         \
   H2_INSTANTIATE_GPU_2
 
-#else  // H2_HAS_GPU
+#else // H2_HAS_GPU
 
 #define H2_INSTANTIATE_1 H2_INSTANTIATE_CPU_1
 
 #define H2_INSTANTIATE_2 H2_INSTANTIATE_CPU_2
 
-#endif  // H2_HAS_GPU
+#endif // H2_HAS_GPU
 
 namespace h2
 {
@@ -273,25 +272,24 @@ void dispatch_call(const DispatchFunctionEntry& func, Args&&... args)
  * Number of bits needed to uniquely represent all native compute types.
  */
 constexpr std::size_t dispatch_bits_per_native_compute_type =
-    ceillog2(NumComputeTypes);
+  ceillog2(NumComputeTypes);
 /**
  * Number of bits needed to uniquely represent all compute types.
  */
 constexpr std::size_t dispatch_bits_per_compute_type =
-    ceillog2(static_cast<std::size_t>(TypeInfo::max_token - 1));
+  ceillog2(static_cast<std::size_t>(TypeInfo::max_token - 1));
 
 /** Helper to construct a dispatch key with sanity checking. */
 template <unsigned int num_types, std::size_t bits_per_compute_type>
 struct DispatchKeyT_impl
 {
   /** Number of bits needed to represent the dispatch key. */
-  static constexpr unsigned int num_bits =
-      bits_per_compute_type * num_types;
+  static constexpr unsigned int num_bits = bits_per_compute_type * num_types;
   /** Number of bytes needed to represent the dispatch key. */
   static constexpr unsigned int num_bytes = byteceil(num_bits);
   static_assert(
-      num_bytes <= 8,
-      "Cannot create a dispatch key that would require more than 8 bytes");
+    num_bytes <= 8,
+    "Cannot create a dispatch key that would require more than 8 bytes");
   /** Type to use for the dispatch key. */
   using type = typename UTypeForBytes<num_bytes>::type;
 };
@@ -304,14 +302,14 @@ struct DispatchKeyT_impl
  * key from a (float, float) key: They are both 0.)
  */
 template <unsigned int num_types>
-using NativeDispatchKeyT = typename DispatchKeyT_impl<
-    num_types,
-    dispatch_bits_per_native_compute_type>::type;
+using NativeDispatchKeyT =
+  typename DispatchKeyT_impl<num_types,
+                             dispatch_bits_per_native_compute_type>::type;
 /** Type for the largest native dispach key supported. */
 using MaxNativeDispatchKeyT = typename UTypeForBytes<8>::type;
 /** Maximum number of native dispatch types supported. */
 constexpr std::size_t max_native_dispatch_types =
-    (sizeof(MaxNativeDispatchKeyT) * 8) / dispatch_bits_per_native_compute_type;
+  (sizeof(MaxNativeDispatchKeyT) * 8) / dispatch_bits_per_native_compute_type;
 
 /**
  * Type for a dispatch key that dispatches over native and non-native
@@ -320,10 +318,10 @@ constexpr std::size_t max_native_dispatch_types =
 using DispatchKeyT = typename UTypeForBytes<8>::type;
 /** Maximum number of dispatch types supported. */
 constexpr std::size_t max_dispatch_types =
-    ((sizeof(DispatchKeyT) - 1) * 8) / dispatch_bits_per_compute_type;
+  ((sizeof(DispatchKeyT) - 1) * 8) / dispatch_bits_per_compute_type;
 /** Number of bits to shift to reach the top byte of DispatchKeyT. */
 constexpr std::size_t dispatch_key_top_byte_shift =
-    (sizeof(DispatchKeyT) - 1) * 8;
+  (sizeof(DispatchKeyT) - 1) * 8;
 
 /**
  * Extract the `TypeInfo` from something.
@@ -407,10 +405,10 @@ constexpr NativeDispatchKeyT<sizeof...(TypeInfoHavers)>
 get_native_dispatch_key(const TypeInfoHavers&... args)
 {
   H2_ASSERT_DEBUG(
-      all_h2_compute_types(args...),
-      "Cannot construct native dispatch keys for non-native compute types");
+    all_h2_compute_types(args...),
+    "Cannot construct native dispatch keys for non-native compute types");
   std::array<TypeInfo::TokenType, sizeof...(TypeInfoHavers)> tokens = {
-      {get_type_token(args)...}};
+    {get_type_token(args)...}};
   return get_native_dispatch_key(tokens);
 }
 
@@ -429,8 +427,7 @@ bool has_dispatch_entry(const std::string& name,
  * Throws if the entry is not present.
  */
 const DispatchFunctionEntry&
-get_dispatch_entry(const std::string& name,
-                   const DispatchKeyT& dispatch_key);
+get_dispatch_entry(const std::string& name, const DispatchKeyT& dispatch_key);
 
 /**
  * Call the dispatch entry for name and key with the given arguments.
@@ -457,25 +454,23 @@ get_dispatch_key(const std::array<TypeInfo::TokenType, N>& tokens)
   // Shift tokens, with the first being leftmost, to construct the key.
   for (std::size_t i = 0; i < N; ++i)
   {
-    dispatch_key |= tokens[i]
-                    << (dispatch_bits_per_compute_type * (N - 1 - i));
+    dispatch_key |= tokens[i] << (dispatch_bits_per_compute_type * (N - 1 - i));
   }
   return dispatch_key;
 }
 
-}  // namespace internal
+} // namespace internal
 
 /** Construct a dispatch key for dispatching on args. */
 template <typename... TypeInfoHavers>
-constexpr internal::DispatchKeyT
-get_dispatch_key(const TypeInfoHavers&... args)
+constexpr internal::DispatchKeyT get_dispatch_key(const TypeInfoHavers&... args)
 {
   H2_ASSERT_DEBUG(internal::all_compute_types(args...),
                   "Cannot construct dispatch keys for non-compute types");
   static_assert(sizeof...(args) <= internal::max_dispatch_types,
                 "Attempt to get dispatch key for too many types");
   std::array<TypeInfo::TokenType, sizeof...(TypeInfoHavers)> tokens = {
-      {internal::get_type_token(args)...}};
+    {internal::get_type_token(args)...}};
   return internal::get_dispatch_key(tokens);
 }
 
@@ -493,8 +488,8 @@ void dispatch_register(const std::string& name,
                        void (*func)(Args...))
 {
   internal::DispatchFunctionEntry dispatch_entry{
-      reinterpret_cast<void*>(func),
-      &internal::DispatchFunctionWrapper<void, Args...>::call};
+    reinterpret_cast<void*>(func),
+    &internal::DispatchFunctionWrapper<void, Args...>::call};
   add_dispatch_entry(name, dispatch_key, dispatch_entry);
 }
 
@@ -508,12 +503,12 @@ struct DispatchOn
 {
   template <typename... Args>
   DispatchOn(const Args&... args)
-      : tokens{{internal::get_type_token(args)...}},
-        all_native(internal::all_h2_compute_types(args...))
+    : tokens{{internal::get_type_token(args)...}},
+      all_native(internal::all_h2_compute_types(args...))
   {
     static_assert(
-        sizeof...(args) == num_types,
-        "Provided different number of types to dispatch on than expected");
+      sizeof...(args) == num_types,
+      "Provided different number of types to dispatch on than expected");
     if (!internal::all_compute_types(args...))
     {
       throw H2FatalException("Attempt to dispatch on a non-compute type");
@@ -531,15 +526,15 @@ struct DispatchOn
  */
 template <std::size_t N, std::size_t num_types, typename... Args>
 void do_dispatch(
-    const std::array<internal::DispatchFunctionEntry, N>& dispatch_table,
-    const std::string& name,
-    const DispatchOn<num_types>& dispatch_types,
-    Args&&... args)
+  const std::array<internal::DispatchFunctionEntry, N>& dispatch_table,
+  const std::string& name,
+  const DispatchOn<num_types>& dispatch_types,
+  Args&&... args)
 {
   if (dispatch_types.all_native)
   {
     const auto native_dispatch_key =
-        internal::get_native_dispatch_key(dispatch_types.tokens);
+      internal::get_native_dispatch_key(dispatch_types.tokens);
     H2_ASSERT_DEBUG(native_dispatch_key < dispatch_table.size(),
                     "Native dispatch key exceeds dispatch table size");
     internal::dispatch_call(dispatch_table[native_dispatch_key],
@@ -549,11 +544,11 @@ void do_dispatch(
   {
     const auto dispatch_key = internal::get_dispatch_key(dispatch_types.tokens);
     internal::call_dispatch_entry(
-        name, dispatch_key, std::forward<Args>(args)...);
+      name, dispatch_key, std::forward<Args>(args)...);
   }
 }
 
-}  // namespace h2
+} // namespace h2
 
 // *****
 // Example of static dispatching (this is also used in unit tests).
@@ -573,7 +568,7 @@ template <typename T>
 void dispatch_test_impl(GPUDev_t, T*);
 #endif
 
-}  // namespace impl
+} // namespace impl
 
 // Define the H2 public API:
 template <typename T>
@@ -582,7 +577,7 @@ void dispatch_test(Device dev, T* v)
   H2_DEVICE_DISPATCH_SAME(dev, impl::dispatch_test_impl(DeviceT_v<Dev>, v));
 }
 
-}  // namespace h2
+} // namespace h2
 
 // End static dispatch example.
 // *****

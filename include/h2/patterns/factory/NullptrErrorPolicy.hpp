@@ -19,10 +19,10 @@ namespace factory
 template <typename IdType, class ObjectType>
 struct NullptrErrorPolicy
 {
-    std::unique_ptr<ObjectType> handle_unknown_id(IdType const&) const
-    {
-        return nullptr;
-    }
+  std::unique_ptr<ObjectType> handle_unknown_id(IdType const&) const
+  {
+    return nullptr;
+  }
 }; // struct NullptrErrorPolicy
 
 } // namespace factory

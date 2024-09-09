@@ -20,8 +20,8 @@ static_assert(EqV<Cons<int, TL<float>>, TL<int, float>>(), "Cons to nonempty.");
 // Testing Prepend
 static_assert(EqV<Prepend<int, Empty>, TL<int>>(), "Prepend to empty.");
 static_assert(!EqV<Prepend<int, Empty>, TL<float>>(), "Prepend to empty.");
-static_assert(
-    EqV<Prepend<int, TL<float>>, TL<int, float>>(), "Prepend to nonempty.");
+static_assert(EqV<Prepend<int, TL<float>>, TL<int, float>>(),
+              "Prepend to nonempty.");
 
 // Testing Car
 static_assert(EqV<Car<Empty>, Nil>(), "Car of empty list is empty.");
@@ -44,8 +44,8 @@ static_assert(!EqV<Cdr<TL<int, float>>, float>(), "Car of length two list");
 // Testing Tail
 static_assert(EqV<Tail<Empty>, Empty>(), "Tail of empty list is empty.");
 static_assert(EqV<Tail<TL<float>>, Empty>(), "Tail of length one list");
-static_assert(
-    EqV<Tail<TL<int, float>>, TL<float>>(), "Tail of length two list");
+static_assert(EqV<Tail<TL<int, float>>, TL<float>>(),
+              "Tail of length two list");
 static_assert(!EqV<Tail<TL<int, float>>, float>(), "Car of length two list");
 
 // Uniquely Haskell-y stuff
@@ -53,24 +53,22 @@ static_assert(!EqV<Tail<TL<int, float>>, float>(), "Car of length two list");
 // Testing Last
 static_assert(EqV<Last<Empty>, Nil>(), "Last of an empty list is nil.");
 static_assert(EqV<Last<TL<float>>, float>(), "Last of an single-entry list.");
-static_assert(
-    EqV<Last<TL<int, char, float>>, float>(), "Last of a multi-entry list.");
+static_assert(EqV<Last<TL<int, char, float>>, float>(),
+              "Last of a multi-entry list.");
 
 // Testing Init
 static_assert(EqV<Init<Empty>, Empty>(), "Init of an empty list is empty.");
-static_assert(
-    EqV<Init<TL<float>>, Empty>(), "Init of a single-entry list is empty.");
-static_assert(
-    EqV<Init<TL<int, char, float>>, TL<int, char>>(),
-    "Init of a multi-entry list.");
+static_assert(EqV<Init<TL<float>>, Empty>(),
+              "Init of a single-entry list is empty.");
+static_assert(EqV<Init<TL<int, char, float>>, TL<int, char>>(),
+              "Init of a multi-entry list.");
 
 // Quick sanity check
 namespace static_test_accessor_sanity
 {
 using TList = TL<bool, char, short, int, long>;
-static_assert(
-    EqV<Cons<Car<TList>, Cdr<TList>>, TList>(),
-    "Consing the car to the cdr gives the original list back.");
+static_assert(EqV<Cons<Car<TList>, Cdr<TList>>, TList>(),
+              "Consing the car to the cdr gives the original list back.");
 } // namespace static_test_accessor_sanity
 
 // Testing the combinatorial craziness that is the CL c[ad]*r stuff.
@@ -84,8 +82,8 @@ using TList4 = TL<TList3, TList2, TList1, int, long>;
 using TList = TL<TList4, TList3, TList2, long, long long>;
 
 static_assert(EqV<Car<TList>, TList4>(), "Car (again)");
-static_assert(
-    EqV<Cdr<TList>, TL<TList3, TList2, long, long long>>(), "Cdr (again)");
+static_assert(EqV<Cdr<TList>, TL<TList3, TList2, long, long long>>(),
+              "Cdr (again)");
 
 static_assert(EqV<Caar<TList>, TList3>(), "Car of car");
 static_assert(EqV<Cadr<TList>, TList3>(), "Car of cdr");

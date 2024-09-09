@@ -20,7 +20,6 @@
 #include "h2/utils/Describable.hpp"
 #include "h2/utils/typename.hpp"
 
-
 namespace h2
 {
 
@@ -47,7 +46,6 @@ namespace h2
 class BaseDistTensor : public Describable
 {
 public:
-
   /**
    * Construct a tensor with the given shape and dimension types,
    * distributed over the given processor grid.
@@ -56,11 +54,11 @@ public:
                  const DimensionTypeTuple& dim_types_,
                  ProcessorGrid grid_,
                  const DistributionTypeTuple& dist_types_)
-      : tensor_shape(shape_),
-        tensor_dim_types(dim_types_),
-        tensor_grid(grid_),
-        tensor_dist_types(dist_types_),
-        tensor_view_type(ViewType::None)
+    : tensor_shape(shape_),
+      tensor_dim_types(dim_types_),
+      tensor_grid(grid_),
+      tensor_dist_types(dist_types_),
+      tensor_view_type(ViewType::None)
   {
     H2_ASSERT_DEBUG(tensor_shape.size() == tensor_dim_types.size(),
                     "Tensor shape (",
@@ -69,7 +67,7 @@ public:
                     tensor_dim_types,
                     ") must be the same size");
     H2_ASSERT_DEBUG((tensor_shape.size() == tensor_grid.ndim())
-                        || tensor_shape.is_empty(),
+                      || tensor_shape.is_empty(),
                     "Tensor (",
                     tensor_shape,
                     ") and processor grid (",
@@ -82,15 +80,15 @@ public:
                     tensor_grid.shape(),
                     ") must be the same rank");
     tensor_local_shape =
-        internal::get_local_shape(tensor_shape, tensor_grid, tensor_dist_types);
+      internal::get_local_shape(tensor_shape, tensor_grid, tensor_dist_types);
   }
 
   /** Construct an empty tensor on a null grid. */
   BaseDistTensor()
-      : BaseDistTensor(ShapeTuple{},
-                       DimensionTypeTuple{},
-                       ProcessorGrid{},
-                       DistributionTypeTuple{})
+    : BaseDistTensor(ShapeTuple{},
+                     DimensionTypeTuple{},
+                     ProcessorGrid{},
+                     DistributionTypeTuple{})
   {}
 
   virtual ~BaseDistTensor() = default;
@@ -99,10 +97,7 @@ public:
   virtual TypeInfo get_type_info() const H2_NOEXCEPT = 0;
 
   /** Return the shape of the tensor. */
-  ShapeTuple shape() const H2_NOEXCEPT
-  {
-    return tensor_shape;
-  }
+  ShapeTuple shape() const H2_NOEXCEPT { return tensor_shape; }
 
   /** Return the size of a particular dimension. */
   typename ShapeTuple::type
@@ -112,10 +107,7 @@ public:
   }
 
   /** Return the local shape of the tensor. */
-  ShapeTuple local_shape() const H2_NOEXCEPT
-  {
-    return tensor_local_shape;
-  }
+  ShapeTuple local_shape() const H2_NOEXCEPT { return tensor_local_shape; }
 
   /** Return the local size of a particular dimension. */
   typename ShapeTuple::type
@@ -125,10 +117,7 @@ public:
   }
 
   /** Return the types of each dimension of the tensor. */
-  DimensionTypeTuple dim_types() const H2_NOEXCEPT
-  {
-    return tensor_dim_types;
-  }
+  DimensionTypeTuple dim_types() const H2_NOEXCEPT { return tensor_dim_types; }
 
   /** Return the type of a particular dimension. */
   typename DimensionTypeTuple::type
@@ -211,12 +200,12 @@ public:
   virtual Device get_device() const H2_NOEXCEPT = 0;
 
 protected:
-  ShapeTuple tensor_shape;  /**< Global shape of the tensor. */
-  DimensionTypeTuple tensor_dim_types;  /**< Type of each dimension. */
-  ProcessorGrid tensor_grid;  /**< Grid the tensor is distributed over. */
+  ShapeTuple tensor_shape;             /**< Global shape of the tensor. */
+  DimensionTypeTuple tensor_dim_types; /**< Type of each dimension. */
+  ProcessorGrid tensor_grid; /**< Grid the tensor is distributed over. */
   /** How each dimension of the tensor is distributed. */
   DistributionTypeTuple tensor_dist_types;
-  ViewType tensor_view_type;  /**< What type of view (if any) this tensor is. */
+  ViewType tensor_view_type; /**< What type of view (if any) this tensor is. */
 
   // Implementation note:
   // This somewhat duplicates size information in the concrete
@@ -224,7 +213,7 @@ protected:
   // of course also stores its shape). Keeping this here allows us to
   // compute local size information while remaining abstract.
 
-  ShapeTuple tensor_local_shape;  /**< Local shape of the tensor. */
+  ShapeTuple tensor_local_shape; /**< Local shape of the tensor. */
 
   /** Construct a tensor with the given view type. */
   BaseDistTensor(ViewType view_type_,
@@ -233,12 +222,13 @@ protected:
                  ProcessorGrid grid_,
                  const DistributionTypeTuple& dist_types_,
                  const ShapeTuple& local_shape_)
-      : tensor_shape(shape_),
-        tensor_dim_types(dim_types_),
-        tensor_grid(grid_),
-        tensor_dist_types(dist_types_),
-        tensor_view_type(view_type_),
-        tensor_local_shape(local_shape_) {}
+    : tensor_shape(shape_),
+      tensor_dim_types(dim_types_),
+      tensor_grid(grid_),
+      tensor_dist_types(dist_types_),
+      tensor_view_type(view_type_),
+      tensor_local_shape(local_shape_)
+  {}
 };
 
-}  // namespace h2
+} // namespace h2

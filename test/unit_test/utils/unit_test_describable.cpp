@@ -5,36 +5,30 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_test_macros.hpp>
-
 #include "h2/utils/Describable.hpp"
+
+#include <catch2/catch_test_macros.hpp>
 
 class Foo final : public h2::Describable
 {
 public:
-    void short_describe(std::ostream& os) const final
-    {
-        os << "Foo(short)";
-    }
-    void describe(std::ostream& os) const final
-    {
-        os << "Foo(long)";
-    }
+  void short_describe(std::ostream& os) const final { os << "Foo(short)"; }
+  void describe(std::ostream& os) const final { os << "Foo(long)"; }
 };
 
 TEST_CASE("Testing describable", "[utilities][describe]")
 {
-    Foo x;
-    SECTION ("Member functions")
-    {
-        CHECK(x.short_description() == "Foo(short)");
-        CHECK(x.description() == "Foo(long)");
-    }
+  Foo x;
+  SECTION("Member functions")
+  {
+    CHECK(x.short_description() == "Foo(short)");
+    CHECK(x.description() == "Foo(long)");
+  }
 
-    SECTION ("Stream operator")
-    {
-        std::ostringstream oss;
-        oss << x << "|" << describe(x);
-        CHECK(oss.str() == x.short_description() + "|" + x.description());
-    }
+  SECTION("Stream operator")
+  {
+    std::ostringstream oss;
+    oss << x << "|" << describe(x);
+    CHECK(oss.str() == x.short_description() + "|" + x.description());
+  }
 }

@@ -26,7 +26,7 @@ namespace internal
  * This will attempt to provide a readable name.
  */
 std::string get_type_name(const std::type_info& tinfo);
-}  // namespace internal
+} // namespace internal
 
 /** Return a string naming the given type. */
 template <typename T>
@@ -62,4 +62,4 @@ H2_ADD_TYPENAME(long double)
 
 #undef H2_ADD_TYPENAME
 
-}  // namespace h2
+} // namespace h2

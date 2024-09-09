@@ -7,6 +7,10 @@
 
 #pragma once
 
+#include "h2/tensor/dist_types.hpp"
+#include "h2/tensor/tensor_types.hpp"
+#include "h2/utils/Error.hpp"
+
 #include <algorithm>
 #include <memory>
 #include <stack>
@@ -18,20 +22,16 @@
 #include <catch2/generators/catch_generators.hpp>
 #include <catch2/generators/catch_generators_adapters.hpp>
 
-#include "h2/tensor/dist_types.hpp"
-#include "h2/tensor/tensor_types.hpp"
-#include "h2/utils/Error.hpp"
-
-
 namespace internal
 {
 // Thrown by CommManager::get_comm if the rank is not participating.
-struct NotParticipatingException {};
+struct NotParticipatingException
+{};
 
 void start_for_comms();
 void end_for_comms();
 
-}  // namespace internal
+} // namespace internal
 
 /**
  * Manages instances of communicators for testing.
@@ -41,15 +41,9 @@ void end_for_comms();
 class CommManager
 {
 public:
-  CommManager()
-  {
-    world_size = El::mpi::COMM_WORLD.Size();
-  }
+  CommManager() { world_size = El::mpi::COMM_WORLD.Size(); }
 
-  ~CommManager()
-  {
-    clear();
-  }
+  ~CommManager() { clear(); }
 
   El::mpi::Comm& get_comm(int size = -1)
   {
@@ -176,7 +170,7 @@ void for_comms(Test t, int min_size = 1, int max_size = -1)
                        El::SyncInfo<El::Device::CPU>{});
     if (test_result == 0)
     {
-      internal::end_for_comms();  // Indicate we are done.
+      internal::end_for_comms(); // Indicate we are done.
       FAIL(std::to_string(El::mpi::Rank())
            + ": Failure detected on another rank");
     }
@@ -299,7 +293,7 @@ all_grid_shapes(h2::ShapeTuple::type size,
   return shapes;
 }
 
-}  // namespace internal
+} // namespace internal
 
 /**
  * Invoke a test case with every possible grid shape between a minimum
@@ -308,10 +302,10 @@ all_grid_shapes(h2::ShapeTuple::type size,
  */
 template <typename Test>
 void for_grid_shapes(
-    Test t,
-    h2::Comm& comm,
-    h2::ShapeTuple::size_type min_size = 0,
-    h2::ShapeTuple::size_type max_size = h2::ShapeTuple::max_size)
+  Test t,
+  h2::Comm& comm,
+  h2::ShapeTuple::size_type min_size = 0,
+  h2::ShapeTuple::size_type max_size = h2::ShapeTuple::max_size)
 {
   H2_ASSERT_ALWAYS(max_size <= h2::ShapeTuple::max_size,
                    "Requested maximum grid dimensions are too large");

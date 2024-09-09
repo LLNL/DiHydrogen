@@ -30,20 +30,20 @@ using Append = Force<AppendT<Lists...>>;
 template <typename... ListTs>
 struct AppendT<TL<ListTs...>>
 {
-    using type = TL<ListTs...>;
+  using type = TL<ListTs...>;
 };
 
 // Two lists
 template <typename... ListOneTs, typename... ListTwoTs>
 struct AppendT<TypeList<ListOneTs...>, TypeList<ListTwoTs...>>
 {
-    using type = TL<ListOneTs..., ListTwoTs...>;
+  using type = TL<ListOneTs..., ListTwoTs...>;
 };
 
 // Many lists
 template <typename FirstList, typename... OtherLists>
 struct AppendT<FirstList, OtherLists...>
-    : AppendT<FirstList, Append<OtherLists...>>
+  : AppendT<FirstList, Append<OtherLists...>>
 {};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

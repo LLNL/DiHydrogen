@@ -12,12 +12,12 @@
  * Printing and file I/O for tensors and distributed tensors.
  */
 
-#include <ostream>
-#include "tensor_types.hpp"
-
-#include "h2/tensor/tensor.hpp"
 #include "h2/tensor/copy.hpp"
+#include "h2/tensor/tensor.hpp"
 
+#include <ostream>
+
+#include "tensor_types.hpp"
 
 namespace h2
 {
@@ -75,7 +75,8 @@ inline std::ostream& print(std::ostream& os, const Tensor<T>& tensor)
       if (coord[dim] == tensor.shape(dim))
       {
         coord[dim] = 0;
-        if (dim > 0) {
+        if (dim > 0)
+        {
           coord[dim - 1] += 1;
         }
         // Close braces except for the inner-most dimension.
@@ -96,6 +97,4 @@ inline std::ostream& print(std::ostream& os, const Tensor<T>& tensor)
   return os;
 }
 
-
-
-}
+} // namespace h2

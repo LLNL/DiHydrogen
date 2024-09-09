@@ -24,7 +24,7 @@ struct MemberVT;
 template <typename T, typename List>
 constexpr bool MemberV()
 {
-    return MemberVT<T, List>::value;
+  return MemberVT<T, List>::value;
 }
 
 template <typename T, typename List>

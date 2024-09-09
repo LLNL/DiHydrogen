@@ -30,13 +30,13 @@ using Repeat = Force<RepeatT<T, N>>;
 template <typename T>
 struct RepeatT<T, 0UL>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
 template <typename T, unsigned long N>
 struct RepeatT
 {
-    using type = Cons<T, Repeat<T, N - 1UL>>;
+  using type = Cons<T, Repeat<T, N - 1UL>>;
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

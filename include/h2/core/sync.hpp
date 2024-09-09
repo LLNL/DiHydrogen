@@ -14,13 +14,13 @@
 
 #include <h2_config.hpp>
 
+#include "h2/core/device.hpp"
+#include "h2/utils/Error.hpp"
+
 #include <El.hpp>
 
 #include <tuple>
 #include <utility>
-
-#include "h2/core/device.hpp"
-#include "h2/utils/Error.hpp"
 
 #ifdef H2_HAS_GPU
 #include "h2/gpu/runtime.hpp"
@@ -110,7 +110,8 @@ namespace internal
 
 /** Define the underlying event type used by a device. */
 template <Device Dev>
-struct RawSyncEvent {};
+struct RawSyncEvent
+{};
 
 template <>
 struct RawSyncEvent<Device::CPU>
@@ -139,11 +140,12 @@ inline void release_device_event(gpu::DeviceEvent event)
   Al::internal::cuda::event_pool.release(event);
 }
 
-#endif  // H2_HAS_GPU
+#endif // H2_HAS_GPU
 
 /** Define the underlying compute stream type used by a device. */
 template <Device Dev>
-struct RawComputeStream {};
+struct RawComputeStream
+{};
 
 template <>
 struct RawComputeStream<Device::CPU>
@@ -186,14 +188,16 @@ template <Device Dev>
 inline typename RawComputeStream<Dev>::type get_default_compute_stream();
 
 template <>
-inline typename RawComputeStream<Device::CPU>::type get_default_compute_stream<Device::CPU>()
+inline typename RawComputeStream<Device::CPU>::type
+get_default_compute_stream<Device::CPU>()
 {
   return 0;
 }
 
 #ifdef H2_HAS_GPU
 template <>
-inline typename RawComputeStream<Device::GPU>::type get_default_compute_stream<Device::GPU>()
+inline typename RawComputeStream<Device::GPU>::type
+get_default_compute_stream<Device::GPU>()
 {
 #if H2_HAS_CUDA
   return El::cuda::GetDefaultStream();
@@ -203,7 +207,7 @@ inline typename RawComputeStream<Device::GPU>::type get_default_compute_stream<D
 }
 #endif
 
-}  // namespace internal
+} // namespace internal
 
 // Forward-declarations:
 class SyncEvent;
@@ -223,49 +227,38 @@ inline void destroy_compute_stream(ComputeStream&);
 class SyncEvent
 {
 public:
-
   /** Create a new event using the device's default event. */
-  SyncEvent(Device device_)
-    : device(device_)
+  SyncEvent(Device device_) : device(device_)
   {
-    H2_DEVICE_DISPATCH(
-      device,
-      cpu_event = internal::get_default_event<Dev>(),
-      gpu_event = internal::get_default_event<Dev>());
+    H2_DEVICE_DISPATCH(device,
+                       cpu_event = internal::get_default_event<Dev>(),
+                       gpu_event = internal::get_default_event<Dev>());
   }
 
 #ifdef H2_HAS_GPU
   /** Wrap an existing GPU event. */
   SyncEvent(typename internal::RawSyncEvent<Device::GPU>::type raw_event)
-    : device(Device::GPU), gpu_event(raw_event) {}
+    : device(Device::GPU), gpu_event(raw_event)
+  {}
 #endif
 
   SyncEvent(const SyncEvent&) = default;
   SyncEvent& operator=(const SyncEvent&) = default;
 
-  SyncEvent(SyncEvent&& other)
-    : device(other.device)
+  SyncEvent(SyncEvent&& other) : device(other.device)
   {
     H2_DEVICE_DISPATCH(
-        device,
-        {
-          cpu_event = std::exchange(other.cpu_event, 0);
-        },
-        {
-          gpu_event = std::exchange(other.gpu_event, nullptr);
-        });
+      device,
+      { cpu_event = std::exchange(other.cpu_event, 0); },
+      { gpu_event = std::exchange(other.gpu_event, nullptr); });
   }
   SyncEvent& operator=(SyncEvent&& other)
   {
     device = other.device;
     H2_DEVICE_DISPATCH(
-        device,
-        {
-          cpu_event = std::exchange(other.cpu_event, 0);
-        },
-        {
-          gpu_event = std::exchange(other.gpu_event, nullptr);
-        });
+      device,
+      { cpu_event = std::exchange(other.cpu_event, 0); },
+      { gpu_event = std::exchange(other.gpu_event, nullptr); });
     return *this;
   }
 
@@ -287,11 +280,8 @@ public:
   void wait_for_this() const
   {
     H2_ASSERT_DEBUG(
-        Dev == device, "Incorrect device ", Dev, " (expected ", device, ")");
-    H2_DEVICE_DISPATCH_CONST(
-      Dev,
-      (void) 0,
-      gpu::sync(gpu_event));
+      Dev == device, "Incorrect device ", Dev, " (expected ", device, ")");
+    H2_DEVICE_DISPATCH_CONST(Dev, (void) 0, gpu::sync(gpu_event));
   }
 
   /** Return the underlying raw event for the device. */
@@ -299,15 +289,12 @@ public:
   typename internal::RawSyncEvent<Dev>::type get_event() const H2_NOEXCEPT
   {
     H2_ASSERT_DEBUG(
-        Dev == device, "Incorrect device ", Dev, " (expected ", device, ")");
-    H2_DEVICE_DISPATCH_CONST(
-      Dev,
-      return cpu_event,
-      return gpu_event);
+      Dev == device, "Incorrect device ", Dev, " (expected ", device, ")");
+    H2_DEVICE_DISPATCH_CONST(Dev, return cpu_event, return gpu_event);
   }
 
 private:
-  Device device;  /**< The device this event is for. */
+  Device device; /**< The device this event is for. */
 
   /** Holds the actual event type. */
   union
@@ -327,47 +314,45 @@ private:
 /** Support printing synchronization events. */
 inline std::ostream& operator<<(std::ostream& os, const SyncEvent& event)
 {
-  H2_DEVICE_DISPATCH_SAME(
-    event.get_device(),
-    os << event.get_device() << " sync event ("
-    << event.get_event<Dev>() << ")");
+  H2_DEVICE_DISPATCH_SAME(event.get_device(),
+                          os << event.get_device() << " sync event ("
+                             << event.get_event<Dev>() << ")");
   return os;
 }
 
 /** Equality for synchronization events. */
-inline bool operator==(const SyncEvent& event1, const SyncEvent& event2) H2_NOEXCEPT
+inline bool operator==(const SyncEvent& event1,
+                       const SyncEvent& event2) H2_NOEXCEPT
 {
   if (event1.get_device() != event2.get_device())
   {
     return false;
   }
-  H2_DEVICE_DISPATCH(
-    event1.get_device(),
-    return true,
-    return event1.get_event<Dev>() == event2.get_event<Dev>());
+  H2_DEVICE_DISPATCH(event1.get_device(),
+                     return true,
+                     return event1.get_event<Dev>() == event2.get_event<Dev>());
 }
 
 /** Inequality for synchronization events. */
-inline bool operator!=(const SyncEvent& event1, const SyncEvent& event2) H2_NOEXCEPT
+inline bool operator!=(const SyncEvent& event1,
+                       const SyncEvent& event2) H2_NOEXCEPT
 {
   if (event1.get_device() != event2.get_device())
   {
     return true;
   }
-  H2_DEVICE_DISPATCH(
-    event1.get_device(),
-    return false,
-    return event1.get_event<Dev>() != event2.get_event<Dev>());
+  H2_DEVICE_DISPATCH(event1.get_device(),
+                     return false,
+                     return event1.get_event<Dev>() != event2.get_event<Dev>());
 }
 
 /** Create a fresh synchronization event for a particular device. */
 template <Device Dev>
 inline SyncEvent create_new_sync_event()
 {
-  H2_DEVICE_DISPATCH_CONST(
-    Dev,
-    return SyncEvent{Dev},
-    return SyncEvent{internal::get_new_device_event()});
+  H2_DEVICE_DISPATCH_CONST(Dev,
+                           return SyncEvent{Dev},
+                           return SyncEvent{internal::get_new_device_event()});
 }
 
 inline SyncEvent create_new_sync_event(Device device)
@@ -380,9 +365,7 @@ template <Device Dev>
 inline void destroy_sync_event(SyncEvent& event)
 {
   H2_DEVICE_DISPATCH_CONST(
-    Dev,
-    (void) event,
-    if (event.gpu_event != nullptr) {
+    Dev, (void) event, if (event.gpu_event != nullptr) {
       internal::release_device_event(event.gpu_event);
       event.gpu_event = nullptr;
     });
@@ -401,7 +384,6 @@ inline void destroy_sync_event(SyncEvent& event)
 class SyncEventRAII
 {
 public:
-
   SyncEventRAII() : event(create_new_sync_event<Device::CPU>()) {}
 
   SyncEventRAII(Device device) : event(create_new_sync_event(device)) {}
@@ -459,32 +441,31 @@ public:
 class ComputeStream
 {
 public:
-
   /** Create a new compute stream with the device's default stream. */
-  ComputeStream(Device device_)
-    : device(device_)
+  ComputeStream(Device device_) : device(device_)
   {
-    H2_DEVICE_DISPATCH(
-      device,
-      cpu_stream = internal::get_default_compute_stream<Dev>(),
-      gpu_stream = internal::get_default_compute_stream<Dev>());
+    H2_DEVICE_DISPATCH(device,
+                       cpu_stream = internal::get_default_compute_stream<Dev>(),
+                       gpu_stream =
+                         internal::get_default_compute_stream<Dev>());
   }
 
 #ifdef H2_HAS_GPU
   /** Wrap an existing device stream. */
-  ComputeStream(typename internal::RawComputeStream<Device::GPU>::type raw_stream)
-    : device(Device::GPU), gpu_stream(raw_stream) {}
+  ComputeStream(
+    typename internal::RawComputeStream<Device::GPU>::type raw_stream)
+    : device(Device::GPU), gpu_stream(raw_stream)
+  {}
 #endif
 
   /** Support conversion from an existing El::SyncInfo. */
   template <Device Dev>
-  explicit ComputeStream(const El::SyncInfo<Dev>& sync_info)
-    : device(Dev)
+  explicit ComputeStream(const El::SyncInfo<Dev>& sync_info) : device(Dev)
   {
-    H2_DEVICE_DISPATCH_CONST(
-      Dev,
-      cpu_stream = internal::get_default_compute_stream<Dev>(),
-      gpu_stream = sync_info.Stream());
+    H2_DEVICE_DISPATCH_CONST(Dev,
+                             cpu_stream =
+                               internal::get_default_compute_stream<Dev>(),
+                             gpu_stream = sync_info.Stream());
   }
 
   /** Support conversion to El::SyncInfo. */
@@ -504,25 +485,17 @@ public:
   ComputeStream(ComputeStream&& other) : device(other.device)
   {
     H2_DEVICE_DISPATCH(
-        device,
-        {
-          cpu_stream = std::exchange(other.cpu_stream, 0);
-        },
-        {
-          gpu_stream = std::exchange(other.gpu_stream, nullptr);
-        });
+      device,
+      { cpu_stream = std::exchange(other.cpu_stream, 0); },
+      { gpu_stream = std::exchange(other.gpu_stream, nullptr); });
   }
   ComputeStream& operator=(ComputeStream&& other)
   {
     device = other.device;
     H2_DEVICE_DISPATCH(
-        device,
-        {
-          cpu_stream = std::exchange(other.cpu_stream, 0);
-        },
-        {
-          gpu_stream = std::exchange(other.gpu_stream, nullptr);
-        });
+      device,
+      { cpu_stream = std::exchange(other.cpu_stream, 0); },
+      { gpu_stream = std::exchange(other.gpu_stream, nullptr); });
     return *this;
   }
 
@@ -538,9 +511,8 @@ public:
   template <Device ThisDev>
   void add_sync_point(const SyncEvent& event) const
   {
-    H2_DEVICE_DISPATCH_SAME(
-      event.get_device(),
-      (add_sync_point<ThisDev, Dev>(event)));
+    H2_DEVICE_DISPATCH_SAME(event.get_device(),
+                            (add_sync_point<ThisDev, Dev>(event)));
   }
 
   template <Device ThisDev, Device EventDev>
@@ -589,9 +561,8 @@ public:
   template <Device ThisDev>
   void wait_for(const SyncEvent& event) const
   {
-    H2_DEVICE_DISPATCH_SAME(
-      event.get_device(),
-      (wait_for<ThisDev, Dev>(event)));
+    H2_DEVICE_DISPATCH_SAME(event.get_device(),
+                            (wait_for<ThisDev, Dev>(event)));
   }
 
   template <Device ThisDev, Device EventDev>
@@ -645,9 +616,8 @@ public:
   template <Device ThisDev>
   void wait_for(const ComputeStream& other_stream) const
   {
-    H2_DEVICE_DISPATCH_SAME(
-      other_stream.get_device(),
-      (wait_for<ThisDev, Dev>(other_stream)));
+    H2_DEVICE_DISPATCH_SAME(other_stream.get_device(),
+                            (wait_for<ThisDev, Dev>(other_stream)));
   }
 
   template <Device ThisDev, Device StreamDev>
@@ -684,7 +654,7 @@ public:
       {
         if (gpu_stream == other_stream.gpu_stream)
         {
-          return;  // No need to sync when these are the same stream.
+          return; // No need to sync when these are the same stream.
         }
         // Add an event and wait on it.
         gpu::DeviceEvent event = internal::get_new_device_event();
@@ -716,15 +686,13 @@ public:
                     " (expected ",
                     device,
                     ")");
-    H2_DEVICE_DISPATCH_CONST(
-      ThisDev,
-      (void) 0,
-      gpu::sync(gpu_stream));
+    H2_DEVICE_DISPATCH_CONST(ThisDev, (void) 0, gpu::sync(gpu_stream));
   }
 
   /** Return the underlying raw stream for the device. */
   template <Device ThisDev>
-  typename internal::RawComputeStream<ThisDev>::type get_stream() const H2_NOEXCEPT
+  typename internal::RawComputeStream<ThisDev>::type
+  get_stream() const H2_NOEXCEPT
   {
     H2_ASSERT_DEBUG(ThisDev == device,
                     "Attempt to get raw stream for wrong device ",
@@ -732,14 +700,11 @@ public:
                     " (expected ",
                     device,
                     ")");
-    H2_DEVICE_DISPATCH_CONST(
-      ThisDev,
-      return cpu_stream,
-      return gpu_stream);
+    H2_DEVICE_DISPATCH_CONST(ThisDev, return cpu_stream, return gpu_stream);
   }
 
 private:
-  Device device;  /**< The device this stream is for. */
+  Device device; /**< The device this stream is for. */
 
   /** Holds the actual stream type. */
   union
@@ -760,37 +725,38 @@ private:
 inline std::ostream& operator<<(std::ostream& os,
                                 const ComputeStream& stream) H2_NOEXCEPT
 {
-  H2_DEVICE_DISPATCH_SAME(
-    stream.get_device(),
-    os << stream.get_device() << " stream ("
-    << stream.get_stream<Dev>() << ")");
+  H2_DEVICE_DISPATCH_SAME(stream.get_device(),
+                          os << stream.get_device() << " stream ("
+                             << stream.get_stream<Dev>() << ")");
   return os;
 }
 
 /** Equality for compute streams. */
-inline bool operator==(const ComputeStream& stream1, const ComputeStream& stream2) H2_NOEXCEPT
+inline bool operator==(const ComputeStream& stream1,
+                       const ComputeStream& stream2) H2_NOEXCEPT
 {
   if (stream1.get_device() != stream2.get_device())
   {
     return false;
   }
-  H2_DEVICE_DISPATCH(
-    stream1.get_device(),
-    return true,
-    return stream1.get_stream<Dev>() == stream2.get_stream<Dev>());
+  H2_DEVICE_DISPATCH(stream1.get_device(),
+                     return true,
+                     return stream1.get_stream<Dev>()
+                            == stream2.get_stream<Dev>());
 }
 
 /** Inequality for compute streams. */
-inline bool operator!=(const ComputeStream& stream1, const ComputeStream& stream2) H2_NOEXCEPT
+inline bool operator!=(const ComputeStream& stream1,
+                       const ComputeStream& stream2) H2_NOEXCEPT
 {
   if (stream1.get_device() != stream2.get_device())
   {
     return true;
   }
-  H2_DEVICE_DISPATCH(
-    stream1.get_device(),
-    return false,
-    return stream1.get_stream<Dev>() != stream2.get_stream<Dev>());
+  H2_DEVICE_DISPATCH(stream1.get_device(),
+                     return false,
+                     return stream1.get_stream<Dev>()
+                            != stream2.get_stream<Dev>());
 }
 
 /** Create a fresh compute stream for a particular device. */
@@ -798,9 +764,7 @@ template <Device Dev>
 inline ComputeStream create_new_compute_stream()
 {
   H2_DEVICE_DISPATCH_CONST(
-    Dev,
-    return ComputeStream{Dev},
-    return ComputeStream{gpu::make_stream()});
+    Dev, return ComputeStream{Dev}, return ComputeStream{gpu::make_stream()});
 }
 
 inline ComputeStream create_new_compute_stream(Device device)
@@ -813,9 +777,7 @@ template <Device Dev>
 inline void destroy_compute_stream(ComputeStream& stream)
 {
   H2_DEVICE_DISPATCH_CONST(
-    Dev,
-    (void) stream,
-    if (stream.gpu_stream != nullptr) {
+    Dev, (void) stream, if (stream.gpu_stream != nullptr) {
       gpu::destroy(stream.gpu_stream);
       stream.gpu_stream = nullptr;
     });
@@ -823,8 +785,8 @@ inline void destroy_compute_stream(ComputeStream& stream)
 
 inline void destroy_compute_stream(ComputeStream& stream)
 {
-  H2_DEVICE_DISPATCH_SAME(
-    stream.get_device(), destroy_compute_stream<Dev>(stream));
+  H2_DEVICE_DISPATCH_SAME(stream.get_device(),
+                          destroy_compute_stream<Dev>(stream));
 }
 
 // General utilities for interacting with compute streams and events:
@@ -876,8 +838,8 @@ public:
   ~MultiSync()
   {
     std::apply(
-        [&](auto&&... args) { all_wait_on_stream(main_stream, args...); },
-        other_streams);
+      [&](auto&&... args) { all_wait_on_stream(main_stream, args...); },
+      other_streams);
   }
 
   /**
@@ -912,7 +874,7 @@ create_multi_sync(const ComputeStream& main,
   return MultiSync(main, other_streams...);
 }
 
-}  // namespace h2
+} // namespace h2
 
 namespace std
 {
@@ -925,10 +887,9 @@ struct hash<h2::SyncEvent>
   size_t operator()(const h2::SyncEvent& event) const H2_NOEXCEPT
   {
     using h2::Device;
-    H2_DEVICE_DISPATCH(
-      event.get_device(),
-      return 0,
-      return hash<void*>()((void*) event.get_event<Dev>()));
+    H2_DEVICE_DISPATCH(event.get_device(),
+                       return 0,
+                       return hash<void*>()((void*) event.get_event<Dev>()));
   }
 };
 
@@ -938,11 +899,10 @@ struct hash<h2::ComputeStream>
   size_t operator()(const h2::ComputeStream& stream) const H2_NOEXCEPT
   {
     using h2::Device;
-    H2_DEVICE_DISPATCH(
-      stream.get_device(),
-      return 0,
-      return hash<void*>()((void*) stream.get_stream<Dev>()));
+    H2_DEVICE_DISPATCH(stream.get_device(),
+                       return 0,
+                       return hash<void*>()((void*) stream.get_stream<Dev>()));
   }
 };
 
-}  // namespace std
+} // namespace std

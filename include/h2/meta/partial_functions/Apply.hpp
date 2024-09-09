@@ -47,7 +47,7 @@ using Apply = Force<ApplyT<F, Args>>;
 template <template <typename...> class F, typename... Params, typename... Args>
 struct ApplyT<F<Params...>, TL<Args...>>
 {
-    using type = F<placeholders::PHReplace<Params, Args...>...>;
+  using type = F<placeholders::PHReplace<Params, Args...>...>;
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

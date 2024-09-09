@@ -5,17 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_template_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
-
-#include <type_traits>
-
 #include "h2/tensor/raw_buffer.hpp"
 #include "h2/utils/typename.hpp"
 #include "utils.hpp"
 
-using namespace h2;
+#include <type_traits>
 
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
+
+using namespace h2;
 
 TEMPLATE_LIST_TEST_CASE("Raw buffers are sane",
                         "[tensor][raw_buffer]",
@@ -33,7 +32,8 @@ TEMPLATE_LIST_TEST_CASE("Raw buffers are sane",
 
   DataType* orig_buf = buf.data();
 
-  SECTION("Ensure then release works") {
+  SECTION("Ensure then release works")
+  {
     buf.ensure();
     REQUIRE(buf.size() == buf_size);
     REQUIRE(buf.data() == orig_buf);
@@ -44,7 +44,8 @@ TEMPLATE_LIST_TEST_CASE("Raw buffers are sane",
     REQUIRE(buf.data() == nullptr);
     REQUIRE(buf.const_data() == nullptr);
   }
-  SECTION("Release then ensure works") {
+  SECTION("Release then ensure works")
+  {
     buf.release();
     REQUIRE(buf.size() == buf_size);
     REQUIRE(buf.data() == nullptr);
@@ -71,7 +72,8 @@ TEMPLATE_LIST_TEST_CASE("Empty raw buffers are sane",
   REQUIRE(buf.data() == nullptr);
   REQUIRE(buf.const_data() == nullptr);
 
-  SECTION("Ensure then release works") {
+  SECTION("Ensure then release works")
+  {
     buf.ensure();
     REQUIRE(buf.size() == 0);
     REQUIRE(buf.data() == nullptr);
@@ -82,7 +84,8 @@ TEMPLATE_LIST_TEST_CASE("Empty raw buffers are sane",
     REQUIRE(buf.data() == nullptr);
     REQUIRE(buf.const_data() == nullptr);
   }
-  SECTION("Release then ensure works") {
+  SECTION("Release then ensure works")
+  {
     buf.release();
     REQUIRE(buf.size() == 0);
     REQUIRE(buf.data() == nullptr);
@@ -108,7 +111,8 @@ TEMPLATE_LIST_TEST_CASE("Raw buffer with explicit size 0 is sane",
   REQUIRE(buf.data() == nullptr);
   REQUIRE(buf.const_data() == nullptr);
 
-  SECTION("Ensure then release works") {
+  SECTION("Ensure then release works")
+  {
     buf.ensure();
     REQUIRE(buf.size() == 0);
     REQUIRE(buf.data() == nullptr);
@@ -119,7 +123,8 @@ TEMPLATE_LIST_TEST_CASE("Raw buffer with explicit size 0 is sane",
     REQUIRE(buf.data() == nullptr);
     REQUIRE(buf.const_data() == nullptr);
   }
-  SECTION("Release then ensure works") {
+  SECTION("Release then ensure works")
+  {
     buf.release();
     REQUIRE(buf.size() == 0);
     REQUIRE(buf.data() == nullptr);

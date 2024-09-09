@@ -19,14 +19,13 @@
 
 #include <h2_config.hpp>
 
-#include <type_traits>
-#include <cstddef>
-#include <cstdint>
-
-#include "h2/gpu/runtime.hpp"
 #include "h2/gpu/macros.hpp"
+#include "h2/gpu/runtime.hpp"
 #include "h2/utils/const_for.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <type_traits>
 
 namespace h2
 {
@@ -179,8 +178,8 @@ struct VectorTypeForT<const T, 4>
 
 template <typename T, std::size_t vec_width>
 using VectorType_t =
-    typename VectorTypeForT<std::remove_pointer_t<std::remove_reference_t<T>>,
-                            vec_width>::type;
+  typename VectorTypeForT<std::remove_pointer_t<std::remove_reference_t<T>>,
+                          vec_width>::type;
 
 template <std::size_t i, std::size_t vec_width, typename T>
 H2_GPU_HOST_DEVICE T& index_vector(VectorType_t<T, vec_width>& vec)
@@ -235,21 +234,21 @@ struct LoadVectorTuple<i, vec_width, std::tuple<Ts...>>
     const_for<std::size_t{0}, sizeof...(Ts), std::size_t{1}>([&](auto arg_i) {
       using T = std::tuple_element_t<arg_i, std::tuple<Ts...>>;
       std::get<arg_i>(ret) =
-          index_vector<i, vec_width, T>(std::get<arg_i>(vec_tuple));
+        index_vector<i, vec_width, T>(std::get<arg_i>(vec_tuple));
     });
     return ret;
   }
 
   template <typename ImmediateT>
   static H2_GPU_HOST_DEVICE std::tuple<ImmediateT, Ts...> load_with_immediate(
-      ImmediateT& imm, VectorTupleType_t<vec_width, std::tuple<Ts...>>& vec_tuple)
+    ImmediateT& imm, VectorTupleType_t<vec_width, std::tuple<Ts...>>& vec_tuple)
   {
     std::tuple<ImmediateT, Ts...> ret;
     std::get<0>(ret) = imm;
     const_for<std::size_t{0}, sizeof...(Ts), std::size_t{1}>([&](auto arg_i) {
       using T = std::tuple_element_t<arg_i, std::tuple<Ts...>>;
       std::get<arg_i + 1>(ret) =
-          index_vector<i, vec_width, T>(std::get<arg_i>(vec_tuple));
+        index_vector<i, vec_width, T>(std::get<arg_i>(vec_tuple));
     });
     return ret;
   }
@@ -275,5 +274,5 @@ H2_GPU_HOST_DEVICE std::size_t max_vectorization_amount(const T* ptr)
   return 1;
 }
 
-}  // namespace gpu
-}  // namespace h2
+} // namespace gpu
+} // namespace h2

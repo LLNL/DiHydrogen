@@ -9,6 +9,9 @@
 #include <catch2/internal/catch_clara.hpp>
 using Catch::Clara::Opt;
 
+#include <h2_config.hpp>
+
+#include <El.hpp>
 #include <unistd.h>
 
 #include <iostream>
@@ -16,15 +19,11 @@ using Catch::Clara::Opt;
 #include <string>
 #include <string_view>
 
-#include <El.hpp>
-#include <h2_config.hpp>
-
 #ifdef H2_HAS_GPU
 #include <h2/gpu/runtime.hpp>
 #endif
 
 #include "mpi_utils.hpp"
-
 
 /**
  * Replace a filename with a modified per-MPI rank version.
@@ -34,9 +33,8 @@ using Catch::Clara::Opt;
  * considered to be the extension. If mpisize is 1 or filename is
  * empty, the original string is returned.
  */
-std::string edit_output_filename(std::string_view filename,
-                                 int mpirank,
-                                 int mpisize)
+std::string
+edit_output_filename(std::string_view filename, int mpirank, int mpisize)
 {
   if (mpisize == 0 || filename.size() == 1UL)
   {
@@ -48,7 +46,7 @@ std::string edit_output_filename(std::string_view filename,
   oss << filename.substr(0, split) << '.' << mpirank << '.' << mpisize;
   if (split != std::string_view::npos)
   {
-    oss << '.' << filename.substr(split+1, std::string_view::npos);
+    oss << '.' << filename.substr(split + 1, std::string_view::npos);
   }
   return oss.str();
 }
@@ -110,9 +108,9 @@ int main(int argc, char** argv)
   Catch::Session session;
 
   int hang_rank = -1;
-  auto cli =
-    session.cli() | Opt(hang_rank, "Rank to hang")["--hang-rank"](
-                      "Hang this rank to attach a debugger.");
+  auto cli = session.cli()
+             | Opt(hang_rank, "Rank to hang")["--hang-rank"](
+               "Hang this rank to attach a debugger.");
   session.cli(cli);
 
   // Parse the command line. Also exit if the user asks for help.
@@ -141,7 +139,7 @@ int main(int argc, char** argv)
     int volatile wait = 1;
     while (wait) {}
   }
-  MPI_Barrier(MPI_COMM_WORLD);  // This should hang the other ranks.
+  MPI_Barrier(MPI_COMM_WORLD); // This should hang the other ranks.
 
   // Manipulate output file(s) if needed.
   auto& output_file = session.configData().defaultOutputFilename;

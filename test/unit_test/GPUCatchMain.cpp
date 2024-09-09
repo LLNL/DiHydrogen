@@ -5,43 +5,44 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_session.hpp>
+#include <h2/gpu/runtime.hpp>
 
 #include <El.hpp>
-#include <h2/gpu/runtime.hpp>
+
+#include <catch2/catch_session.hpp>
 
 struct GPUEnvironment
 {
-    GPUEnvironment(int argc, char** argv)
-    {
-        El::gpu::Initialize();
-        h2::gpu::init_runtime();
-        Al::Initialize(argc, argv);
-    }
+  GPUEnvironment(int argc, char** argv)
+  {
+    El::gpu::Initialize();
+    h2::gpu::init_runtime();
+    Al::Initialize(argc, argv);
+  }
 
-    ~GPUEnvironment()
-    {
-        Al::Finalize();
-        h2::gpu::finalize_runtime();
-        El::gpu::Finalize();
-    }
+  ~GPUEnvironment()
+  {
+    Al::Finalize();
+    h2::gpu::finalize_runtime();
+    El::gpu::Finalize();
+  }
 };
 
 int main(int argc, char** argv)
 {
-    // Initialize and parse the Catch2 command line before any other
-    // initialization.
-    Catch::Session session;
+  // Initialize and parse the Catch2 command line before any other
+  // initialization.
+  Catch::Session session;
+  {
+    const int return_code = session.applyCommandLine(argc, argv);
+    if (return_code != 0 || session.configData().showHelp)
     {
-        const int return_code = session.applyCommandLine(argc, argv);
-        if (return_code != 0 || session.configData().showHelp)
-        {
-            return return_code;
-        }
+      return return_code;
     }
+  }
 
-    // Initialize the GPU environment.
-    GPUEnvironment env(argc, argv);
+  // Initialize the GPU environment.
+  GPUEnvironment env(argc, argv);
 
-    return session.run();
+  return session.run();
 }

@@ -50,13 +50,13 @@ using ExpandTL = Force<ExpandTLT<UnaryT, TList>>;
 template <template <typename> class UnaryT, typename... Ts>
 struct ExpandT
 {
-    using type = TL<UnaryT<Ts>...>;
+  using type = TL<UnaryT<Ts>...>;
 };
 
 template <template <typename> class UnaryT, typename... Ts>
 struct ExpandTLT<UnaryT, TL<Ts...>>
 {
-    using type = Expand<UnaryT, Ts...>;
+  using type = Expand<UnaryT, Ts...>;
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

@@ -35,13 +35,13 @@ struct ReverseImpl;
 template <typename RL>
 struct ReverseImpl<Empty, RL>
 {
-    using type = RL;
+  using type = RL;
 };
 
 template <typename T, typename... Ts, typename RL>
 struct ReverseImpl<TL<T, Ts...>, RL>
 {
-    using type = Force<ReverseImpl<TL<Ts...>, Cons<T, RL>>>;
+  using type = Force<ReverseImpl<TL<Ts...>, Cons<T, RL>>>;
 };
 
 } // namespace internal
@@ -49,7 +49,7 @@ struct ReverseImpl<TL<T, Ts...>, RL>
 template <typename List>
 struct ReverseT
 {
-    using type = Force<internal::ReverseImpl<List, Empty>>;
+  using type = Force<internal::ReverseImpl<List, Empty>>;
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

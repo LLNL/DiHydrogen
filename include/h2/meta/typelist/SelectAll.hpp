@@ -33,18 +33,18 @@ using SelectAll = Force<SelectAllT<List, Predicate>>;
 template <template <typename> class Predicate>
 struct SelectAllT<Empty, Predicate>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
 template <typename T, typename... Ts, template <typename> class Predicate>
 struct SelectAllT<TL<T, Ts...>, Predicate>
 {
 private:
-    static constexpr auto Value_ = Predicate<T>::value;
-    using Rest_ = SelectAll<TL<Ts...>, Predicate>;
+  static constexpr auto Value_ = Predicate<T>::value;
+  using Rest_ = SelectAll<TL<Ts...>, Predicate>;
 
 public:
-    using type = IfThenElse<Value_, Cons<T, Rest_>, Rest_>;
+  using type = IfThenElse<Value_, Cons<T, Rest_>, Rest_>;
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

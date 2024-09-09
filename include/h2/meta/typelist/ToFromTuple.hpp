@@ -38,13 +38,13 @@ using FromTuple = Force<FromTupleT<Tup>>;
 template <typename... Ts>
 struct ToTupleT<TL<Ts...>>
 {
-    using type = std::tuple<Ts...>;
+  using type = std::tuple<Ts...>;
 };
 
 template <typename... Ts>
 struct FromTupleT<std::tuple<Ts...>>
 {
-    using type = TL<Ts...>;
+  using type = TL<Ts...>;
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

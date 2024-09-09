@@ -12,14 +12,14 @@
  * Utilities for working with strings.
  */
 
+#include "h2/utils/As.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <limits>
+#include <sstream>
 #include <stdexcept>
 #include <string>
-#include <sstream>
-
-#include "h2/utils/As.hpp"
 
 namespace h2
 {
@@ -179,7 +179,8 @@ inline unsigned long from_string<unsigned long>(const std::string& str)
 }
 
 template <>
-inline unsigned long long from_string<unsigned long long>(const std::string& str)
+inline unsigned long long
+from_string<unsigned long long>(const std::string& str)
 {
   return std::stoull(str);
 }
@@ -267,4 +268,4 @@ inline bool from_string<bool>(const std::string& str)
   }
 }
 
-}  // namespace h2
+} // namespace h2

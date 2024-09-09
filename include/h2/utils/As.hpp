@@ -21,7 +21,7 @@ template <typename To,
           meta::EnableWhen<std::is_scalar_v<From>, int> = 1>
 constexpr To as(From const& x)
 {
-    return static_cast<To>(x);
+  return static_cast<To>(x);
 }
 
 /** @brief Checked potentially narrowing cast.
@@ -39,15 +39,14 @@ template <typename To,
           meta::EnableWhen<std::is_scalar_v<From>, int> = 1>
 constexpr To safe_as(From const& x)
 {
-    constexpr bool signs_differ =
-        (std::is_signed_v<To> != std::is_signed_v<From>);
-    auto tmp = as<To>(x);
-    if (as<From>(tmp) != x
-        || (signs_differ && (tmp < To{0}) != (x < From{0})))
-    {
-        throw std::runtime_error("narrowing cast failed.");
-    }
-    return tmp;
+  constexpr bool signs_differ =
+    (std::is_signed_v<To> != std::is_signed_v<From>);
+  auto tmp = as<To>(x);
+  if (as<From>(tmp) != x || (signs_differ && (tmp < To{0}) != (x < From{0})))
+  {
+    throw std::runtime_error("narrowing cast failed.");
+  }
+  return tmp;
 }
 
 } // namespace h2

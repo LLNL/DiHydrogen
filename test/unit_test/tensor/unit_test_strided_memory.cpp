@@ -5,20 +5,20 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_template_test_macros.hpp>
-#include <catch2/matchers/catch_matchers_string.hpp>
-
-#include <type_traits>
-
 #include "h2/tensor/strided_memory.hpp"
 #include "h2/utils/typename.hpp"
 #include "utils.hpp"
 
+#include <type_traits>
+
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
+
 using namespace h2;
 
-
-TEST_CASE("get_contiguous_strides", "[tensor][strided_memory]") {
+TEST_CASE("get_contiguous_strides", "[tensor][strided_memory]")
+{
   CHECK(get_contiguous_strides(ShapeTuple{}) == StrideTuple{});
   CHECK(get_contiguous_strides(ShapeTuple{1}) == StrideTuple{1});
   CHECK(get_contiguous_strides(ShapeTuple{13}) == StrideTuple{1});
@@ -27,7 +27,8 @@ TEST_CASE("get_contiguous_strides", "[tensor][strided_memory]") {
   CHECK(get_contiguous_strides(ShapeTuple{13, 3, 7}) == StrideTuple{1, 13, 39});
 }
 
-TEST_CASE("are_strides_contiguous", "[tensor][strided_memory]") {
+TEST_CASE("are_strides_contiguous", "[tensor][strided_memory]")
+{
   CHECK(are_strides_contiguous(ShapeTuple{}, StrideTuple{}));
   CHECK(are_strides_contiguous(ShapeTuple{1}, StrideTuple{1}));
   CHECK(are_strides_contiguous(ShapeTuple{13}, StrideTuple{1}));
@@ -43,15 +44,16 @@ TEST_CASE("are_strides_contiguous", "[tensor][strided_memory]") {
   CHECK_FALSE(are_strides_contiguous(ShapeTuple{13, 3}, StrideTuple{1, 1}));
   CHECK_FALSE(are_strides_contiguous(ShapeTuple{13, 3}, StrideTuple{1, 3}));
   CHECK_FALSE(
-      are_strides_contiguous(ShapeTuple{13, 3, 7}, StrideTuple{1, 4, 21}));
-  CHECK_FALSE(are_strides_contiguous(ShapeTuple{13, 3, 7}, StrideTuple{1, 3, 32}));
+    are_strides_contiguous(ShapeTuple{13, 3, 7}, StrideTuple{1, 4, 21}));
+  CHECK_FALSE(
+    are_strides_contiguous(ShapeTuple{13, 3, 7}, StrideTuple{1, 3, 32}));
 }
 
 TEST_CASE("get_contiguous_strides and are_strides_contiguous are compatible",
           "[tensor][strided_memory]")
 {
-  CHECK(are_strides_contiguous(ShapeTuple{},
-                               get_contiguous_strides(ShapeTuple{})));
+  CHECK(
+    are_strides_contiguous(ShapeTuple{}, get_contiguous_strides(ShapeTuple{})));
   CHECK(are_strides_contiguous(ShapeTuple{13},
                                get_contiguous_strides(ShapeTuple{13})));
   CHECK(are_strides_contiguous(ShapeTuple{13, 3, 7},
@@ -72,7 +74,8 @@ TEST_CASE("get_extent_from_strides works", "[tensor][strided_memor]")
   REQUIRE(get_extent_from_strides(ShapeTuple{1}, StrideTuple{2}) == 1);
   REQUIRE(get_extent_from_strides(ShapeTuple{13}, StrideTuple{2}) == 25);
   REQUIRE(get_extent_from_strides(ShapeTuple{13, 3}, StrideTuple{1, 15}) == 43);
-  REQUIRE(get_extent_from_strides(ShapeTuple{13, 3, 7}, StrideTuple{2, 13, 50}) == 351);
+  REQUIRE(get_extent_from_strides(ShapeTuple{13, 3, 7}, StrideTuple{2, 13, 50})
+          == 351);
 }
 
 TEMPLATE_LIST_TEST_CASE("StridedMemory is sane",
@@ -271,11 +274,8 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory with non-contiguous strides is sane",
   constexpr Device Dev = TestType::value;
   using MemType = StridedMemory<DataType>;
 
-  MemType mem(Dev,
-              ShapeTuple{3, 7, 2},
-              StrideTuple{2, 4, 21},
-              false,
-              ComputeStream{Dev});
+  MemType mem(
+    Dev, ShapeTuple{3, 7, 2}, StrideTuple{2, 4, 21}, false, ComputeStream{Dev});
 
   REQUIRE(mem.size() == 50);
   REQUIRE(mem.get_device() == Dev);
@@ -294,7 +294,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
   using MemType = StridedMemory<DataType>;
 
   MemType base_mem =
-      MemType(Dev, ShapeTuple{3, 7, 3}, false, ComputeStream{Dev});
+    MemType(Dev, ShapeTuple{3, 7, 3}, false, ComputeStream{Dev});
   for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
   {
     write_ele<Dev>(
@@ -336,13 +336,15 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
         {
           if (i >= 1 && i < 3 && k >= 1 && k < 3)
           {
-            REQUIRE(read_ele<Dev>(
-                      base_mem.get({i, j, k}), base_mem.get_stream()) == 1337);
+            REQUIRE(
+              read_ele<Dev>(base_mem.get({i, j, k}), base_mem.get_stream())
+              == 1337);
           }
           else
           {
-            REQUIRE(read_ele<Dev>(
-                      base_mem.get({i, j, k}), base_mem.get_stream()) == idx);
+            REQUIRE(
+              read_ele<Dev>(base_mem.get({i, j, k}), base_mem.get_stream())
+              == idx);
           }
           ++idx;
         }
@@ -379,7 +381,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views work",
       for (DimType i = 0; i < mem.shape(0); ++i)
       {
         REQUIRE(read_ele<Dev>(mem.get({i, 0, k}), mem.get_stream())
-                              == base_mem.get_index({i, 1, k}));
+                == base_mem.get_index({i, 1, k}));
       }
     }
   }
@@ -419,8 +421,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views of subviews work",
   constexpr Device Dev = TestType::value;
   using MemType = StridedMemory<DataType>;
 
-  MemType base_mem =
-    MemType(Dev, ShapeTuple{4, 6}, false, ComputeStream{Dev});
+  MemType base_mem = MemType(Dev, ShapeTuple{4, 6}, false, ComputeStream{Dev});
   for (std::size_t i = 0; i < product<std::size_t>(base_mem.shape()); ++i)
   {
     write_ele<Dev>(
@@ -453,7 +454,7 @@ TEMPLATE_LIST_TEST_CASE("Lazy StridedMemory works",
     mem.ensure();
     REQUIRE(mem.data() != nullptr);
     REQUIRE(mem.const_data() != nullptr);
-    mem.ensure();  // Test calling ensure multiple times.
+    mem.ensure(); // Test calling ensure multiple times.
     REQUIRE(mem.data() != nullptr);
     REQUIRE(mem.const_data() != nullptr);
     mem.release();
@@ -562,7 +563,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory with external buffers works",
 
   DataType test_data[] = {0, 0, 0, 0};
   MemType mem = MemType(
-      Dev, test_data, ShapeTuple{2, 2}, StrideTuple{1, 2}, ComputeStream{Dev});
+    Dev, test_data, ShapeTuple{2, 2}, StrideTuple{1, 2}, ComputeStream{Dev});
 
   REQUIRE(mem.get_device() == Dev);
   REQUIRE(mem.data() == test_data);
@@ -642,7 +643,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views across devices work",
   REQUIRE(mem_view.get_stream() == dst_stream);
 }
 
-#endif  // H2_TEST_WITH_GPU
+#endif // H2_TEST_WITH_GPU
 
 TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
                         "[tensor][strided_memory]",
@@ -801,7 +802,7 @@ TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
     }
 
     MemType mem(
-        Dev, buf.buf, ShapeTuple{4, 6}, StrideTuple{1, 4}, ComputeStream{Dev});
+      Dev, buf.buf, ShapeTuple{4, 6}, StrideTuple{1, 4}, ComputeStream{Dev});
     MemType clone = mem.clone();
     REQUIRE(clone.data() != nullptr);
     REQUIRE(clone.data() != mem.data());
@@ -848,7 +849,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory get works",
       for (typename ShapeTuple::type i = 0; i < mem.shape(0); ++i)
       {
         write_ele<Dev>(
-            mem.data(), i + 4 * j, static_cast<DataType>(v), mem.get_stream());
+          mem.data(), i + 4 * j, static_cast<DataType>(v), mem.get_stream());
         ++v;
       }
     }
@@ -1008,7 +1009,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory contents print",
   SECTION("Printing non-contiguous StridedBuffers works")
   {
     MemType mem{
-        Dev, ShapeTuple{2, 3}, StrideTuple{2, 4}, false, ComputeStream{Dev}};
+      Dev, ShapeTuple{2, 3}, StrideTuple{2, 4}, false, ComputeStream{Dev}};
     std::stringstream expected_ss;
     DataIndexType size = product<DataIndexType>(mem.shape());
     DataIndexType v = 0;
@@ -1017,7 +1018,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory contents print",
       for (DimType i = 0; i < mem.shape(0); ++i)
       {
         write_ele<Dev>(
-            mem.get({i, j}), 0, static_cast<DataType>(v), mem.get_stream());
+          mem.get({i, j}), 0, static_cast<DataType>(v), mem.get_stream());
         expected_ss << static_cast<DataType>(v);
         if (v != size - 1)
         {

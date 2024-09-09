@@ -12,9 +12,6 @@
  * Distributed tensors that live on a device.
  */
 
-#include <memory>
-#include <optional>
-
 #include "h2/core/types.hpp"
 #include "h2/tensor/dist_tensor_base.hpp"
 #include "h2/tensor/dist_types.hpp"
@@ -22,6 +19,9 @@
 #include "h2/tensor/tensor.hpp"
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/utils/passkey.hpp"
+
+#include <memory>
+#include <optional>
 
 namespace h2
 {
@@ -31,13 +31,11 @@ template <typename T>
 class DistTensor : public BaseDistTensor
 {
 public:
-
   using value_type = T;
   using local_tensor_type = Tensor<T>;
 
-  static_assert(
-    IsH2StorageType_v<T>,
-    "Cannot create a tensor with a non-storage type");
+  static_assert(IsH2StorageType_v<T>,
+                "Cannot create a tensor with a non-storage type");
 
   DistTensor(Device device,
              const ShapeTuple& shape_,
@@ -46,25 +44,25 @@ public:
              const DistributionTypeTuple& dist_types_,
              TensorAllocationStrategy alloc_type = StrictAlloc,
              const std::optional<ComputeStream> stream = std::nullopt)
-      : BaseDistTensor(shape_, dim_types_, grid_, dist_types_),
-        tensor_local(device,
-                     this->tensor_local_shape,
-                     init_n(dim_types_, this->tensor_local_shape.size()),
-                     alloc_type,
-                     stream.value_or(ComputeStream{device}))
+    : BaseDistTensor(shape_, dim_types_, grid_, dist_types_),
+      tensor_local(device,
+                   this->tensor_local_shape,
+                   init_n(dim_types_, this->tensor_local_shape.size()),
+                   alloc_type,
+                   stream.value_or(ComputeStream{device}))
   {}
 
   DistTensor(Device device,
              ProcessorGrid grid_,
              TensorAllocationStrategy alloc_type = StrictAlloc,
              const std::optional<ComputeStream> stream = std::nullopt)
-      : DistTensor(device,
-                   ShapeTuple(),
-                   DimensionTypeTuple(),
-                   grid_,
-                   DistributionTypeTuple(),
-                   alloc_type,
-                   stream)
+    : DistTensor(device,
+                 ShapeTuple(),
+                 DimensionTypeTuple(),
+                 grid_,
+                 DistributionTypeTuple(),
+                 alloc_type,
+                 stream)
   {}
 
   DistTensor(Device device,
@@ -76,14 +74,14 @@ public:
              const ShapeTuple& local_shape_,
              const StrideTuple& local_strides_,
              const ComputeStream& stream)
-      : BaseDistTensor(ViewType::Mutable,
-                       global_shape_,
-                       dim_types_,
-                       grid_,
-                       dist_types_,
-                       local_shape_),
-        tensor_local(
-            device, buffer, local_shape_, dim_types_, local_strides_, stream)
+    : BaseDistTensor(ViewType::Mutable,
+                     global_shape_,
+                     dim_types_,
+                     grid_,
+                     dist_types_,
+                     local_shape_),
+      tensor_local(
+        device, buffer, local_shape_, dim_types_, local_strides_, stream)
   {}
 
   DistTensor(Device device,
@@ -95,14 +93,14 @@ public:
              const ShapeTuple& local_shape_,
              const StrideTuple& local_strides_,
              const ComputeStream& stream)
-      : BaseDistTensor(ViewType::Const,
-                          global_shape_,
-                          dim_types_,
-                          grid_,
-                          dist_types_,
-                          local_shape_),
-        tensor_local(
-            device, buffer, local_shape_, dim_types_, local_strides_, stream)
+    : BaseDistTensor(ViewType::Const,
+                     global_shape_,
+                     dim_types_,
+                     grid_,
+                     dist_types_,
+                     local_shape_),
+      tensor_local(
+        device, buffer, local_shape_, dim_types_, local_strides_, stream)
   {}
 
   /** Internal constructor for views. */
@@ -115,17 +113,16 @@ public:
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
              Passkey<DistTensor<T>>)
-      : BaseDistTensor(
-          view_type_, shape_, dim_types_, grid_, dist_types_, local_shape_),
-        tensor_local(view_type_,
-                     orig_tensor_local_.tensor_memory,
-                     local_shape_,
-                     // Local shape may be empty depending on the view
-                     // coordinates and distribution (e.g., Single).
-                     local_shape_.is_empty() ? DimensionTypeTuple{}
-                                             : dim_types_,
-                     local_coords_,
-                     Passkey<DistTensor<T>>{})
+    : BaseDistTensor(
+        view_type_, shape_, dim_types_, grid_, dist_types_, local_shape_),
+      tensor_local(view_type_,
+                   orig_tensor_local_.tensor_memory,
+                   local_shape_,
+                   // Local shape may be empty depending on the view
+                   // coordinates and distribution (e.g., Single).
+                   local_shape_.is_empty() ? DimensionTypeTuple{} : dim_types_,
+                   local_coords_,
+                   Passkey<DistTensor<T>>{})
   {}
 
   /** Internal constructor for cloning. */
@@ -135,13 +132,13 @@ public:
              ProcessorGrid grid_,
              const DistributionTypeTuple& dist_types_,
              Passkey<DistTensor<T>>)
-      : BaseDistTensor(ViewType::None,
-                       shape_,
-                       dim_types_,
-                       grid_,
-                       dist_types_,
-                       local_tensor_clone.shape()),
-        tensor_local(std::move(local_tensor_clone))
+    : BaseDistTensor(ViewType::None,
+                     shape_,
+                     dim_types_,
+                     grid_,
+                     dist_types_,
+                     local_tensor_clone.shape()),
+      tensor_local(std::move(local_tensor_clone))
   {}
 
   virtual ~DistTensor() = default;
@@ -290,8 +287,8 @@ public:
                      new_dist_types,
                      ") must be the same size");
     this->tensor_shape = new_shape;
-    this->tensor_local_shape = internal::get_local_shape(
-        new_shape, this->tensor_grid, new_dist_types);
+    this->tensor_local_shape =
+      internal::get_local_shape(new_shape, this->tensor_grid, new_dist_types);
     this->tensor_dim_types = new_dim_types;
     this->tensor_dist_types = new_dist_types;
     tensor_local.resize(this->tensor_local_shape,
@@ -305,40 +302,22 @@ public:
    * @note Just because a tensor is globally non-empty does not mean it
    * has local data.
    */
-  T* data()
-  {
-    return tensor_local.data();
-  }
+  T* data() { return tensor_local.data(); }
 
   /** Return a raw constant pointer to the underlying local storage. */
-  const T* data() const
-  {
-    return tensor_local.data();
-  }
+  const T* data() const { return tensor_local.data(); }
 
   /** Return a raw constant pointer to the underlying local storage. */
-  const T* const_data() const
-  {
-    return tensor_local.const_data();
-  }
+  const T* const_data() const { return tensor_local.const_data(); }
 
   /** Return the underlying local tensor. */
-  Tensor<T>& local_tensor()
-  {
-    return tensor_local;
-  }
+  Tensor<T>& local_tensor() { return tensor_local; }
 
   /** Return a constant reference to the underlying local tensor. */
-  const Tensor<T>& local_tensor() const
-  {
-    return tensor_local;
-  }
+  const Tensor<T>& local_tensor() const { return tensor_local; }
 
   /** Return a constant reference to the underlying local tensor. */
-  const Tensor<T>& const_local_tensor() const
-  {
-    return tensor_local;
-  }
+  const Tensor<T>& const_local_tensor() const { return tensor_local; }
 
   /**
    * Ensure memory is backing this tensor, allocating if necessary.
@@ -346,10 +325,7 @@ public:
    * This attempts to reuse existing memory from still-extant views of
    * this tensor.
    */
-  void ensure()
-  {
-    ensure(TensorAttemptRecovery);
-  }
+  void ensure() { ensure(TensorAttemptRecovery); }
 
   /**
    * Ensure memory is backing this tensor, allocating if necessary.
@@ -357,10 +333,7 @@ public:
    * This does not attempt to reuse existing memory from still-extant
    * views of this tensor.
    */
-  void ensure(tensor_no_recovery_t)
-  {
-    tensor_local.ensure(TensorNoRecovery);
-  }
+  void ensure(tensor_no_recovery_t) { tensor_local.ensure(TensorNoRecovery); }
 
   /**
    * Ensure memory is backing this tensor, allocating if necessary.
@@ -379,10 +352,7 @@ public:
    * Note that if there are views, memory may not be deallocated
    * immediately.
    */
-  void release()
-  {
-    tensor_local.release();
-  }
+  void release() { tensor_local.release(); }
 
   /**
    * Return a view of this tensor.
@@ -403,14 +373,14 @@ public:
   std::unique_ptr<DistTensor<T>> view()
   {
     return view(IndexRangeTuple(
-        TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
+      TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
   /** Return a constant view of this tensor. */
   std::unique_ptr<DistTensor<T>> view() const
   {
     return view(IndexRangeTuple(
-        TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
+      TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
   /**
@@ -456,14 +426,14 @@ public:
   void unview()
   {
     H2_ASSERT_DEBUG(this->is_view(), "Must be a view to unview");
-    empty();  // Emptying a view is equivalent to unviewing.
+    empty(); // Emptying a view is equivalent to unviewing.
   }
 
   /** Return a constant view of this tensor. */
   std::unique_ptr<DistTensor<T>> const_view() const
   {
     return const_view(IndexRangeTuple(
-        TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
+      TuplePad<IndexRangeTuple>(this->tensor_shape.size(), ALL)));
   }
 
   /** Return a constant view of a subtensor of this tensor. */
@@ -488,10 +458,7 @@ public:
     tensor_local.set_stream(stream);
   }
 
-  bool is_lazy() const H2_NOEXCEPT
-  {
-    return tensor_local.is_lazy();
-  }
+  bool is_lazy() const H2_NOEXCEPT { return tensor_local.is_lazy(); }
 
 private:
   /** Local tensor used for storage. */
@@ -507,9 +474,11 @@ private:
                      " is not contained in ",
                      this->tensor_shape);
     H2_ASSERT_ALWAYS(
-        !any_of(index_range,
-                [](const IndexRangeTuple::type& x) { return x.is_scalar(); }),
-        "Scalar indices (", index_range, ") are not permitted in global views");
+      !any_of(index_range,
+              [](const IndexRangeTuple::type& x) { return x.is_scalar(); }),
+      "Scalar indices (",
+      index_range,
+      ") are not permitted in global views");
 
     // We have three cases:
     // 1. The indices are empty, so we have a globally empty view.
@@ -546,11 +515,11 @@ private:
 
     // Get the global shape of the view.
     ShapeTuple view_global_shape =
-        get_index_range_shape(index_range, this->tensor_shape);
+      get_index_range_shape(index_range, this->tensor_shape);
     // Get the global indices of the original tensor that this rank
     // owns (i.e., that are present locally).
     IndexRangeTuple global_indices = internal::get_global_indices(
-        this->tensor_shape, this->tensor_grid, this->tensor_dist_types);
+      this->tensor_shape, this->tensor_grid, this->tensor_dist_types);
 
     if (!do_index_ranges_intersect(index_range, global_indices))
     {
@@ -569,15 +538,15 @@ private:
     // Determine this rank's indices in the view by intersecting
     // its global indices with the global indices defining the view.
     IndexRangeTuple present_global_indices =
-        intersect_index_ranges(global_indices, index_range);
+      intersect_index_ranges(global_indices, index_range);
     // Convert this to local indices for setting up the local view.
     IndexRangeTuple local_indices =
-        internal::global2local_indices(this->tensor_shape,
-                                      this->tensor_grid,
-                                      this->tensor_dist_types,
-                                      present_global_indices);
+      internal::global2local_indices(this->tensor_shape,
+                                     this->tensor_grid,
+                                     this->tensor_dist_types,
+                                     present_global_indices);
     ShapeTuple view_local_shape =
-        get_index_range_shape(local_indices, this->tensor_local_shape);
+      get_index_range_shape(local_indices, this->tensor_local_shape);
     return std::make_unique<DistTensor<T>>(view_type,
                                            tensor_local,
                                            view_local_shape,
@@ -588,7 +557,6 @@ private:
                                            this->tensor_dist_types,
                                            Passkey<DistTensor<T>>{});
   }
-
 };
 
-}  // namespace h2
+} // namespace h2

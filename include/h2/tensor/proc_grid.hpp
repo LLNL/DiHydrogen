@@ -12,16 +12,15 @@
  * Processor grids and associated types.
  */
 
-#include <memory>
-
-#include <El.hpp>
-
 #include "h2/tensor/dist_types.hpp"
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/utils/As.hpp"
 #include "h2/utils/Describable.hpp"
 #include "h2/utils/Error.hpp"
 
+#include <El.hpp>
+
+#include <memory>
 
 namespace h2
 {
@@ -41,16 +40,17 @@ namespace h2
  *
  * The underlying communicator will be duplicated.
  *
- * \note There is no attempt at "topology-aware" mapping here (e.g., `MPI_Cart_create`).
- *       Users should manually manage this on the input communicator if desired.
+ * \note There is no attempt at "topology-aware" mapping here (e.g.,
+ * `MPI_Cart_create`). Users should manually manage this on the input
+ * communicator if desired.
  */
 class ProcessorGrid final : public Describable
 {
 private:
   /** Strides on the grid. */
   using GridStrideTuple = NDimTuple<RankType>;
-public:
 
+public:
   /**
    * Construct a processor grid of the given shape over the communicator.
    */
@@ -69,10 +69,7 @@ public:
   }
 
   /** Construct a null processor grid. */
-  ProcessorGrid()
-  {
-    grid_comm = std::make_shared<Comm>();
-  }
+  ProcessorGrid() { grid_comm = std::make_shared<Comm>(); }
 
   /** Get a reference to the underlying communicator. */
   Comm& comm() H2_NOEXCEPT { return *grid_comm; }
@@ -84,7 +81,8 @@ public:
   ShapeTuple shape() const H2_NOEXCEPT { return grid_shape; }
 
   /** Return the size of a particular grid dimension. */
-  typename ShapeTuple::type shape(typename ShapeTuple::size_type i) const H2_NOEXCEPT
+  typename ShapeTuple::type
+  shape(typename ShapeTuple::size_type i) const H2_NOEXCEPT
   {
     return grid_shape[i];
   }
@@ -106,10 +104,7 @@ public:
   RankType size() const H2_NOEXCEPT { return grid_comm->Size(); }
 
   /** Return the rank of the calling process in the grid. */
-  RankType rank() const H2_NOEXCEPT
-  {
-    return grid_comm->Rank();
-  }
+  RankType rank() const H2_NOEXCEPT { return grid_comm->Rank(); }
 
   /** Return the rank of the process at a given grid coordinate. */
   RankType rank(ScalarIndexTuple coord) const H2_NOEXCEPT
@@ -215,15 +210,15 @@ public:
     }
     int result;
     MPI_Comm_compare(
-        grid_comm->GetMPIComm(), other.grid_comm->GetMPIComm(), &result);
+      grid_comm->GetMPIComm(), other.grid_comm->GetMPIComm(), &result);
     return result == MPI_IDENT || result == MPI_CONGRUENT;
   }
 
 private:
   /** Underlying communicator for the grid. */
   std::shared_ptr<Comm> grid_comm;
-  ShapeTuple grid_shape;  /**< Shape of the grid. */
-  GridStrideTuple grid_strides;  /**< Strides for computing indices. */
+  ShapeTuple grid_shape;        /**< Shape of the grid. */
+  GridStrideTuple grid_strides; /**< Strides for computing indices. */
 };
 
 /**
@@ -243,4 +238,4 @@ inline bool operator!=(const ProcessorGrid& grid1, const ProcessorGrid& grid2)
   return !grid1.is_identical_to(grid2);
 }
 
-}  // namespace h2
+} // namespace h2

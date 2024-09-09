@@ -26,7 +26,7 @@ struct LengthVT;
 template <typename List>
 constexpr unsigned long LengthV()
 {
-    return LengthVT<List>::value;
+  return LengthVT<List>::value;
 }
 
 template <typename List>
@@ -35,8 +35,7 @@ inline constexpr unsigned long Length = LengthV<List>();
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
 template <typename... Ts>
-struct LengthVT<TL<Ts...>>
-    : ValueAsType<unsigned long, sizeof...(Ts)>
+struct LengthVT<TL<Ts...>> : ValueAsType<unsigned long, sizeof...(Ts)>
 {};
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

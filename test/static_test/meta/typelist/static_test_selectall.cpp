@@ -17,9 +17,7 @@ using IsInt = EqVT<T, int>;
 using TList1 = TL<float, int, double, int, char, bool>;
 using TList2 = TL<unsigned, long, short>;
 
-static_assert(
-    EqV<SelectAll<TList1, IsInt>, TL<int, int>>(),
-    "Select all ints from the typelist containing ints.");
-static_assert(
-    EqV<SelectAll<TList2, IsInt>, Empty>(),
-    "Try selecting all ints from typelist with no int.");
+static_assert(EqV<SelectAll<TList1, IsInt>, TL<int, int>>(),
+              "Select all ints from the typelist containing ints.");
+static_assert(EqV<SelectAll<TList2, IsInt>, Empty>(),
+              "Try selecting all ints from typelist with no int.");

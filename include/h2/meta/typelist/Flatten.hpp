@@ -38,26 +38,26 @@ using Flatten_impl = Force<Flatten_implT<T>>;
 template <typename T>
 struct Flatten_implT
 {
-    using type = TL<T>;
+  using type = TL<T>;
 };
 
 template <>
 struct Flatten_implT<Empty>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
 // Typelists get extracted and recursively flattened
 template <typename... Ts>
 struct Flatten_implT<TL<Ts...>>
 {
-    using type = Flatten<Ts...>;
+  using type = Flatten<Ts...>;
 };
 
 template <typename... Ts>
 struct FlattenT
 {
-    using type = Append<Flatten_impl<Ts>...>;
+  using type = Append<Flatten_impl<Ts>...>;
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

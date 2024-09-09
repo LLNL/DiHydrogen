@@ -12,9 +12,9 @@
  * Utilities to interface with environment variables.
  */
 
-#include <string>
-
 #include "h2/utils/strings.hpp"
+
+#include <string>
 
 namespace h2
 {
@@ -94,8 +94,8 @@ inline T get(const std::string& name)
   return from_string<T>(get_raw(name));
 }
 
-}  // namespace raw
+} // namespace raw
 
-}  // namespace env
+} // namespace env
 
-}  // namespace h2
+} // namespace h2

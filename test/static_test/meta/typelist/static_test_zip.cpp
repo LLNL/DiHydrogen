@@ -10,7 +10,6 @@
 
 using namespace h2::meta;
 
-
 using TList1 = TL<char>;
 using TList2 = TL<char, short, int>;
 using TList3 = TL<float, double, long double>;
@@ -27,8 +26,8 @@ static_assert(EqV<tlist::ZipTL<TList1, TList1>, TL<TL<char, char>>>());
 static_assert(EqV<tlist::ZipTL<TList2, TList2>,
                   TL<TL<char, char>, TL<short, short>, TL<int, int>>>());
 static_assert(
-    EqV<tlist::ZipTL<TList2, TList3>,
-        TL<TL<char, float>, TL<short, double>, TL<int, long double>>>());
+  EqV<tlist::ZipTL<TList2, TList3>,
+      TL<TL<char, float>, TL<short, double>, TL<int, long double>>>());
 
 // Zip with unequal-length lists:
 static_assert(EqV<tlist::ZipTL<TList1, TList3>, TL<TL<char, float>>>());

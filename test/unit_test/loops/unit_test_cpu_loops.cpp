@@ -5,15 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_template_test_macros.hpp>
-
 #include "h2/loops/cpu_loops.hpp"
-#include "../tensor/utils.hpp"
 
+#include "../tensor/utils.hpp"
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace h2;
-
 
 TEMPLATE_LIST_TEST_CASE("CPU elementwise loop works",
                         "[loops]",
@@ -28,7 +26,7 @@ TEMPLATE_LIST_TEST_CASE("CPU elementwise loop works",
     Type* empty_buf = nullptr;
     cpu::elementwise_loop([](Type) {}, 0, empty_buf);
     cpu::elementwise_loop(
-        []() -> Type { return static_cast<Type>(42); }, 0, empty_buf);
+      []() -> Type { return static_cast<Type>(42); }, 0, empty_buf);
     cpu::elementwise_loop([](Type) -> Type { return static_cast<Type>(42); },
                           0,
                           empty_buf,

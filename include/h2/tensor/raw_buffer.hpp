@@ -12,17 +12,17 @@
  * Manages a raw memory buffer.
  */
 
+#include "h2/core/allocator.hpp"
+#include "h2/core/device.hpp"
+#include "h2/core/sync.hpp"
+#include "h2/tensor/tensor_types.hpp"
+#include "h2/utils/typename.hpp"
+
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <ostream>
 #include <unordered_map>
-#include <cstddef>
-
-#include "h2/tensor/tensor_types.hpp"
-#include "h2/utils/typename.hpp"
-#include "h2/core/allocator.hpp"
-#include "h2/core/sync.hpp"
-#include "h2/core/device.hpp"
 
 #ifdef H2_HAS_GPU
 #include "h2/gpu/runtime.hpp"
@@ -35,9 +35,9 @@ namespace h2
  * Manage a raw buffer of data on a device.
  */
 template <typename T>
-class RawBuffer {
+class RawBuffer
+{
 public:
-
   RawBuffer(Device dev, const ComputeStream& stream_)
     : RawBuffer(dev, 0, false, stream_)
   {}
@@ -46,11 +46,11 @@ public:
             std::size_t size,
             bool defer_alloc,
             const ComputeStream& stream_)
-      : buffer(nullptr),
-        buffer_size(size),
-        unowned_buffer(false),
-        buffer_device(dev),
-        stream(stream_)
+    : buffer(nullptr),
+      buffer_size(size),
+      unowned_buffer(false),
+      buffer_device(dev),
+      stream(stream_)
   {
     if (!defer_alloc)
     {
@@ -62,11 +62,11 @@ public:
             T* external_buffer,
             std::size_t size,
             const ComputeStream& stream_)
-      : buffer(external_buffer),
-        buffer_size(size),
-        unowned_buffer(true),
-        buffer_device(dev),
-        stream(stream_)
+    : buffer(external_buffer),
+      buffer_size(size),
+      unowned_buffer(true),
+      buffer_device(dev),
+      stream(stream_)
   {}
 
   ~RawBuffer() { H2_TERMINATE_ON_THROW_ALWAYS(release()); }
@@ -112,14 +112,16 @@ public:
     // Clear all sync registrations.
     pending_streams.clear();
 #else  // H2_HAS_GPU
-    if (buffer) {
-      if (!unowned_buffer) {
+    if (buffer)
+    {
+      if (!unowned_buffer)
+      {
         internal::Allocator<T, Device::CPU>::deallocate(buffer, stream);
       }
       buffer = nullptr;
       unowned_buffer = false;
     }
-#endif  // H2_HAS_GPU
+#endif // H2_HAS_GPU
   }
 
   Device get_device() const H2_NOEXCEPT { return buffer_device; }
@@ -168,15 +170,15 @@ public:
         pending_streams.emplace(other_stream, std::move(event));
       }
     }
-#endif  // H2_HAS_GPU
+#endif // H2_HAS_GPU
   }
 
 private:
-  T* buffer;  /**< Internal buffer. */
-  std::size_t buffer_size;  /**< Number of elements in buffer. */
-  bool unowned_buffer;      /**< Whether buffer is externally managed. */
-  Device buffer_device;     /**< Device on which buffer was allocated. */
-  ComputeStream stream;     /**< Device stream for synchronization. */
+  T* buffer;               /**< Internal buffer. */
+  std::size_t buffer_size; /**< Number of elements in buffer. */
+  bool unowned_buffer;     /**< Whether buffer is externally managed. */
+  Device buffer_device;    /**< Device on which buffer was allocated. */
+  ComputeStream stream;    /**< Device stream for synchronization. */
 
 #ifdef H2_HAS_GPU
   /**
@@ -194,10 +196,9 @@ private:
 template <typename T>
 inline std::ostream& operator<<(std::ostream& os, const RawBuffer<T>& buf)
 {
-  os << "RawBuffer<" << TypeName<T>()
-     << ", " << buf.get_device()
-     << ", " << buf.get_stream()
-     << ">(" << buf.const_data() << ", " << buf.size() << ")";
+  os << "RawBuffer<" << TypeName<T>() << ", " << buf.get_device() << ", "
+     << buf.get_stream() << ">(" << buf.const_data() << ", " << buf.size()
+     << ")";
   return os;
 }
 
@@ -259,17 +260,17 @@ struct DeviceBufferPrinter<T, Device::GPU>
     {
       internal::ManagedBuffer<T> cpu_buf(size, Device::CPU);
       gpu::mem_copy(
-          cpu_buf.data(), buf, size, stream.get_stream<Device::GPU>());
+        cpu_buf.data(), buf, size, stream.get_stream<Device::GPU>());
       stream.wait_for_this();
       DeviceBufferPrinter<T, Device::CPU>::print(
-          cpu_buf.data(), size, stream, os);
+        cpu_buf.data(), size, stream, os);
     }
   }
 };
 
-#endif  // H2_HAS_GPU
+#endif // H2_HAS_GPU
 
-}  // namespace internal
+} // namespace internal
 
 /** Print the contents of a RawBuffer. */
 template <typename T>
@@ -277,10 +278,10 @@ inline std::ostream& raw_buffer_contents(std::ostream& os,
                                          const RawBuffer<T>& buf)
 {
   H2_DEVICE_DISPATCH_SAME(
-      buf.get_device(),
-      (internal::DeviceBufferPrinter<T, Dev>::print(
-          buf.const_data(), buf.size(), buf.get_stream(), os)));
+    buf.get_device(),
+    (internal::DeviceBufferPrinter<T, Dev>::print(
+      buf.const_data(), buf.size(), buf.get_stream(), os)));
   return os;
 }
 
-}  // namespace h2
+} // namespace h2

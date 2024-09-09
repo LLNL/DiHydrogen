@@ -23,13 +23,13 @@ using IfThenElse = Force<IfThenElseT<B, T, F>>;
 template <bool B, typename T, typename F>
 struct IfThenElseT
 {
-    using type = F;
+  using type = F;
 };
 
 template <typename T, typename F>
 struct IfThenElseT<true, T, F>
 {
-    using type = T;
+  using type = T;
 };
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 

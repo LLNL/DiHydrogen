@@ -10,8 +10,7 @@
 
 using namespace h2::meta;
 
-static_assert(
-    EqV<IfThenElse<true, int, float>, int>(), "True selects the first type.");
-static_assert(
-    EqV<IfThenElse<false, int, float>, float>(),
-    "False selects the second type.");
+static_assert(EqV<IfThenElse<true, int, float>, int>(),
+              "True selects the first type.");
+static_assert(EqV<IfThenElse<false, int, float>, float>(),
+              "False selects the second type.");

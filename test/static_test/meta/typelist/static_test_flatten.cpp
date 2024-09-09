@@ -28,23 +28,23 @@ static_assert(EqV<tlist::Flatten<ResultTList>, ResultTList>(),
 
 // No nesting
 static_assert(
-    EqV<tlist::Flatten<TL<A, B, C>, A, TL<A, B>, TL<A>>, ResultTList>(),
-    "No nested TLs");
+  EqV<tlist::Flatten<TL<A, B, C>, A, TL<A, B>, TL<A>>, ResultTList>(),
+  "No nested TLs");
 static_assert(
-    EqV<tlist::Flatten<TL<A>, TL<B>, TL<C>, TL<A>, TL<A>, TL<B>, TL<A>>,
-        ResultTList>(),
-    "All single-element TLs");
+  EqV<tlist::Flatten<TL<A>, TL<B>, TL<C>, TL<A>, TL<A>, TL<B>, TL<A>>,
+      ResultTList>(),
+  "All single-element TLs");
 
 // Nesting TLs
 static_assert(
-    EqV<tlist::Flatten<TL<TL<A, B, C>, A, TL<A, B>, TL<A>>>, ResultTList>(),
-    "All types under one nested TL");
+  EqV<tlist::Flatten<TL<TL<A, B, C>, A, TL<A, B>, TL<A>>>, ResultTList>(),
+  "All types under one nested TL");
 static_assert(
-    EqV<tlist::Flatten<TL<TL<A>, TL<B>, TL<C>, TL<A>, TL<A>, TL<B>, TL<A>>>,
-        ResultTList>(),
-    "All single-element TLs nested under one TL");
+  EqV<tlist::Flatten<TL<TL<A>, TL<B>, TL<C>, TL<A>, TL<A>, TL<B>, TL<A>>>,
+      ResultTList>(),
+  "All single-element TLs nested under one TL");
 
 static_assert(
-    EqV<tlist::Flatten<TL<TL<A, B>, TL<C, TL<A>>>, TL<A, TL<B>, TL<A>>>,
-        ResultTList>(),
-    "Complex nesting");
+  EqV<tlist::Flatten<TL<TL<A, B>, TL<C, TL<A>>>, TL<A, TL<B>, TL<A>>>,
+      ResultTList>(),
+  "Complex nesting");

@@ -32,7 +32,7 @@ using Unique = Force<UniqueT<List>>;
 template <>
 struct UniqueT<Empty>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
 // Recursive case
@@ -40,12 +40,12 @@ template <typename List>
 struct UniqueT
 {
 private:
-    using Head_ = Car<List>;
-    using Tail_ = Cdr<List>;
-    using UniqueTail_ = Unique<Tail_>;
+  using Head_ = Car<List>;
+  using Tail_ = Cdr<List>;
+  using UniqueTail_ = Unique<Tail_>;
 
 public:
-    using type = Cons<Head_, Remove<UniqueTail_, Head_>>;
+  using type = Cons<Head_, Remove<UniqueTail_, Head_>>;
 };
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

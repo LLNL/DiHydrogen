@@ -71,4 +71,4 @@ private:
   NonCopyablePasskey& operator=(const NonCopyablePasskey&) = delete;
 };
 
-}  // namespace h2
+} // namespace h2

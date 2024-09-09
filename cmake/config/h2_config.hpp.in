@@ -10,9 +10,9 @@
 #define H2_CONFIG_HPP_
 
 // Version information
-#define H2_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
-#define H2_VERSION_MINOR @PROJECT_VERSION_MINOR@
-#define H2_VERSION_PATCH @PROJECT_VERSION_PATCH@
+#define H2_VERSION_MAJOR @PROJECT_VERSION_MAJOR @
+#define H2_VERSION_MINOR @PROJECT_VERSION_MINOR @
+#define H2_VERSION_PATCH @PROJECT_VERSION_PATCH @
 #define H2_VERSION "@PROJECT_VERSION@"
 
 // Configuration information
@@ -31,8 +31,8 @@
 #cmakedefine H2_DEBUG
 
 // Features detected at configure time
-#define H2_PRETTY_FUNCTION @H2_PRETTY_FUNCTION@
-#define H2_RESTRICT @H2_RESTRICT@
+#define H2_PRETTY_FUNCTION @H2_PRETTY_FUNCTION @
+#define H2_RESTRICT @H2_RESTRICT @
 
 // Disable noexcept when debugging, as debug asserts may throw.
 #ifdef H2_DEBUG

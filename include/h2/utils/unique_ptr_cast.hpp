@@ -12,10 +12,8 @@
  * Utilities for working with `std::unique_ptr`s.
  */
 
-
 #include <memory>
 #include <type_traits>
-
 
 namespace h2
 {
@@ -30,8 +28,8 @@ template <typename DerivedT, typename BaseT>
 std::unique_ptr<DerivedT> downcast_uptr(std::unique_ptr<BaseT>& p)
 {
   static_assert(
-      std::is_base_of_v<BaseT, DerivedT>,
-      "Cannot cast a unique_ptr from a base class to a non-derived class");
+    std::is_base_of_v<BaseT, DerivedT>,
+    "Cannot cast a unique_ptr from a base class to a non-derived class");
   return std::unique_ptr<DerivedT>(static_cast<DerivedT*>(p.release()));
 }
 
@@ -39,10 +37,10 @@ template <typename DerivedT, typename BaseT>
 std::unique_ptr<const DerivedT> downcast_uptr(std::unique_ptr<const BaseT>& p)
 {
   static_assert(
-      std::is_base_of_v<BaseT, DerivedT>,
-      "Cannot cast a unique_ptr from a base class to a non-derived class");
+    std::is_base_of_v<BaseT, DerivedT>,
+    "Cannot cast a unique_ptr from a base class to a non-derived class");
   return std::unique_ptr<const DerivedT>(
-      static_cast<const DerivedT*>(p.release()));
+    static_cast<const DerivedT*>(p.release()));
 }
 
-}  // namespace h2
+} // namespace h2

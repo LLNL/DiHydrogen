@@ -15,11 +15,9 @@
 // This partially adapted from
 // https://stackoverflow.com/questions/7943525/is-it-possible-to-figure-out-the-parameter-type-and-return-type-of-a-lambda
 
+#include <cstddef>
 #include <functional>
 #include <tuple>
-
-#include <cstddef>
-
 
 namespace h2
 {
@@ -29,7 +27,7 @@ namespace h2
  */
 template <typename T>
 struct FunctionTraits
-    : public FunctionTraits<decltype(&std::remove_reference_t<T>::operator())>
+  : public FunctionTraits<decltype(&std::remove_reference_t<T>::operator())>
 {};
 
 template <typename Ret, typename... Args>
@@ -48,33 +46,41 @@ struct FunctionTraits<Ret(Args...)>
 };
 
 template <typename Ret, typename... Args>
-struct FunctionTraits<Ret(*)(Args...)> : public FunctionTraits<Ret(Args...)> {};
+struct FunctionTraits<Ret (*)(Args...)> : public FunctionTraits<Ret(Args...)>
+{};
 template <typename FuncT>
-struct FunctionTraits<std::function<FuncT>> : public FunctionTraits<FuncT> {};
+struct FunctionTraits<std::function<FuncT>> : public FunctionTraits<FuncT>
+{};
 template <typename T>
-struct FunctionTraits<T&> : public FunctionTraits<T> {};
+struct FunctionTraits<T&> : public FunctionTraits<T>
+{};
 template <typename T>
-struct FunctionTraits<const T&> : public FunctionTraits<T> {};
+struct FunctionTraits<const T&> : public FunctionTraits<T>
+{};
 template <typename T>
-struct FunctionTraits<T&&> : public FunctionTraits<T> {};
+struct FunctionTraits<T&&> : public FunctionTraits<T>
+{};
 template <typename T>
-struct FunctionTraits<const T&&> : public FunctionTraits<T> {};
+struct FunctionTraits<const T&&> : public FunctionTraits<T>
+{};
 template <typename T>
-struct FunctionTraits<T*> : public FunctionTraits<T> {};
+struct FunctionTraits<T*> : public FunctionTraits<T>
+{};
 template <typename T>
-struct FunctionTraits<const T*> : public FunctionTraits<T> {};
+struct FunctionTraits<const T*> : public FunctionTraits<T>
+{};
 
 template <typename Class, typename Ret, typename... Args>
 struct FunctionTraits<Ret (Class::*)(Args...)>
-    : public FunctionTraits<Ret(Args...)>
+  : public FunctionTraits<Ret(Args...)>
 {
   using ClassT = Class;
 };
 template <typename Class, typename Ret, typename... Args>
 struct FunctionTraits<Ret (Class::*)(Args...) const>
-    : public FunctionTraits<Ret(Args...)>
+  : public FunctionTraits<Ret(Args...)>
 {
   using ClassT = Class;
 };
 
-}  // namespace h2
+} // namespace h2

@@ -5,9 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "wait.hpp"
 #include "h2/gpu/runtime.hpp"
-
+#include "wait.hpp"
 
 namespace
 {
@@ -19,11 +18,10 @@ __global__ void wait_kernel(const long long int cycles)
   do
   {
     cur = clock64();
-  }
-  while (cur - start < cycles);
+  } while (cur - start < cycles);
 }
 
-}  // anonymous namespace
+} // anonymous namespace
 
 void gpu_wait(double length, h2::gpu::DeviceStream stream)
 {
@@ -37,14 +35,14 @@ void gpu_wait(double length, h2::gpu::DeviceStream stream)
     int freq_khz;
 #if H2_HAS_CUDA
     H2_CHECK_CUDA(
-        cudaDeviceGetAttribute(&freq_khz, cudaDevAttrClockRate, device));
+      cudaDeviceGetAttribute(&freq_khz, cudaDevAttrClockRate, device));
 #elif H2_HAS_ROCM
     H2_CHECK_HIP(
       hipDeviceGetAttribute(&freq_khz, hipDeviceAttributeClockRate, device));
 #else
 #error "Unknown GPU arch"
 #endif
-    freq_hz = static_cast<long long int>(freq_khz) * 1000ll;  // KHz -> Hz
+    freq_hz = static_cast<long long int>(freq_khz) * 1000ll; // KHz -> Hz
   }
   const long long int cycles = length * freq_hz;
 

@@ -7,24 +7,23 @@
 
 #pragma once
 
-#include <hip/hip_runtime.h>
-
 #include "h2/utils/Error.hpp"
 
+#include <hip/hip_runtime.h>
 
-#define H2_CHECK_HIP(CMD)                                               \
-  do                                                                    \
-  {                                                                     \
-    const auto status_H2_CHECK_HIP = (CMD);                             \
-    if (status_H2_CHECK_HIP != hipSuccess)                              \
-    {                                                                   \
-      throw H2FatalException("HIP error ",                              \
-                             ::h2::gpu::error_name(status_H2_CHECK_HIP), \
-                             " (",                                      \
-                             status_H2_CHECK_HIP,                       \
-                             "): ",                                     \
-                             ::h2::gpu::error_string(status_H2_CHECK_HIP)); \
-    }                                                                   \
+#define H2_CHECK_HIP(CMD)                                                      \
+  do                                                                           \
+  {                                                                            \
+    const auto status_H2_CHECK_HIP = (CMD);                                    \
+    if (status_H2_CHECK_HIP != hipSuccess)                                     \
+    {                                                                          \
+      throw H2FatalException("HIP error ",                                     \
+                             ::h2::gpu::error_name(status_H2_CHECK_HIP),       \
+                             " (",                                             \
+                             status_H2_CHECK_HIP,                              \
+                             "): ",                                            \
+                             ::h2::gpu::error_string(status_H2_CHECK_HIP));    \
+    }                                                                          \
   } while (0)
 
 namespace h2
@@ -52,17 +51,17 @@ constexpr unsigned int work_per_block = work_per_thread * num_threads_per_block;
 
 inline bool ok(DeviceError status) noexcept
 {
-    return (status == hipSuccess);
+  return (status == hipSuccess);
 }
 
 inline char const* error_name(DeviceError status) noexcept
 {
-    return hipGetErrorName(status);
+  return hipGetErrorName(status);
 }
 
 inline char const* error_string(DeviceError status) noexcept
 {
-    return hipGetErrorString(status);
+  return hipGetErrorString(status);
 }
 
 template <typename... KernelArgs, typename... Args>
@@ -75,8 +74,12 @@ void launch_kernel_internal(void (*kernel)(KernelArgs...),
 {
   // Assumes Args and KernelArgs have been checked.
   H2_CHECK_HIP(hipGetLastError());
-  hipLaunchKernelGGL(
-     kernel, grid_dim, block_dim, shared_mem, stream, std::forward<Args>(args)...);
+  hipLaunchKernelGGL(kernel,
+                     grid_dim,
+                     block_dim,
+                     shared_mem,
+                     stream,
+                     std::forward<Args>(args)...);
   H2_CHECK_HIP(hipGetLastError());
 }
 
