@@ -2,7 +2,6 @@
 
 #include <unordered_map>
 
-
 namespace h2
 {
 namespace internal
@@ -11,17 +10,16 @@ namespace internal
 namespace
 {
 
-using KeyToEntryMap =
-    std::unordered_map<DispatchKeyT, DispatchFunctionEntry>;
+using KeyToEntryMap = std::unordered_map<DispatchKeyT, DispatchFunctionEntry>;
 // Dispatch table with dynamic registration.
 // Maps from names to a lookup table of dispatch keys -> dispatch entries.
 std::unordered_map<std::string, KeyToEntryMap> dispatch_table;
 
 }  // anonymous namespace
 
-void add_dispatch_entry(const std::string& name,
-                        const DispatchKeyT& dispatch_key,
-                        const DispatchFunctionEntry& dispatch_entry)
+void add_dispatch_entry(std::string const& name,
+                        DispatchKeyT const& dispatch_key,
+                        DispatchFunctionEntry const& dispatch_entry)
 {
   if (dispatch_table.count(name) == 0)
   {
@@ -30,15 +28,15 @@ void add_dispatch_entry(const std::string& name,
   dispatch_table[name][dispatch_key] = dispatch_entry;
 }
 
-bool has_dispatch_entry(const std::string& name,
-                        const DispatchKeyT& dispatch_key)
+bool has_dispatch_entry(std::string const& name,
+                        DispatchKeyT const& dispatch_key)
 {
   return (dispatch_table.count(name) > 0)
          && (dispatch_table[name].count(dispatch_key) > 0);
 }
 
-const DispatchFunctionEntry&
-get_dispatch_entry(const std::string& name, const DispatchKeyT& dispatch_key)
+DispatchFunctionEntry const&
+get_dispatch_entry(std::string const& name, DispatchKeyT const& dispatch_key)
 {
   if (!has_dispatch_entry(name, dispatch_key))
   {
@@ -53,8 +51,8 @@ get_dispatch_entry(const std::string& name, const DispatchKeyT& dispatch_key)
 
 }  // namespace internal
 
-void dispatch_unregister(const std::string& name,
-                         const internal::DispatchKeyT& dispatch_key)
+void dispatch_unregister(std::string const& name,
+                         internal::DispatchKeyT const& dispatch_key)
 {
   if (internal::has_dispatch_entry(name, dispatch_key))
   {
@@ -81,7 +79,8 @@ void dispatch_test_impl(CPUDev_t, T* v)
 
 #ifdef H2_HAS_GPU
 template <typename T>
-void dispatch_test_impl(GPUDev_t, T* v) {}
+void dispatch_test_impl(GPUDev_t, T* v)
+{}
 #endif
 
 // Instantiate for all compute types:

@@ -6,10 +6,11 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include <h2_config.hpp>
+
 #include <h2/utils/Error.hpp>
 
-#include <execinfo.h>
 #include <dlfcn.h>
+#include <execinfo.h>
 
 #include <iomanip>
 #include <memory>
@@ -36,7 +37,7 @@ bool H2ExceptionBase::should_save_backtrace()
 }
 
 void H2ExceptionBase::set_what_and_maybe_collect_backtrace(
-    const std::string& what_arg, bool collect_bt)
+  std::string const& what_arg, bool collect_bt)
 {
   constexpr int max_frames = 128;
   using c_str_ptr = std::unique_ptr<char, void (*)(void*)>;
@@ -49,7 +50,7 @@ void H2ExceptionBase::set_what_and_maybe_collect_backtrace(
   }
 
   void* frames[max_frames];
-  const int num_frames = backtrace(frames, max_frames);
+  int const num_frames = backtrace(frames, max_frames);
 
   c_str_ptr_ptr symbols{backtrace_symbols(frames, num_frames), free};
 
@@ -67,8 +68,8 @@ void H2ExceptionBase::set_what_and_maybe_collect_backtrace(
     dladdr(frames[i], &info);
     if (info.dli_sname != nullptr)
     {
-      c_str_ptr demangled{abi::__cxa_demangle(
-          info.dli_sname, nullptr, nullptr, nullptr), free};
+      c_str_ptr demangled{
+        abi::__cxa_demangle(info.dli_sname, nullptr, nullptr, nullptr), free};
       if (demangled)
       {
         ss << demangled.get();
@@ -98,8 +99,8 @@ namespace h2
 
 void break_on_me(std::string const& msg)
 {
-    char const volatile* x = msg.data();
-    (void) x;
+  char const volatile* x = msg.data();
+  (void) x;
 }
 
-} // namespace h2
+}  // namespace h2

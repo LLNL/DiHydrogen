@@ -8,9 +8,8 @@
 #include "h2/tensor/init/fill.hpp"
 
 #include "h2/core/dispatch.hpp"
-#include "h2/utils/typename.hpp"
 #include "h2/loops/cpu_loops.hpp"
-
+#include "h2/utils/typename.hpp"
 
 namespace h2
 {
@@ -37,7 +36,7 @@ namespace impl
 {
 
 template <typename T>
-void fill_impl(CPUDev_t, Tensor<T>& tensor, const T& val)
+void fill_impl(CPUDev_t, Tensor<T>& tensor, T const& val)
 {
   if (tensor.is_empty())
   {
@@ -46,7 +45,7 @@ void fill_impl(CPUDev_t, Tensor<T>& tensor, const T& val)
   if (tensor.is_contiguous())
   {
     cpu::elementwise_loop(
-        [&val]() -> T { return val; }, tensor.numel(), tensor.data());
+      [&val]() -> T { return val; }, tensor.numel(), tensor.data());
   }
   else
   {
@@ -54,7 +53,7 @@ void fill_impl(CPUDev_t, Tensor<T>& tensor, const T& val)
   }
 }
 
-#define PROTO(device, t1)                                       \
+#define PROTO(device, t1)                                                      \
   template void fill_impl<t1>(device, Tensor<t1>&, const t1&)
 H2_INSTANTIATE_CPU_1
 #undef PROTO
@@ -62,12 +61,13 @@ H2_INSTANTIATE_CPU_1
 }  // namespace impl
 
 template <typename T>
-void fill(BaseTensor& tensor, const T& val)
+void fill(BaseTensor& tensor, T const& val)
 {
   // H2_DISPATCH_NAME: fill
   // H2_DISPATCH_NUM_TYPES: 1
   // H2_DISPATCH_INIT_CPU: impl::fill_impl("CPUDev_t", "Tensor<{T1}>&", "const {T1}&")
-  //  H2_DISPATCH_INIT_GPU: impl::fill_impl("GPUDev_t", "Tensor<{T1}>&", "const {T1}&")
+  //  H2_DISPATCH_INIT_GPU: impl::fill_impl("GPUDev_t", "Tensor<{T1}>&", "const
+  //  {T1}&")
 
   // Ensure val matches the tensor's type.
   // TODO: Relax this to allow conversion.

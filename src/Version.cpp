@@ -16,8 +16,8 @@ namespace h2
 {
 std::string Version() noexcept
 {
-    return STRINGIFY(H2_VERSION_MAJOR) "." STRINGIFY(
-        H2_VERSION_MINOR) "." STRINGIFY(H2_VERSION_PATCH);
+  return STRINGIFY(H2_VERSION_MAJOR) "." STRINGIFY(
+    H2_VERSION_MINOR) "." STRINGIFY(H2_VERSION_PATCH);
 }
 
-} // namespace h2
+}  // namespace h2

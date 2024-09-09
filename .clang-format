@@ -60,6 +60,7 @@ BreakConstructorInitializers: BeforeColon
 BreakInheritanceList: BeforeColon
 BreakStringLiterals: true
 ColumnLimit: 80
+CommentPragmas: "^ H2_DISPATCH"
 CompactNamespaces: false
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth: 2

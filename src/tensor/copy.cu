@@ -5,10 +5,9 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "h2/tensor/copy.hpp"
-
 #include "h2/core/dispatch.hpp"
 #include "h2/loops/gpu_loops.cuh"
+#include "h2/tensor/copy.hpp"
 
 namespace h2
 {
@@ -17,21 +16,23 @@ namespace impl
 {
 
 template <typename DstT, typename SrcT>
-void cast_impl(GPUDev_t, Tensor<DstT>& dst, const Tensor<SrcT>& src)
+void cast_impl(GPUDev_t, Tensor<DstT>& dst, Tensor<SrcT> const& src)
 {
   static_assert(std::is_convertible_v<SrcT, DstT>,
                 "Attempt to cast between inconvertible types");
-  const SrcT* __restrict__ src_buf = src.const_data();
+  SrcT const* __restrict__ src_buf = src.const_data();
   DstT* __restrict__ dst_buf = dst.data();
   auto stream = create_multi_sync(dst.get_stream(), src.get_stream());
   if (src.is_contiguous())
   {
     h2::gpu::launch_elementwise_loop(
-        [] H2_GPU_LAMBDA(const SrcT val) -> DstT { return static_cast<DstT>(val); },
-        stream,
-        dst.numel(),
-        dst_buf,
-        src_buf);
+      [] H2_GPU_LAMBDA(SrcT const val) -> DstT {
+        return static_cast<DstT>(val);
+      },
+      stream,
+      dst.numel(),
+      dst_buf,
+      src_buf);
   }
   else
   {
