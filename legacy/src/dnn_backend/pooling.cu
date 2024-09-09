@@ -95,7 +95,7 @@ void bp_accumulate_sum_nd(Tensor<DataType>& tensor,
 #endif
 }
 
-} // namespace
+}  // namespace
 
 namespace distconv
 {
@@ -125,4 +125,4 @@ INSTANTIATE_BP_ACCUMULATE_SUM(float);
 INSTANTIATE_BP_ACCUMULATE_SUM(double);
 #undef INSTANTIATE_BP_ACCUMULATE_SUM
 
-} // namespace distconv
+}  // namespace distconv

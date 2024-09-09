@@ -58,4 +58,4 @@ constexpr void const_for_pack(FuncT&& func, Args&&... args)
   (func(std::forward<Args>(args)), ...);
 }
 
-} // namespace h2
+}  // namespace h2

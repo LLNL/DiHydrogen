@@ -71,5 +71,5 @@ void elementwise_loop(FuncT&& func, std::size_t size, Args... args)
   }
 }
 
-} // namespace cpu
-} // namespace h2
+}  // namespace cpu
+}  // namespace h2

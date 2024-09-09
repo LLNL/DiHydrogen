@@ -114,7 +114,7 @@ struct Accessor<T, h2::Device::GPU>
 };
 #endif
 
-} // namespace internal
+}  // namespace internal
 
 // Helper to read a value from a buffer on a device.
 // Equivalent to buf[i].
@@ -220,4 +220,4 @@ struct DeviceBuf<T, h2::Device::GPU>
   T* buf = nullptr;
 };
 
-#endif // H2_HAS_GPU
+#endif  // H2_HAS_GPU

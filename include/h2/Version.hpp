@@ -20,4 +20,4 @@ namespace h2
  */
 std::string Version() noexcept;
 
-} // namespace h2
+}  // namespace h2

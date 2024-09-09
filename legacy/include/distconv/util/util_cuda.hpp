@@ -71,7 +71,7 @@ __device__ __forceinline__ __half atomic_add(__half* address, __half val)
   } while (assumed != old);
   return *old_as_half;
 }
-#endif // defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 700 && __CUDA_ARCH__ >= 530
+#endif  // defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 700 && __CUDA_ARCH__ >= 530
 
 #if defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
 __device__ __forceinline__ double atomic_add(double* address, double val)
@@ -87,8 +87,8 @@ __device__ __forceinline__ double atomic_add(double* address, double val)
   } while (assumed != old);
   return __longlong_as_double(old);
 }
-#endif // defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
-#endif // __CUDACC__
+#endif  // defined(__CUDA_ARCH__) && __CUDA_ARCH__ < 600
+#endif  // __CUDACC__
 
 namespace distconv
 {
@@ -402,9 +402,9 @@ LIST_OF_VECTOR2_TYPES
 LIST_OF_VECTOR4_TYPES
 #undef VECTOR_TYPE_OP
 
-#endif // __NVCC__
+#endif  // __NVCC__
 
-} // namespace util
+}  // namespace util
 
 #ifdef __NVCC__
 #define VECTOR_TYPE_OP(B, V, W)                                                \
@@ -533,8 +533,8 @@ LIST_OF_VECTOR2_TYPES
 LIST_OF_VECTOR4_TYPES
 #undef VECTOR_TYPE_OP
 
-#endif // __NVCC__
+#endif  // __NVCC__
 
-} // namespace distconv
+}  // namespace distconv
 
 #undef LIST_OF_VECTOR_TYPES

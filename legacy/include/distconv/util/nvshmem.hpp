@@ -13,7 +13,7 @@
 #define NVSHMEM_USE_NCCL
 #include "nvshmem.h"
 #include "nvshmemx.h"
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 
 #define DISTCONV_CHECK_NVSHMEM(call)                                           \
   do                                                                           \
@@ -262,7 +262,7 @@ DEFINE_PUT(int)
 DEFINE_PUT(long)
 #undef DEFINE_PUT
 
-#endif // __NVCC__
+#endif  // __NVCC__
 
 // Set the team to all possible PEs. May affect correctness but builds
 // succesfully
@@ -286,15 +286,15 @@ DEFINE_SUM_TO_ALL(int)
 DEFINE_SUM_TO_ALL(long)
 #undef DEFINE_SUM_TO_ALL
 
-#else  // DISTCONV_HAS_NVSHMEM
+#else   // DISTCONV_HAS_NVSHMEM
 inline void initialize(MPI_Comm comm)
 {}
 inline void finalize()
 {}
 inline void barrier()
 {}
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 
-} // namespace nvshmem
-} // namespace util
-} // namespace distconv
+}  // namespace nvshmem
+}  // namespace util
+}  // namespace distconv

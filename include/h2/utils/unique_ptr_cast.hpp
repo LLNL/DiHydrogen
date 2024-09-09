@@ -43,4 +43,4 @@ std::unique_ptr<const DerivedT> downcast_uptr(std::unique_ptr<const BaseT>& p)
     static_cast<const DerivedT*>(p.release()));
 }
 
-} // namespace h2
+}  // namespace h2

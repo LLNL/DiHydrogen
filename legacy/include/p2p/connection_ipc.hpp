@@ -74,4 +74,4 @@ private:
   bool wait_handler(cudaStream_t stream, void* data, Request* req);
 };
 
-} // namespace p2p
+}  // namespace p2p

@@ -43,5 +43,5 @@ private:
   char m_notification_key = 0;
 };
 
-} // namespace internal
-} // namespace p2p
+}  // namespace internal
+}  // namespace p2p

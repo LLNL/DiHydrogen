@@ -61,5 +61,5 @@ std::unique_ptr<BaseTensor> const_view(const BaseTensor& tensor);
 std::unique_ptr<BaseTensor> const_view(const BaseTensor& tensor,
                                        const IndexRangeTuple& coords);
 
-} // namespace base
-} // namespace h2
+}  // namespace base
+}  // namespace h2

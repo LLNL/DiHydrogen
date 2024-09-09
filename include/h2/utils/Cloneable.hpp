@@ -77,7 +77,7 @@ private:
   {
     return new T{static_cast<T const&>(*this)};
   }
-}; // class Cloneable
+};  // class Cloneable
 
 /** @brief Specialization of Cloneable to handle stand-alone classes. */
 template <typename T>
@@ -96,7 +96,7 @@ private:
   {
     return new T{static_cast<T const&>(*this)};
   }
-}; // class Cloneable<T>
+};  // class Cloneable<T>
 
 /** @brief Specialization of Cloneable for intermediate classes.
  *
@@ -139,6 +139,6 @@ public:
 private:
   virtual Cloneable* do_clone_() const = 0;
 
-}; // class Cloneable<T>
+};  // class Cloneable<T>
 
-} // namespace h2
+}  // namespace h2

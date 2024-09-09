@@ -28,7 +28,7 @@ struct host_scalar
                       val);
   }
   operator void const*() const { return get(); }
-}; // host_scalar
+};  // host_scalar
 
 inline host_scalar make_host_scalar(GPUDNNBackend::DataType_t const dt,
                                     double const v)
@@ -86,4 +86,4 @@ inline size_t datatype_size(GPUDNNBackend::DataType_t dt)
   return 1UL;
 }
 
-} // namespace distconv
+}  // namespace distconv

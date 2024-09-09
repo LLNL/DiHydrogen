@@ -60,7 +60,7 @@ struct FlattenT
   using type = Append<Flatten_impl<Ts>...>;
 };
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

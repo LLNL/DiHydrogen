@@ -90,5 +90,5 @@ cudaEvent_t& RuntimeCUDA::get_event(int idx)
   return get_instance().m_events[idx];
 }
 
-} // namespace internal
-} // namespace distconv
+}  // namespace internal
+}  // namespace distconv

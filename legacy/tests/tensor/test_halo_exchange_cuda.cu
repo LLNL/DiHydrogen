@@ -9,17 +9,17 @@
 #include "test_tensor.hpp"
 #ifdef DISTCONV_HAS_NVSHMEM
 #include "distconv/util/nvshmem.hpp"
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 #include "distconv/tensor/halo_exchange_cuda.hpp"
 #include "distconv/tensor/halo_exchange_cuda_al.hpp"
 #include "distconv/tensor/halo_exchange_cuda_mpi.hpp"
 #ifdef DISTCONV_HAS_P2P
 #include "distconv/tensor/halo_exchange_cuda_hybrid.hpp"
 #include "distconv/tensor/halo_exchange_cuda_p2p.hpp"
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
 #include "distconv/tensor/halo_exchange_cuda_nvshmem.hpp"
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 
 #include "h2/gpu/memory_utils.hpp"
 #include "h2/gpu/runtime.hpp"
@@ -646,7 +646,7 @@ int test_halo_exchange(const Array<ND>& shape,
       tensor, p2p);
     util::MPIRootPrintStreamInfo() << "HaloExchangeHybrid created";
     break;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
   case HaloExchangeMethod::NVSHMEM:
     halo_exc =
@@ -660,7 +660,7 @@ int test_halo_exchange(const Array<ND>& shape,
         tensor);
     util::MPIRootPrintStreamInfo() << "HaloExchangeNVSHMEMGraph created";
     break;
-#endif // DISTCONV_HAS_CUDA_GRAPH
+#endif  // DISTCONV_HAS_CUDA_GRAPH
   case HaloExchangeMethod::NVSHMEM_DIRECT:
     halo_exc =
       new HaloExchangeNVSHMEMDirect<DataType, CUDAAllocator, Al::NCCLBackend>(
@@ -673,7 +673,7 @@ int test_halo_exchange(const Array<ND>& shape,
                                                   Al::NCCLBackend>(tensor);
     util::MPIRootPrintStreamInfo() << "HaloExchangeNVSHMEMFusedNotify created";
     break;
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
   default:
     util::MPIRootPrintStreamError()
       << "Invalid halo exchange method: " << method;
@@ -804,7 +804,7 @@ int test_halo_exchange_reverse(const Array<ND>& shape,
   HaloExchange<DataType, CUDAAllocator, Al::NCCLBackend>* halo_exc = nullptr;
 #ifdef DISTCONV_HAS_P2P
   p2p::P2P p2p(MPI_COMM_WORLD);
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 
   switch (method)
   {
@@ -829,7 +829,7 @@ int test_halo_exchange_reverse(const Array<ND>& shape,
       tensor, p2p);
     util::MPIRootPrintStreamInfo() << "HaloExchangeHybrid created";
     break;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
   case HaloExchangeMethod::NVSHMEM:
     halo_exc =
@@ -843,7 +843,7 @@ int test_halo_exchange_reverse(const Array<ND>& shape,
         tensor);
     util::MPIRootPrintStreamInfo() << "HaloExchangeNVSHMEMGraph created";
     break;
-#endif // DISTCONV_HAS_CUDA_GRAPH
+#endif  // DISTCONV_HAS_CUDA_GRAPH
   case HaloExchangeMethod::NVSHMEM_DIRECT:
     halo_exc =
       new HaloExchangeNVSHMEMDirect<DataType, CUDAAllocator, Al::NCCLBackend>(
@@ -856,7 +856,7 @@ int test_halo_exchange_reverse(const Array<ND>& shape,
                                                   Al::NCCLBackend>(tensor);
     util::MPIRootPrintStreamInfo() << "HaloExchangeNVSHMEMFusedNotify created";
     break;
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
   default:
     util::MPIRootPrintStreamError() << "Invalid halo exchange method";
     std::abort();
@@ -1015,7 +1015,7 @@ int main(int argc, char* argv[])
 #ifdef DISTCONV_HAS_P2P
                                              HaloExchangeMethod::P2P,
                                              HaloExchangeMethod::HYBRID
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
   };
 
 #ifdef DISTCONV_HAS_NVSHMEM
@@ -1100,7 +1100,7 @@ int main(int argc, char* argv[])
     else if (name == "HYBRID")
     {
       method = HaloExchangeMethod::HYBRID;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
     }
     else if (name == "NVSHMEM")
@@ -1118,7 +1118,7 @@ int main(int argc, char* argv[])
     else if (name == "NVSHMEM_FUSED_NOTIFY")
     {
       method = HaloExchangeMethod::NVSHMEM_FUSED_NOTIFY;
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
     }
     else
     {

@@ -43,7 +43,7 @@ struct PrintTLT<TL<T, Ts...>>
   }
 };
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
 
 /** @brief Convert a type list to a string. */
 template <typename... Ts>
@@ -52,6 +52,6 @@ std::string print(const TL<Ts...>&)
   return PrintTLT<TL<Ts...>>::to_string();
 }
 
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

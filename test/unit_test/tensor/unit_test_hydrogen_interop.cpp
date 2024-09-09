@@ -24,7 +24,7 @@ make_matrix(El::Int height, El::Int width, El::Int ldim = 0)
   return mat;
 }
 
-} // namespace
+}  // namespace
 
 TEST_CASE("is_chw_packed predicate", "[tensor][utilities]")
 {

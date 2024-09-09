@@ -59,7 +59,7 @@ __device__ __forceinline__ T atomic_add(T* address, T value)
 {
   return atomicAdd(address, value);
 }
-#endif // __HIPCC__
+#endif  // __HIPCC__
 
 namespace distconv
 {
@@ -383,9 +383,9 @@ LIST_OF_VECTOR2_TYPES
 LIST_OF_VECTOR4_TYPES
 #undef VECTOR_TYPE_OP
 
-#endif // __HIPCC__
+#endif  // __HIPCC__
 
-} // namespace util
+}  // namespace util
 
 #ifdef __HIPCC__
 #define VECTOR_TYPE_OP(B, V, W)                                                \
@@ -514,8 +514,8 @@ LIST_OF_VECTOR2_TYPES
 LIST_OF_VECTOR4_TYPES
 #undef VECTOR_TYPE_OP
 
-#endif // __HIPCC__
+#endif  // __HIPCC__
 
-} // namespace distconv
+}  // namespace distconv
 
 #undef LIST_OF_VECTOR_TYPES

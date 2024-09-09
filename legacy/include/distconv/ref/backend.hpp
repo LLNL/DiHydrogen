@@ -28,8 +28,8 @@ void apply4d(typename Tensor::data_type alpha,
              Tensor& y,
              index_t y_n,
              index_t y_k,
-             int_vector paddings, // DWH
-             int_vector strides,  // DWH
+             int_vector paddings,  // DWH
+             int_vector strides,   // DWH
              bool expand_halo)
 {
   using Array4 = tensor::Array<4>;
@@ -105,8 +105,8 @@ void apply5d(typename Tensor::data_type alpha,
              Tensor& y,
              index_t y_n,
              index_t y_k,
-             int_vector paddings, // DWH
-             int_vector strides,  // DWH
+             int_vector paddings,  // DWH
+             int_vector strides,   // DWH
              bool expand_halo)
 {
   using Array5 = tensor::Array<5>;
@@ -198,8 +198,8 @@ void apply(typename Tensor::data_type alpha,
            Tensor& y,
            index_t y_n,
            index_t y_k,
-           int_vector paddings, // DWH
-           int_vector strides,  // DWH
+           int_vector paddings,  // DWH
+           int_vector strides,   // DWH
            bool expand_halo)
 {
   switch (x.get_num_dims())
@@ -245,7 +245,7 @@ void apply(typename Tensor::data_type alpha,
   }
 }
 
-} // namespace ref
+}  // namespace ref
 
 template <typename DataType>
 class Convolution<ref::Backend, DataType>
@@ -495,4 +495,4 @@ protected:
   }
 };
 
-} // namespace distconv
+}  // namespace distconv

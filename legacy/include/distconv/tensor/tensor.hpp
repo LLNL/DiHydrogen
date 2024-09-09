@@ -30,7 +30,7 @@ struct ViewFunctor;
 template <typename TensorTypeX, typename TensorTypeY>
 struct CopyFunctor;
 
-} // namespace internal
+}  // namespace internal
 
 class AbstractTensor
 {
@@ -689,5 +689,5 @@ struct TensorTypeSetConst {
                       typename TensorType::allocator_type>;
 };
 #endif
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

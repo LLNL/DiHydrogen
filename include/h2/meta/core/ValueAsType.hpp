@@ -33,5 +33,5 @@ using TrueType = ValueAsType<bool, true>;
 /** @brief A representation of boolean `false` values as a type. */
 using FalseType = ValueAsType<bool, false>;
 
-} // namespace meta
-} // namespace h2
+}  // namespace meta
+}  // namespace h2

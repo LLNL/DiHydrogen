@@ -69,7 +69,7 @@ struct CastScaleBiasFuctor
   DataType1 m_alpba, m_beta;
 };
 
-} // namespace internal
+}  // namespace internal
 
 #define DEFINE_CLEAR_HALO(TYPE)                                                \
   template <>                                                                  \
@@ -267,7 +267,7 @@ int ConcatenateOrSlice(
   h2::gpu::DeviceStream s)
 {
   const int nd = t_dest.get_num_dims();
-  int block_dim = 256; // tunable
+  int block_dim = 256;  // tunable
 
   int concat_dim = -1;
   for (int i = 0; i < nd; ++i)
@@ -323,7 +323,7 @@ int ConcatenateOrSlice(
 #undef CALL_KERNEL
   return 0;
 }
-} // namespace internal
+}  // namespace internal
 
 template <typename DataType>
 int Concatenate(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest,
@@ -362,5 +362,5 @@ DEFINE_CONCATENATE(int)
 DEFINE_CONCATENATE(long)
 #undef DEFINE_CONCATENATE
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

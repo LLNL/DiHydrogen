@@ -11,15 +11,15 @@
 #include "distconv/dnn_backend/pack_unpack.hpp"
 #include "h2/gpu/runtime.hpp"
 
-#include <functional> // std::multiplies
-#include <memory>     // std::make_shared
-#include <numeric>    // std::exclusive_scan
-#include <ostream>    // std::ostream
-#include <sstream>    // std::ostringstream
-#include <stdexcept>  // std::runtime_error
-#include <string>     // std::string
-#include <utility>    // std::move
-#include <vector>     // std::vector
+#include <functional>  // std::multiplies
+#include <memory>      // std::make_shared
+#include <numeric>     // std::exclusive_scan
+#include <ostream>     // std::ostream
+#include <sstream>     // std::ostringstream
+#include <stdexcept>   // std::runtime_error
+#include <string>      // std::string
+#include <utility>     // std::move
+#include <vector>      // std::vector
 
 #include "./dnn_lib_utils.hpp"
 
@@ -60,7 +60,7 @@ size_t getenv_num_streams(size_t default_nstreams = 8)
     nstreams = std::stoul(env);
   return std::max(nstreams, static_cast<size_t>(0UL));
 }
-} // namespace
+}  // namespace
 
 template <typename VendorBackendT>
 DNNBackend<VendorBackendT>::DNNBackend(MPI_Comm comm,
@@ -891,4 +891,4 @@ void DNNBackend<VendorBackendT>::pooling_backward(
 
 template class DNNBackend<GPUDNNBackend>;
 
-} // namespace distconv
+}  // namespace distconv

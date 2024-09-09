@@ -141,7 +141,7 @@ public:
     {
       util::MPIPrintStreamInfo() << "Empty tensor detected";
       setup_chanfilt_comms(input,
-                           filter); // Still need to participate in this.
+                           filter);  // Still need to participate in this.
       return;
     }
 
@@ -2888,4 +2888,4 @@ protected:
   }
 };
 
-} // namespace distconv
+}  // namespace distconv

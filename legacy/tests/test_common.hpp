@@ -544,4 +544,4 @@ int dump_shared_tensor(
   return 0;
 }
 
-} // namespace test
+}  // namespace test

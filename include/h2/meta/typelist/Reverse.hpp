@@ -44,7 +44,7 @@ struct ReverseImpl<TL<T, Ts...>, RL>
   using type = Force<ReverseImpl<TL<Ts...>, Cons<T, RL>>>;
 };
 
-} // namespace internal
+}  // namespace internal
 
 template <typename List>
 struct ReverseT
@@ -52,7 +52,7 @@ struct ReverseT
   using type = Force<internal::ReverseImpl<List, Empty>>;
 };
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

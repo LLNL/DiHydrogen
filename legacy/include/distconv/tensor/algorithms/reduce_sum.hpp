@@ -10,7 +10,7 @@ namespace distconv
 namespace tensor
 {
 namespace algorithms
-{} // namespace algorithms
+{}  // namespace algorithms
 
 template <typename DataType, typename Locale, typename Allocator>
 typename std::enable_if<std::is_same<Allocator, BaseAllocator>::value,
@@ -22,5 +22,5 @@ ReduceSum(const Tensor<DataType, Locale, Allocator>& src,
   return 0;
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

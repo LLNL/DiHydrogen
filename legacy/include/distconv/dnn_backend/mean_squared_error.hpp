@@ -69,4 +69,4 @@ private:
   int m_num_procs_per_sample;
 };
 
-} // namespace distconv
+}  // namespace distconv

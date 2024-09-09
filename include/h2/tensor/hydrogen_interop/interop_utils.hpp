@@ -78,4 +78,4 @@ hydrogen::SyncInfo<D> get_sync_info(El::Matrix<T, D> const& m)
   return El::SyncInfoFromMatrix(m);
 }
 
-} // namespace h2
+}  // namespace h2

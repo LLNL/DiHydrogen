@@ -42,5 +42,5 @@ protected:
 template <typename DataType>
 using AllreduceAlNCCL = AllreduceAl<DataType, Al::NCCLBackend>;
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

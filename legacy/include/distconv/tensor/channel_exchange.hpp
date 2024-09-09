@@ -113,5 +113,5 @@ protected:
                       h2::gpu::DeviceStream stream);
 };
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

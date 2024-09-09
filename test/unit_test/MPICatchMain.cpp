@@ -139,7 +139,7 @@ int main(int argc, char** argv)
     int volatile wait = 1;
     while (wait) {}
   }
-  MPI_Barrier(MPI_COMM_WORLD); // This should hang the other ranks.
+  MPI_Barrier(MPI_COMM_WORLD);  // This should hang the other ranks.
 
   // Manipulate output file(s) if needed.
   auto& output_file = session.configData().defaultOutputFilename;

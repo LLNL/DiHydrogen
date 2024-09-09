@@ -290,5 +290,5 @@ inline std::ostream& operator<<(std::ostream& os, const Distribution& d)
   return d.print(os);
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

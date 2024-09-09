@@ -46,5 +46,5 @@ private:
   h2::gpu::DeviceStream m_stream;
 };
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

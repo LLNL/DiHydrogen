@@ -104,5 +104,5 @@ private:
   map_type map_;
 };
 
-} // namespace factory
-} // namespace h2
+}  // namespace factory
+}  // namespace h2

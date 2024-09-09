@@ -21,7 +21,7 @@ __global__ void wait_kernel(const long long int cycles)
   } while (cur - start < cycles);
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 void gpu_wait(double length, h2::gpu::DeviceStream stream)
 {
@@ -42,7 +42,7 @@ void gpu_wait(double length, h2::gpu::DeviceStream stream)
 #else
 #error "Unknown GPU arch"
 #endif
-    freq_hz = static_cast<long long int>(freq_khz) * 1000ll; // KHz -> Hz
+    freq_hz = static_cast<long long int>(freq_khz) * 1000ll;  // KHz -> Hz
   }
   const long long int cycles = length * freq_hz;
 

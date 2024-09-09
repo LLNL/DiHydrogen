@@ -42,7 +42,7 @@ public:
 
 private:
   std::shared_ptr<std::string> m_what_str;
-}; // class GPUError
+};  // class GPUError
 
 class BadGPUAlloc : public GPUError
 {
@@ -59,5 +59,5 @@ public:
   BadGPUFree(DeviceError status) : GPUError{status} {}
 };
 
-} // namespace gpu
-} // namespace h2
+}  // namespace gpu
+}  // namespace h2

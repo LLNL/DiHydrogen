@@ -26,7 +26,7 @@
 #define H2_GPU_DEVICE_COMPILING 0
 #endif
 
-#endif // H2_HAS_GPU
+#endif  // H2_HAS_GPU
 
 #if defined(__CUDACC__) || defined(__HIPCC__)
 
@@ -48,4 +48,4 @@
 #define H2_GPU_LAMBDA
 #define H2_GPU_FORCE_INLINE inline
 
-#endif // defined(__CUDACC__) || defined(__HIPCC__)
+#endif  // defined(__CUDACC__) || defined(__HIPCC__)

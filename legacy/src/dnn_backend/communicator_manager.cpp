@@ -6,7 +6,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "distconv/dnn_backend/dnn_backend.hpp"
-#include "distconv/util/util_mpi.hpp" // MPIRootPrintStreamDebug
+#include "distconv/util/util_mpi.hpp"  // MPIRootPrintStreamDebug
 
 #define DISTCONV_ASSERT_PTR(ptr)                                               \
   do                                                                           \
@@ -27,7 +27,7 @@ CommunicatorManager::CommunicatorManager(MPI_Comm comm,
                                          StreamManager const& stream_mgr)
 #ifdef DISTCONV_HAS_P2P
   : m_p2p(comm)
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 {
   MPI_Comm_dup(comm, &m_comm);
 
@@ -124,4 +124,4 @@ auto CommunicatorManager::get_chanfilt_filter_comm(size_t idx) -> AlCommType*
   return &(m_chanfilt_filter_comms.at(idx));
 }
 
-} // namespace distconv
+}  // namespace distconv

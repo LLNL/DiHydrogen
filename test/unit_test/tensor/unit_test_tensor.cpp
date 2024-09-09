@@ -78,7 +78,7 @@ TEST_CASE("for_ndim", "[tensor]")
   {
     ShapeTuple shape;
     for_ndim(shape, [&](ScalarIndexTuple c) {
-      REQUIRE(false); // Should never be reached.
+      REQUIRE(false);  // Should never be reached.
     });
   }
 

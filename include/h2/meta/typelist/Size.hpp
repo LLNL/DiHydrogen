@@ -29,6 +29,6 @@ constexpr unsigned long SizeV()
 template <typename List>
 inline constexpr unsigned long Size = SizeV<List>();
 
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

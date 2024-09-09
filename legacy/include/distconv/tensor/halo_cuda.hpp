@@ -713,7 +713,7 @@ inline void traverse_halo_opt(DataType* tensor,
 
 inline int get_max_block_dimension()
 {
-  int dim = 512; // default
+  int dim = 512;  // default
   auto env = std::getenv("DISTCONV_HALO_TRAVERSAL_MAX_BLOCK_SIZE");
   if (env)
   {
@@ -886,7 +886,7 @@ inline void traverse_halo_opt(DataType* tensor,
   }
 }
 
-} // namespace internal
+}  // namespace internal
 
 template <typename Tensor, typename OpType>
 void TraverseHalo(Tensor& tensor,
@@ -1001,8 +1001,8 @@ void TraverseHalo(
   TraverseHalo(tensor, dim, Side::LHS, inner, op, s);
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv
 
 #undef GPU_SUCCESS
 #undef GPU_LAUNCH_COOP_KERNEL

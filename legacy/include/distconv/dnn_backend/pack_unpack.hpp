@@ -76,7 +76,7 @@ public:
   }
   void const* ptr() const noexcept { return packed_data(); }
 
-}; // class PackedTensorReadProxy
+};  // class PackedTensorReadProxy
 
 // This models a strided output tensor. We need to allocate a packable
 // buffer up front, then copy the values on destruction (as long as
@@ -155,7 +155,7 @@ public:
   }
   void* ptr() const noexcept { return packed_data(); }
 
-}; // class PackedTensorWriteProxy
+};  // class PackedTensorWriteProxy
 
 inline PackedTensorReadProxy read_proxy(GPUDNNBackend::TensorDescriptor_t desc)
 {
@@ -214,4 +214,4 @@ force_write_proxy(GPUDNNBackend::Handle_t handle,
   return PackedTensorWriteProxy{handle, desc, data, beta, /*force=*/true};
 }
 
-} // namespace distconv
+}  // namespace distconv

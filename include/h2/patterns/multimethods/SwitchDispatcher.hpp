@@ -301,7 +301,7 @@ public:
   }
 };
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
 
-} // namespace multimethods
-} // namespace h2
+}  // namespace multimethods
+}  // namespace h2

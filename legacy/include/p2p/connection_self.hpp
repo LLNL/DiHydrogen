@@ -43,4 +43,4 @@ private:
   std::list<std::pair<cudaEvent_t, cudaStream_t>> m_notifications;
 };
 
-} // namespace p2p
+}  // namespace p2p

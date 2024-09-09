@@ -37,4 +37,4 @@ class CrossEntropy;
 template <typename Backend>
 class MeanSquaredError;
 
-} // namespace distconv
+}  // namespace distconv

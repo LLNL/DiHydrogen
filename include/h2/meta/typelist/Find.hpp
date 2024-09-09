@@ -56,7 +56,7 @@ public:
   static constexpr auto value = (tmp_ == invalid_ ? invalid_ : 1UL + tmp_);
 };
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

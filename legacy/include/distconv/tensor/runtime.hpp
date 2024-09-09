@@ -3,5 +3,5 @@
 namespace distconv
 {
 namespace tensor
-{} // namespace tensor
-} // namespace distconv
+{}  // namespace tensor
+}  // namespace distconv

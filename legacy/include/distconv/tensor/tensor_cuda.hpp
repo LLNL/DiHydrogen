@@ -201,5 +201,5 @@ protected:
   IndexVector m_offset;
 };
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

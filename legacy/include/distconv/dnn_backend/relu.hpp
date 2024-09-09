@@ -117,4 +117,4 @@ private:
   GPUDNNBackend::TensorDescriptor_t m_d_output_d;
 };
 
-} // namespace distconv
+}  // namespace distconv

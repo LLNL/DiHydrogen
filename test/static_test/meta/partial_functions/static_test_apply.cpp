@@ -15,7 +15,7 @@ namespace
 {
 template <typename A, typename B, typename C>
 struct F;
-} // namespace
+}  // namespace
 
 static_assert(EqV<Apply<F<int, int, int>, tlist::Empty>, F<int, int, int>>(),
               "Apply returns input when no placeholders present.");

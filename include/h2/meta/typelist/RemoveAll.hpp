@@ -45,7 +45,7 @@ struct RemoveAllT<TypeList<S, Ts...>, T>
   : ConsT<S, RemoveAll<TypeList<Ts...>, T>>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

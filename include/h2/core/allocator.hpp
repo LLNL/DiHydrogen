@@ -160,6 +160,6 @@ private:
   ComputeStream stream;
 };
 
-} // namespace internal
+}  // namespace internal
 
-} // namespace h2
+}  // namespace h2

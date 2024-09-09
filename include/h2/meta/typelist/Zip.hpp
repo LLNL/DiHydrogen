@@ -55,8 +55,8 @@ struct ZipTLT<TL<T1, List1Ts...>, TL<T2, List2Ts...>>
     Append<TL<TL<T1, T2>>, Force<ZipTLT<TL<List1Ts...>, TL<List2Ts...>>>>;
 };
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
 
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

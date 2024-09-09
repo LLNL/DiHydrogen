@@ -81,4 +81,4 @@ void copy_buffer(T* dst,
   }
 }
 
-} // namespace h2
+}  // namespace h2

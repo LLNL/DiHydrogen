@@ -11,4 +11,4 @@ struct Config
 void initialize();
 const Config& get_config();
 
-} // namespace distconv
+}  // namespace distconv

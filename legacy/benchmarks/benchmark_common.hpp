@@ -47,7 +47,7 @@ struct GetType<BenchmarkDataType::HALF>
 {
   using type = half;
 };
-#endif // H2_HAS_HALF
+#endif  // H2_HAS_HALF
 
 const unsigned input_tensor_seed = 0;
 const unsigned filter_tensor_seed = 1;
@@ -70,7 +70,7 @@ struct Initializer
     const auto x = indices.reduce_sum();
     const double rand1 = (double) (m_rands[x % num_rands]) / RAND_MAX;
     size_t offset = 0;
-    { // offset = w_idx + h_idx * w_dim + c_idx * w_dim * h_dim + ...;
+    {  // offset = w_idx + h_idx * w_dim + c_idx * w_dim * h_dim + ...;
       size_t d_prod = 1;
       for (auto i = indices.begin(); i != indices.end(); i++)
       {
@@ -280,7 +280,7 @@ public:
     conv_bwd_filter_algo = pr["conv-bwd-filter-algo"].as<std::string>();
     pooling_mode = pr["pooling-mode"].as<std::string>();
     backend = pr["backend"].as<std::string>();
-    { // mode
+    {  // mode
       std::string m = pr["mode"].as<std::string>();
       if (m == "SIMPLE")
       {
@@ -293,7 +293,7 @@ public:
     }
     halo_exchange_method = distconv::GetHaloExchangeMethod(
       pr["halo-exchange-method"].as<std::string>());
-    { // shuffle-method
+    {  // shuffle-method
       std::string method = pr["shuffle-method"].as<std::string>();
       if (method == "MPI")
       {
@@ -311,7 +311,7 @@ public:
       else if (method == "HYBRID")
       {
         shuffle_method = distconv::ShuffleMethod::HYBRID;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
       }
       else
       {
@@ -320,7 +320,7 @@ public:
       }
     }
 
-    { // Channel/filter parallelism algorithm.
+    {  // Channel/filter parallelism algorithm.
       std::string algo = pr["chanfilt-algo"].as<std::string>();
       if (algo == "NONE")
       {
@@ -734,4 +734,4 @@ int parse_num_dims(int argc, char* argv[])
   return nsd;
 }
 
-} // namespace distconv_benchmark
+}  // namespace distconv_benchmark

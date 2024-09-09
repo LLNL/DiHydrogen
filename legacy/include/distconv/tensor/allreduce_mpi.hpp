@@ -46,5 +46,5 @@ protected:
   MPI_Comm m_comm;
 };
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

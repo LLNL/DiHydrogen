@@ -7,7 +7,7 @@
 
 #include "distconv/dnn_backend/dace_backend.hpp"
 
-#include "distconv/util/util_mpi.hpp" // For printouts
+#include "distconv/util/util_mpi.hpp"  // For printouts
 
 #include <dlfcn.h>
 
@@ -319,7 +319,7 @@ size_t DaCeDNNBackend<VendorBackendT>::get_conv_forward_workspace_size(
     // Try to get workspace size from JIT-compiled library
     dace_state library;
     bool jit_compiled = load_library_or_fallback(desc, library);
-    if (jit_compiled) // Library found
+    if (jit_compiled)  // Library found
     {
       if (library.get_ws_size)
         return library.get_ws_size(library.handle);
@@ -351,7 +351,7 @@ size_t DaCeDNNBackend<VendorBackendT>::get_conv_bwd_data_workspace_size(
     // Try to get workspace size from JIT-compiled library
     dace_state library;
     bool jit_compiled = load_library_or_fallback(desc, library);
-    if (jit_compiled) // Library found
+    if (jit_compiled)  // Library found
     {
       if (library.get_ws_size)
         return library.get_ws_size(library.handle);
@@ -383,7 +383,7 @@ size_t DaCeDNNBackend<VendorBackendT>::get_conv_bwd_filter_workspace_size(
     // Try to get workspace size from JIT-compiled library
     dace_state library;
     bool jit_compiled = load_library_or_fallback(desc, library);
-    if (jit_compiled) // Library found
+    if (jit_compiled)  // Library found
     {
       if (library.get_ws_size)
         return library.get_ws_size(library.handle);
@@ -494,7 +494,7 @@ DaCeDNNBackend<VendorBackendT>::try_load(const std::string& hash,
   {
     initfunc_t initfunc = (initfunc_t) dlsym(handle, initname.str().c_str());
     result.library = handle;
-    if (!initfunc) // No initializer
+    if (!initfunc)  // No initializer
     {
       util::MPIPrintStreamError() << "Initializer not found.";
       std::abort();
@@ -502,7 +502,7 @@ DaCeDNNBackend<VendorBackendT>::try_load(const std::string& hash,
 
     dace_exitfunc_t exitfunc =
       (dace_exitfunc_t) dlsym(result.library, exitname.str().c_str());
-    if (!exitfunc) // No destructor
+    if (!exitfunc)  // No destructor
     {
       util::MPIPrintStreamError() << "Destructor not found.";
       std::abort();
@@ -517,7 +517,7 @@ DaCeDNNBackend<VendorBackendT>::try_load(const std::string& hash,
     dace_setstream_t setstreamfunc =
       (dace_setstream_t) dlsym(handle, "__dace_gpu_set_all_streams");
     if (!setstreamfunc)
-    { // No external stream setter
+    {  // No external stream setter
       util::MPIPrintStreamError()
         << "Set stream function not found, please regenerate the code.";
       std::abort();
@@ -529,7 +529,7 @@ DaCeDNNBackend<VendorBackendT>::try_load(const std::string& hash,
       dlsym(handle, "__dace_get_external_memory_size_GPU_Global");
     void* setws = dlsym(handle, "__dace_set_external_memory_GPU_Global");
     if (getwssize)
-    { // In case of no workspace requirements, the functions will not exist
+    {  // In case of no workspace requirements, the functions will not exist
       if (!setws)
       {
         util::MPIPrintStreamError()
@@ -562,7 +562,7 @@ DaCeDNNBackend<VendorBackendT>::try_load(const std::string& hash,
 template <typename VendorBackendT>
 bool DaCeDNNBackend<VendorBackendT>::unload(dace_state library)
 {
-  if (!library.library) // No library loaded
+  if (!library.library)  // No library loaded
     return true;
 
   // Malformed library state
@@ -663,4 +663,4 @@ bool DaCeDNNBackend<VendorBackendT>::load_library_or_fallback(
 // Instantiate class with GPU backend
 template class DaCeDNNBackend<GPUDNNBackend>;
 
-} // namespace distconv
+}  // namespace distconv

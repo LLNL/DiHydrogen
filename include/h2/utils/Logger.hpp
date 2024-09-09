@@ -28,7 +28,7 @@ public:
     ERROR = 0x10,
     CRITICAL = 0x20,
     OFF = 0x40,
-  }; // enum class LogLevelType
+  };  // enum class LogLevelType
 
   /** @brief Logger constructor. Logs to stdout.
    *  @param name Name of logger.
@@ -72,7 +72,7 @@ private:
   std::shared_ptr<::spdlog::logger> m_logger;
   unsigned char m_mask;
 
-}; // class Logger
+};  // class Logger
 
 /** @brief Set log levels for multiple loggers (Hierarchical logging levels).
  *  @param loggers Vector of Logger pointers.
@@ -96,4 +96,4 @@ void setup_masks(std::vector<Logger*>& loggers,
  **/
 spdlog::level::level_enum to_spdlog_level(Logger::LogLevelType level);
 
-} // namespace h2
+}  // namespace h2

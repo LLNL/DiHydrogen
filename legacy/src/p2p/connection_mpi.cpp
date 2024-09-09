@@ -342,4 +342,4 @@ Request ConnectionMPI::wait_nb(cudaStream_t stream)
   return req;
 }
 
-} // namespace p2p
+}  // namespace p2p

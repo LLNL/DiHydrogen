@@ -17,5 +17,5 @@ struct DefaultStream
   static DefaultStream value;
 };
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

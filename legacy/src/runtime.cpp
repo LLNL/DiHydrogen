@@ -9,7 +9,7 @@ namespace
 {
 bool initialized = false;
 Config cfg;
-} // namespace
+}  // namespace
 
 void initialize()
 {
@@ -28,4 +28,4 @@ const Config& get_config()
   return cfg;
 }
 
-} // namespace distconv
+}  // namespace distconv

@@ -151,5 +151,5 @@ inline int View(Tensor<DataType, LocaleProcess, Allocator>& t_proc,
   return 0;
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

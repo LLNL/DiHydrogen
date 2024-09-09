@@ -140,7 +140,7 @@ inline void release_device_event(gpu::DeviceEvent event)
   Al::internal::cuda::event_pool.release(event);
 }
 
-#endif // H2_HAS_GPU
+#endif  // H2_HAS_GPU
 
 /** Define the underlying compute stream type used by a device. */
 template <Device Dev>
@@ -207,7 +207,7 @@ get_default_compute_stream<Device::GPU>()
 }
 #endif
 
-} // namespace internal
+}  // namespace internal
 
 // Forward-declarations:
 class SyncEvent;
@@ -654,7 +654,7 @@ public:
       {
         if (gpu_stream == other_stream.gpu_stream)
         {
-          return; // No need to sync when these are the same stream.
+          return;  // No need to sync when these are the same stream.
         }
         // Add an event and wait on it.
         gpu::DeviceEvent event = internal::get_new_device_event();
@@ -874,7 +874,7 @@ create_multi_sync(const ComputeStream& main,
   return MultiSync(main, other_streams...);
 }
 
-} // namespace h2
+}  // namespace h2
 
 namespace std
 {
@@ -905,4 +905,4 @@ struct hash<h2::ComputeStream>
   }
 };
 
-} // namespace std
+}  // namespace std

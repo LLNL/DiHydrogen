@@ -13,7 +13,7 @@
 
 #ifdef DISTCONV_HAS_P2P
 #include "p2p/p2p.hpp"
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 
 #include <Al.hpp>
 #include <mpi.h>
@@ -46,7 +46,7 @@ using IntVector = Vector<int>;
 struct Options
 {
   bool overlap_halo_exchange;
-  bool m_deterministic; // FIXME trb: LBANN compile hack
+  bool m_deterministic;  // FIXME trb: LBANN compile hack
   bool enable_profiling;
   float ws_capacity_factor;
 
@@ -60,7 +60,7 @@ struct Options
           float ws_capacity_factor = 1.0f,
           bool jit_verbose = false,
           const std::string& jit_cache_path = ".jitcache");
-}; // struct Options
+};  // struct Options
 
 // Manage the collection of streams.
 class StreamManager
@@ -139,7 +139,7 @@ public:
   AlCommType& get_al_nccl_comm();
 #ifdef DISTCONV_HAS_P2P
   p2p::P2P& get_p2p() { return m_p2p; }
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 
   ///@}
   /** @name Halo exchange comms */
@@ -168,7 +168,7 @@ public:
 private:
 #ifdef DISTCONV_HAS_P2P
   p2p::P2P m_p2p;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 
   MPI_Comm m_comm;
 
@@ -187,7 +187,7 @@ private:
   // Same filter indices on the filter tensor.
   CommMap m_chanfilt_filter_comms;
 
-}; // class CommunicatorManager
+};  // class CommunicatorManager
 
 // This is essentially just a namespace on steroids (since you cannot
 // template on a namespace or pass one around as an object).
@@ -604,7 +604,7 @@ public:
                                       Tensor const& tensor,
                                       bool include_halo = true);
   /// @}
-}; // class MIOpenBackend
+};  // class MIOpenBackend
 
 class Workspace
 {
@@ -685,7 +685,7 @@ public:
   AlCommType& get_al_nccl_comm() { return get_al_comm(); }
 #ifdef DISTCONV_HAS_P2P
   p2p::P2P& get_p2p() { return m_comms.get_p2p(); }
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 
   /** @brief HACK to help LBANN
    *
@@ -973,6 +973,6 @@ protected:
   Options m_opts;
   StreamManager m_stream_mgr;
   CommunicatorManager m_comms;
-}; // class DNNBackend
+};  // class DNNBackend
 
-} // namespace distconv
+}  // namespace distconv

@@ -238,4 +238,4 @@ inline bool operator!=(const ProcessorGrid& grid1, const ProcessorGrid& grid2)
   return !grid1.is_identical_to(grid2);
 }
 
-} // namespace h2
+}  // namespace h2

@@ -260,6 +260,6 @@ protected:
               void* workspace,
               Stream_t stream) const;
 
-}; // class DaCeDNNBackend
+};  // class DaCeDNNBackend
 
-} // namespace distconv
+}  // namespace distconv

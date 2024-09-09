@@ -87,7 +87,7 @@ TypeInfo get_h2_type<dyndist_cust_type_t>()
   return TypeInfo::make<dyndist_cust_type_t>(TypeInfo::min_user_token);
 }
 
-} // namespace h2
+}  // namespace h2
 
 namespace
 {
@@ -436,7 +436,7 @@ void dyndist_tester(BaseTensor& dst, const BaseTensor& src)
                                  src));
 }
 
-} // anonymous namespace
+}  // anonymous namespace
 
 TEMPLATE_LIST_TEST_CASE("Dynamic dispatch works for H2 compute types",
                         "[dispatch]",

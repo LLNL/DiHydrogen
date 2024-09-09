@@ -91,5 +91,5 @@ private:
   DeviceStream m_stream;
   void* m_data = nullptr;
   handler_type m_handler = nullptr;
-}; // class Request
-} // namespace p2p
+};  // class Request
+}  // namespace p2p

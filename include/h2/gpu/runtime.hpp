@@ -91,10 +91,10 @@ DeviceEvent make_event_notiming();
 void destroy(DeviceEvent);
 void record_event(DeviceEvent, DeviceStream);
 
-void sync();                          // Device Sync
-void sync(DeviceEvent);               // Sync on event.
-void sync(DeviceStream);              // Sync on stream.
-void sync(DeviceStream, DeviceEvent); // Sync stream on event.
+void sync();                           // Device Sync
+void sync(DeviceEvent);                // Sync on event.
+void sync(DeviceStream);               // Sync on stream.
+void sync(DeviceStream, DeviceEvent);  // Sync stream on event.
 
 namespace internal
 {
@@ -152,7 +152,7 @@ const void* convert_for_fmt(const T* const v) noexcept
   return reinterpret_cast<const void*>(v);
 }
 
-} // namespace internal
+}  // namespace internal
 
 template <typename... KernelArgs, typename... Args>
 inline void launch_kernel(void (*kernel)(KernelArgs...),
@@ -254,5 +254,5 @@ inline void launch_kernel(void (*kernel)(KernelArgs...),
                          std::forward<Args>(args)...);
 }
 
-} // namespace gpu
-} // namespace h2
+}  // namespace gpu
+}  // namespace h2

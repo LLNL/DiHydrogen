@@ -35,7 +35,7 @@ struct BackwardFunctor
   }
 };
 
-} // namespace
+}  // namespace
 
 // input should be const, but Transform is not polymorphic with
 // respect to constness of tensor parameters. All of tensors need to

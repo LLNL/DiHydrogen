@@ -192,7 +192,7 @@ void copy_tensor(GPUDNNBackend::Handle_t handle,
 #endif
 }
 
-} // namespace
+}  // namespace
 
 // Read proxy impl
 
@@ -340,4 +340,4 @@ PackedTensorWriteProxy::~PackedTensorWriteProxy()
   m_packed_desc = 0;
   m_unpacked_desc = 0;
 }
-} // namespace distconv
+}  // namespace distconv

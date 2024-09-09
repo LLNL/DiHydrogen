@@ -49,4 +49,4 @@ constexpr To safe_as(From const& x)
   return tmp;
 }
 
-} // namespace h2
+}  // namespace h2

@@ -332,4 +332,4 @@ void for_ndim(const ShapeTuple& shape,
   }
 }
 
-} // namespace h2
+}  // namespace h2

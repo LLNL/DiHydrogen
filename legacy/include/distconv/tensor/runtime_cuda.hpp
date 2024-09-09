@@ -69,6 +69,6 @@ protected:
   static RuntimeCUDA& get_instance();
 };
 
-} // namespace internal
-} // namespace tensor
-} // namespace distconv
+}  // namespace internal
+}  // namespace tensor
+}  // namespace distconv

@@ -12,7 +12,7 @@
 #ifdef DISTCONV_HAS_P2P
 #include "distconv/tensor/shuffle_mpi_cuda_hybrid.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda_p2p.hpp"
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 
 #include "h2/gpu/memory_utils.hpp"
 #include "h2/gpu/runtime.hpp"
@@ -305,7 +305,7 @@ int test_copy_shuffle(const Shape& shape,
   TensorMPICUDAShuffler<DataType>* shuffler = nullptr;
 #ifdef DISTCONV_HAS_P2P
   p2p::P2P* p2p_h = nullptr;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
   AlBackend::comm_type* al_comm = nullptr;
   DeviceStream stream = make_stream();
 
@@ -333,7 +333,7 @@ int test_copy_shuffle(const Shape& shape,
     shuffler = new tensor::TensorMPICUDAShufflerHybrid<DataType>(
       t_src, t_dest, *p2p_h, *al_comm);
     break;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
   default:
     util::MPIRootPrintStreamError() << "Unknown shuffle method";
     std::abort();
@@ -405,7 +405,7 @@ int test_copy_shuffle(const Shape& shape,
 #ifdef DISTCONV_HAS_P2P
   if (p2p_h)
     delete p2p_h;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
   if (al_comm)
     delete al_comm;
   destroy(stream);
@@ -495,7 +495,7 @@ int run_tests(const Shape& proc_dim, const Shape& shape, ShuffleMethod method)
         << "Shuffling " << dist2
         << " not supported with P2P as it involves inter-node transfer";
     }
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
     if (!skip)
     {
       util::MPIRootPrintStreamInfo()
@@ -529,7 +529,7 @@ int run_tests(const Shape& proc_dim, const Shape& shape, ShuffleMethod method)
         << "Shuffling " << dist2
         << " not supported with P2P as it involves inter-node transfer";
     }
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
     if (!skip)
     {
       util::MPIRootPrintStreamInfo()
@@ -566,7 +566,7 @@ int run_tests(const Shape& proc_dim, const Shape& shape, ShuffleMethod method)
         << "Shuffling " << dist1
         << " not supported with P2P as it involves inter-node transfer";
     }
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
     if (!skip)
     {
       util::MPIRootPrintStreamInfo() << "dist1 to dist2";
@@ -602,7 +602,7 @@ int run_tests(const Shape& proc_dim, const Shape& shape, ShuffleMethod method)
         << " not supported with P2P as it involves inter-node transfer";
       skip = true;
     }
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
     if (!skip)
     {
       auto sample_dist = get_sample_dist(shape, np);
@@ -731,7 +731,7 @@ int main(int argc, char* argv[])
 #ifdef DISTCONV_HAS_P2P
                ShuffleMethod::P2P,
                ShuffleMethod::HYBRID
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
     };
   }
 

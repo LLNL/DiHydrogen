@@ -211,7 +211,7 @@ H2_DEFINE_FORWARDING_EXCEPTION(H2Exception, H2FatalException);
   {                                                                            \
     code;                                                                      \
   } while (0)
-#endif // H2_DEBUG
+#endif  // H2_DEBUG
 
 namespace h2
 {
@@ -222,4 +222,4 @@ namespace h2
  */
 void break_on_me(std::string const& msg = "");
 
-} // namespace h2
+}  // namespace h2

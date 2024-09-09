@@ -35,5 +35,5 @@ protected:
   static RuntimeCUDA& get_instance();
 };
 
-} // namespace internal
-} // namespace distconv
+}  // namespace internal
+}  // namespace distconv

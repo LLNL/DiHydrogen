@@ -19,7 +19,7 @@ private:
 
 public:
   using data_type = DataType;
-  using value_type = data_type; // for compatibility with std::vector
+  using value_type = data_type;  // for compatibility with std::vector
   using iterator = typename container_type::iterator;
   using const_iterator = typename container_type::const_iterator;
   using reverse_iterator = typename container_type::reverse_iterator;
@@ -630,4 +630,4 @@ inline std::ostream& operator<<(std::ostream& os, const Vector<DataType>& v)
 using IntVector = Vector<int>;
 using IndexVector = Vector<index_t>;
 
-} // namespace distconv
+}  // namespace distconv

@@ -23,5 +23,5 @@ inline hipStream_t get_gpu_stream(hipStream_t const& s)
   return s;
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

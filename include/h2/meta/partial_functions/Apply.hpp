@@ -50,7 +50,7 @@ struct ApplyT<F<Params...>, TL<Args...>>
   using type = F<placeholders::PHReplace<Params, Args...>...>;
 };
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace pfunctions
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace pfunctions
+}  // namespace meta
+}  // namespace h2

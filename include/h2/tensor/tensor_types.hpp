@@ -50,7 +50,7 @@ enum class DimensionType
   Sequence /**< The sequence dimension (e.g., in textual data). */
 };
 
-using DT = DimensionType; // Alias to save you some typing.
+using DT = DimensionType;  // Alias to save you some typing.
 
 /** Support printing DimensionType. */
 inline std::ostream& operator<<(std::ostream& os, const DimensionType& dim_type)
@@ -106,7 +106,7 @@ using ShapeTuple = NDimTuple<DimType>;
  */
 using DimensionTypeTuple = NDimTuple<DimensionType>;
 
-using DTTuple = DimensionTypeTuple; // Alias to save you some typing.
+using DTTuple = DimensionTypeTuple;  // Alias to save you some typing.
 
 /**
  * The strides of a tensor.
@@ -174,7 +174,7 @@ inline constexpr bool operator!=(const IndexRange& ir1, const IndexRange& ir2)
   return ir1.start() != ir2.start() || ir1.end() != ir2.end();
 }
 
-using IRng = IndexRange; // Alias to save you some typing.
+using IRng = IndexRange;  // Alias to save you some typing.
 
 /** Special IndexRange that represents a entire range. */
 static constexpr IndexRange ALL(0, std::numeric_limits<DimType>::max());
@@ -251,4 +251,4 @@ enum TensorAllocationStrategy
   StrictAlloc /**< Tensor data should not be allocated lazily. */
 };
 
-} // namespace h2
+}  // namespace h2

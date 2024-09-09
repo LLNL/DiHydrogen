@@ -60,4 +60,4 @@ h2::gpu::DeviceStream StreamManager::priority_stream(size_t idx) const
   return m_priority_streams.at(idx);
 }
 
-} // namespace distconv
+}  // namespace distconv

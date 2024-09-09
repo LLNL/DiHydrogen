@@ -432,7 +432,7 @@ inline RankType dim_global2rank<Distribution::Replicated>(
   typename ShapeTuple::type /*grid_dim_size*/,
   DimType /*global_index*/)
 {
-  return 0; // Data is present on all ranks in the grid dimension.
+  return 0;  // Data is present on all ranks in the grid dimension.
 }
 
 template <>
@@ -441,7 +441,7 @@ inline RankType dim_global2rank<Distribution::Single>(
   typename ShapeTuple::type /*grid_dim_size*/,
   DimType /*global_index*/)
 {
-  return 0; // Data is always present on the root.
+  return 0;  // Data is always present on the root.
 }
 
 inline RankType dim_global2rank(typename ShapeTuple::type dim_size,
@@ -592,5 +592,5 @@ inline ScalarIndexTuple local2global_index(ShapeTuple global_shape,
   });
 }
 
-} // namespace internal
-} // namespace h2
+}  // namespace internal
+}  // namespace h2

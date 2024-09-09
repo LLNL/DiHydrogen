@@ -45,7 +45,7 @@ template <typename S, typename... Ts, typename T>
 struct RemoveT<TypeList<S, Ts...>, T> : ConsT<S, Remove<TypeList<Ts...>, T>>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

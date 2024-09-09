@@ -159,5 +159,5 @@ public:
   MPIRootPrintStreamInfo() : MPIPrintStreamInfo() { m_enable = m_rank == 0; }
 };
 
-} // namespace logging
-} // namespace p2p
+}  // namespace logging
+}  // namespace p2p

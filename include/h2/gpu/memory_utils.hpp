@@ -58,8 +58,8 @@ struct MemInfo
   size_t total;
 };
 
-} // namespace gpu
-} // namespace h2
+}  // namespace gpu
+}  // namespace h2
 
 #if H2_HAS_CUDA
 #include "cuda/memory_utils.hpp"
@@ -169,5 +169,5 @@ inline void mem_zero(T* mem, size_t n_elmts, DeviceStream stream)
   mem_zero(reinterpret_cast<void*>(mem), n_elmts * sizeof(T), stream);
 }
 
-} // namespace gpu
-} // namespace h2
+}  // namespace gpu
+}  // namespace h2

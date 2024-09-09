@@ -109,7 +109,7 @@ __global__ void bp_local(const DataType* __restrict__ x_pred,
   }
 }
 
-} // namespace
+}  // namespace
 
 template <typename Tensor>
 int MeanSquaredError<BackendDNNLib>::forward(const Tensor& x_pred,
@@ -237,4 +237,4 @@ PROTO(float)
 PROTO(double)
 #undef PROTO
 
-} // namespace distconv
+}  // namespace distconv

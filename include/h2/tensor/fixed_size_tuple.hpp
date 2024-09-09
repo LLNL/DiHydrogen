@@ -370,7 +370,7 @@ inline std::ostream& operator<<(std::ostream& os,
   return os;
 }
 
-} // namespace h2
+}  // namespace h2
 
 namespace std
 {
@@ -395,4 +395,4 @@ struct hash<h2::FixedSizeTuple<T, SizeType, N>>
   }
 };
 
-} // namespace std
+}  // namespace std

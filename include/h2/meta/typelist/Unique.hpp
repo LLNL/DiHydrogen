@@ -48,7 +48,7 @@ public:
   using type = Cons<Head_, Remove<UniqueTail_, Head_>>;
 };
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

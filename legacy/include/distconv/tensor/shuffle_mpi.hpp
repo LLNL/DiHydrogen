@@ -2,7 +2,7 @@
 
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/tensor_mpi.hpp"
-#include "distconv/util/util_gpu.hpp" // for profiler marking
+#include "distconv/util/util_gpu.hpp"  // for profiler marking
 #include "distconv/util/util_mpi.hpp"
 
 #include <algorithm>
@@ -461,7 +461,7 @@ public:
     return is_forward ? m_recv_displs.data() : m_send_displs.data();
   }
 };
-} // namespace internal
+}  // namespace internal
 
 template <typename DataType, typename Allocator>
 class TensorMPIShuffler;
@@ -640,7 +640,7 @@ protected:
       }
     }
 
-    util::profile_pop(); // pack
+    util::profile_pop();  // pack
 
     util::profile_push("transfer");
     if (!getenv("SKIP_TRANSFER"))
@@ -1120,8 +1120,8 @@ protected:
   }
 };
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv
 
 #undef CALC_OFFSET4
 #undef CALC_OFFSET5

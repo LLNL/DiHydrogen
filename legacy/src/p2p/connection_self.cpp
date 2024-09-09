@@ -109,4 +109,4 @@ int ConnectionSelf::transfer(void* local_buf,
   }
 }
 
-} // namespace p2p
+}  // namespace p2p

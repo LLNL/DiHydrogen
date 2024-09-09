@@ -60,4 +60,4 @@ private:
   }
 };
 
-} // namespace distconv
+}  // namespace distconv

@@ -60,8 +60,8 @@ struct PHReplaceT;
 template <typename CandidatePH, typename... Replacements>
 using PHReplace = Force<PHReplaceT<CandidatePH, Replacements...>>;
 
-} // namespace placeholders
-} // namespace pfunctions
+}  // namespace placeholders
+}  // namespace pfunctions
 
 /** @brief A placeholder wrapper for use in the meta namespace. */
 template <unsigned long Idx>
@@ -112,7 +112,7 @@ public:
                           Placeholder<Idx - num_args_>>;
 };
 
-} // namespace placeholders
+}  // namespace placeholders
 
 // Inject these symbols into the pfunctions namespace
 using placeholders::_1;
@@ -125,7 +125,7 @@ using placeholders::_7;
 using placeholders::_8;
 using placeholders::_9;
 
-} // namespace pfunctions
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace meta
-} // namespace h2
+}  // namespace pfunctions
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace meta
+}  // namespace h2

@@ -268,4 +268,4 @@ inline bool from_string<bool>(const std::string& str)
   }
 }
 
-} // namespace h2
+}  // namespace h2

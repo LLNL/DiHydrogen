@@ -15,7 +15,7 @@ __global__ void test_kernel(int* buf, int val)
   *buf = val;
 }
 
-} // namespace
+}  // namespace
 
 void unit_test_gpu_launch_kernel_test(int* buf,
                                       int val,

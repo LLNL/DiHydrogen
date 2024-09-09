@@ -37,4 +37,4 @@ public:
   int disconnect() override;
 };
 
-} // namespace p2p
+}  // namespace p2p

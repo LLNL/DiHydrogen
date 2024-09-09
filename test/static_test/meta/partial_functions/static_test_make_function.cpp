@@ -22,7 +22,7 @@ struct F2;
 template <typename T, typename T, typename T>
 struct F3;
 
-} // namespace
+}  // namespace
 
 static_assert(EqV<MakeNaryFunction<F1, 1>, F1<_1>>(), "Make a unary function.");
 static_assert(EqV<MakeNaryFunction<F2, 2>, F2<_1, _2>>(),
@@ -65,7 +65,7 @@ using F__Int = F3<T, U, int>;
 template <typename T, typename U>
 using FRev = F2<U, T>;
 
-} // namespace
+}  // namespace
 
 static_assert(EqV<MakeUnaryFunction<F_Int>, F2<_1, int>>(),
               "Make a unary function.");

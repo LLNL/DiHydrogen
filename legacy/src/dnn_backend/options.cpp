@@ -6,7 +6,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "distconv/dnn_backend/dnn_backend.hpp"
-#include "distconv/util/util_mpi.hpp" // MPIRootPrintStreamDebug
+#include "distconv/util/util_mpi.hpp"  // MPIRootPrintStreamDebug
 
 namespace distconv
 {
@@ -71,4 +71,4 @@ Options::Options(bool overlap_halo_exchange_in,
   }
 }
 
-} // namespace distconv
+}  // namespace distconv

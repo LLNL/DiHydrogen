@@ -45,8 +45,8 @@ struct CartProdTLT<TL<T, List1Ts...>, TL<List2Ts...>>
                       Force<CartProdTLT<TL<List1Ts...>, TL<List2Ts...>>>>;
 };
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
 
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

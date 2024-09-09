@@ -418,5 +418,5 @@ inline
   return 0;
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

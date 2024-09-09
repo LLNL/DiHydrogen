@@ -247,7 +247,7 @@ void channel_sums_and_sqsums(int num_samples,
                                          shape,
                                          input_strides);
 }
-} // namespace
+}  // namespace
 
 template <typename Tensor>
 void channel_sums_and_sqsums(int num_dims,
@@ -312,7 +312,7 @@ struct sums_to_statistics_functor
   }
 };
 
-} // namespace
+}  // namespace
 
 template <typename TensorType>
 void sums_to_statistics(index_t num_per_sum,
@@ -563,7 +563,7 @@ void batch_normalization(int num_samples,
     output_strides);
 }
 
-} // namespace
+}  // namespace
 
 template <typename TensorType>
 void batch_normalization(int num_dims,
@@ -801,7 +801,7 @@ void forward_all(const Tensor& input,
   }
 }
 
-} // namespace
+}  // namespace
 
 template <typename Tensor>
 void forward_all(int num_dims,
@@ -868,7 +868,7 @@ void forward_all(int num_dims,
 INSTANTIATE_FORWARD(float)
 INSTANTIATE_FORWARD(double)
 #undef INSTANTIATE_FORWARD
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 
 namespace
 {
@@ -1202,7 +1202,7 @@ void backprop1(int num_samples,
                                          d_output_strides);
 }
 
-} // namespace
+}  // namespace
 
 template <typename TensorType>
 void backprop1(int num_dims,
@@ -1275,16 +1275,16 @@ namespace
 
 template <int ND, typename DataType>
 __global__ void backprop2_kernel(
-  const DataType* input, // no __restrict__ so input can be reused for d_input
-                         // as a memory optimization
+  const DataType* input,  // no __restrict__ so input can be reused for d_input
+                          // as a memory optimization
   const DataType* __restrict__ d_output,
   const DataType* __restrict__ global_mean,
   const DataType* __restrict__ global_var,
   const DataType* __restrict__ global_scale,
   const DataType* __restrict__ global_dmean,
   const DataType* __restrict__ global_dvar,
-  DataType* d_input, // no __restrict__ so input can be reused for d_input as
-                     // a memory optimization
+  DataType* d_input,  // no __restrict__ so input can be reused for d_input as
+                      // a memory optimization
   DataType epsilon,
   index_t num_per_sum,
   tensor::Array<ND> shape,
@@ -1343,16 +1343,16 @@ __global__ void backprop2_kernel(
 
 template <int ND, typename DataType, typename DataTypeV>
 __global__ void backprop2_opt_kernel(
-  const DataTypeV* input, // no __restrict__ so input can be reused for
-                          // d_input as a memory optimization
+  const DataTypeV* input,  // no __restrict__ so input can be reused for
+                           // d_input as a memory optimization
   const DataTypeV* __restrict__ d_output,
   const DataType* __restrict__ global_mean,
   const DataType* __restrict__ global_var,
   const DataType* __restrict__ global_scale,
   const DataType* __restrict__ global_dmean,
   const DataType* __restrict__ global_dvar,
-  DataTypeV* d_input, // no __restrict__ so input can be reused for d_input as
-                      // a memory optimization
+  DataTypeV* d_input,  // no __restrict__ so input can be reused for d_input as
+                       // a memory optimization
   DataType epsilon,
   index_t num_per_sum,
   index_t spatial_size,
@@ -1529,7 +1529,7 @@ void backprop2(index_t num_samples,
                                          d_input_strides);
 }
 
-} // namespace
+}  // namespace
 
 template <typename TensorType>
 void backprop2(int num_dims,
@@ -1597,5 +1597,5 @@ INSTANTIATE_BACKPROP2(float)
 INSTANTIATE_BACKPROP2(double)
 #undef INSTANTIATE_BACKPROP2
 
-} // namespace batchnorm
-} // namespace distconv
+}  // namespace batchnorm
+}  // namespace distconv

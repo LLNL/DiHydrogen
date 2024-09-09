@@ -27,5 +27,5 @@ inline void nvtx_end()
   return;
 }
 
-} // namespace internal
-} // namespace p2p
+}  // namespace internal
+}  // namespace p2p

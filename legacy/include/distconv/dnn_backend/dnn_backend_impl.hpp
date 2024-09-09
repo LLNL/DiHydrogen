@@ -95,4 +95,4 @@ void GPUDNNBackend::setup_tensor_descriptor(TensorDescriptor_t& desc,
   setup_tensor_descriptor(desc, tensor, include_halo_array, include_halo_array);
 }
 
-} // namespace distconv
+}  // namespace distconv

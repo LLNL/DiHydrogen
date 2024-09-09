@@ -153,7 +153,7 @@ P2P::connect(int peer, char* peer_name, int peer_dev)
     MPIPrintStreamDebug() << "Connecting to rank " << peer << " using device "
                           << peer_dev << " with IPC\n";
     return std::make_shared<ConnectionIPC>(peer, peer_dev, m_mpi, m_event_pool);
-#if 0 // Disables MPI connection
+#if 0  // Disables MPI connection
   } else {
     MPIPrintStreamInfo() <<
         "Connecting to rank " << peer << " with MPI\n";
@@ -412,4 +412,4 @@ int P2P::exchange(connection_type* connections,
   return 0;
 }
 
-} // namespace p2p
+}  // namespace p2p

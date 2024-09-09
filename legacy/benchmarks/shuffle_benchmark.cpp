@@ -14,7 +14,7 @@
 #ifdef DISTCONV_HAS_P2P
 #include "distconv/tensor/shuffle_mpi_cuda_hybrid.hpp"
 #include "distconv/tensor/shuffle_mpi_cuda_p2p.hpp"
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 #include "distconv/distconv.hpp"
 #include "distconv/util/cxxopts.hpp"
 #include "distconv/util/stopwatch.h"
@@ -271,7 +271,7 @@ int test_shuffler(Data<tensor::CUDAAllocator>& d,
 
 #ifdef DISTCONV_HAS_P2P
   p2p::P2P* p2p_h = nullptr;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
   AlBackend::comm_type* al_comm = nullptr;
   tensor::TensorMPICUDAShuffler<DataType>* shfl = nullptr;
   auto stream = h2::gpu::make_stream();
@@ -298,7 +298,7 @@ int test_shuffler(Data<tensor::CUDAAllocator>& d,
     shfl = new tensor::TensorMPICUDAShufflerHybrid<DataType>(
       d.sample, d.spatial, *p2p_h, *al_comm);
     break;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
   default:
     util::MPIRootPrintStreamError() << "Unknown shuffle method";
     std::abort();
@@ -354,7 +354,7 @@ int test_shuffler(Data<tensor::CUDAAllocator>& d,
 #ifdef DISTCONV_HAS_P2P
   if (p2p_h)
     delete p2p_h;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
   if (al_comm)
     delete al_comm;
   h2::gpu::destroy(stream);
@@ -450,7 +450,7 @@ void run(int argc, char* argv[], int pid, int np)
   util::MPIRootPrintStreamInfo() << "Completed";
 }
 
-} // namespace distconv_benchmark
+}  // namespace distconv_benchmark
 
 int main(int argc, char* argv[])
 {

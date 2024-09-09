@@ -258,4 +258,4 @@ void Request::process(const Request* requests,
   }
 }
 
-} // namespace p2p
+}  // namespace p2p

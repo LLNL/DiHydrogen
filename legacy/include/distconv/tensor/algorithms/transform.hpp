@@ -10,7 +10,7 @@ namespace distconv
 namespace tensor
 {
 namespace algorithms
-{} // namespace algorithms
+{}  // namespace algorithms
 
 template <typename Tensor, typename UnaryFunction>
 typename std::enable_if<
@@ -22,5 +22,5 @@ Transform(Tensor& tensor, UnaryFunction op)
   return 0;
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

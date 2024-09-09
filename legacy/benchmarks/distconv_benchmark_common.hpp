@@ -426,4 +426,4 @@ inline int run_test(const BenchmarkConfig<NSD>& cfg, MPI_Comm comm)
   }
 }
 
-} // namespace distconv_benchmark
+}  // namespace distconv_benchmark

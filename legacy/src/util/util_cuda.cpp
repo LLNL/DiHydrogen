@@ -178,5 +178,5 @@ cudaStream_t create_priority_stream()
   return s;
 }
 
-} // namespace util
-} // namespace distconv
+}  // namespace util
+}  // namespace distconv

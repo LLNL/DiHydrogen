@@ -41,7 +41,7 @@ TEMPLATE_LIST_TEST_CASE(
   constexpr h2::Device Dev = TestType::device;
   constexpr hydrogen::Device HDev = h2::HydrogenDevice<Dev>;
 
-  El::Grid grid; // COMM_WORLD, as square as possible, column-major ordering
+  El::Grid grid;  // COMM_WORLD, as square as possible, column-major ordering
   SECTION("DistMatrix(STAR, STAR)")
   {
     El::DistMatrix<DataType, El::STAR, El::STAR, El::ELEMENT, HDev> A(grid);

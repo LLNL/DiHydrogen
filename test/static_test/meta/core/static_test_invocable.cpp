@@ -20,7 +20,7 @@ struct Q
   void operator()(int, float);
 };
 
-} // namespace
+}  // namespace
 
 // Other function
 extern void f(double, double);
@@ -42,4 +42,4 @@ static_assert(IsInvocableV<decltype(f), double, double>(),
 static_assert(IsInvocableV<decltype(f), float, float>(),
               "Functions are invocable through implicit conversions.");
 static_assert(!IsInvocableV<decltype(f), X, float>(),
-              "No implicit conversions."); // implicit conversions
+              "No implicit conversions.");  // implicit conversions

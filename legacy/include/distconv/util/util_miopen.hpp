@@ -70,7 +70,8 @@ struct miopenTypeTraits;
 template <>
 struct miopenTypeTraits<int>
 {
-  static constexpr auto value = miopenInt32; // Yeah, I know. But also, reality.
+  static constexpr auto value =
+    miopenInt32;  // Yeah, I know. But also, reality.
 };
 
 template <>
@@ -127,5 +128,5 @@ std::vector<int> get_miopen_strides(int const num_samples,
                                     std::vector<int> const& spatial_dims,
                                     std::string const& fmt);
 
-} // namespace util
-} // namespace distconv
+}  // namespace util
+}  // namespace distconv

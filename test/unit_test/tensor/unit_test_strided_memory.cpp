@@ -454,7 +454,7 @@ TEMPLATE_LIST_TEST_CASE("Lazy StridedMemory works",
     mem.ensure();
     REQUIRE(mem.data() != nullptr);
     REQUIRE(mem.const_data() != nullptr);
-    mem.ensure(); // Test calling ensure multiple times.
+    mem.ensure();  // Test calling ensure multiple times.
     REQUIRE(mem.data() != nullptr);
     REQUIRE(mem.const_data() != nullptr);
     mem.release();
@@ -643,7 +643,7 @@ TEMPLATE_LIST_TEST_CASE("StridedMemory views across devices work",
   REQUIRE(mem_view.get_stream() == dst_stream);
 }
 
-#endif // H2_TEST_WITH_GPU
+#endif  // H2_TEST_WITH_GPU
 
 TEMPLATE_LIST_TEST_CASE("Cloning StridedMemory works",
                         "[tensor][strided_memory]",

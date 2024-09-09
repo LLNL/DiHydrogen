@@ -86,6 +86,6 @@ PinnedMemoryPool& RuntimeHIP::get_pinned_memory_pool()
   return get_instance().m_pmp;
 }
 
-} // namespace internal
-} // namespace tensor
-} // namespace distconv
+}  // namespace internal
+}  // namespace tensor
+}  // namespace distconv

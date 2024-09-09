@@ -130,4 +130,4 @@ void Connection::delete_mapped_addr(const void* mapped_addr)
   return;
 }
 
-} // namespace p2p
+}  // namespace p2p

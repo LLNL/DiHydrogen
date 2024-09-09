@@ -334,7 +334,7 @@ void run(int argc, char* argv[], int pid)
   util::MPIRootPrintStreamInfo() << "Finishing";
 }
 
-} // namespace distconv_benchmark
+}  // namespace distconv_benchmark
 
 int main(int argc, char* argv[])
 {

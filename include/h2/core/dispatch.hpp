@@ -193,13 +193,13 @@
   H2_INSTANTIATE_CPU_2                                                         \
   H2_INSTANTIATE_GPU_2
 
-#else // H2_HAS_GPU
+#else  // H2_HAS_GPU
 
 #define H2_INSTANTIATE_1 H2_INSTANTIATE_CPU_1
 
 #define H2_INSTANTIATE_2 H2_INSTANTIATE_CPU_2
 
-#endif // H2_HAS_GPU
+#endif  // H2_HAS_GPU
 
 namespace h2
 {
@@ -459,7 +459,7 @@ get_dispatch_key(const std::array<TypeInfo::TokenType, N>& tokens)
   return dispatch_key;
 }
 
-} // namespace internal
+}  // namespace internal
 
 /** Construct a dispatch key for dispatching on args. */
 template <typename... TypeInfoHavers>
@@ -548,7 +548,7 @@ void do_dispatch(
   }
 }
 
-} // namespace h2
+}  // namespace h2
 
 // *****
 // Example of static dispatching (this is also used in unit tests).
@@ -568,7 +568,7 @@ template <typename T>
 void dispatch_test_impl(GPUDev_t, T*);
 #endif
 
-} // namespace impl
+}  // namespace impl
 
 // Define the H2 public API:
 template <typename T>
@@ -577,7 +577,7 @@ void dispatch_test(Device dev, T* v)
   H2_DEVICE_DISPATCH_SAME(dev, impl::dispatch_test_impl(DeviceT_v<Dev>, v));
 }
 
-} // namespace h2
+}  // namespace h2
 
 // End static dispatch example.
 // *****

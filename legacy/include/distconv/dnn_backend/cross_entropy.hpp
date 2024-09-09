@@ -89,4 +89,4 @@ private:
   const bool m_use_labels;
 };
 
-} // namespace distconv
+}  // namespace distconv

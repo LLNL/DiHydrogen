@@ -28,7 +28,7 @@ void end_for_comms()
   in_for_comms = false;
 }
 
-} // namespace internal
+}  // namespace internal
 
 /**
  * Gracefully handle test case failures when not all ranks may see

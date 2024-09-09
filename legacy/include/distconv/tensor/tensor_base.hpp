@@ -660,5 +660,5 @@ get_strides(const Shape& logical_shape, const IntVector& overlap, index_t pitch)
   return strides;
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

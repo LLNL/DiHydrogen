@@ -111,7 +111,7 @@ public:
     }
     // Clear all sync registrations.
     pending_streams.clear();
-#else  // H2_HAS_GPU
+#else   // H2_HAS_GPU
     if (buffer)
     {
       if (!unowned_buffer)
@@ -121,7 +121,7 @@ public:
       buffer = nullptr;
       unowned_buffer = false;
     }
-#endif // H2_HAS_GPU
+#endif  // H2_HAS_GPU
   }
 
   Device get_device() const H2_NOEXCEPT { return buffer_device; }
@@ -170,7 +170,7 @@ public:
         pending_streams.emplace(other_stream, std::move(event));
       }
     }
-#endif // H2_HAS_GPU
+#endif  // H2_HAS_GPU
   }
 
 private:
@@ -268,9 +268,9 @@ struct DeviceBufferPrinter<T, Device::GPU>
   }
 };
 
-#endif // H2_HAS_GPU
+#endif  // H2_HAS_GPU
 
-} // namespace internal
+}  // namespace internal
 
 /** Print the contents of a RawBuffer. */
 template <typename T>
@@ -284,4 +284,4 @@ inline std::ostream& raw_buffer_contents(std::ostream& os,
   return os;
 }
 
-} // namespace h2
+}  // namespace h2

@@ -69,7 +69,7 @@ void write_report(std::vector<Catch::Totals> const& all_totals,
     mpi_size,
   };
 
-  std::uint64_t width = 60; // THIS VALUE IS SPECIAL
+  std::uint64_t width = 60;  // THIS VALUE IS SPECIAL
   for (auto& x : fwidth)
   {
     x = std::to_string(x).size();
@@ -120,7 +120,7 @@ void write_report(std::vector<Catch::Totals> const& all_totals,
     for (size_t i = 0; i < num_failed_ranks; ++i)
     {
       if (i > 0 && i % 8 == 0)
-        os << "\n             "; // "\nFAILED RANKS:"
+        os << "\n             ";  // "\nFAILED RANKS:"
       os << " " << setw(rwidth) << right << failed_ranks[i];
     }
     os << "\n";
@@ -128,7 +128,7 @@ void write_report(std::vector<Catch::Totals> const& all_totals,
   endl(os);
   flush(os);
 }
-} // namespace
+}  // namespace
 
 // Assumptions
 // - All processes in MPI_COMM_WORLD participate in testing.

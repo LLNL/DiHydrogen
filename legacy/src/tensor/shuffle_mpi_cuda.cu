@@ -399,7 +399,7 @@ void unpack(DataType* dst,
                                            stream);
 }
 
-} // namespace
+}  // namespace
 
 namespace tensor
 {
@@ -537,8 +537,8 @@ INSTANTIATE_SHUFFLE(unsigned short)
 INSTANTIATE_SHUFFLE(long)
 INSTANTIATE_SHUFFLE(unsigned long)
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv
 
 #ifdef PACK_USE_SHMEM
 #undef PACK_USE_SHMEM

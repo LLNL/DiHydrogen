@@ -66,6 +66,6 @@
 #define H2_NODISCARD
 #endif
 
-#endif // defined(__cplusplus)
+#endif  // defined(__cplusplus)
 
-#endif // H2_CONFIG_HPP_
+#endif  // H2_CONFIG_HPP_

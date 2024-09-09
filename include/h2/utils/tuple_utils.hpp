@@ -64,4 +64,4 @@ struct TupleCatT<Tuple, OtherTuples...>
 template <typename... Tuples>
 using TupleCat_t = typename TupleCatT<Tuples...>::type;
 
-} // namespace h2
+}  // namespace h2

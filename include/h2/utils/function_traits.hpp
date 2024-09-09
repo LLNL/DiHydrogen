@@ -83,4 +83,4 @@ struct FunctionTraits<Ret (Class::*)(Args...) const>
   using ClassT = Class;
 };
 
-} // namespace h2
+}  // namespace h2

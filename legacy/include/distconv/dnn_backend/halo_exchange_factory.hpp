@@ -13,11 +13,11 @@
 #ifdef DISTCONV_HAS_P2P
 #include "distconv/tensor/halo_exchange_cuda_hybrid.hpp"
 #include "distconv/tensor/halo_exchange_cuda_p2p.hpp"
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 #include "distconv/tensor/channel_exchange.hpp"
 #ifdef DISTCONV_HAS_NVSHMEM
 #include "distconv/tensor/halo_exchange_cuda_nvshmem.hpp"
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 #include "distconv/tensor/tensor_mpi.hpp"
 
 namespace distconv
@@ -32,7 +32,7 @@ auto make_halo_exchange(
   HaloExchangeMethod method)
 {
   using AlBackend = Al::NCCLBackend;
-  using Allocator = tensor::CUDAAllocator; // may differ from AllocT.
+  using Allocator = tensor::CUDAAllocator;  // may differ from AllocT.
   using HaloExchange = tensor::HaloExchange<DataT, Allocator, AlBackend>;
   using HaloExchangeMPI = tensor::HaloExchangeMPI<DataT, Allocator, AlBackend>;
   using HaloExchangeAL = tensor::HaloExchangeAL<DataT, Allocator, AlBackend>;
@@ -40,7 +40,7 @@ auto make_halo_exchange(
   using HaloExchangeP2P = tensor::HaloExchangeP2P<DataT, Allocator, AlBackend>;
   using HaloExchangeHybrid =
     tensor::HaloExchangeHybrid<DataT, Allocator, AlBackend>;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
   using HaloExchangeNVSHMEM =
     tensor::HaloExchangeNVSHMEM<DataT, Allocator, AlBackend>;
@@ -51,8 +51,8 @@ auto make_halo_exchange(
 #ifdef DISTCONV_HAS_CUDA_GRAPH
   using HaloExchangeNVSHMEMGraph =
     tensor::HaloExchangeNVSHMEMGraph<DataT, Allocator, AlBackend>;
-#endif // DISTCONV_HAS_CUDA_GRAPH
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_CUDA_GRAPH
+#endif  // DISTCONV_HAS_NVSHMEM
 
   util::MPIRootPrintStreamDebug() << "Using " << method << " in halo exchange";
   std::unique_ptr<HaloExchange> out;
@@ -71,7 +71,7 @@ auto make_halo_exchange(
   case HaloExchangeMethod::HYBRID:
     out = std::make_unique<HaloExchangeHybrid>(tensor, p2p);
     break;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
   case HaloExchangeMethod::NVSHMEM:
     out = std::make_unique<HaloExchangeNVSHMEM>(tensor);
@@ -86,8 +86,8 @@ auto make_halo_exchange(
   case HaloExchangeMethod::NVSHMEM_GRAPH:
     out = std::make_unique<HaloExchangeNVSHMEMGraph>(tensor);
     break;
-#endif // DISTCONV_HAS_CUDA_GRAPH
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_CUDA_GRAPH
+#endif  // DISTCONV_HAS_NVSHMEM
   default:
     util::MPIPrintStreamError() << "Invalid halo exchange method: " << method;
     std::abort();
@@ -95,4 +95,4 @@ auto make_halo_exchange(
   return out;
 }
 
-} // namespace distconv
+}  // namespace distconv

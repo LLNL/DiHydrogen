@@ -113,7 +113,7 @@ get_halo_sizes(const tensor::Tensor<DataType, Locale, Allocator>& input,
   }
 }
 
-} // namespace internal
+}  // namespace internal
 
 HOST_DEV_FUNC constexpr int get_channel_dim()
 {
@@ -374,7 +374,7 @@ Tensor create_filter_tensor(const int_vector& locale_shape,
   if (filter_locale_shape[-2] > 1)
   {
     // Handle channel/filter parallelism.
-    assert(num_groups == 1); // No grouped convolution for now.
+    assert(num_groups == 1);  // No grouped convolution for now.
     if (chanfilt_algo == ChannelParallelismAlgorithm::X)
     {
       filter_locale_shape[-1] = 1;
@@ -789,4 +789,4 @@ inline int dump_local_tensor(
   return 0;
 }
 
-} // namespace distconv
+}  // namespace distconv

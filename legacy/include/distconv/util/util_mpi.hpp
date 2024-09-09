@@ -190,5 +190,5 @@ public:
   }
 };
 
-} // namespace util
-} // namespace distconv
+}  // namespace util
+}  // namespace distconv

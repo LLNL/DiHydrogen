@@ -88,6 +88,6 @@ void get_grid_dims2(const Shape& region,
   return;
 }
 
-} // namespace algorithms_cuda
-} // namespace tensor
-} // namespace distconv
+}  // namespace algorithms_cuda
+}  // namespace tensor
+}  // namespace distconv

@@ -70,5 +70,5 @@ LIST_OF_TYPES
 LIST_OF_TYPES
 #undef DEFINE_FUNC
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

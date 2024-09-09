@@ -23,7 +23,7 @@ public:
   Base(int) {}
   virtual ~Base() = default;
   virtual std::string foo() const = 0;
-}; // class Base
+};  // class Base
 
 class Derived1 : public Cloneable<Derived1, Base>
 {
@@ -37,7 +37,7 @@ protected:
   using DirectBase = Cloneable<Derived1, Base>;
   using DirectBase::DirectBase;
 
-}; // class Derived1
+};  // class Derived1
 
 class Derived2 : public Cloneable<Derived2, Base>
 {
@@ -51,9 +51,9 @@ protected:
   using DirectBase = Cloneable<Derived2, Base>;
   using DirectBase::DirectBase;
 
-}; // class Derived1
+};  // class Derived1
 
-} // namespace
+}  // namespace
 
 TEST_CASE("Testing cloneable with base pointers", "[clone][utilities]")
 {

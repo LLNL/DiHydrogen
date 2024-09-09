@@ -395,9 +395,9 @@ protected:
     DISTCONV_CHECK_CUDA(cudaGraphLaunch(m_execs(dim, side), stream));
   }
 };
-#endif // DISTCONV_CUDA_VERSION_MAJOR
+#endif  // DISTCONV_CUDA_VERSION_MAJOR
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv
 
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM

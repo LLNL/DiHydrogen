@@ -253,4 +253,4 @@ protected:
   }
 };
 
-} // namespace h2
+}  // namespace h2

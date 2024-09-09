@@ -46,6 +46,6 @@ using MapTLT = ExpandTLT<F, List>;
 template <template <typename> class F, typename List>
 using MapTL = ExpandTL<F, List>;
 
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

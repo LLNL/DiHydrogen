@@ -145,7 +145,7 @@ auto make_dist_tensor_impl(T* const buffer,
       static_cast<El::Matrix<U, D> const&>(mat.LockedMatrix()))}};
 }
 
-} // namespace internal
+}  // namespace internal
 
 /** @name Hydrogen to DiHydrogen Zero-Copy Conversion (return by value) */
 ///@{
@@ -445,7 +445,7 @@ void set_sync(El::AbstractDistMatrix<T>& mat, ComputeStream stream)
   }
 #endif
 }
-} // namespace internal
+}  // namespace internal
 
 /** @name DiHydrogen to Hydrogen Zero-Copy Conversion */
 ///@{
@@ -538,4 +538,4 @@ auto as_h_matrix(DistTensor<T> const& tensor,
 
 ///@}
 
-} // namespace h2
+}  // namespace h2

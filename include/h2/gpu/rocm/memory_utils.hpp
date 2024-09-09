@@ -72,5 +72,5 @@ inline void mem_zero(void* mem, size_t bytes, DeviceStream stream)
   H2_CHECK_HIP(hipMemsetAsync(mem, 0x0, bytes, stream));
 }
 
-} // namespace gpu
-} // namespace h2
+}  // namespace gpu
+}  // namespace h2

@@ -38,7 +38,7 @@ template <typename... Ts>
 struct LengthVT<TL<Ts...>> : ValueAsType<unsigned long, sizeof...(Ts)>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

@@ -18,5 +18,5 @@ enum class HaloExchangeAccumOp
 template <typename DataType, typename Allocator, typename AlBackend>
 class HaloExchange;
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

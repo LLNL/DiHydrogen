@@ -11,6 +11,6 @@ namespace distconv
 namespace tensor
 {
 namespace algorithms
-{} // namespace algorithms
-} // namespace tensor
-} // namespace distconv
+{}  // namespace algorithms
+}  // namespace tensor
+}  // namespace distconv

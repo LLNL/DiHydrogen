@@ -89,7 +89,7 @@ void launch_kernel(float const& alpha,
   std::reverse_copy(tgt_strides_in, tgt_strides_in + ND, tgt_strides.val);
 
   size_t const N = get_size(dims);
-  size_t const blk_size = 256; // 64;
+  size_t const blk_size = 256;  // 64;
 
 #if H2_HAS_ROCM
   hipLaunchKernelGGL(copy_kernel,
@@ -114,7 +114,7 @@ void launch_kernel(float const& alpha,
 #endif
 }
 
-} // namespace
+}  // namespace
 
 namespace distconv
 {
@@ -164,4 +164,4 @@ void do_gpu_tensor_repack(float const& alpha,
   }
 }
 
-} // namespace distconv
+}  // namespace distconv

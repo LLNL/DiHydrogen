@@ -23,7 +23,7 @@ struct Q
   template <typename U, EnableUnless<EqV<T, U>(), int> = 0>
   static double F(U const&);
 };
-} // namespace
+}  // namespace
 
 static_assert(SubstitutionSuccess<int>::value, "SubstitutionSuccess is true.");
 static_assert(SubstitutionSuccess<float>::value,

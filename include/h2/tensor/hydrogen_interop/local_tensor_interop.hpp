@@ -70,7 +70,7 @@ auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
   auto const m = safe_as<DimType>(matrix.Height());
   auto const n = safe_as<DimType>(matrix.Width());
   auto const ldim = safe_as<DataIndexType>(matrix.LDim());
-  if (n == DimType{1}) // Column vector
+  if (n == DimType{1})  // Column vector
   {
     return TensorType{H2Device<D>,
                       buf,
@@ -79,7 +79,7 @@ auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
                       {as<DataIndexType>(1)},
                       ComputeStream(get_sync_info(matrix))};
   }
-  else if (m == DimType{1}) // Row vector
+  else if (m == DimType{1})  // Row vector
   {
     return TensorType{H2Device<D>,
                       buf,
@@ -95,7 +95,7 @@ auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
                     {as<DataIndexType>(1), ldim},
                     ComputeStream(get_sync_info(matrix))};
 }
-} // namespace internal
+}  // namespace internal
 
 /** @brief View an H2 Tensor as a Hydrogen matrix.
  *
@@ -247,4 +247,4 @@ auto as_h2_tensor(El::Matrix<T, D>& matrix) -> Tensor<T>
   return internal::as_h2_tensor_impl(matrix.Buffer(), matrix);
 }
 
-} // namespace h2
+}  // namespace h2

@@ -40,5 +40,5 @@ void HaloExchange<double, CUDAAllocator, Al::NCCLBackend>::pack_or_unpack(
     m_tensor, dim, side, width, stream, buf, is_pack, is_reverse, op);
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

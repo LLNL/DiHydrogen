@@ -97,4 +97,4 @@ private:
                        std::vector<int>& peer_devices);
 };
 
-} // namespace p2p
+}  // namespace p2p

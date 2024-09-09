@@ -12,7 +12,7 @@
 #include "distconv/util/util_mpi.hpp"
 #ifdef DISTCONV_HAS_NVSHMEM
 #include "distconv/tensor/allreduce_nvshmem.hpp"
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 
 #include "h2/gpu/memory_utils.hpp"
 #include "h2/gpu/runtime.hpp"
@@ -67,7 +67,7 @@ void alloc_buf(const std::string& method, DataType*& ptr, size_t count)
     ptr = static_cast<DataType*>(nvshmem_malloc(sizeof(DataType) * count));
     util::nvshmem::barrier();
     // util::MPIPrintStreamInfo() << "NVSHMEM alloc at: " << ptr;
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
   }
   else
   {
@@ -86,7 +86,7 @@ void free_buf(const std::string& method, void* ptr)
     nvshmem_free(ptr);
     util::nvshmem::barrier();
     // util::MPIPrintStreamInfo() << "Freeing nvshmem done";
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
   }
   else
   {
@@ -201,7 +201,7 @@ make_reducer(const std::string name, MPI_Comm comm, DeviceStream stream)
   {
     return std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
       stream, tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BLOCK);
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
   }
   else
   {

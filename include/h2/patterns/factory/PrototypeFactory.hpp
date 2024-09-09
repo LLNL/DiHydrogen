@@ -122,7 +122,7 @@ public:
 
 private:
   map_type map_;
-}; // class PrototypeFactory
+};  // class PrototypeFactory
 
-} // namespace factory
-} // namespace h2
+}  // namespace factory
+}  // namespace h2

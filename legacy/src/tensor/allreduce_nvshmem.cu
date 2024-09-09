@@ -31,7 +31,7 @@ __global__ void reduce_kernel(const DataType* src, DataType* dst, size_t count)
   }
 }
 
-} // namespace
+}  // namespace
 
 #define DEFINE_COPY(TYPE)                                                      \
   template <>                                                                  \
@@ -148,7 +148,7 @@ __global__ void recursive_doubling_kernel(const DataType* send_buf,
   copy_block(recv_buf, psum, work_per_block);
 }
 
-} // namespace allreduce_nvshmem
+}  // namespace allreduce_nvshmem
 
 template <typename DataType>
 void AllreduceNVSHMEM<DataType>::recursive_doubling(const DataType* send_buf,
@@ -234,7 +234,7 @@ __global__ void recursive_doubling_buffered(const DataType* send_buf,
   }
   copy_block(recv_buf, psum, work_per_block);
 }
-} // namespace allreduce_nvshmem
+}  // namespace allreduce_nvshmem
 
 template <typename DataType>
 void AllreduceNVSHMEM<DataType>::recursive_doubling_buffered(
@@ -317,7 +317,7 @@ struct Vector2<long>
 {
   using type = long2;
 };
-} // namespace allreduce_nvshmem
+}  // namespace allreduce_nvshmem
 
 template <typename DataType>
 void AllreduceNVSHMEM<DataType>::recursive_doubling_block(
@@ -363,5 +363,5 @@ DEFINE_RECURSIVE_DOUBLING(int)
 DEFINE_RECURSIVE_DOUBLING(long)
 #undef DEFINE_RECURSIVE_DOUBLING
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

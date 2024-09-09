@@ -408,7 +408,7 @@ void transform(Shape shape,
 #undef CALL_KERNEL
 }
 
-} // namespace algorithms_cuda
+}  // namespace algorithms_cuda
 
 template <typename Tensor, typename TransformFunc>
 typename std::enable_if<
@@ -733,5 +733,5 @@ Transform(Tensor1& tensor1,
   return 0;
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

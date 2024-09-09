@@ -54,7 +54,7 @@ static constexpr struct
   uint8_t major, minor, patch;
 } version = {
   CXXOPTS__VERSION_MAJOR, CXXOPTS__VERSION_MINOR, CXXOPTS__VERSION_PATCH};
-} // namespace cxxopts
+}  // namespace cxxopts
 
 // when we ask cxxopts to use Unicode, help strings are processed using ICU,
 // which results in the correct lengths being computed for strings when they
@@ -154,7 +154,7 @@ inline bool empty(const String& s)
 {
   return s.isEmpty();
 }
-} // namespace cxxopts
+}  // namespace cxxopts
 
 namespace std
 {
@@ -167,7 +167,7 @@ inline cxxopts::UnicodeStringIterator end(const icu::UnicodeString& s)
 {
   return cxxopts::UnicodeStringIterator(&s, s.length());
 }
-} // namespace std
+}  // namespace std
 
 // ifdef CXXOPTS_USE_UNICODE
 #else
@@ -213,7 +213,7 @@ inline bool empty(const std::string& s)
 {
   return s.empty();
 }
-} // namespace cxxopts
+}  // namespace cxxopts
 
 // ifdef CXXOPTS_USE_UNICODE
 #endif
@@ -229,7 +229,7 @@ const std::string RQUOTE("\'");
 const std::string LQUOTE("‘");
 const std::string RQUOTE("’");
 #endif
-} // namespace
+}  // namespace
 
 class Value : public std::enable_shared_from_this<Value>
 {
@@ -380,7 +380,7 @@ namespace
 std::basic_regex<char> integer_pattern("(-)?(0x)?([0-9a-zA-Z]+)|((0x)?0)");
 std::basic_regex<char> truthy_pattern("(t|T)(rue)?");
 std::basic_regex<char> falsy_pattern("((f|F)(alse)?)?");
-} // namespace
+}  // namespace
 
 namespace detail
 {
@@ -423,7 +423,7 @@ void check_signed_range(bool negative, U value, const std::string& text)
 {
   SignedCheck<T, std::numeric_limits<T>::is_signed>()(negative, value, text);
 }
-} // namespace detail
+}  // namespace detail
 
 template <typename R, typename T>
 R checked_negate(T&& t, const std::string&, std::true_type)
@@ -745,7 +745,7 @@ private:
     m_implicit_value = "true";
   }
 };
-} // namespace values
+}  // namespace values
 
 template <typename T>
 std::shared_ptr<Value> value()
@@ -1188,7 +1188,7 @@ format_description(const HelpOptionDetails& o, size_t start, size_t width)
 
   return result;
 }
-} // namespace
+}  // namespace
 
 inline ParseResult::ParseResult(
   const std::shared_ptr<
@@ -1731,6 +1731,6 @@ Options::group_help(const std::string& group) const
   return m_help.at(group);
 }
 
-} // namespace cxxopts
+}  // namespace cxxopts
 
-#endif // CXXOPTS_HPP_INCLUDED
+#endif  // CXXOPTS_HPP_INCLUDED

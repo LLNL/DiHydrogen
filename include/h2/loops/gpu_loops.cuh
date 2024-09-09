@@ -233,7 +233,7 @@ H2_GPU_GLOBAL void vectorized_elementwise_loop_with_immediate(const FuncT& func,
   {
     std::tuple<Args...> args_ptrs{args...};
     typename traits::ArgsTuple loaded_args;
-    std::get<0>(loaded_args) = imm; // Store immediate in first arg.
+    std::get<0>(loaded_args) = imm;  // Store immediate in first arg.
 
     for (SizeT i = num_iter + tid; i < size; i += grid_stride)
     {
@@ -334,7 +334,7 @@ H2_GPU_GLOBAL void elementwise_loop_with_immediate(FuncT f,
 
   std::tuple<Args...> args_ptrs{args...};
   typename traits::ArgsTuple loaded_args;
-  std::get<0>(loaded_args) = imm; // Store immediate in first arg.
+  std::get<0>(loaded_args) = imm;  // Store immediate in first arg.
 
   static_assert(
     !has_return
@@ -363,7 +363,7 @@ H2_GPU_GLOBAL void elementwise_loop_with_immediate(FuncT f,
   }
 }
 
-} // namespace kernels
+}  // namespace kernels
 
 template <typename FuncT, typename... Args>
 void launch_elementwise_loop(const FuncT& func,
@@ -486,5 +486,5 @@ void launch_elementwise_loop_with_immediate(const FuncT& func,
 #undef DO_LAUNCH
 }
 
-} // namespace gpu
-} // namespace h2
+}  // namespace gpu
+}  // namespace h2

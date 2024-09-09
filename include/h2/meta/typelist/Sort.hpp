@@ -62,7 +62,7 @@ struct InsertIntoSortedT<T, TL<Head, Tail...>, Compare>
                 Cons<Head, InsertIntoSorted<T, TL<Tail...>, Compare>>>
 {};
 
-} // namespace details
+}  // namespace details
 
 template <template <typename, typename> class Compare>
 struct SortT<Empty, Compare>
@@ -79,7 +79,7 @@ struct SortT<TL<Head, Tail...>, Compare>
   : details::InsertIntoSortedT<Head, Sort<TL<Tail...>, Compare>, Compare>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

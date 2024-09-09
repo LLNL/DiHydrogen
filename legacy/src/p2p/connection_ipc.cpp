@@ -359,4 +359,4 @@ bool ConnectionIPC::wait_handler(cudaStream_t stream, void* data, Request* req)
   return false;
 }
 
-} // namespace p2p
+}  // namespace p2p

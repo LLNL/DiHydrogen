@@ -44,6 +44,6 @@ private:
   PinnedMemoryPool m_pmp;
 };
 
-} // namespace internal
-} // namespace tensor
-} // namespace distconv
+}  // namespace internal
+}  // namespace tensor
+}  // namespace distconv

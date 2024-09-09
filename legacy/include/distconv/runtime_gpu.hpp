@@ -64,5 +64,5 @@ using RuntimeGPU = RuntimeCUDA;
 using RuntimeGPU = RuntimeHIP;
 #endif
 
-} // namespace internal
-} // namespace distconv
+}  // namespace internal
+}  // namespace distconv

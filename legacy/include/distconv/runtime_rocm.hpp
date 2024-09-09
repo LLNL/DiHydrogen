@@ -33,5 +33,5 @@ public:
   static hipEvent_t& get_event(int idx = 0);
 };
 
-} // namespace internal
-} // namespace distconv
+}  // namespace internal
+}  // namespace distconv

@@ -41,7 +41,7 @@ void copy_same_type(DistTensor<T>& dst, const DistTensor<T>& src)
   dst.ensure();
   if (src.is_local_empty())
   {
-    return; // No local data to copy.
+    return;  // No local data to copy.
   }
   Tensor<T>& dst_local = dst.local_tensor();
   const Tensor<T>& src_local = src.local_tensor();
@@ -62,7 +62,7 @@ void copy_same_type(DistTensor<T>& dst, const DistTensor<T>& src)
   }
 }
 
-} // namespace internal
+}  // namespace internal
 
 /**
  * Copy the contents of tensor `src` to `dst`.
@@ -216,11 +216,11 @@ std::unique_ptr<Tensor<T>> make_accessible_on_device(
     copy(*dst, src);
     return dst;
   }
-#else  // H2_HAS_GPU
+#else   // H2_HAS_GPU
   // No GPU support, but dev differs from the tensor's device.
   // This should not happen.
   throw H2FatalException("Unknown device ", dev);
-#endif // H2_HAS_GPU
+#endif  // H2_HAS_GPU
 }
 
 /** Version of `make_accessible_on_device` for const tensors. */
@@ -253,9 +253,9 @@ std::unique_ptr<Tensor<T>> make_accessible_on_device(
     copy(*dst, src);
     return dst;
   }
-#else  // H2_HAS_GPU
+#else   // H2_HAS_GPU
   throw H2FatalException("Unknown device ", dev);
-#endif // H2_HAS_GPU
+#endif  // H2_HAS_GPU
 }
 
 namespace impl
@@ -268,7 +268,7 @@ template <typename DstT, typename SrcT>
 void cast_impl(GPUDev_t, Tensor<DstT>& dst, const Tensor<SrcT>& src);
 #endif
 
-} // namespace impl
+}  // namespace impl
 
 /**
  * Return a version of tensor `src` with its type converted to `DstT`.
@@ -326,4 +326,4 @@ std::unique_ptr<Tensor<DstT>> cast(BaseTensor& src);
 /** Fully runtime version of `cast`. */
 std::unique_ptr<BaseTensor> cast(const TypeInfo& type, BaseTensor& src);
 
-} // namespace h2
+}  // namespace h2

@@ -70,7 +70,7 @@ static_assert(test_tuple_move.size() == 0);
 constexpr auto test_tuple_move_construct(std::move(test_tuple_copy));
 static_assert(test_tuple_move_construct.size() == 0);
 
-} // namespace empty_test
+}  // namespace empty_test
 
 // Sized tuple.
 namespace sized_test
@@ -168,7 +168,7 @@ constexpr TestFixedSizeTuple
 static_assert(test_tuple_move_construct.size() == 2);
 static_assert(test_tuple_move_construct[0] == 1);
 static_assert(test_tuple_move_construct[1] == 2);
-} // namespace sized_test
+}  // namespace sized_test
 
 // Tuple padding.
 namespace padding_test
@@ -200,7 +200,7 @@ static_assert(test_sized_tuple_pad3[0] == 1);
 static_assert(test_sized_tuple_pad3[1] == 2);
 static_assert(test_sized_tuple_pad3[2] == 0);
 static_assert(test_sized_tuple_pad3[3] == 0);
-} // namespace padding_test
+}  // namespace padding_test
 
 namespace init_test
 {
@@ -208,7 +208,7 @@ namespace init_test
 constexpr TestFixedSizeTuple test_init{3, 2, 1};
 static_assert(init(test_init) == TestFixedSizeTuple{3, 2});
 
-} // namespace init_test
+}  // namespace init_test
 
 namespace init_n_test
 {
@@ -218,7 +218,7 @@ static_assert(h2::init_n(test, std::size_t{1}) == TestFixedSizeTuple(1));
 static_assert(h2::init_n(test, std::size_t{3}) == TestFixedSizeTuple(1, 2, 3));
 constexpr TestFixedSizeTuple test_empty;
 static_assert(h2::init_n(test_empty, std::size_t{0}) == TestFixedSizeTuple{});
-} // namespace init_n_test
+}  // namespace init_n_test
 
 // Ensure the hash specialization is picked up.
 std::unordered_map<TestFixedSizeTuple, int> hash_test_map;

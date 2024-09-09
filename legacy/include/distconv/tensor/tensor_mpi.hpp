@@ -671,7 +671,7 @@ struct ViewFunctor<Tensor<DataType, LocaleMPI, Allocator>,
   }
 };
 
-} // namespace internal
+}  // namespace internal
 
 template <typename DataType, typename Allocator>
 inline int View(Tensor<DataType, LocaleProcess, Allocator>& t_proc,
@@ -1236,7 +1236,7 @@ struct CopyLocalFunctor3D
   }
 };
 
-} // namespace internal
+}  // namespace internal
 
 template <typename DataType,
           typename AllocatorProc,
@@ -1336,5 +1336,5 @@ inline int Copy(Tensor<DataType, LocaleMPI, AllocDest>& t_dest,
   return internal::CopyByShuffle(t_dest, t_src, stream);
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

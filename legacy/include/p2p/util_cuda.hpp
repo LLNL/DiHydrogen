@@ -118,5 +118,5 @@ private:
 size_t get_total_memory();
 size_t get_available_memory();
 
-} // namespace util
-} // namespace p2p
+}  // namespace util
+}  // namespace p2p

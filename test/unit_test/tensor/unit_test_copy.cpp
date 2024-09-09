@@ -453,7 +453,7 @@ TEST_CASE("GPU-CPU copy synchronzies correctly", "[tensor][copy]")
   }
 }
 
-#endif // H2_TEST_WITH_GPU
+#endif  // H2_TEST_WITH_GPU
 
 TEMPLATE_LIST_TEST_CASE("Same-type cast works",
                         "[tensor][copy]",

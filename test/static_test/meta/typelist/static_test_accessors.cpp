@@ -69,7 +69,7 @@ namespace static_test_accessor_sanity
 using TList = TL<bool, char, short, int, long>;
 static_assert(EqV<Cons<Car<TList>, Cdr<TList>>, TList>(),
               "Consing the car to the cdr gives the original list back.");
-} // namespace static_test_accessor_sanity
+}  // namespace static_test_accessor_sanity
 
 // Testing the combinatorial craziness that is the CL c[ad]*r stuff.
 
@@ -115,4 +115,4 @@ static_assert(EqV<Cddaar<TList>, TL<int, long>>(), "Cdr of cdr of car of car");
 static_assert(EqV<Cddadr<TList>, TL<int, long>>(), "Cdr of cdr of car of cdr");
 static_assert(EqV<Cdddar<TList>, TL<int, long>>(), "Cdr of cdr of cdr of car");
 static_assert(EqV<Cddddr<TList>, TL<long long>>(), "Cdr of cdr of cdr of cdr");
-} // namespace static_test_accessor_crazy
+}  // namespace static_test_accessor_crazy

@@ -167,7 +167,7 @@ H2_GPU_FORCE_INLINE H2_GPU_HOST_DEVICE uint32_t mulhi(uint32_t x,
 #else
   return static_cast<uint32_t>(
     (static_cast<uint64_t>(x) * static_cast<uint64_t>(y)) >> 32);
-#endif // H2_GPU_DEVICE_COMPILING
+#endif  // H2_GPU_DEVICE_COMPILING
 }
 
 /** @brief Computes the upper 64 bits of `x*y`. */
@@ -179,7 +179,7 @@ H2_GPU_FORCE_INLINE H2_GPU_HOST_DEVICE uint64_t mulhi(uint64_t x,
 #else
   return static_cast<uint64_t>(
     (static_cast<__uint128_t>(x) * static_cast<__uint128_t>(y)) >> 64);
-#endif // H2_GPU_DEVICE_COMPILING
+#endif  // H2_GPU_DEVICE_COMPILING
 }
 
 /** @class FastDiv
@@ -271,5 +271,5 @@ private:
   UInt mprime_;
   int sh1_;
   int sh2_;
-}; // class FastDiv
-} // namespace h2
+};  // class FastDiv
+}  // namespace h2

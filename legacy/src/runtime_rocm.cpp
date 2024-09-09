@@ -86,7 +86,7 @@ RuntimeHIP_impl& get_runtime()
   return runtime;
 }
 
-} // namespace
+}  // namespace
 
 HIPDeviceMemoryPool& RuntimeHIP::get_device_memory_pool()
 {
@@ -100,5 +100,5 @@ hipEvent_t& RuntimeHIP::get_event(int const idx)
   return rt.m_events[idx];
 }
 
-} // namespace internal
-} // namespace distconv
+}  // namespace internal
+}  // namespace distconv

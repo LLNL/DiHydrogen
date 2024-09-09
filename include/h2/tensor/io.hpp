@@ -97,4 +97,4 @@ inline std::ostream& print(std::ostream& os, const Tensor<T>& tensor)
   return os;
 }
 
-} // namespace h2
+}  // namespace h2

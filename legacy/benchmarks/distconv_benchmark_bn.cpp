@@ -171,32 +171,32 @@ public:
       return;
     // Allocate
     assert0(input.allocate());
-    input.zero(); // will be used
+    input.zero();  // will be used
     assert0(output.allocate());
-    output.zero(); // will be overwritten
+    output.zero();  // will be overwritten
     assert0(d_input.allocate());
-    d_input.zero(); // will be overwritten
+    d_input.zero();  // will be overwritten
     assert0(d_output.allocate());
-    d_output.zero(); // will be used
+    d_output.zero();  // will be used
     assert0(mean_and_var.allocate());
-    mean_and_var.zero(); // will be overwritten
+    mean_and_var.zero();  // will be overwritten
     assert0(tensor::View(mean, mean_and_var.get_buffer()));
     assert0(
       tensor::View(var, mean_and_var.get_buffer() + ch_stat_shape.get_size()));
     assert0(running_mean.allocate());
-    running_mean.zero(); // will be incremented
+    running_mean.zero();  // will be incremented
     assert0(running_var.allocate());
-    running_var.zero(); // will be incremented
+    running_var.zero();  // will be incremented
     assert0(scale.allocate());
-    scale.zero(); // will be used
+    scale.zero();  // will be used
     assert0(bias.allocate());
-    bias.zero(); // will be used
+    bias.zero();  // will be used
     assert0(d_scale.allocate());
-    d_scale.zero(); // will be overwritten
+    d_scale.zero();  // will be overwritten
     assert0(d_bias.allocate());
-    d_bias.zero(); // will be overwritten
+    d_bias.zero();  // will be overwritten
     assert0(d_mean_and_var.allocate());
-    d_mean_and_var.zero(); // will be overwritten
+    d_mean_and_var.zero();  // will be overwritten
     assert0(tensor::View(d_mean, d_mean_and_var.get_buffer()));
     assert0(tensor::View(
       d_var, d_mean_and_var.get_buffer() + ch_stat_shape.get_size()));
@@ -300,7 +300,7 @@ int test_forward(Data<NSD, Backend, DataType>& d,
     {
       util::nvshmem::launch_barrier(be.get_stream());
     }
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
     // Start measurement
     clk_allreduce.start();
     bn.forward_allreduce(d.mean, d.var, is_training);
@@ -310,7 +310,7 @@ int test_forward(Data<NSD, Backend, DataType>& d,
     {
       util::nvshmem::launch_barrier(be.get_stream());
     }
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
     clk.start();
     bn.forward(d.input,
                d.mean,
@@ -331,7 +331,7 @@ int test_forward(Data<NSD, Backend, DataType>& d,
   {
     util::nvshmem::barrier();
   }
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
   util::MPIRootPrintStreamInfo() << "Measurement done";
   return 0;
@@ -400,7 +400,7 @@ int test_backward(Data<NSD, Backend, DataType>& d,
     {
       util::nvshmem::launch_barrier(be.get_stream());
     }
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
     clk_allreduce.start();
     bn.backward_allreduce(
       d.d_scale, d.d_bias, d.d_mean, d.d_var, cfg.skip_weight_allreduce);
@@ -410,7 +410,7 @@ int test_backward(Data<NSD, Backend, DataType>& d,
     {
       util::nvshmem::launch_barrier(be.get_stream());
     }
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
     clk.start();
     bn.backward_stage1(d.input,
                        d.d_output,
@@ -441,7 +441,7 @@ int test_backward(Data<NSD, Backend, DataType>& d,
   {
     util::nvshmem::barrier();
   }
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
   util::MPIRootPrintStreamInfo() << "Measurement done";
   return 0;
@@ -522,7 +522,7 @@ struct BNTester<NSD, cudnn::BackendCUDNN, DataType>
       assert_always(d_bias_nvshmem != nullptr);
       assert0(tensor::View(d.d_bias, d_bias_nvshmem));
     }
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 
     test_forward<NSD, cudnn::BackendCUDNN, DataType>(
       d, cfg, comm, be, bn, prof);
@@ -557,7 +557,7 @@ void run(int argc, char* argv[], int pid, int np)
   {
     util::nvshmem::initialize(MPI_COMM_WORLD);
   }
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 
   run_test<NSD, Data, Profile, BNTester>(cfg, MPI_COMM_WORLD);
 
@@ -568,10 +568,10 @@ void run(int argc, char* argv[], int pid, int np)
   {
     util::nvshmem::finalize();
   }
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 }
 
-} // namespace distconv_benchmark
+}  // namespace distconv_benchmark
 
 int main(int argc, char* argv[])
 {

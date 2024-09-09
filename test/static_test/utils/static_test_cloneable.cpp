@@ -17,7 +17,7 @@ class Base : public Cloneable<Abstract<Base>>
 public:
   Base(int) {}
   virtual ~Base() = default;
-}; // class Base
+};  // class Base
 
 class Middle : public Cloneable<Abstract<Middle>, Base>
 {
@@ -37,7 +37,7 @@ protected:
   using DirectBase = Cloneable<Derived1, Middle>;
   using DirectBase::DirectBase;
 
-}; // class Derived1
+};  // class Derived1
 
 class Derived2 : public Cloneable<Derived2, Middle>
 {
@@ -50,7 +50,7 @@ protected:
   using DirectBase = Cloneable<Derived2, Middle>;
   using DirectBase::DirectBase;
 
-}; // class Derived2
+};  // class Derived2
 
 template <typename PtrType>
 using PtdType = typename PtrType::element_type;

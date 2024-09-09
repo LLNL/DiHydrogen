@@ -22,5 +22,5 @@ struct Susp
 template <typename SuspT>
 using Force = typename SuspT::type;
 
-} // namespace meta
-} // namespace h2
+}  // namespace meta
+}  // namespace h2

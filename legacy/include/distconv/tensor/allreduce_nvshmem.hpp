@@ -75,7 +75,7 @@ struct AllreduceNVSHMEMDevice
     // TODO: intra-grid scatter
     return final_sum;
   }
-#endif // __CUDACC__
+#endif  // __CUDACC__
 };
 
 template <typename DataType>
@@ -334,7 +334,7 @@ protected:
   void reduce(const DataType* src, DataType* dst, size_t count);
 };
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv
 
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM

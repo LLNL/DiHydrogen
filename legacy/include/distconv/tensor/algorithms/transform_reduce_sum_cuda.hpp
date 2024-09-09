@@ -85,5 +85,5 @@ TransformReduceSum(Tensor<DataType, Locale, Allocator>& src,
       src, local_reduction_region, dst1, op1, dst2, op2, stream);
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

@@ -200,13 +200,13 @@ enum class HaloExchangeMethod
 #ifdef DISTCONV_HAS_P2P
   P2P,
   HYBRID,
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
   NVSHMEM,
   NVSHMEM_GRAPH,
   NVSHMEM_DIRECT,
   NVSHMEM_FUSED_NOTIFY
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 };
 
 inline std::ostream& operator<<(std::ostream& os, const HaloExchangeMethod& m)
@@ -227,7 +227,7 @@ inline std::ostream& operator<<(std::ostream& os, const HaloExchangeMethod& m)
   else if (m == HaloExchangeMethod::HYBRID)
   {
     return os << "HYBRID";
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
   }
   else if (m == HaloExchangeMethod::NVSHMEM)
@@ -245,7 +245,7 @@ inline std::ostream& operator<<(std::ostream& os, const HaloExchangeMethod& m)
   else if (m == HaloExchangeMethod::NVSHMEM_FUSED_NOTIFY)
   {
     return os << "NVSHMEM_FUSED_NOTIFY";
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
   }
   else
   {
@@ -272,7 +272,7 @@ inline HaloExchangeMethod GetHaloExchangeMethod(const std::string& method)
   else if (method == "HYBRID")
   {
     return HaloExchangeMethod::HYBRID;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 #ifdef DISTCONV_HAS_NVSHMEM
   }
   else if (method == "NVSHMEM")
@@ -290,7 +290,7 @@ inline HaloExchangeMethod GetHaloExchangeMethod(const std::string& method)
   else if (method == "NVSHMEM_FUSED_NOTIFY")
   {
     return HaloExchangeMethod::NVSHMEM_FUSED_NOTIFY;
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
   }
   else
   {
@@ -323,7 +323,7 @@ enum class ShuffleMethod
 #ifdef DISTCONV_HAS_P2P
   P2P,
   HYBRID
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
 };
 
 inline std::ostream& operator<<(std::ostream& os, const ShuffleMethod& m)
@@ -344,7 +344,7 @@ inline std::ostream& operator<<(std::ostream& os, const ShuffleMethod& m)
   else if (m == ShuffleMethod::HYBRID)
   {
     return os << "HYBRID";
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
   }
   else
   {
@@ -371,7 +371,7 @@ inline ShuffleMethod GetShuffleMethod(const std::string& method)
   else if (method == "HYBRID")
   {
     return ShuffleMethod::HYBRID;
-#endif // DISTCONV_HAS_P2P
+#endif  // DISTCONV_HAS_P2P
   }
   else
   {
@@ -430,7 +430,7 @@ enum class BatchnormImpl
   NVSHMEM_RECURSIVE_DOUBLING_BUFFERED,
   NVSHMEM_RECURSIVE_DOUBLING_BLOCK,
   FUSED_NVSHMEM_RECURSIVE_DOUBLING,
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 };
 
 inline std::ostream& operator<<(std::ostream& os, const BatchnormImpl& v)
@@ -467,7 +467,7 @@ inline std::ostream& operator<<(std::ostream& os, const BatchnormImpl& v)
   else if (v == BatchnormImpl::FUSED_NVSHMEM_RECURSIVE_DOUBLING)
   {
     return os << "FUSED_NVSHMEM_RECURSIVE_DOUBLING";
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
   }
   else
   {
@@ -510,7 +510,7 @@ inline BatchnormImpl GetBatchnormImpl(const std::string& impl)
   else if (impl == "FUSED_NVSHMEM_RECURSIVE_DOUBLING")
   {
     return BatchnormImpl::FUSED_NVSHMEM_RECURSIVE_DOUBLING;
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
   }
   else
   {
@@ -538,4 +538,4 @@ inline bool IsNVSHMEMUsed(BatchnormImpl m)
 #endif
 }
 
-} // namespace distconv
+}  // namespace distconv

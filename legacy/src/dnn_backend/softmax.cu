@@ -158,7 +158,7 @@ void set_kernel_params(const Tensor& tensor,
                        size_t& sample_size,
                        dim3& gdim)
 {
-  int num_blocks = 80; // == V100 #SMs
+  int num_blocks = 80;  // == V100 #SMs
 
   num_samples = tensor.get_local_shape()[-1];
   if (num_samples == 0)
@@ -693,7 +693,7 @@ int bp_channel(const Tensor& y,
   return 0;
 }
 
-} // namespace
+}  // namespace
 
 template <typename Tensor>
 int Softmax<BackendDNNLib>::forward(const Tensor& x, Tensor& y)
@@ -783,4 +783,4 @@ PROTO(float)
 PROTO(double)
 #undef PROTO
 
-} // namespace distconv
+}  // namespace distconv

@@ -53,7 +53,7 @@ public:
 
   __host__ __device__ constexpr bool valid() const noexcept { return false; }
 };
-#endif // ifndef DISTCONV_HAS_NVFUNCTIONAL_HEADER
+#endif  // ifndef DISTCONV_HAS_NVFUNCTIONAL_HEADER
 
 // Generic implementation using atomicAdd
 // assumes ND == 3 or 4
@@ -381,7 +381,7 @@ void reduction_sanity_check(Tensor<DataType, Locale, Allocator>& src,
   }
 }
 
-} // namespace algorithms_cuda
+}  // namespace algorithms_cuda
 
 /**
    Each dimension of src must be equal to that of dst or 1, in which
@@ -462,5 +462,5 @@ ReduceSum(Tensor<DataType, Locale, Allocator>& src,
       src, local_reduction_region, dst1, nullptr, dst2, nullptr, stream);
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

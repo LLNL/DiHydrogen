@@ -41,7 +41,7 @@ struct SelectT<TL<T, Ts...>, Predicate>
   : IfThenElseT<Predicate<T>::value, T, Select<TL<Ts...>, Predicate>>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

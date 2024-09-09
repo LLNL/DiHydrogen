@@ -81,7 +81,7 @@ struct is_same_size_t<meta::TL<T1, T2>>
 template <typename TL>
 using is_same_size = meta::Force<is_same_size_t<TL>>;
 
-} // namespace internal
+}  // namespace internal
 
 template <typename... KernelArgs, typename... Args>
 void launch_kernel_internal(void (*kernel)(KernelArgs...),
@@ -126,5 +126,5 @@ void launch_kernel_internal(void (*kernel)(KernelArgs...),
   }
 }
 
-} // namespace gpu
-} // namespace h2
+}  // namespace gpu
+}  // namespace h2

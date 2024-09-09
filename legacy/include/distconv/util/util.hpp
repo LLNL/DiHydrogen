@@ -182,7 +182,7 @@ public:
     return *this;
   }
 
-protected: // due to nonsense in util_mpi.hpp
+protected:  // due to nonsense in util_mpi.hpp
   std::ostream& m_os;
   std::ostringstream ss;
   std::ostringstream m_prefix;
@@ -374,5 +374,5 @@ inline void* aligned_malloc(size_t s)
   return p;
 }
 
-} // namespace util
-} // namespace distconv
+}  // namespace util
+}  // namespace distconv

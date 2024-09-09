@@ -78,4 +78,4 @@ int ConnectionNULL::disconnect()
   return 0;
 }
 
-} // namespace p2p
+}  // namespace p2p

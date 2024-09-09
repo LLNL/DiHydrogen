@@ -96,7 +96,7 @@ __global__ void unpack_from_ag_kernel(const DataType* __restrict__ packed_buf,
   }
 }
 
-} // namespace internal
+}  // namespace internal
 
 template <>
 void ChannelExchange<float>::pack_for_rs(TensorType& src,
@@ -192,5 +192,5 @@ void ChannelExchange<double>::unpack_from_ag(TensorType& src,
     get_sample_size(dst));
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

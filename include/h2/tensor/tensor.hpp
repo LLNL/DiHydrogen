@@ -428,7 +428,7 @@ public:
   void unview()
   {
     H2_ASSERT_DEBUG(this->is_view(), "Must be a view to unview");
-    empty(); // Emptying a view is equivalent to unviewing.
+    empty();  // Emptying a view is equivalent to unviewing.
   }
 
   /** Return a constant view of this tensor. */
@@ -567,4 +567,4 @@ private:
   friend class DistTensor<T>;
 };
 
-} // namespace h2
+}  // namespace h2

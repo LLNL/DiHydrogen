@@ -83,5 +83,5 @@ void launch_kernel_internal(void (*kernel)(KernelArgs...),
   H2_CHECK_HIP(hipGetLastError());
 }
 
-} // namespace gpu
-} // namespace h2
+}  // namespace gpu
+}  // namespace h2

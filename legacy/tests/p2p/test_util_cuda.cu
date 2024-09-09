@@ -13,7 +13,7 @@ __global__ void kernel(long long int sleep_cycles)
   }
   return;
 }
-} // namespace
+}  // namespace
 
 void spin_device(cudaStream_t st, int giga_cycles)
 {

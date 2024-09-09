@@ -36,7 +36,7 @@ inline std::ostream& operator<<(std::ostream& os, const Device& dev)
   }
   return os;
 }
-} // namespace hydrogen
+}  // namespace hydrogen
 
 namespace h2
 {
@@ -44,7 +44,7 @@ namespace h2
 /**
  * Define the underlying compute device type.
  */
-using Device = El::Device; // Leverage Hydrogen's device typing.
+using Device = El::Device;  // Leverage Hydrogen's device typing.
 
 /**
  * Helper to support tagged dispatch based on the device.
@@ -106,7 +106,7 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
       throw H2Exception("Unknown device");                                     \
     }                                                                          \
   } while (0);
-#else // H2_DEBUG
+#else  // H2_DEBUG
 #define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)                         \
   do                                                                           \
   {                                                                            \
@@ -121,8 +121,8 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
       gpu_code;                                                                \
     }                                                                          \
   } while (0);
-#endif // H2_DEBUG
-#else  // H2_HAS_GPU
+#endif  // H2_DEBUG
+#else   // H2_HAS_GPU
 #ifdef H2_DEBUG
 #define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)                         \
   do                                                                           \
@@ -137,15 +137,15 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
       throw H2Exception("Unknown device");                                     \
     }                                                                          \
   } while (0);
-#else // H2_DEBUG
+#else  // H2_DEBUG
 #define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)                         \
   do                                                                           \
   {                                                                            \
     [[maybe_unused]] constexpr Device Dev = Device::CPU;                       \
     cpu_code;                                                                  \
   } while (0);
-#endif // H2_DEBUG
-#endif // H2_HAS_GPU
+#endif  // H2_DEBUG
+#endif  // H2_HAS_GPU
 
 /**
  * Simplification of H2_DEVICE_DISPATCH when the code for both CPU and
@@ -175,7 +175,7 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
       throw H2Exception("Unknown device");                                     \
     }                                                                          \
   } while (0);
-#else // H2_HAS_GPU
+#else  // H2_HAS_GPU
 #define H2_DEVICE_DISPATCH_CONST(device, cpu_code, gpu_code)                   \
   do                                                                           \
   {                                                                            \
@@ -188,6 +188,6 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
       throw H2Exception("Unknown device");                                     \
     }                                                                          \
   } while (0);
-#endif // H2_HAS_GPU
+#endif  // H2_HAS_GPU
 
-} // namespace h2
+}  // namespace h2

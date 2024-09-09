@@ -19,7 +19,7 @@ std::unique_ptr<T> ToUnique(T* ptr)
 {
   return std::unique_ptr<T>(ptr);
 }
-} // namespace h2
+}  // namespace h2
 
 namespace
 {
@@ -62,7 +62,7 @@ std::unique_ptr<WidgetBase> CopyWidget(WidgetBase const& obj)
   return h2::ToUnique(widget.Copy());
 }
 
-} // namespace
+}  // namespace
 
 TEST_CASE("testing the copy factory class", "[factory][utilities]")
 {

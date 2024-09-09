@@ -25,7 +25,7 @@ namespace h2
 /**
  * Wrapper around communicators for various Aluminum backends.
  */
-using Comm = El::mpi::Comm; // Use Hydrogen's communicator wrappers for now.
+using Comm = El::mpi::Comm;  // Use Hydrogen's communicator wrappers for now.
 
 /**
  * Defines how a dimension of a tensor is distributed on a processor
@@ -56,9 +56,9 @@ inline std::ostream& operator<<(std::ostream& os, const Distribution& dist)
 /** Tuple of distributions. */
 using DistributionTypeTuple = NDimTuple<Distribution>;
 
-using DistTTuple = DistributionTypeTuple; // Alias to save some typing.
+using DistTTuple = DistributionTypeTuple;  // Alias to save some typing.
 
 /** Type used for representing ranks in communicators/grids. */
 using RankType = std::int32_t;
 
-} // namespace h2
+}  // namespace h2

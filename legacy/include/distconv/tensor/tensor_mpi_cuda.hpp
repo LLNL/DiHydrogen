@@ -145,7 +145,7 @@ struct CopyLocalFunctor3D<DataType, CUDAAllocator, CUDAAllocator, StreamType>
   }
 };
 
-} // namespace internal
+}  // namespace internal
 
 template <typename DataType>
 class TensorImplHelper<DataType, CUDAAllocator>
@@ -193,5 +193,5 @@ int Slice(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest1,
           const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src,
           h2::gpu::DeviceStream s);
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

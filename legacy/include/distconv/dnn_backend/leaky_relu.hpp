@@ -22,7 +22,7 @@ void backward(Tensor& input,
               Tensor& output,
               h2::gpu::DeviceStream stream);
 
-} // namespace leaky_relu
+}  // namespace leaky_relu
 
 template <>
 class LeakyReLU<BackendDNNLib>
@@ -71,4 +71,4 @@ private:
   h2::gpu::DeviceStream m_stream;
 };
 
-} // namespace distconv
+}  // namespace distconv

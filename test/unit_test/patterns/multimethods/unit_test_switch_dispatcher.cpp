@@ -127,7 +127,7 @@ struct TestFunctorWithArgs
   }
 };
 
-} // namespace
+}  // namespace
 
 using DTypes = TL<derived_one, derived_two, derived_three>;
 using DTypesNoD3 = TL<derived_one, derived_two>;

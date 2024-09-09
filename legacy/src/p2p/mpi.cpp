@@ -150,5 +150,5 @@ int MPI::wait_requests(MPI_Request* requests, int num_requests)
   return 0;
 }
 
-} // namespace internal
-} // namespace p2p
+}  // namespace internal
+}  // namespace p2p

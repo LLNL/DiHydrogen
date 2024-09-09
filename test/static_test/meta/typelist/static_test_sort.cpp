@@ -26,7 +26,7 @@ template <typename A, typename B>
 struct ValueLess : BoolT<(A::value < B::value)>
 {};
 
-} // namespace
+}  // namespace
 
 // Testing Sort
 static_assert(EqV<tlist::Sort<Empty, ValueLess>, Empty>(),

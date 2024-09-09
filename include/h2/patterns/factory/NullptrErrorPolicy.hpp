@@ -23,7 +23,7 @@ struct NullptrErrorPolicy
   {
     return nullptr;
   }
-}; // struct NullptrErrorPolicy
+};  // struct NullptrErrorPolicy
 
-} // namespace factory
-} // namespace h2
+}  // namespace factory
+}  // namespace h2

@@ -918,7 +918,7 @@ void run(int argc, char* argv[], int pid, int np)
   {
     util::nvshmem::initialize(MPI_COMM_WORLD);
   }
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 
   run_test<NSD, Data, Profile, ConvolutionTester>(cfg, MPI_COMM_WORLD);
 
@@ -929,10 +929,10 @@ void run(int argc, char* argv[], int pid, int np)
   {
     util::nvshmem::finalize();
   }
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 }
 
-} // namespace distconv_benchmark
+}  // namespace distconv_benchmark
 
 int main(int argc, char* argv[])
 {

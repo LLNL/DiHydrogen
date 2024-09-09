@@ -6,7 +6,7 @@
 
 #ifdef DISTCONV_HAS_NVSHMEM
 #include "distconv/util/nvshmem.hpp"
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 
 #define HALO_EXCHANGE_ACCUME_OP_SWITCH(x)                                      \
   switch (x)                                                                   \
@@ -368,8 +368,8 @@ void wait_and_unpack(Tensor<DataType, LocaleMPI, CUDAAllocator>& tensor,
 
 #undef HALO_EXCHANGE_ACCUME_OP_SWITCH
 
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 
-} // namespace halo_exchange_cuda
-} // namespace tensor
-} // namespace distconv
+}  // namespace halo_exchange_cuda
+}  // namespace tensor
+}  // namespace distconv

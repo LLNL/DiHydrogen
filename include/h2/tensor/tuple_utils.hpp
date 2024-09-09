@@ -226,4 +226,4 @@ init_n(const FixedSizeTuple<T, SizeType, N>& tuple,
   return out;
 }
 
-} // namespace h2
+}  // namespace h2

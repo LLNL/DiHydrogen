@@ -220,4 +220,4 @@ inline bool is_compute_type(const TypeInfo& ti)
   return ti.get_token() < TypeInfo::max_token;
 }
 
-} // namespace h2
+}  // namespace h2

@@ -60,7 +60,7 @@ __global__ void inc_counter_kernel(PairwiseSyncDevice sync)
   sync.inc_counter();
 }
 
-} // namespace internal
+}  // namespace internal
 
 void PairwiseSync::sync(
   int peer, bool notify, bool wait, SyncType sync_type, cudaStream_t stream)
@@ -157,7 +157,7 @@ __global__ void inc_counter_kernel(int idx, SyncArrayDevice sync)
   sync.inc_counter(idx);
 }
 
-} // namespace internal
+}  // namespace internal
 
 void SyncArray::sync(int peer,
                      bool notify,
@@ -256,8 +256,8 @@ SyncArrayDevice SyncArray::get_for_device()
   return SyncArrayDevice(m_local_counter.get(), m_shmem_counter.get());
 }
 
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 
-} // namespace nvshmem
-} // namespace util
-} // namespace distconv
+}  // namespace nvshmem
+}  // namespace util
+}  // namespace distconv

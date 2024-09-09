@@ -73,7 +73,7 @@ struct Key<int>
   static int get(GenericKey key) noexcept { return static_cast<int>(key); }
 };
 
-} // namespace
+}  // namespace
 
 TEMPLATE_TEST_CASE("testing the factory class",
                    "[factory][utilities]",

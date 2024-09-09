@@ -39,7 +39,7 @@ static size_t pow(int x, int y)
   }
   return v;
 }
-} // namespace
+}  // namespace
 
 int PinnedMemoryPool::find_bin(size_t size)
 {
@@ -174,5 +174,5 @@ size_t get_total_memory()
   return total;
 }
 
-} // namespace util
-} // namespace p2p
+}  // namespace util
+}  // namespace p2p

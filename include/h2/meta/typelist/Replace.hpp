@@ -50,7 +50,7 @@ template <typename List, typename Old, typename New>
 struct ReplaceT : ConsT<Car<List>, Replace<Cdr<List>, Old, New>>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

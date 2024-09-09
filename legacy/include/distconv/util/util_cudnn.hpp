@@ -460,5 +460,5 @@ inline std::vector<int> get_cudnn_strides(int num_samples,
   return strides;
 }
 
-} // namespace util
-} // namespace distconv
+}  // namespace util
+}  // namespace distconv

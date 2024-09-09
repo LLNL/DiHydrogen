@@ -28,7 +28,7 @@ static_assert(strides3[0] == 1);
 static_assert(strides3[1] == 2);
 static_assert(strides3[2] == 4);
 
-} // namespace get_contiguous_strides_tests
+}  // namespace get_contiguous_strides_tests
 
 namespace are_strides_contiguous_tests
 {
@@ -54,4 +54,4 @@ static_assert(!are_strides_contiguous(shape4, strides5));
 constexpr StrideTuple strides6(1, 4, 4);
 static_assert(!are_strides_contiguous(shape4, strides6));
 
-} // namespace are_strides_contiguous_tests
+}  // namespace are_strides_contiguous_tests

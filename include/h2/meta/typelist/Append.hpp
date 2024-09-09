@@ -46,7 +46,7 @@ struct AppendT<FirstList, OtherLists...>
   : AppendT<FirstList, Append<OtherLists...>>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

@@ -175,8 +175,8 @@ void sync_stream(hipStream_t const s1, hipStream_t const s2)
   DISTCONV_CHECK_HIP(hipStreamWaitEvent(s1, ev2, 0));
 }
 
-} // namespace util
-} // namespace distconv
+}  // namespace util
+}  // namespace distconv
 
 namespace
 {
@@ -187,7 +187,7 @@ std::pair<int, int> get_stream_priority_bounds()
     hipDeviceGetStreamPriorityRange(&least_priority, &greatest_priority));
   return {least_priority, greatest_priority};
 }
-} // namespace
+}  // namespace
 
 hipStream_t distconv::util::create_priority_stream()
 {

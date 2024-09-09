@@ -9,7 +9,7 @@
 #include "distconv/tensor/allreduce_mpi_cuda.hpp"
 #ifdef DISTCONV_HAS_NVSHMEM
 #include "distconv/tensor/allreduce_nvshmem.hpp"
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
 
 #include <memory>
 #include <numeric>
@@ -95,7 +95,7 @@ void backprop2(int num_dims,
                typename TensorType::data_type epsilon,
                h2::gpu::DeviceStream stream);
 
-} // namespace batchnorm
+}  // namespace batchnorm
 
 template <typename DataType>
 class BatchNormalization<BackendDNNLib, DataType>
@@ -157,7 +157,7 @@ public:
     {
       m_allreducer = std::make_unique<tensor::AllreduceNVSHMEM<DataType>>(
         m_stream, tensor::AllreduceNVSHMEM<DataType>::RECURSIVE_DOUBLING_BLOCK);
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
     }
   }
 
@@ -310,7 +310,7 @@ public:
                   is_training);
       return 0;
     }
-#endif // DISTCONV_HAS_NVSHMEM
+#endif  // DISTCONV_HAS_NVSHMEM
     forward_stage1(input, mean, var, is_training);
     forward_allreduce(mean, var, is_training);
     forward_stage2(input,
@@ -561,4 +561,4 @@ private:
   }
 };
 
-} // namespace distconv
+}  // namespace distconv

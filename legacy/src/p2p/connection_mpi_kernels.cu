@@ -32,4 +32,4 @@ int ConnectionMPI::unblock_spin_wait(cuuint32_t wait_val)
   return 0;
 }
 
-} // namespace p2p
+}  // namespace p2p

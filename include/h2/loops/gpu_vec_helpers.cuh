@@ -274,5 +274,5 @@ H2_GPU_HOST_DEVICE std::size_t max_vectorization_amount(const T* ptr)
   return 1;
 }
 
-} // namespace gpu
-} // namespace h2
+}  // namespace gpu
+}  // namespace h2

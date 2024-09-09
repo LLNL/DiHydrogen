@@ -86,7 +86,7 @@ template <typename T>
 void fill_impl(GPUDev_t, Tensor<T>& tensor, const T& val);
 #endif
 
-} // namespace impl
+}  // namespace impl
 
 /**
  * Fill tensor with a given value.
@@ -114,4 +114,4 @@ void fill(Tensor<T>& tensor, const T& val)
 template <typename T>
 void fill(BaseTensor& tensor, const T& val);
 
-} // namespace h2
+}  // namespace h2

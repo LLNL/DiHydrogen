@@ -19,5 +19,5 @@ inline cudaStream_t get_gpu_stream(const cudaStream_t& s)
   return s;
 }
 
-} // namespace tensor
-} // namespace distconv
+}  // namespace tensor
+}  // namespace distconv

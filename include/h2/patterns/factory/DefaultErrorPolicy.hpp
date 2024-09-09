@@ -32,7 +32,7 @@ struct DefaultErrorPolicy
   {
     throw UnknownIDError();
   }
-}; // struct DefaultErrorPolicy
+};  // struct DefaultErrorPolicy
 
-} // namespace factory
-} // namespace h2
+}  // namespace factory
+}  // namespace h2

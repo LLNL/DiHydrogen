@@ -56,7 +56,7 @@ TEMPLATE_LIST_TEST_CASE("ComputeStream works", "[sync]", AllDevList)
   REQUIRE_NOTHROW(stream.add_sync_point(event));
   REQUIRE_NOTHROW(stream.wait_for(event));
 
-  ComputeStream stream2{Dev}; // Same underlying stream.
+  ComputeStream stream2{Dev};  // Same underlying stream.
   REQUIRE_NOTHROW(stream.wait_for(stream2));
 
   REQUIRE_NOTHROW(stream.wait_for_this());
@@ -119,7 +119,7 @@ TEMPLATE_LIST_TEST_CASE("Sync helpers work", "[sync]", AllDevList)
 {
   constexpr Device Dev = TestType::value;
 
-  ComputeStream stream1{Dev}; // Default stream.
+  ComputeStream stream1{Dev};  // Default stream.
   ComputeStream stream2 = create_new_compute_stream<Dev>();
   ComputeStream stream3 = create_new_compute_stream<Dev>();
   ComputeStream cpu_stream = create_new_compute_stream<Device::CPU>();
@@ -276,7 +276,7 @@ TEST_CASE("Moving GPU syncs clears handles", "[sync]")
   REQUIRE(event.get_event<Device::GPU>() == nullptr);
 }
 
-#endif // H2_TEST_WITH_GPU
+#endif  // H2_TEST_WITH_GPU
 
 TEMPLATE_LIST_TEST_CASE("MultiSyncs are sane", "[sync]", AllDevPairsList)
 {

@@ -53,7 +53,7 @@ public:
 
 protected:
   ~Describable() = default;
-}; // class Describable
+};  // class Describable
 
 namespace internal
 {
@@ -62,14 +62,14 @@ struct FullDescription
   Describable const* obj;
   FullDescription(Describable const& obj_) : obj{&obj_} {}
 };
-} // namespace internal
+}  // namespace internal
 
 inline internal::FullDescription describe(Describable const& obj)
 {
   return internal::FullDescription{obj};
 }
 
-} // namespace h2
+}  // namespace h2
 
 inline std::ostream& operator<<(std::ostream& os,
                                 h2::internal::FullDescription const& desc)

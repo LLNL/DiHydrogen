@@ -51,13 +51,13 @@ public:
 template <typename F, typename... Args>
 using GetInvocationResult = meta::Force<GetInvocationResultT<F, Args...>>;
 
-} // namespace details
+}  // namespace details
 
 template <typename F, typename... Args>
 struct IsInvocableVT
   : SubstitutionSuccess<details::GetInvocationResult<F, Args...>>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace meta
+}  // namespace h2

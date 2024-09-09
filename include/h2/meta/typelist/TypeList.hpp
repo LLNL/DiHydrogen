@@ -44,7 +44,7 @@ using Empty = TypeList<>;
 /** @brief The empty list. */
 using Nil = Empty;
 
-} // namespace tlist
+}  // namespace tlist
 
 // Implementation
 
@@ -60,7 +60,7 @@ template <>
 struct TypeList<> : FalseType
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
 
-} // namespace meta
-} // namespace h2
+}  // namespace meta
+}  // namespace h2

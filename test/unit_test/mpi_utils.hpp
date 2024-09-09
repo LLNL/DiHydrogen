@@ -31,7 +31,7 @@ struct NotParticipatingException
 void start_for_comms();
 void end_for_comms();
 
-} // namespace internal
+}  // namespace internal
 
 /**
  * Manages instances of communicators for testing.
@@ -170,7 +170,7 @@ void for_comms(Test t, int min_size = 1, int max_size = -1)
                        El::SyncInfo<El::Device::CPU>{});
     if (test_result == 0)
     {
-      internal::end_for_comms(); // Indicate we are done.
+      internal::end_for_comms();  // Indicate we are done.
       FAIL(std::to_string(El::mpi::Rank())
            + ": Failure detected on another rank");
     }
@@ -293,7 +293,7 @@ all_grid_shapes(h2::ShapeTuple::type size,
   return shapes;
 }
 
-} // namespace internal
+}  // namespace internal
 
 /**
  * Invoke a test case with every possible grid shape between a minimum

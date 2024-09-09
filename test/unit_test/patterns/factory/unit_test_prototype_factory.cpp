@@ -19,7 +19,7 @@ std::unique_ptr<T> ToUnique(T* ptr)
 {
   return std::unique_ptr<T>(ptr);
 }
-} // namespace h2
+}  // namespace h2
 
 namespace
 {
@@ -56,7 +56,7 @@ struct BasicCopyPolicy
   }
 };
 
-} // namespace
+}  // namespace
 
 TEST_CASE("testing the prototype factory class", "[factory][utilities]")
 {

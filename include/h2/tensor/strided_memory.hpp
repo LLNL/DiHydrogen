@@ -283,7 +283,7 @@ public:
       {
         raw_buffer->ensure();
       }
-      return; // Data is already allocated.
+      return;  // Data is already allocated.
     }
     if (attempt_recover)
     {
@@ -295,7 +295,7 @@ public:
       // Either not attempting to recover or no old raw buffer.
       make_raw_buffer(false);
     }
-    old_raw_buffer.reset(); // Drop reference to old raw buffer.
+    old_raw_buffer.reset();  // Drop reference to old raw buffer.
   }
 
   void release()
@@ -471,7 +471,7 @@ inline std::ostream& strided_memory_contents(std::ostream& os,
     mem.shape().size() ? product<DataIndexType>(mem.shape()) : 0;
   if (size == 0)
   {
-    return os; // Skip if empty.
+    return os;  // Skip if empty.
   }
   const T* buf = nullptr;
   internal::ManagedBuffer<T> cpu_buf{Device::CPU};
@@ -502,12 +502,12 @@ inline std::ostream& strided_memory_contents(std::ostream& os,
   {
     throw H2FatalException("Unknown device ", mem.get_device());
   }
-  mem.get_stream().wait_for_this(); // Ensure all operations have finished.
+  mem.get_stream().wait_for_this();  // Ensure all operations have finished.
 
   // We might try to nicely format this in the future.
   // We know size > 0 if we are here.
   ScalarIndexTuple start{TuplePad<ScalarIndexTuple>(mem.shape().size(), 0)};
-  os << buf[mem.get_index(start)]; // Print first entry.
+  os << buf[mem.get_index(start)];  // Print first entry.
   start = next_scalar_index(start, mem.shape());
   for_ndim(
     mem.shape(),
@@ -516,4 +516,4 @@ inline std::ostream& strided_memory_contents(std::ostream& os,
   return os;
 }
 
-} // namespace h2
+}  // namespace h2
