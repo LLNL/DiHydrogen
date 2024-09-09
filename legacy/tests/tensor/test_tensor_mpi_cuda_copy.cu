@@ -5,28 +5,26 @@
 #include "distconv/tensor/tensor_mpi_cuda.hpp"
 #include "distconv/util/util_gpu.hpp"
 #include "distconv/util/util_mpi.hpp"
+#include "test_tensor.hpp"
+#include "test_tensor_mpi_cuda_common.hpp"
 
 #include <cmath>
 #include <iostream>
-
-#include "test_tensor.hpp"
-#include "test_tensor_mpi_cuda_common.hpp"
 
 using namespace distconv;
 using namespace distconv::tensor;
 
 template <>
-inline LocaleMPI get_locale<LocaleMPI>()
-{
+inline LocaleMPI get_locale<LocaleMPI>() {
   LocaleMPI loc(MPI_COMM_WORLD);
   return loc;
 }
 
-template <int ND, typename TensorSrc, typename TensorDest>
-int test_copy_shuffle(Array<ND> const& shape,
-                      Distribution const& dist_src,
-                      Distribution const& dist_dest)
-{
+template <int ND, typename TensorSrc,
+          typename TensorDest>
+int test_copy_shuffle(const Array<ND> &shape,
+                      const Distribution &dist_src,
+                      const Distribution &dist_dest) {
   util::MPIRootPrintStreamInfo() << "test_copy_shuffle";
   auto loc_dest = get_locale<typename TensorDest::locale_type>();
   auto loc_src = get_locale<typename TensorSrc::locale_type>();
@@ -35,7 +33,7 @@ int test_copy_shuffle(Array<ND> const& shape,
   auto t_src = get_tensor<TensorSrc>(shape, loc_src, dist_src);
   assert_always(t_src.allocate() == 0);
 
-  int* buf = t_src.get_buffer();
+  int *buf = t_src.get_buffer();
   assert_always(buf || t_src.get_local_shape().is_empty());
 
   init_tensor<ND><<<4, 4>>>(buf,
@@ -58,7 +56,7 @@ int test_copy_shuffle(Array<ND> const& shape,
   util::MPIRootPrintStreamInfo() << "Copy done";
 
   int error_counter = 0;
-  int* error_counter_d;
+  int *error_counter_d;
   GPU_MALLOC(&error_counter_d, sizeof(int));
   h2::gpu::mem_copy(error_counter_d, &error_counter);
 
@@ -74,11 +72,12 @@ int test_copy_shuffle(Array<ND> const& shape,
   return 0;
 }
 
-template <int ND, typename TensorSrc, typename TensorDest>
-int test_copy_shuffle_from_host_to_device(Array<ND> const& shape,
-                                          Distribution const& dist_src,
-                                          Distribution const& dist_dest)
-{
+template <int ND, typename TensorSrc,
+          typename TensorDest>
+int test_copy_shuffle_from_host_to_device(
+    const Array<ND> &shape,
+    const Distribution &dist_src,
+    const Distribution &dist_dest) {
   util::MPIRootPrintStreamInfo() << "test_copy_shuffle";
 
   auto loc_src = get_locale<typename TensorSrc::locale_type>();
@@ -86,13 +85,13 @@ int test_copy_shuffle_from_host_to_device(Array<ND> const& shape,
   auto t_src = get_tensor<TensorSrc>(shape, loc_src, dist_src);
   assert_always(t_src.allocate() == 0);
 
-  auto const local_shape = t_src.get_local_shape();
-  int* buf = t_src.get_buffer();
+  const auto local_shape = t_src.get_local_shape();
+  int *buf = t_src.get_buffer();
   assert_always(buf);
-  for (auto it = local_shape.index_begin(); it != local_shape.index_end(); ++it)
-  {
-    index_t x =
-      get_linearlized_offset(t_src.get_global_index(*it), t_src.get_shape());
+  for (auto it = local_shape.index_begin();
+       it != local_shape.index_end(); ++it) {
+    index_t x = get_linearlized_offset(t_src.get_global_index(*it),
+                                       t_src.get_shape());
     buf[t_src.get_local_offset(*it)] = x;
   }
 
@@ -102,7 +101,7 @@ int test_copy_shuffle_from_host_to_device(Array<ND> const& shape,
   assert_always(Copy(t_dest, t_src) == 0);
 
   int error_counter = 0;
-  int* error_counter_d;
+  int *error_counter_d;
   GPU_MALLOC(&error_counter_d, sizeof(int));
   h2::gpu::mem_copy(error_counter_d, &error_counter);
 
@@ -119,11 +118,11 @@ int test_copy_shuffle_from_host_to_device(Array<ND> const& shape,
   return 0;
 }
 
-template <int ND, typename TensorSrc, typename TensorDest>
-int test_copy_shuffle_from_device_to_host(Array<ND> const& shape,
-                                          Distribution const& dist_src,
-                                          Distribution const& dist_dest)
-{
+template <int ND, typename TensorSrc,
+          typename TensorDest>
+int test_copy_shuffle_from_device_to_host(const Array<ND> &shape,
+                                          const Distribution &dist_src,
+                                          const Distribution &dist_dest) {
   util::MPIRootPrintStreamInfo() << "test_copy_shuffle";
   auto loc_dest = get_locale<typename TensorDest::locale_type>();
   auto loc_src = get_locale<typename TensorSrc::locale_type>();
@@ -132,7 +131,7 @@ int test_copy_shuffle_from_device_to_host(Array<ND> const& shape,
   auto t_src = get_tensor<TensorSrc>(shape, loc_src, dist_src);
   assert_always(t_src.allocate() == 0);
 
-  int* buf = t_src.get_buffer();
+  int *buf = t_src.get_buffer();
   assert_always(buf);
 
   init_tensor<ND><<<4, 4>>>(buf,
@@ -156,15 +155,15 @@ int test_copy_shuffle_from_device_to_host(Array<ND> const& shape,
 
   auto local_shape = t_dest.get_local_shape();
   buf = t_dest.get_buffer();
-  for (auto it = local_shape.index_begin(); it != local_shape.index_end(); ++it)
-  {
-    int ref =
-      get_linearlized_offset(t_dest.get_global_index(*it), t_dest.get_shape());
+  for (auto it = local_shape.index_begin();
+       it != local_shape.index_end(); ++it) {
+    int ref = get_linearlized_offset(t_dest.get_global_index(*it),
+                                     t_dest.get_shape());
     int stored = buf[t_dest.get_local_offset(*it)];
-    if (ref != stored)
-    {
+    if (ref != stored) {
       util::MPIPrintStreamError()
-        << "Mismatch at: " << *it << ", ref: " << ref << ", stored: " << stored;
+          << "Mismatch at: " << *it
+          << ", ref: " << ref << ", stored: " << stored;
       return -1;
     }
   }
@@ -172,14 +171,14 @@ int test_copy_shuffle_from_device_to_host(Array<ND> const& shape,
 }
 
 template <int ND>
-void test(Shape const& proc_dim, Shape const& shape)
-{
+void test(const Shape &proc_dim, const Shape &shape) {
   using DataType = int;
   using TensorMPI = Tensor<DataType, LocaleMPI, CUDAAllocator>;
   using TensorHost = Tensor<DataType, LocaleMPI, BaseAllocator>;
-  using TensorHostPinned = Tensor<DataType, LocaleMPI, CUDAHostPooledAllocator>;
+  using TensorHostPinned = Tensor<DataType, LocaleMPI,
+                                  CUDAHostPooledAllocator>;
 
-  auto const sample_dist = make_sample_distribution(ND, proc_dim.size());
+  const auto sample_dist = make_sample_distribution(ND, proc_dim.size());
   IntVector overlap(ND, 1);
   overlap[get_sample_dim()] = 0;
   overlap[get_channel_dim()] = 0;
@@ -187,14 +186,15 @@ void test(Shape const& proc_dim, Shape const& shape)
 #if 1
   {
     MPI_Barrier(MPI_COMM_WORLD);
-    util::MPIRootPrintStreamInfo() << "Test: local copy from host to device.";
+    util::MPIRootPrintStreamInfo()
+        << "Test: local copy from host to device.";
     auto dist1 = Distribution::make_distribution(proc_dim);
     auto dist2 = Distribution::make_distribution(proc_dim);
     assert0(test_copy_shuffle_from_host_to_device<ND, TensorHost, TensorMPI>(
-      shape, dist1, dist2));
+        shape, dist1, dist2));
     // reverse
     assert0(test_copy_shuffle_from_device_to_host<ND, TensorMPI, TensorHost>(
-      shape, dist1, dist2));
+        shape, dist1, dist2));
   }
 #endif
 
@@ -202,15 +202,13 @@ void test(Shape const& proc_dim, Shape const& shape)
   {
     MPI_Barrier(MPI_COMM_WORLD);
     util::MPIRootPrintStreamInfo()
-      << "Test: local copy from device to pinned host.";
+        << "Test: local copy from device to pinned host.";
     auto dist1 = Distribution::make_distribution(proc_dim);
     auto dist2 = Distribution::make_distribution(proc_dim);
-    assert0(
-      test_copy_shuffle_from_host_to_device<ND, TensorHostPinned, TensorMPI>(
+    assert0(test_copy_shuffle_from_host_to_device<ND, TensorHostPinned, TensorMPI>(
         shape, dist1, dist2));
     // reverse
-    assert0(
-      test_copy_shuffle_from_device_to_host<ND, TensorMPI, TensorHostPinned>(
+    assert0(test_copy_shuffle_from_device_to_host<ND, TensorMPI, TensorHostPinned>(
         shape, dist1, dist2));
   }
 #endif
@@ -219,7 +217,7 @@ void test(Shape const& proc_dim, Shape const& shape)
   {
     MPI_Barrier(MPI_COMM_WORLD);
     util::MPIRootPrintStreamInfo()
-      << "Test: copy between same shape and distribution. no mpi involved.";
+        << "Test: copy between same shape and distribution. no mpi involved.";
     auto dist1 = Distribution::make_overlapped_distribution(proc_dim, overlap);
     auto dist2 = Distribution::make_overlapped_distribution(proc_dim, overlap);
     assert0(test_copy_shuffle<ND, TensorMPI, TensorMPI>(shape, dist1, dist2));
@@ -232,7 +230,7 @@ void test(Shape const& proc_dim, Shape const& shape)
   {
     MPI_Barrier(MPI_COMM_WORLD);
     util::MPIRootPrintStreamInfo()
-      << "Test: copy from tensor with overlap to non-overlap tensor.";
+        << "Test: copy from tensor with overlap to non-overlap tensor.";
     auto dist1 = Distribution::make_overlapped_distribution(proc_dim, overlap);
     auto dist2 = Distribution::make_distribution(proc_dim);
     assert0(test_copy_shuffle<ND, TensorMPI, TensorMPI>(shape, dist1, dist2));
@@ -243,8 +241,8 @@ void test(Shape const& proc_dim, Shape const& shape)
 #if 1
   {
     MPI_Barrier(MPI_COMM_WORLD);
-    util::MPIRootPrintStreamInfo() << "Test: copy from sample-distributed "
-                                      "tensor to spatially-distributed tensor.";
+    util::MPIRootPrintStreamInfo()
+        << "Test: copy from sample-distributed tensor to spatially-distributed tensor.";
     auto dist1 = sample_dist;
     auto dist2 = Distribution::make_overlapped_distribution(proc_dim, overlap);
     assert0(test_copy_shuffle<ND, TensorMPI, TensorMPI>(shape, dist1, dist2));
@@ -259,17 +257,13 @@ void test(Shape const& proc_dim, Shape const& shape)
     //
     MPI_Barrier(MPI_COMM_WORLD);
     util::MPIRootPrintStreamInfo()
-      << "Test: copy from sample-distributed tensor to spatially-distributed "
-         "tensor. non-divisible tensor sizes.";
+        << "Test: copy from sample-distributed tensor to spatially-distributed tensor. non-divisible tensor sizes.";
     auto dist1 = sample_dist;
     auto dist2 = Distribution::make_overlapped_distribution(proc_dim, overlap);
     Array<ND> shape;
-    if (ND == 3)
-    {
+    if (ND == 3) {
       shape = {7, 9, 4};
-    }
-    else if (ND == 4)
-    {
+    } else if (ND == 4) {
       shape = {7, 9, 5, 3};
     }
     assert0(test_copy_shuffle<ND, TensorMPI, TensorMPI>(shape, dist1, dist2));
@@ -277,6 +271,7 @@ void test(Shape const& proc_dim, Shape const& shape)
     assert0(test_copy_shuffle<ND, TensorMPI, TensorMPI>(shape, dist2, dist1));
   }
 #endif
+
 
   // cudaMalloc2D does not work with Spectrum MPI. Fails when
   // deallocating with cudaFree.
@@ -311,18 +306,15 @@ void test(Shape const& proc_dim, Shape const& shape)
   Usage: mpirun -np N ./test_tensor_mpi_cuda_copy px py [pz], where px
   * py * pz == N
  */
-int main(int argc, char* argv[])
-{
+int main(int argc, char *argv[]) {
   MPI_Init(&argc, &argv);
   int pid;
   int np;
   MPI_Comm_rank(MPI_COMM_WORLD, &pid);
   MPI_Comm_size(MPI_COMM_WORLD, &np);
 
-  if (argc != 3 && argc != 4)
-  {
-    if (pid == 0)
-    {
+  if (argc != 3 && argc != 4) {
+    if (pid == 0) {
       std::cerr << "Error! Usage: " << argv[0] << " proc_x proc_y [proc_z]\n";
     }
     MPI_Finalize();
@@ -332,13 +324,10 @@ int main(int argc, char* argv[])
   int proc_x = atoi(argv[1]);
   int proc_y = atoi(argv[2]);
 
-  if (argc == 3)
-  {
+  if (argc == 3) {
     assert_always(proc_x * proc_y == np);
     test<3>(Shape({proc_x, proc_y, 1}), Shape({8, 8, np}));
-  }
-  else if (argc == 4)
-  {
+  } else if (argc == 4) {
     int proc_z = atoi(argv[3]);
     assert_always(proc_x * proc_y * proc_z == np);
     test<4>(Shape({proc_x, proc_y, proc_z, 1}), Shape({8, 8, 8, np}));

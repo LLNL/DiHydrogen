@@ -4,8 +4,7 @@
 #include "distconv/tensor/tensor.hpp"
 #include "distconv/tensor/tensor_mpi.hpp"
 
-namespace distconv
-{
+namespace distconv {
 
 template <typename Backend, typename DataType>
 class Convolution;
@@ -22,11 +21,7 @@ class LeakyReLU;
 template <typename Backend, typename DataType>
 class BatchNormalization;
 
-enum class SoftmaxMode
-{
-  INSTANCE,
-  CHANNEL
-};
+enum class SoftmaxMode {INSTANCE, CHANNEL};
 
 template <typename Backend>
 class Softmax;
@@ -37,4 +32,4 @@ class CrossEntropy;
 template <typename Backend>
 class MeanSquaredError;
 
-}  // namespace distconv
+} // namespace distconv

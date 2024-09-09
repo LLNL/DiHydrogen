@@ -26,6 +26,6 @@ using RuntimeGPU = RuntimeCUDA;
 using RuntimeGPU = RuntimeHIP;
 #endif
 
-}  // namespace internal
-}  // namespace tensor
-}  // namespace distconv
+} // namespace internal
+} // namespace tensor
+} // namespace distconv

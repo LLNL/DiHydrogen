@@ -1,14 +1,12 @@
 #pragma once
 
-namespace distconv
-{
+namespace distconv {
 
-struct Config
-{
-  bool profiling;
+struct Config {
+    bool profiling;
 };
 
 void initialize();
-Config const& get_config();
+const Config &get_config();
 
-}  // namespace distconv
+} // namespace distconv

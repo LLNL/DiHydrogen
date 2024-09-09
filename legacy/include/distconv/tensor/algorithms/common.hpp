@@ -6,11 +6,12 @@
 
 // Placeholder
 
-namespace distconv
-{
-namespace tensor
-{
-namespace algorithms
-{}  // namespace algorithms
-}  // namespace tensor
-}  // namespace distconv
+namespace distconv {
+namespace tensor {
+namespace algorithms {
+
+
+} // namespace algorithms_cuda
+} // namespace tensor
+} // namespace distconv
+

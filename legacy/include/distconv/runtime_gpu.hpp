@@ -7,9 +7,8 @@
 
 #pragma once
 
-#include "distconv_config.hpp"
-
 #include "distconv/util/util_gpu.hpp"
+#include "distconv_config.hpp"
 #include "h2/gpu/memory_utils.hpp"
 #include "h2/gpu/runtime.hpp"
 
@@ -64,5 +63,5 @@ using RuntimeGPU = RuntimeCUDA;
 using RuntimeGPU = RuntimeHIP;
 #endif
 
-}  // namespace internal
-}  // namespace distconv
+} // namespace internal
+} // namespace distconv

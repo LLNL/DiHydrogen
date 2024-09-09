@@ -19,19 +19,19 @@ namespace internal
 class HIPDeviceMemoryPool
 {
 public:
-  HIPDeviceMemoryPool();
-  ~HIPDeviceMemoryPool();
-  void* get(size_t size, hipStream_t st);
-  void release(void* p);
-  size_t get_max_allocatable_size(size_t limit);
+    HIPDeviceMemoryPool();
+    ~HIPDeviceMemoryPool();
+    void* get(size_t size, hipStream_t st);
+    void release(void* p);
+    size_t get_max_allocatable_size(size_t limit);
 };
 
 class RuntimeHIP
 {
 public:
-  static HIPDeviceMemoryPool& get_device_memory_pool();
-  static hipEvent_t& get_event(int idx = 0);
+    static HIPDeviceMemoryPool& get_device_memory_pool();
+    static hipEvent_t& get_event(int idx = 0);
 };
 
-}  // namespace internal
-}  // namespace distconv
+} // namespace internal
+} // namespace distconv

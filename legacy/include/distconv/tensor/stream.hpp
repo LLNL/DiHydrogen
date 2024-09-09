@@ -2,20 +2,18 @@
 
 #include "distconv/base.hpp"
 
-namespace distconv
-{
-namespace tensor
-{
+namespace distconv {
+namespace tensor {
 
 template <typename Allocator>
 struct Stream;
 
-struct DefaultStream
-{
+struct DefaultStream {
   DefaultStream() = default;
   DefaultStream(int v) {}
   static DefaultStream value;
 };
 
-}  // namespace tensor
-}  // namespace distconv
+} // namespace tensro
+} // namespae distconv
+

@@ -33,21 +33,20 @@ struct TensorType;
 template <>
 struct TensorType<BackendDNNLib>
 {
-  using type =
-    tensor::Tensor<DataType, tensor::LocaleMPI, tensor::CUDAAllocator>;
+    using type =
+        tensor::Tensor<DataType, tensor::LocaleMPI, tensor::CUDAAllocator>;
 };
 
 template <>
-struct TensorType<ref::Backend>
-{
+struct TensorType<ref::Backend> {
   using type =
-    tensor::Tensor<DataType, tensor::LocaleMPI, tensor::BaseAllocator>;
+      tensor::Tensor<DataType, tensor::LocaleMPI,
+                     tensor::BaseAllocator>;
 };
 
 template <typename Backend>
-class Data
-{
-public:
+class Data {
+ public:
   typename TensorType<Backend>::type input;
   typename TensorType<Backend>::type d_input;
   typename TensorType<Backend>::type output;
@@ -55,8 +54,8 @@ public:
 };
 
 template <typename Backend>
-int setup(test::Config const& cfg, MPI_Comm comm, Data<Backend>& d)
-{
+int setup(const test::Config &cfg, MPI_Comm comm,
+          Data<Backend> &d) {
   using Tensor = typename TensorType<Backend>::type;
 
   int pid;
@@ -69,7 +68,7 @@ int setup(test::Config const& cfg, MPI_Comm comm, Data<Backend>& d)
   IntVector overlap({1, 1, 0, 0});
 
   auto dist = tensor::Distribution::make_overlapped_distribution(
-    tensor::Shape({cfg.p_w, cfg.p_h, cfg.p_c, cfg.p_n}), overlap);
+      tensor::Shape({cfg.p_w, cfg.p_h, cfg.p_c, cfg.p_n}), overlap);
 
   tensor::LocaleMPI loc(comm);
   d.input = Tensor(input_shape, loc, dist);
@@ -95,16 +94,15 @@ int setup(test::Config const& cfg, MPI_Comm comm, Data<Backend>& d)
 }
 
 template <typename Backend>
-int test_forward(Data<Backend>& d,
-                 test::Config const& cfg,
+int test_forward(Data<Backend> &d,
+                 const test::Config &cfg,
                  MPI_Comm comm,
-                 Backend& be)
-{
+                 Backend &be) {
   int pid;
   MPI_Comm_rank(comm, &pid);
 
   util::MPIRootPrintStreamInfo()
-    << "Executing test_forward with backend \"" << cfg.backend << "\"";
+      << "Executing test_forward with backend \"" << cfg.backend << "\"";
 
   LeakyReLU<Backend> leaky_relu(be);
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
@@ -117,20 +115,20 @@ int test_forward(Data<Backend>& d,
 }
 
 template <typename Backend>
-int test_backward(Data<Backend>& d,
-                  test::Config const& cfg,
+int test_backward(Data<Backend> &d,
+                  const test::Config &cfg,
                   MPI_Comm comm,
-                  Backend& be)
-{
+                  Backend &be) {
   int pid;
   MPI_Comm_rank(comm, &pid);
 
   util::MPIRootPrintStreamInfo()
-    << "Executing test_backward with backend \"" << cfg.backend << "\"";
+      << "Executing test_backward with backend \"" << cfg.backend << "\"";
 
   LeakyReLU<Backend> leaky_relu(be);
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
-  leaky_relu.backward(d.input, d.d_output, negative_slope, d.d_input);
+  leaky_relu.backward(d.input, d.d_output, negative_slope,
+                      d.d_input);
   be.wait();
   DISTCONV_CHECK_MPI(MPI_Barrier(comm));
   util::MPIRootPrintStreamInfo() << "Test done";
@@ -139,27 +137,27 @@ int test_backward(Data<Backend>& d,
 }
 
 template <typename Backend>
-int test_all(Data<Backend>& d, test::Config const& cfg, MPI_Comm comm);
+int test_all(Data<Backend> &d, const test::Config &cfg,
+             MPI_Comm comm);
 
 template <>
 int test_all<BackendDNNLib>(Data<BackendDNNLib>& d,
-                            test::Config const& cfg,
+                            const test::Config& cfg,
                             MPI_Comm comm)
 {
-  int pid;
-  DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
-  auto handle = GPUDNNBackend::make_handle();
-  BackendDNNLib be(comm, handle);
-  test_forward<BackendDNNLib>(d, cfg, comm, be);
-  test_backward<BackendDNNLib>(d, cfg, comm, be);
-  be.wait();
-  GPUDNNBackend::destroy_handle(handle);
-  return 0;
+    int pid;
+    DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
+    auto handle = GPUDNNBackend::make_handle();
+    BackendDNNLib be(comm, handle);
+    test_forward<BackendDNNLib>(d, cfg, comm, be);
+    test_backward<BackendDNNLib>(d, cfg, comm, be);
+    be.wait();
+    GPUDNNBackend::destroy_handle(handle);
+    return 0;
 }
 
 template <typename Backend>
-int run(test::Config const& cfg, MPI_Comm comm)
-{
+int run(const test::Config &cfg, MPI_Comm comm) {
   int pid;
   int np;
   DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
@@ -169,8 +167,7 @@ int run(test::Config const& cfg, MPI_Comm comm)
   setup<Backend>(cfg, MPI_COMM_WORLD, d);
 
   // Dump input and filter tensors
-  if (cfg.dump_input)
-  {
+  if (cfg.dump_input) {
     util::MPIRootPrintStreamDebug() << "Dumping input tensors";
     dump_tensor(d.input, "input_tensor");
     dump_tensor(d.d_output, "d_output_tensor");
@@ -182,8 +179,7 @@ int run(test::Config const& cfg, MPI_Comm comm)
   util::MPIRootPrintStreamDebug() << "Testing done";
 
   // Dump result
-  if (cfg.dump_output)
-  {
+  if (cfg.dump_output) {
     dump_tensor(d.output, "output_tensor");
     dump_tensor(d.d_input, "d_input_tensor");
   }
@@ -191,42 +187,39 @@ int run(test::Config const& cfg, MPI_Comm comm)
   return 0;
 }
 
-int main(int argc, char* argv[])
-{
-  h2::gpu::set_gpu(distconv::util::choose_gpu());
-  int pid;
-  int np;
-  Al::Initialize(argc, argv);
-  DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
-  DISTCONV_CHECK_MPI(MPI_Comm_size(MPI_COMM_WORLD, &np));
+int main(int argc, char *argv[]) {
+    h2::gpu::set_gpu(distconv::util::choose_gpu());
+    int pid;
+    int np;
+    Al::Initialize(argc, argv);
+    DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
+    DISTCONV_CHECK_MPI(MPI_Comm_size(MPI_COMM_WORLD, &np));
 
-  test::Config cfg = test::process_opt(argc, argv, pid);
-  if (pid == 0)
-  {
-    std::cout << cfg << std::endl;
-  }
+    test::Config cfg = test::process_opt(argc, argv, pid);
+    if (pid == 0)
+    {
+        std::cout << cfg << std::endl;
+    }
 
-  if (cfg.p_n * cfg.p_c * cfg.p_h * cfg.p_w != np)
-  {
+  if (cfg.p_n * cfg.p_c * cfg.p_h * cfg.p_w != np) {
     util::MPIRootPrintStreamError()
-      << "Number of ranks does not match with the number of tensor partitions";
+        << "Number of ranks does not match with the number of tensor partitions";
     DISTCONV_CHECK_MPI(MPI_Finalize());
     std::exit(1);
   }
 
-  if (cfg.backend == "Ref")
-  {
-    // run<ref::Backend>(cfg, MPI_COMM_WORLD);
+  if (cfg.backend == "Ref") {
+    //run<ref::Backend>(cfg, MPI_COMM_WORLD);
     util::MPIRootPrintStreamError() << "Ref backend not implemented";
   }
   else if (cfg.backend == "CUDNN" || cfg.backend == "MIOpen")
   {
-    run<BackendDNNLib>(cfg, MPI_COMM_WORLD);
+      run<BackendDNNLib>(cfg, MPI_COMM_WORLD);
   }
   else
   {
-    util::MPIRootPrintStreamError() << "Unknown backend name";
-    abort();
+      util::MPIRootPrintStreamError() << "Unknown backend name";
+      abort();
   }
 
   util::MPIRootPrintStreamInfo() << "Finishing";
