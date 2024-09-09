@@ -1,9 +1,12 @@
 #pragma once
 
-namespace p2p {
-namespace internal {
+namespace p2p
+{
+namespace internal
+{
 
-struct Config {
+struct Config
+{
   bool insert_nvtx_mark = false;
 };
 

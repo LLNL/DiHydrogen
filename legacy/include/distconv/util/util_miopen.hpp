@@ -27,27 +27,27 @@ std::ostream& operator<<(std::ostream& os, miopenDataType_t& dt);
 inline std::ostream& operator<<(std::ostream& os,
                                 miopenConvFwdAlgorithm_t const& algo)
 {
-    return os << get_name(algo);
+  return os << get_name(algo);
 }
 inline std::ostream& operator<<(std::ostream& os,
                                 miopenConvBwdDataAlgorithm_t const& algo)
 {
-    return os << get_name(algo);
+  return os << get_name(algo);
 }
 inline std::ostream& operator<<(std::ostream& os,
                                 miopenConvBwdWeightsAlgorithm_t const& algo)
 {
-    return os << get_name(algo);
+  return os << get_name(algo);
 }
 inline std::ostream& operator<<(std::ostream& os,
                                 miopenTensorDescriptor_t const& d)
 {
-    return os << tostring(d);
+  return os << tostring(d);
 }
 inline std::ostream& operator<<(std::ostream& os,
                                 miopenConvolutionDescriptor_t const& d)
 {
-    return os << tostring(d);
+  return os << tostring(d);
 }
 
 // NOTE (trb 07/25/2022): There's no such thing in MIOpen.
@@ -70,20 +70,19 @@ struct miopenTypeTraits;
 template <>
 struct miopenTypeTraits<int>
 {
-    static constexpr auto value =
-        miopenInt32; // Yeah, I know. But also, reality.
+  static constexpr auto value = miopenInt32; // Yeah, I know. But also, reality.
 };
 
 template <>
 struct miopenTypeTraits<float>
 {
-    static constexpr auto value = miopenFloat;
+  static constexpr auto value = miopenFloat;
 };
 
 template <>
 struct miopenTypeTraits<double>
 {
-    static constexpr auto value = miopenDouble;
+  static constexpr auto value = miopenDouble;
 };
 
 // FIXME (trb 07/25/2022): FP16 support.
@@ -96,7 +95,7 @@ struct miopenTypeTraits<double>
 template <typename T>
 inline constexpr miopenDataType_t get_miopen_type()
 {
-    return miopenTypeTraits<std::decay_t<T>>::value;
+  return miopenTypeTraits<std::decay_t<T>>::value;
 }
 
 template <typename T>
@@ -105,7 +104,7 @@ inline constexpr miopenDataType_t miopen_type = get_miopen_type<T>();
 template <typename T>
 inline constexpr miopenDataType_t get_dnnlib_type()
 {
-    return get_miopen_type<T>();
+  return get_miopen_type<T>();
 }
 
 /** @brief Get the loaded MIOpen version.

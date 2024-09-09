@@ -2,8 +2,10 @@
 
 #include "distconv/tensor/algorithms/reduce_sum_cuda.hpp"
 
-namespace distconv {
-namespace tensor {
+namespace distconv
+{
+namespace tensor
+{
 
 template <int ND,
           typename DataType,
@@ -17,9 +19,9 @@ TransformReduceSum(Tensor<DataType, Locale, Allocator>& src,
                    const UnaryFunction& op,
                    h2::gpu::DeviceStream stream = 0)
 {
-    using TensorType = Tensor<DataType, Locale, Allocator>;
-    return algorithms_cuda::ReduceSumFunctor<ND, TensorType, UnaryFunction>()(
-        src, src.get_local_shape(), dst, op, stream);
+  using TensorType = Tensor<DataType, Locale, Allocator>;
+  return algorithms_cuda::ReduceSumFunctor<ND, TensorType, UnaryFunction>()(
+    src, src.get_local_shape(), dst, op, stream);
 }
 
 template <int ND,
@@ -35,9 +37,9 @@ TransformReduceSum(Tensor<DataType, Locale, Allocator>& src,
                    const UnaryFunction& op,
                    h2::gpu::DeviceStream stream = 0)
 {
-    using TensorType = Tensor<DataType, Locale, Allocator>;
-    return algorithms_cuda::ReduceSumFunctor<ND, TensorType, UnaryFunction>()(
-        src, local_reduction_region, dst, op, stream);
+  using TensorType = Tensor<DataType, Locale, Allocator>;
+  return algorithms_cuda::ReduceSumFunctor<ND, TensorType, UnaryFunction>()(
+    src, local_reduction_region, dst, op, stream);
 }
 
 template <int ND,
@@ -55,10 +57,10 @@ TransformReduceSum(Tensor<DataType, Locale, Allocator>& src,
                    const UnaryFunction2& op2,
                    h2::gpu::DeviceStream stream = 0)
 {
-    using TensorType = Tensor<DataType, Locale, Allocator>;
-    return algorithms_cuda::
-        ReduceSumFunctor2<ND, TensorType, UnaryFunction1, UnaryFunction2>()(
-            src, src.get_local_shape(), dst1, op1, dst2, op2, stream);
+  using TensorType = Tensor<DataType, Locale, Allocator>;
+  return algorithms_cuda::
+    ReduceSumFunctor2<ND, TensorType, UnaryFunction1, UnaryFunction2>()(
+      src, src.get_local_shape(), dst1, op1, dst2, op2, stream);
 }
 
 template <int ND,
@@ -77,10 +79,10 @@ TransformReduceSum(Tensor<DataType, Locale, Allocator>& src,
                    const UnaryFunction2& op2,
                    h2::gpu::DeviceStream stream = 0)
 {
-    using TensorType = Tensor<DataType, Locale, Allocator>;
-    return algorithms_cuda::
-        ReduceSumFunctor2<ND, TensorType, UnaryFunction1, UnaryFunction2>()(
-            src, local_reduction_region, dst1, op1, dst2, op2, stream);
+  using TensorType = Tensor<DataType, Locale, Allocator>;
+  return algorithms_cuda::
+    ReduceSumFunctor2<ND, TensorType, UnaryFunction1, UnaryFunction2>()(
+      src, local_reduction_region, dst1, op1, dst2, op2, stream);
 }
 
 } // namespace tensor
