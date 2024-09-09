@@ -45,10 +45,10 @@ public:
 
   int get_size() const { return m_num_procs; }
 
-  IndexVector get_rank_idx(const Distribution& dist) const
+  IndexVector get_rank_idx(Distribution const& dist) const
   {
     IndexVector rank_idx(dist.num_dims(), 0);
-    const auto& locale_shape = dist.get_locale_shape();
+    auto const& locale_shape = dist.get_locale_shape();
     int rank = m_rank;
     for (int i = 0; i < dist.num_dims(); ++i)
     {
@@ -58,7 +58,7 @@ public:
     return rank_idx;
   }
 
-  IndexVector get_split_idx(const Distribution& dist) const
+  IndexVector get_split_idx(Distribution const& dist) const
   {
     auto idx = get_rank_idx(dist);
     for (int i = 0; i < dist.num_dims(); ++i)
@@ -68,7 +68,7 @@ public:
     return idx;
   }
 
-  bool is_split_root(const Distribution& dist) const
+  bool is_split_root(Distribution const& dist) const
   {
     auto idx = get_rank_idx(dist);
     for (int i = 0; i < dist.num_dims(); ++i)
@@ -132,7 +132,7 @@ public:
     }
   }
 
-  TensorImpl(const TensorImpl<TensorType>& x)
+  TensorImpl(TensorImpl<TensorType> const& x)
     : m_tensor(x.m_tensor),
       m_proc_idx(x.m_proc_idx),
       m_split_idx(x.m_split_idx),
@@ -143,7 +143,7 @@ public:
       m_offset_all(x.m_offset_all)
   {}
 
-  TensorImpl(TensorType* tensor, const TensorImpl<TensorType>& x)
+  TensorImpl(TensorType* tensor, TensorImpl<TensorType> const& x)
     : m_tensor(tensor),
       m_proc_idx(x.m_proc_idx),
       m_split_idx(x.m_split_idx),
@@ -154,7 +154,7 @@ public:
       m_offset_all(x.m_offset_all)
   {}
 
-  TensorImpl<TensorType>& operator=(const TensorImpl<TensorType>& x)
+  TensorImpl<TensorType>& operator=(TensorImpl<TensorType> const& x)
   {
     m_tensor = x.m_tensor;
     m_proc_idx = x.m_proc_idx;
@@ -169,14 +169,14 @@ public:
 
   ~TensorImpl() = default;
 
-  void set_shape(const Shape& shape)
+  void set_shape(Shape const& shape)
   {
     m_tensor->m_shape = shape;
     init_local_tensor();
     init_offsets();
   }
 
-  void set_distribution(const Distribution& dist)
+  void set_distribution(Distribution const& dist)
   {
     m_tensor->get_distribution() = dist;
     init_proc_grid();
@@ -249,8 +249,8 @@ public:
 
   int allocate()
   {
-    const auto& dist = m_tensor->get_distribution();
-    const auto& locale_shape = dist.get_locale_shape();
+    auto const& dist = m_tensor->get_distribution();
+    auto const& locale_shape = dist.get_locale_shape();
     // MPI num procs must be equal to the locale shape size, except
     // for shared tensors
     util::MPIPrintStreamDebug()
@@ -291,7 +291,7 @@ public:
     return global_idx - m_offset[dim];
   }
 
-  index_t get_local_offset(const IndexVector& idx, bool idx_include_halo) const
+  index_t get_local_offset(IndexVector const& idx, bool idx_include_halo) const
   {
     auto real_idx = idx;
     if (!idx_include_halo)
@@ -305,7 +305,7 @@ public:
   {
     MPI_Comm comm = m_tensor->get_locale().get_comm();
     MPI_Comm sub_comm;
-    const auto& dist = m_tensor->get_distribution();
+    auto const& dist = m_tensor->get_distribution();
     auto proc_idx = m_proc_idx;
     proc_idx[dim] = 0;
     int sub_comm_key = get_offset(proc_idx, dist.get_locale_shape());
@@ -323,7 +323,7 @@ public:
   {
     MPI_Comm comm = m_tensor->get_locale().get_comm();
     MPI_Comm sub_comm;
-    const auto& dist = m_tensor->get_distribution();
+    auto const& dist = m_tensor->get_distribution();
     auto proc_idx = m_proc_idx;
     dim = dim < 0 ? proc_idx.length() + dim : dim;
     for (int i = 0; i < proc_idx.length(); ++i)
@@ -349,7 +349,7 @@ public:
   {
     MPI_Comm comm = m_tensor->get_locale().get_comm();
     MPI_Comm sub_comm;
-    const auto& dist = m_tensor->get_distribution();
+    auto const& dist = m_tensor->get_distribution();
     auto proc_idx = m_proc_idx;
     for (int i = 0; i < get_num_spatial_dims(); ++i)
     {
@@ -366,7 +366,7 @@ public:
   {
     MPI_Comm comm = m_tensor->get_locale().get_comm();
     MPI_Comm sub_comm;
-    const auto& dist = m_tensor->get_distribution();
+    auto const& dist = m_tensor->get_distribution();
     auto split_idx = m_split_idx;
     int sub_comm_key = get_offset(split_idx, dist.get_split_shape());
     DISTCONV_CHECK_MPI(MPI_Comm_split(
@@ -378,7 +378,7 @@ public:
   {
     MPI_Comm comm = m_tensor->get_locale().get_comm();
     MPI_Comm sub_comm;
-    const auto& dist = m_tensor->get_distribution();
+    auto const& dist = m_tensor->get_distribution();
     auto split_idx = m_split_idx;
     split_idx[dim] = 0;
     int sub_comm_key = get_offset(split_idx, dist.get_split_shape());
@@ -404,10 +404,10 @@ public:
                                      subloc.get_comm()));
   }
 
-  void allreduce(const std::vector<int>& dims)
+  void allreduce(std::vector<int> const& dims)
   {
     MPI_Comm comm = m_tensor->get_locale().get_comm();
-    const auto& dist = m_tensor->get_distribution();
+    auto const& dist = m_tensor->get_distribution();
     auto sub_comm_idx = get_proc_index();
     for (auto d : dims)
     {
@@ -447,7 +447,7 @@ protected:
 
   int get_num_spatial_dims() const { return m_tensor->get_num_spatial_dims(); }
 
-  void ensure_no_cyclic_distribution(const Distribution& dist) const
+  void ensure_no_cyclic_distribution(Distribution const& dist) const
   {
     for (int i = 0; i < get_num_dims(); ++i)
     {
@@ -457,7 +457,7 @@ protected:
 
   void init_proc_grid()
   {
-    const auto& dist = m_tensor->get_distribution();
+    auto const& dist = m_tensor->get_distribution();
     m_proc_idx = m_tensor->get_locale().get_rank_idx(dist);
     m_split_idx = m_tensor->get_locale().get_split_idx(dist);
   }
@@ -471,9 +471,9 @@ protected:
       return;
     }
 
-    const auto& tensor_shape = m_tensor->get_shape();
+    auto const& tensor_shape = m_tensor->get_shape();
     auto& dist = m_tensor->get_distribution();
-    const auto& split_shape = dist.get_split_shape();
+    auto const& split_shape = dist.get_split_shape();
 
     for (int i = 0; i < get_num_dims(); ++i)
     {
@@ -544,8 +544,8 @@ protected:
 
   void init_offsets()
   {
-    const auto& dist = m_tensor->get_distribution();
-    const auto& loc_shape = dist.get_locale_shape();
+    auto const& dist = m_tensor->get_distribution();
+    auto const& loc_shape = dist.get_locale_shape();
 
     m_offset_all.clear();
     m_offset = IndexVector(get_num_dims(), 0);
@@ -634,7 +634,7 @@ struct ViewFunctor<Tensor<DataType, LocaleProcess, Allocator>,
                    Tensor<DataType, LocaleMPI, Allocator>>
 {
   int operator()(Tensor<DataType, LocaleProcess, Allocator>& t_proc,
-                 const Tensor<DataType, LocaleMPI, Allocator>& t_mpi)
+                 Tensor<DataType, LocaleMPI, Allocator> const& t_mpi)
   {
     assert_always(t_proc.is_null());
     assert_always(t_proc.get_shape().is_empty());
@@ -657,7 +657,7 @@ struct ViewFunctor<Tensor<DataType, LocaleMPI, Allocator>,
                    Tensor<DataType, LocaleMPI, Allocator>>
 {
   int operator()(Tensor<DataType, LocaleMPI, Allocator>& t_viewer,
-                 const Tensor<DataType, LocaleMPI, Allocator>& t_original)
+                 Tensor<DataType, LocaleMPI, Allocator> const& t_original)
   {
     t_viewer.set_view(t_original.get_data());
     t_viewer.m_locale = t_original.get_locale();
@@ -675,7 +675,7 @@ struct ViewFunctor<Tensor<DataType, LocaleMPI, Allocator>,
 
 template <typename DataType, typename Allocator>
 inline int View(Tensor<DataType, LocaleProcess, Allocator>& t_proc,
-                const Tensor<DataType, LocaleMPI, Allocator>& t_mpi)
+                Tensor<DataType, LocaleMPI, Allocator> const& t_mpi)
 {
   return internal::ViewFunctor<Tensor<DataType, LocaleProcess, Allocator>,
                                Tensor<DataType, LocaleMPI, Allocator>>()(t_proc,
@@ -692,7 +692,7 @@ inline int View(Tensor<DataType, LocaleMPI, Allocator>& t, DataType* raw_ptr)
 // Note: raw_ptr should not be pitched memory
 template <typename DataType, typename Allocator>
 inline int View(Tensor<DataType, LocaleMPI, Allocator>& t,
-                const DataType* raw_ptr)
+                DataType const* raw_ptr)
 {
   t.set_view(raw_ptr);
   return 0;
@@ -700,7 +700,7 @@ inline int View(Tensor<DataType, LocaleMPI, Allocator>& t,
 
 template <typename DataType, typename Allocator>
 inline int View(Tensor<DataType, LocaleMPI, Allocator>& t_viewer,
-                const Tensor<DataType, LocaleMPI, Allocator>& t_original)
+                Tensor<DataType, LocaleMPI, Allocator> const& t_original)
 {
   return internal::ViewFunctor<Tensor<DataType, LocaleMPI, Allocator>,
                                Tensor<DataType, LocaleMPI, Allocator>>()(
@@ -742,11 +742,11 @@ struct CopyFunctor<Tensor<DataType, LocaleProcess, AllocatorProc>,
   }
 
   void copy_into_local_buffer(DataType* dest,
-                              const DataType* src,
-                              const Shape& local_shape,
-                              const IndexVector& global_offset,
-                              const Shape& global_shape,
-                              const IndexVector& overlap,
+                              DataType const* src,
+                              Shape const& local_shape,
+                              IndexVector const& global_offset,
+                              Shape const& global_shape,
+                              IndexVector const& overlap,
                               size_t pitch)
   {
     auto local_real_shape = local_shape + overlap * 2;
@@ -767,9 +767,9 @@ struct CopyFunctor<Tensor<DataType, LocaleProcess, AllocatorProc>,
   }
 
   template <typename TensorMPIType>
-  void send_local_buffer(const TensorMPIType& t_mpi, int root, int tag)
+  void send_local_buffer(TensorMPIType const& t_mpi, int root, int tag)
   {
-    const int nd = t_mpi.get_num_dims();
+    int const nd = t_mpi.get_num_dims();
     // Send offset and shape
     IndexVector offset = t_mpi.get_global_index();
     // util::PrintStreamDebug() << "Sending offset to " << root;
@@ -792,7 +792,7 @@ struct CopyFunctor<Tensor<DataType, LocaleProcess, AllocatorProc>,
       return;
     }
     // Send the buffer
-    const DataType* send_buffer = t_mpi.get_const_buffer();
+    DataType const* send_buffer = t_mpi.get_const_buffer();
     size_t buffer_size = t_mpi.m_data.get_real_size();
 
     MPI_Send(&buffer_size,
@@ -821,13 +821,13 @@ struct CopyFunctor<Tensor<DataType, LocaleProcess, AllocatorProc>,
 
   template <typename TensorProcType, typename TensorMPIType>
   void recv_local_buffer(TensorProcType& t_proc,
-                         const TensorMPIType& t_mpi,
+                         TensorMPIType const& t_mpi,
                          int src,
                          int tag)
   {
-    const int nd = t_proc.get_num_dims();
+    int const nd = t_proc.get_num_dims();
     int my_rank = t_mpi.m_locale.get_rank();
-    const DataType* src_buf = nullptr;
+    DataType const* src_buf = nullptr;
     IndexVector global_offset(nd);
     Shape shape(nd);
     size_t pitch;
@@ -889,7 +889,7 @@ struct CopyFunctor<Tensor<DataType, LocaleProcess, AllocatorProc>,
                MPI_STATUS_IGNORE);
     }
     src_buf = m_buf;
-    const auto& overlap = t_mpi.get_halo_width();
+    auto const& overlap = t_mpi.get_halo_width();
     copy_into_local_buffer(t_proc.get_buffer(),
                            src_buf,
                            shape,
@@ -899,7 +899,7 @@ struct CopyFunctor<Tensor<DataType, LocaleProcess, AllocatorProc>,
                            pitch);
   }
 
-  int operator()(TensorProcType& t_proc, const TensorMPIType& t_mpi, int root)
+  int operator()(TensorProcType& t_proc, TensorMPIType const& t_mpi, int root)
   {
     util::MPIPrintStreamDebug()
       << "Gathering " << t_mpi << " to " << t_proc << " at proc " << root;
@@ -939,12 +939,12 @@ struct CopyFunctor<Tensor<DataType, LocaleProcess, AllocatorProc>,
 };
 
 template <typename DataType, typename Allocator>
-void find_owning_process(const Tensor<DataType, LocaleMPI, Allocator>& tensor,
-                         const IndexVector& global_idx,
+void find_owning_process(Tensor<DataType, LocaleMPI, Allocator> const& tensor,
+                         IndexVector const& global_idx,
                          IndexVector& rank,
                          IndexVector& local_offset)
 {
-  const int nd = tensor.get_num_dims();
+  int const nd = tensor.get_num_dims();
   auto dist = tensor.get_distribution();
   if (!dist.is_distributed())
   {
@@ -986,9 +986,9 @@ struct HostShadow<Tensor<DataType, LocaleMPI, BaseAllocator>>
   using ShadowTensorType = Tensor<DataType, LocaleMPI, BaseAllocator>;
 
   HostShadow() = delete;
-  HostShadow(const TensorType& tensor) : m_tensor(tensor) {}
+  HostShadow(TensorType const& tensor) : m_tensor(tensor) {}
 
-  const ShadowTensorType& get_host_shadow() const { return m_tensor; }
+  ShadowTensorType const& get_host_shadow() const { return m_tensor; }
 
   ShadowTensorType& get_host_shadow() { return m_tensor; }
 
@@ -1004,7 +1004,7 @@ template <typename DataType,
           typename AllocDest,
           typename StreamType>
 int CopyByShuffle(Tensor<DataType, LocaleMPI, AllocDest>& t_dest,
-                  const Tensor<DataType, LocaleMPI, AllocSrc>& t_src,
+                  Tensor<DataType, LocaleMPI, AllocSrc> const& t_src,
                   StreamType stream)
 {
   util::MPIPrintStreamWarning()
@@ -1053,7 +1053,7 @@ int CopyByShuffle(Tensor<DataType, LocaleMPI, AllocDest>& t_dest,
                  &win);
   MPI_Win_fence(0, win);
 
-  const auto src_shape = t_src_host.get_local_shape();
+  auto const src_shape = t_src_host.get_local_shape();
   auto loc_shape = t_dest_host.get_distribution().get_locale_shape();
   int put_count = 0;
   // delay puts for continuous elements
@@ -1158,11 +1158,11 @@ template <typename DataType,
 struct CopyLocalFunctor
 {
   int operator()(Tensor<DataType, LocaleMPI, AllocDest>& t_dst,
-                 const Tensor<DataType, LocaleMPI, AllocSrc>& t_src,
+                 Tensor<DataType, LocaleMPI, AllocSrc> const& t_src,
                  StreamType stream)
   {
-    const int nd = t_src.get_num_dims();
-    const auto local_shape = t_src.get_local_shape();
+    int const nd = t_src.get_num_dims();
+    auto const local_shape = t_src.get_local_shape();
     assert_eq(local_shape, t_dst.get_local_shape());
     assert_eq(nd, t_dst.get_num_dims());
     assert_always(nd >= 2);
@@ -1194,10 +1194,10 @@ struct CopyLocalFunctor
   }
 
   int copy_opt(Tensor<DataType, LocaleMPI, AllocDest>& t_dst,
-               const Tensor<DataType, LocaleMPI, AllocSrc>& t_src,
+               Tensor<DataType, LocaleMPI, AllocSrc> const& t_src,
                StreamType stream)
   {
-    const auto local_shape = t_src.get_local_shape();
+    auto const local_shape = t_src.get_local_shape();
     auto tr_shape = local_shape;
     tr_shape[0] = 1;
     tr_shape[1] = 1;
@@ -1228,7 +1228,7 @@ template <typename DataType,
 struct CopyLocalFunctor3D
 {
   int operator()(Tensor<DataType, LocaleMPI, AllocDest>& t_dst,
-                 const Tensor<DataType, LocaleMPI, AllocSrc>& t_src,
+                 Tensor<DataType, LocaleMPI, AllocSrc> const& t_src,
                  StreamType stream)
   {
     return CopyLocalFunctor<DataType, AllocSrc, AllocDest, StreamType>()(
@@ -1243,7 +1243,7 @@ template <typename DataType,
           typename AllocatorMPI,
           typename StreamType = DefaultStream>
 inline int Copy(Tensor<DataType, LocaleProcess, AllocatorProc>& t_proc,
-                const Tensor<DataType, LocaleMPI, AllocatorMPI>& t_mpi,
+                Tensor<DataType, LocaleMPI, AllocatorMPI> const& t_mpi,
                 int root,
                 StreamType stream = DefaultStream::value)
 {
@@ -1257,10 +1257,10 @@ template <typename DataType,
           typename AllocDest,
           typename StreamType = DefaultStream>
 inline int Copy(Tensor<DataType, LocaleMPI, AllocDest>& t_dest,
-                const Tensor<DataType, LocaleMPI, AllocSrc>& t_src,
+                Tensor<DataType, LocaleMPI, AllocSrc> const& t_src,
                 StreamType stream = DefaultStream::value)
 {
-  const int nd = t_src.get_num_dims();
+  int const nd = t_src.get_num_dims();
   util::MPIPrintStreamDebug() << "Copying " << t_src << " to " << t_dest;
 
   // tensor shape must match

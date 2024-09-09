@@ -30,10 +30,10 @@ public:
   }
 
   template <typename Tensor, typename ConstTensor>
-  void setup(const ConstTensor& input,
-             const Tensor& output,
-             const Tensor& d_input,
-             const ConstTensor& d_output)
+  void setup(ConstTensor const& input,
+             Tensor const& output,
+             Tensor const& d_input,
+             ConstTensor const& d_output)
   {
     GPUDNNBackend::setup_tensor_descriptor(m_input_d, input, false);
     GPUDNNBackend::setup_tensor_descriptor(m_output_d, output, false);
@@ -44,7 +44,7 @@ public:
 
   template <typename Tensor>
   int forward(typename Tensor::data_type alpha,
-              const Tensor& input,
+              Tensor const& input,
               typename Tensor::data_type beta,
               Tensor& output)
   {
@@ -70,8 +70,8 @@ public:
   template <typename Tensor>
   int backward(typename Tensor::data_type alpha,
                Tensor& output,
-               const Tensor& d_output,
-               const Tensor& input,
+               Tensor const& d_output,
+               Tensor const& input,
                typename Tensor::data_type beta,
                Tensor& d_input)
   {

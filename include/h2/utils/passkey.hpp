@@ -67,8 +67,8 @@ private:
   friend T;
 
   NonCopyablePasskey() = default;
-  NonCopyablePasskey(const NonCopyablePasskey&) = delete;
-  NonCopyablePasskey& operator=(const NonCopyablePasskey&) = delete;
+  NonCopyablePasskey(NonCopyablePasskey const&) = delete;
+  NonCopyablePasskey& operator=(NonCopyablePasskey const&) = delete;
 };
 
 }  // namespace h2

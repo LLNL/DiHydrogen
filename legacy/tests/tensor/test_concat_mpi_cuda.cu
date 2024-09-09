@@ -21,13 +21,13 @@ inline LocaleMPI get_locale()
 }
 
 template <typename TensorType>
-inline int test_concat(const Shape& dst_shape,
-                       const Distribution& dst_dist,
-                       const Shape& src1_shape,
-                       const Shape& src2_shape,
-                       const Distribution& src_dist)
+inline int test_concat(Shape const& dst_shape,
+                       Distribution const& dst_dist,
+                       Shape const& src1_shape,
+                       Shape const& src2_shape,
+                       Distribution const& src_dist)
 {
-  const int num_dims = dst_shape.num_dims();
+  int const num_dims = dst_shape.num_dims();
   using DataType = typename TensorType::data_type;
   using LocaleType = typename TensorType::locale_type;
   LocaleType loc = get_locale<LocaleType>();
@@ -119,7 +119,7 @@ inline int test_concat(const Shape& dst_shape,
   std::vector<TensorType*> src_tensors = {&src1, &src2};
   for (int i = 0; i < src_tensors.size(); ++i)
   {
-    const auto& src = *src_tensors[i];
+    auto const& src = *src_tensors[i];
     TensorProcType host(LocaleProcess(), proc_dist);
     assert0(tensor::Copy(host, src, 0));
     int num_errors = 0;

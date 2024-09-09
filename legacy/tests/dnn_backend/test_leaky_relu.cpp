@@ -55,7 +55,7 @@ public:
 };
 
 template <typename Backend>
-int setup(const test::Config& cfg, MPI_Comm comm, Data<Backend>& d)
+int setup(test::Config const& cfg, MPI_Comm comm, Data<Backend>& d)
 {
   using Tensor = typename TensorType<Backend>::type;
 
@@ -96,7 +96,7 @@ int setup(const test::Config& cfg, MPI_Comm comm, Data<Backend>& d)
 
 template <typename Backend>
 int test_forward(Data<Backend>& d,
-                 const test::Config& cfg,
+                 test::Config const& cfg,
                  MPI_Comm comm,
                  Backend& be)
 {
@@ -118,7 +118,7 @@ int test_forward(Data<Backend>& d,
 
 template <typename Backend>
 int test_backward(Data<Backend>& d,
-                  const test::Config& cfg,
+                  test::Config const& cfg,
                   MPI_Comm comm,
                   Backend& be)
 {
@@ -139,11 +139,11 @@ int test_backward(Data<Backend>& d,
 }
 
 template <typename Backend>
-int test_all(Data<Backend>& d, const test::Config& cfg, MPI_Comm comm);
+int test_all(Data<Backend>& d, test::Config const& cfg, MPI_Comm comm);
 
 template <>
 int test_all<BackendDNNLib>(Data<BackendDNNLib>& d,
-                            const test::Config& cfg,
+                            test::Config const& cfg,
                             MPI_Comm comm)
 {
   int pid;
@@ -158,7 +158,7 @@ int test_all<BackendDNNLib>(Data<BackendDNNLib>& d,
 }
 
 template <typename Backend>
-int run(const test::Config& cfg, MPI_Comm comm)
+int run(test::Config const& cfg, MPI_Comm comm)
 {
   int pid;
   int np;

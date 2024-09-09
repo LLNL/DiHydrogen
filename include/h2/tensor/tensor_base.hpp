@@ -49,7 +49,7 @@ public:
   /**
    * Construct a tensor with the given shape and dimension types.
    */
-  BaseTensor(const ShapeTuple& shape_, const DimensionTypeTuple& dim_types_)
+  BaseTensor(ShapeTuple const& shape_, DimensionTypeTuple const& dim_types_)
     : tensor_shape(shape_),
       tensor_dim_types(dim_types_),
       tensor_view_type(ViewType::None)
@@ -144,7 +144,7 @@ public:
   virtual ComputeStream get_stream() const H2_NOEXCEPT = 0;
 
   /** Set the compute stream associated with this tensor. */
-  virtual void set_stream(const ComputeStream& stream) = 0;
+  virtual void set_stream(ComputeStream const& stream) = 0;
 
   /**
    * Return a raw, generic pointer (void*) to the underlying storage.
@@ -158,13 +158,13 @@ public:
    * Return a raw, generic constant pointer (const void*) to the
    * underlying storage.
    */
-  virtual const void* storage_data() const = 0;
+  virtual void const* storage_data() const = 0;
 
   /**
    * Return a raw, generic constant pointer (const void*) to the
    * underlying storage.
    */
-  virtual const void* const_storage_data() const = 0;
+  virtual void const* const_storage_data() const = 0;
 
   /**
    * Ensure memory is backing this tensor, allocating if necessary.
@@ -210,15 +210,15 @@ public:
    *
    * It is an error to call this on a view.
    */
-  virtual void resize(const ShapeTuple& new_shape) = 0;
+  virtual void resize(ShapeTuple const& new_shape) = 0;
 
   /**
    * Resize the tensor to a new shape, also changing dimension types.
    *
    * It is an error to call this on a view.
    */
-  virtual void resize(const ShapeTuple& new_shape,
-                      const DimensionTypeTuple& new_dim_types) = 0;
+  virtual void resize(ShapeTuple const& new_shape,
+                      DimensionTypeTuple const& new_dim_types) = 0;
 
   /**
    * Resize the tensor to a new shape, also changing dimension types
@@ -226,9 +226,9 @@ public:
    *
    * It is an error to call this on a view.
    */
-  virtual void resize(const ShapeTuple& new_shape,
-                      const DimensionTypeTuple& new_dim_types,
-                      const StrideTuple& new_strides) = 0;
+  virtual void resize(ShapeTuple const& new_shape,
+                      DimensionTypeTuple const& new_dim_types,
+                      StrideTuple const& new_strides) = 0;
 
 protected:
   ShapeTuple tensor_shape;             /**< Shape of the tensor. */
@@ -238,8 +238,8 @@ protected:
   /** Construct a tensor with the given view type, shape, and dimension types.
    */
   BaseTensor(ViewType view_type_,
-             const ShapeTuple& shape_,
-             const DimensionTypeTuple& dim_types_)
+             ShapeTuple const& shape_,
+             DimensionTypeTuple const& dim_types_)
     : tensor_shape(shape_),
       tensor_dim_types(dim_types_),
       tensor_view_type(view_type_)

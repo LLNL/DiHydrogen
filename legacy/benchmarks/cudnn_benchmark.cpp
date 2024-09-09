@@ -255,13 +255,13 @@ template <int NSD>
 class Profile
 {
 public:
-  const BenchmarkConfig<NSD>& m_cfg;
+  BenchmarkConfig<NSD> const& m_cfg;
   std::vector<float> conv_fwd_time;
   std::vector<float> conv_bwd_data_time;
   std::vector<float> conv_bwd_filter_time;
   std::vector<float> conv_bwd_bias_time;
 
-  Profile(const BenchmarkConfig<NSD>& cfg) : m_cfg(cfg) {}
+  Profile(BenchmarkConfig<NSD> const& cfg) : m_cfg(cfg) {}
 
   std::ostream& print_as_row(std::ostream& os)
   {
@@ -351,7 +351,7 @@ public:
   cudnnTensorDescriptor_t m_db_d;
 
   template <int NSD>
-  Data(const BenchmarkConfig<NSD>& cfg,
+  Data(BenchmarkConfig<NSD> const& cfg,
        REAL* x,
        REAL* y,
        REAL* f,
@@ -519,7 +519,7 @@ size_t calc_len(int n, int c, const std::vector<int>& spatial_dims)
 }
 
 template <typename REAL>
-REAL* make_tensor(int n, int c, const std::vector<int>& spatial_dims)
+REAL* make_tensor(int n, int c, std::vector<int> const& spatial_dims)
 {
   void* ptr;
   size_t s = calc_len(n, c, spatial_dims);
@@ -531,7 +531,7 @@ REAL* make_tensor(int n, int c, const std::vector<int>& spatial_dims)
 template <typename REAL>
 REAL* make_random_tensor(int n,
                          int c,
-                         const std::vector<int>& spatial_dims,
+                         std::vector<int> const& spatial_dims,
                          unsigned seed)
 {
   REAL* ptr = make_tensor<REAL>(n, c, spatial_dims);
@@ -554,7 +554,7 @@ REAL* make_random_tensor(int n,
 template <typename REAL>
 REAL* make_constant_tensor(int n,
                            int c,
-                           const std::vector<int>& spatial_dims,
+                           std::vector<int> const& spatial_dims,
                            REAL d)
 {
   REAL* ptr = make_tensor<REAL>(n, c, spatial_dims);
@@ -574,7 +574,7 @@ REAL* make_constant_tensor(int n,
 template <typename REAL>
 REAL* make_initialized_tensor(int n,
                               int c,
-                              const std::vector<int>& spatial_dims,
+                              std::vector<int> const& spatial_dims,
                               unsigned seed)
 {
   REAL* ptr = make_tensor<REAL>(n, c, spatial_dims);
@@ -586,7 +586,7 @@ REAL* make_initialized_tensor(int n,
   int w = spatial_dims[0];
   int h = spatial_dims[1];
 
-  const auto v2s = [](const std::vector<int> v) {
+  auto const v2s = [](std::vector<int> const v) {
     return std::vector<size_t>(v.begin(), v.end());
   };
 
@@ -600,8 +600,8 @@ REAL* make_initialized_tensor(int n,
         {
           for (int i3 = 0; i3 < w; ++i3)
           {
-            const std::vector<int> indices{i3, i2, i1, i0};
-            const std::vector<int> dims{w, h, c, n};
+            std::vector<int> const indices{i3, i2, i1, i0};
+            std::vector<int> const dims{w, h, c, n};
             buf[offset] = init.get_initial_value(v2s(indices), v2s(dims));
             ++offset;
           }
@@ -616,8 +616,8 @@ REAL* make_initialized_tensor(int n,
           {
             for (int i4 = 0; i4 < w; ++i4)
             {
-              const std::vector<int> indices{i4, i3, i2, i1, i0};
-              const std::vector<int> dims{w, h, d, c, n};
+              std::vector<int> const indices{i4, i3, i2, i1, i0};
+              std::vector<int> const dims{w, h, d, c, n};
               buf[offset] = init.get_initial_value(v2s(indices), v2s(dims));
               ++offset;
             }
@@ -633,7 +633,7 @@ REAL* make_initialized_tensor(int n,
 }
 
 template <int NSD, typename REAL>
-cudnnConvolutionDescriptor_t get_conv_desc(const BenchmarkConfig<NSD>& cfg)
+cudnnConvolutionDescriptor_t get_conv_desc(BenchmarkConfig<NSD> const& cfg)
 {
   cudnnConvolutionDescriptor_t conv_desc;
   DISTCONV_CHECK_CUDNN(cudnnCreateConvolutionDescriptor(&conv_desc));
@@ -652,9 +652,9 @@ cudnnConvolutionDescriptor_t get_conv_desc(const BenchmarkConfig<NSD>& cfg)
 }
 
 template <int NSD, typename REAL>
-void setup_workspace(const Data<REAL>& d,
+void setup_workspace(Data<REAL> const& d,
                      cudnnConvolutionDescriptor_t conv_desc,
-                     const BenchmarkConfig<NSD>& cfg,
+                     BenchmarkConfig<NSD> const& cfg,
                      size_t& ws_size,
                      void*& ws)
 {
@@ -723,9 +723,9 @@ void setup_workspace(const Data<REAL>& d,
 }
 
 template <int NSD, typename REAL>
-void run_forward_convolution(const Data<REAL>& d,
+void run_forward_convolution(Data<REAL> const& d,
                              cudnnConvolutionDescriptor_t conv_desc,
-                             const BenchmarkConfig<NSD>& cfg,
+                             BenchmarkConfig<NSD> const& cfg,
                              size_t ws_size,
                              void* ws)
 {
@@ -773,9 +773,9 @@ void run_forward_convolution(const Data<REAL>& d,
 }
 
 template <int NSD, typename REAL>
-void run_backward_data_convolution(const Data<REAL>& d,
+void run_backward_data_convolution(Data<REAL> const& d,
                                    cudnnConvolutionDescriptor_t conv_desc,
-                                   const BenchmarkConfig<NSD>& cfg,
+                                   BenchmarkConfig<NSD> const& cfg,
                                    size_t ws_size,
                                    void* ws)
 {
@@ -818,9 +818,9 @@ void run_backward_data_convolution(const Data<REAL>& d,
 }
 
 template <int NSD, typename REAL>
-void run_backward_filter_convolution(const Data<REAL>& d,
+void run_backward_filter_convolution(Data<REAL> const& d,
                                      cudnnConvolutionDescriptor_t conv_desc,
-                                     const BenchmarkConfig<NSD>& cfg,
+                                     BenchmarkConfig<NSD> const& cfg,
                                      size_t ws_size,
                                      void* ws)
 {
@@ -865,8 +865,8 @@ void run_backward_filter_convolution(const Data<REAL>& d,
 }
 
 template <int NSD, typename REAL>
-void run_backward_bias_convolution(const Data<REAL>& d,
-                                   const BenchmarkConfig<NSD>& cfg)
+void run_backward_bias_convolution(Data<REAL> const& d,
+                                   BenchmarkConfig<NSD> const& cfg)
 {
   REAL zero(0.0);
   REAL one(1.0);
@@ -875,11 +875,11 @@ void run_backward_bias_convolution(const Data<REAL>& d,
 }
 
 template <int NSD, typename REAL>
-void measure_forward_convolution(const Data<REAL>& d,
+void measure_forward_convolution(Data<REAL> const& d,
                                  cudnnConvolutionDescriptor_t conv_desc,
                                  size_t ws_size,
                                  void* ws,
-                                 const BenchmarkConfig<NSD>& cfg,
+                                 BenchmarkConfig<NSD> const& cfg,
                                  Profile<NSD>& prof)
 {
   std::vector<util::Clock> clks(cfg.run_count, stream);
@@ -908,11 +908,11 @@ void measure_forward_convolution(const Data<REAL>& d,
 }
 
 template <int NSD, typename REAL>
-void measure_backward_data_convolution(const Data<REAL>& d,
+void measure_backward_data_convolution(Data<REAL> const& d,
                                        cudnnConvolutionDescriptor_t conv_desc,
                                        size_t ws_size,
                                        void* ws,
-                                       const BenchmarkConfig<NSD>& cfg,
+                                       BenchmarkConfig<NSD> const& cfg,
                                        Profile<NSD>& prof)
 {
   std::vector<util::Clock> clks(cfg.run_count, stream);
@@ -941,11 +941,11 @@ void measure_backward_data_convolution(const Data<REAL>& d,
 }
 
 template <int NSD, typename REAL>
-void measure_backward_filter_convolution(const Data<REAL>& d,
+void measure_backward_filter_convolution(Data<REAL> const& d,
                                          cudnnConvolutionDescriptor_t conv_desc,
                                          size_t ws_size,
                                          void* ws,
-                                         const BenchmarkConfig<NSD>& cfg,
+                                         BenchmarkConfig<NSD> const& cfg,
                                          Profile<NSD>& prof)
 {
   std::vector<util::Clock> clks(cfg.run_count, stream);
@@ -974,8 +974,8 @@ void measure_backward_filter_convolution(const Data<REAL>& d,
 }
 
 template <int NSD, typename REAL>
-void measure_backward_bias_convolution(const Data<REAL>& d,
-                                       const BenchmarkConfig<NSD>& cfg,
+void measure_backward_bias_convolution(Data<REAL> const& d,
+                                       BenchmarkConfig<NSD> const& cfg,
                                        Profile<NSD>& prof)
 {
   std::vector<util::Clock> clks(cfg.run_count, stream);
@@ -1016,7 +1016,7 @@ std::ostream& print_version_number(std::ostream& os)
 template <typename REAL>
 int dump_tensor(const REAL* t,
                 size_t num_elms,
-                const std::string& file_path,
+                std::string const& file_path,
                 bool binary)
 {
   REAL* h = new REAL[num_elms];
@@ -1042,7 +1042,7 @@ int dump_tensor(const REAL* t,
 }
 
 template <int NSD, typename REAL>
-int run(const BenchmarkConfig<NSD>& cfg)
+int run(BenchmarkConfig<NSD> const& cfg)
 {
   std::srand(0);
 
@@ -1226,7 +1226,7 @@ int main(int argc, char* argv[])
   cudaStreamCreate(&stream);
   DISTCONV_CHECK_CUDNN(cudnnSetStream(cudnn_h, stream));
 
-  const int nsd = distconv_benchmark::parse_num_dims(argc, argv);
+  int const nsd = distconv_benchmark::parse_num_dims(argc, argv);
 
   if (nsd == 2)
   {

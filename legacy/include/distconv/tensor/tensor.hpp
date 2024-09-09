@@ -58,27 +58,27 @@ public:
 
   Tensor() : Tensor(Locale(), Distribution()) {}
 
-  Tensor(const Locale& locale, const Distribution& dist)
+  Tensor(Locale const& locale, Distribution const& dist)
     : Tensor(Shape(dist.num_dims(), 0), locale, dist)
   {}
 
-  Tensor(const Shape& shape, const Locale& locale, const Distribution& dist)
+  Tensor(Shape const& shape, Locale const& locale, Distribution const& dist)
     : Tensor(shape, locale, dist, Shape(shape.num_dims(), 0))
   {}
 
-  Tensor(const Shape& shape,
-         const Locale& locale,
-         const Distribution& dist,
-         const Shape& requested_local_shape)
+  Tensor(Shape const& shape,
+         Locale const& locale,
+         Distribution const& dist,
+         Shape const& requested_local_shape)
     : Tensor(
         shape, locale, dist, requested_local_shape, Shape(shape.num_dims(), 1))
   {}
 
-  Tensor(const Shape& shape,
-         const Locale& locale,
-         const Distribution& dist,
-         const Shape& requested_local_shape,
-         const Shape& requested_local_block)
+  Tensor(Shape const& shape,
+         Locale const& locale,
+         Distribution const& dist,
+         Shape const& requested_local_shape,
+         Shape const& requested_local_block)
     : m_num_dims(shape.num_dims()),
       m_shape(shape),
       m_requested_local_shape(requested_local_shape),
@@ -93,7 +93,7 @@ public:
 
   virtual ~Tensor() = default;
 
-  Tensor& operator=(const Tensor& t)
+  Tensor& operator=(Tensor const& t)
   {
     m_num_dims = t.get_num_dims();
     m_shape = t.m_shape;
@@ -108,7 +108,7 @@ public:
     return *this;
   }
 
-  Tensor(const Tensor& t)
+  Tensor(Tensor const& t)
     : m_num_dims(t.get_num_dims()),
       m_shape(t.m_shape),
       m_requested_local_shape(t.m_requested_local_shape),
@@ -128,13 +128,13 @@ public:
   TensorImplType& get_impl() { return m_impl; }
 
   // This should not be used as much as possible
-  const TensorImplType& get_impl() const { return m_impl; }
+  TensorImplType const& get_impl() const { return m_impl; }
 
   constexpr int get_num_dims() const { return m_num_dims; }
 
   constexpr int get_num_spatial_dims() const { return get_num_dims() - 2; }
 
-  const Locale& get_locale() const { return m_locale; }
+  Locale const& get_locale() const { return m_locale; }
 
   Locale get_sub_locale(int dim) const { return m_impl.get_sub_locale(dim); }
 
@@ -158,11 +158,11 @@ public:
     return m_impl.get_split_sub_locale(dim);
   }
 
-  const Memory<Allocator>& get_data() const { return m_data; }
+  Memory<Allocator> const& get_data() const { return m_data; }
 
   Memory<Allocator>& get_data() { return m_data; }
 
-  const Shape& get_shape() const { return m_shape; }
+  Shape const& get_shape() const { return m_shape; }
 
   Shape get_local_shape() const { return m_impl.get_local_shape(); }
 
@@ -207,7 +207,7 @@ public:
      @param local_idx local indices.
      @return the global index array of the local indices.
    */
-  IndexVector get_global_index(const IndexVector& local_idx) const
+  IndexVector get_global_index(IndexVector const& local_idx) const
   {
     IndexVector gi(get_num_dims());
     for (int i = 0; i < get_num_dims(); ++i)
@@ -230,7 +230,7 @@ public:
      @param local_idx an local index array.
      @return The linear global offset to the local index.
    */
-  index_t get_global_offset(const IndexVector& local_idx) const
+  index_t get_global_offset(IndexVector const& local_idx) const
   {
     auto gi = get_global_index(local_idx);
     return get_offset(gi, get_shape());
@@ -253,7 +253,7 @@ public:
      @param global_idx a global index array.
      @return the local index array of the global indices.
    */
-  IndexVector get_local_index(const IndexVector& global_idx) const
+  IndexVector get_local_index(IndexVector const& global_idx) const
   {
     IndexVector li;
     for (int i = 0; i < get_num_dims(); ++i)
@@ -271,7 +271,7 @@ public:
      local index includes the halo space.
      @returns The linear offset to the given local index.
    */
-  index_t get_local_offset(const IndexVector& local_idx,
+  index_t get_local_offset(IndexVector const& local_idx,
                            bool idx_include_halo = false) const
   {
     assert_always(get_local_size() > 0);
@@ -306,7 +306,7 @@ public:
     return m_impl.get_dimension_rank_offset(dim, rank);
   }
 
-  IndexVector get_remote_index(const IndexVector& rank_idx) const
+  IndexVector get_remote_index(IndexVector const& rank_idx) const
   {
     IndexVector rs;
     for (int i = 0; i < get_num_dims(); ++i)
@@ -348,7 +348,7 @@ public:
      @param rank_idx an index array of a remote rank.
      @return the local shape.
    */
-  Shape get_remote_shape(const IndexVector& rank_idx) const
+  Shape get_remote_shape(IndexVector const& rank_idx) const
   {
     Shape rs;
     for (int i = 0; i < get_num_dims(); ++i)
@@ -367,7 +367,7 @@ public:
      @param rank_idx an index array of a remote rank.
      @return the local real shape.
    */
-  Shape get_remote_real_shape(const IndexVector& rank_idx) const
+  Shape get_remote_real_shape(IndexVector const& rank_idx) const
   {
     auto rs = get_remote_shape(rank_idx);
     for (int i = 0; i < get_num_dims(); ++i)
@@ -383,23 +383,23 @@ public:
      @param rank_idx an index array of a remote rank.
      @return the local pitched shape.
    */
-  Shape get_remote_pitched_shape(const IndexVector& rank_idx) const
+  Shape get_remote_pitched_shape(IndexVector const& rank_idx) const
   {
     auto rs = get_remote_real_shape(rank_idx);
     rs[0] = get_pitch();
     return rs;
   }
 
-  const Distribution& get_distribution() const { return m_dist; }
+  Distribution const& get_distribution() const { return m_dist; }
 
   Distribution& get_distribution() { return m_dist; }
 
-  const IndexVector& get_locale_shape() const
+  IndexVector const& get_locale_shape() const
   {
     return get_distribution().get_locale_shape();
   }
 
-  const IndexVector& get_split_shape() const
+  IndexVector const& get_split_shape() const
   {
     return get_distribution().get_split_shape();
   }
@@ -442,20 +442,20 @@ public:
    */
   int attach(DataType* buffer) { return m_data.attach(buffer); }
 
-  DataType get(const IndexVector& local_idx,
+  DataType get(IndexVector const& local_idx,
                bool idx_include_halo = false) const
   {
     index_t offset = get_local_offset(local_idx, idx_include_halo);
-    const DataType* buf = get_const_buffer();
+    DataType const* buf = get_const_buffer();
     assert_always(buf != nullptr);
     return buf[offset];
   }
 
-  const DataType* get_const_buffer(bool logical_offset = false) const
+  DataType const* get_const_buffer(bool logical_offset = false) const
   {
     if (get_local_size() == 0)
       return nullptr;
-    const DataType* p = static_cast<const DataType*>(m_data.get());
+    DataType const* p = static_cast<DataType const*>(m_data.get());
     if (p != nullptr && logical_offset)
     {
       p += get_local_offset();
@@ -475,16 +475,16 @@ public:
     return p;
   }
 
-  const DataType* get_buffer(bool logical_offset = false) const
+  DataType const* get_buffer(bool logical_offset = false) const
   {
     return get_const_buffer(logical_offset);
   }
 
-  const DataType* get_const_base_ptr() const { return get_const_buffer(true); }
+  DataType const* get_const_base_ptr() const { return get_const_buffer(true); }
 
   DataType* get_base_ptr() { return get_buffer(true); }
 
-  const DataType* get_base_ptr() const { return get_const_buffer(true); }
+  DataType const* get_base_ptr() const { return get_const_buffer(true); }
 
   size_t get_pitch() const { return m_data.get_pitch() / sizeof(DataType); }
 
@@ -502,12 +502,12 @@ public:
   }
 
   // REFACTORING: Replace this with get_halo_width
-  const IntVector& get_overlap() const
+  IntVector const& get_overlap() const
   {
     return get_distribution().get_overlap();
   }
 
-  const IntVector& get_halo_width() const
+  IntVector const& get_halo_width() const
   {
     return get_distribution().get_overlap();
   }
@@ -590,13 +590,13 @@ protected:
     }
   }
 
-  void set_shape(const Shape& shape)
+  void set_shape(Shape const& shape)
   {
     m_impl.set_shape(shape);
     check_shape_validity();
   }
 
-  void set_distribution(const Distribution& dist)
+  void set_distribution(Distribution const& dist)
   {
     m_impl.set_distribution(dist);
     check_shape_validity();
@@ -604,7 +604,7 @@ protected:
 
   // TODO: Make these functions protected
 public:
-  void set_view(const Memory<Allocator>& parent_mem)
+  void set_view(Memory<Allocator> const& parent_mem)
   {
     m_data.alias(parent_mem);
     m_is_view = true;
@@ -620,7 +620,7 @@ public:
     m_is_view = true;
   }
 
-  void set_view(const void* raw_ptr)
+  void set_view(void const* raw_ptr)
   {
     // Note: raw_ptr should not be pitched memory
     m_data.alias(raw_ptr,
@@ -630,10 +630,10 @@ public:
     m_is_view = true;
   }
 
-  void copyin(const void* m) { this->m_data.copyin(m); }
+  void copyin(void const* m) { this->m_data.copyin(m); }
 
   void
-  set(const IndexVector& local_idx, DataType v, bool idx_include_halo = false)
+  set(IndexVector const& local_idx, DataType v, bool idx_include_halo = false)
   {
     index_t offset = this->get_local_offset(local_idx, idx_include_halo);
     this->get_buffer()[offset] = v;
@@ -654,12 +654,12 @@ public:
   /*
     Allreduces along dims.
   */
-  void allreduce(const std::vector<int>& dims) { this->m_impl.allreduce(dims); }
+  void allreduce(std::vector<int> const& dims) { this->m_impl.allreduce(dims); }
 };
 
 template <typename DataType, typename Locale, typename Allocator>
 inline std::ostream& operator<<(std::ostream& os,
-                                const Tensor<DataType, Locale, Allocator>& t)
+                                Tensor<DataType, Locale, Allocator> const& t)
 {
   return t.print(os);
 }

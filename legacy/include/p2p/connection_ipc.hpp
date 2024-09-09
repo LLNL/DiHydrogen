@@ -13,14 +13,14 @@ class ConnectionIPC : public Connection
 public:
   ConnectionIPC(int peer,
                 int dev,
-                const internal::MPI& mpi,
+                internal::MPI const& mpi,
                 util::EventPool& ev_pool);
   ~ConnectionIPC() override;
 
   static bool is_ipc_capable(int peer,
                              internal::MPI& mpi,
-                             const char* self_name,
-                             const char* peer_name,
+                             char const* self_name,
+                             char const* peer_name,
                              int self_dev,
                              int peer_dev);
 
@@ -30,15 +30,15 @@ public:
   Request register_addr_nb(void* self, void* peer) override;
   int deregister_addr(void* mapped_addr) override;
 
-  int send(const void* src, size_t size, cudaStream_t stream) override;
+  int send(void const* src, size_t size, cudaStream_t stream) override;
   int recv(void* dst, size_t size, cudaStream_t stream) override;
-  int sendrecv(const void* send_src,
+  int sendrecv(void const* send_src,
                size_t send_size,
                void* recv_dst,
                size_t recv_size,
                cudaStream_t stream) override;
 
-  int put(const void* src,
+  int put(void const* src,
           void* dst,
           size_t size,
           cudaStream_t stream) override;
@@ -65,9 +65,9 @@ private:
   std::set<void*> m_opened_local_mem;
 
   void enable_peer_access_if_possible();
-  int register_peer_memory(const void* peer, cudaIpcMemHandle_t peer_handle);
+  int register_peer_memory(void const* peer, cudaIpcMemHandle_t peer_handle);
 
-  using register_addr_data = std::pair<const void*, cudaIpcMemHandle_t>;
+  using register_addr_data = std::pair<void const*, cudaIpcMemHandle_t>;
   int register_addr_post(void* data) override;
 
   bool notify_handler(cudaStream_t stream, void* data, Request* req);

@@ -40,7 +40,7 @@ public:
   std::vector<float> fwd_allreduce_time;
   std::vector<float> bwd_time;
   std::vector<float> bwd_allreduce_time;
-  Profile(const BenchmarkConfig<NSD>& cfg)
+  Profile(BenchmarkConfig<NSD> const& cfg)
     : m_cfg(cfg),
       fwd_time(cfg.run_count, 0),
       fwd_allreduce_time(cfg.run_count, 0),
@@ -85,7 +85,7 @@ template <int NSD, typename Backend, typename DataType>
 class Data
 {
 public:
-  const BenchmarkConfig<NSD>& m_cfg;
+  BenchmarkConfig<NSD> const& m_cfg;
   using Tensor = typename TensorType<Backend, DataType>::type;
   typename TensorType<Backend, DataType>::type input;
   typename TensorType<Backend, DataType>::type d_input;
@@ -106,7 +106,7 @@ public:
   typename TensorType<Backend, DataType>::type d_mean;
   typename TensorType<Backend, DataType>::type d_var;
 
-  Data(const BenchmarkConfig<NSD>& cfg, MPI_Comm comm) : m_cfg(cfg)
+  Data(BenchmarkConfig<NSD> const& cfg, MPI_Comm comm) : m_cfg(cfg)
   {
     int pid;
     int np;
@@ -118,25 +118,25 @@ public:
         * cfg.p_c * cfg.p_n,
       np);
 
-    const auto vector_concat =
-      [](const int_vector v, const int c, const int n) {
+    auto const vector_concat =
+      [](int_vector const v, int const c, int const n) {
         int_vector cn({c, n});
         cn.insert(cn.begin(), v.begin(), v.end());
-        return (const int_vector) cn;
+        return (int_vector const) cn;
       };
 
-    const auto input_shape = vector_concat(cfg.i_s, cfg.i_c, cfg.i_n);
-    const auto locale_shape = vector_concat(cfg.p_s, cfg.p_c, cfg.p_n);
+    auto const input_shape = vector_concat(cfg.i_s, cfg.i_c, cfg.i_n);
+    auto const locale_shape = vector_concat(cfg.p_s, cfg.p_c, cfg.p_n);
     util::MPIPrintStreamDebug()
       << "input_shape: " << util::join_array(input_shape, " ")
       << " locale_shape: " << util::join_array(locale_shape, " ");
 
-    const auto dist =
+    auto const dist =
       tensor::Distribution::make_distribution(tensor::Shape(locale_shape));
     // This assumes no partitioning of the channel dimension
-    const auto shared_dist = tensor::Distribution::make_shared_distribution(
+    auto const shared_dist = tensor::Distribution::make_shared_distribution(
       tensor::Shape(locale_shape));
-    const auto loc = tensor::LocaleMPI(comm);
+    auto const loc = tensor::LocaleMPI(comm);
 
     input = Tensor(tensor::Shape(input_shape), loc, dist);
     d_input = Tensor(tensor::Shape(input_shape), loc, dist);
@@ -245,7 +245,7 @@ public:
 
 template <int NSD, typename Backend, typename DataType>
 int test_forward(Data<NSD, Backend, DataType>& d,
-                 const BenchmarkConfig<NSD>& cfg,
+                 BenchmarkConfig<NSD> const& cfg,
                  MPI_Comm comm,
                  Backend& be,
                  BatchNormalization<Backend, DataType>& bn,
@@ -262,7 +262,7 @@ int test_forward(Data<NSD, Backend, DataType>& d,
     util::MPIRootPrintStreamInfo() << "Warming up";
   }
 
-  const bool is_training = true;
+  bool const is_training = true;
 
   for (int i = 0; i < cfg.warming_up_count; ++i)
   {
@@ -339,7 +339,7 @@ int test_forward(Data<NSD, Backend, DataType>& d,
 
 template <int NSD, typename Backend, typename DataType>
 int test_backward(Data<NSD, Backend, DataType>& d,
-                  const BenchmarkConfig<NSD>& cfg,
+                  BenchmarkConfig<NSD> const& cfg,
                   MPI_Comm comm,
                   Backend& be,
                   BatchNormalization<Backend, DataType>& bn,
@@ -456,7 +456,7 @@ struct BNTester<NSD, ref::Backend, DataType>
 {
   BNTester() {}
   int operator()(Data<NSD, ref::Backend, DataType>& d,
-                 const BenchmarkConfig<NSD>& cfg,
+                 BenchmarkConfig<NSD> const& cfg,
                  MPI_Comm comm,
                  Profile<NSD>& prof)
   {
@@ -470,7 +470,7 @@ struct BNTester<NSD, cudnn::BackendCUDNN, DataType>
 {
   BNTester() {}
   int operator()(Data<NSD, cudnn::BackendCUDNN, DataType>& d,
-                 const BenchmarkConfig<NSD>& cfg,
+                 BenchmarkConfig<NSD> const& cfg,
                  MPI_Comm comm,
                  Profile<NSD>& prof)
   {
@@ -582,7 +582,7 @@ int main(int argc, char* argv[])
   DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
   DISTCONV_CHECK_MPI(MPI_Comm_size(MPI_COMM_WORLD, &np));
 
-  const int nsd = distconv_benchmark::parse_num_dims(argc, argv);
+  int const nsd = distconv_benchmark::parse_num_dims(argc, argv);
 
   if (nsd == 2)
   {

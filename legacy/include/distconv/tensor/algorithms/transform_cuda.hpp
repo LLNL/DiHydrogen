@@ -26,7 +26,7 @@ __global__ void transform_kernel(Array<ND> shape,
                                  int thread_work_size,
                                  int num_inner_blocks)
 {
-  const int tid = threadIdx.x;
+  int const tid = threadIdx.x;
   int bid = blockIdx.x;
   int inner_bid = bid % num_inner_blocks;
   bid /= num_inner_blocks;
@@ -73,11 +73,11 @@ void transform(Shape shape,
                TransformFunc op,
                int thread_work_size,
                int num_inner_blocks,
-               const dim3& grid_dims,
-               const dim3& block_dims,
+               dim3 const& grid_dims,
+               dim3 const& block_dims,
                h2::gpu::DeviceStream stream)
 {
-  const int nd = shape.num_dims();
+  int const nd = shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                        \
   transform_kernel<ND, DataType, BLOCK_SIZE, INNER_DIM, TransformFunc>         \
@@ -112,7 +112,7 @@ __global__ void transform_kernel(Array<ND> shape,
                                  int thread_work_size,
                                  int num_inner_blocks)
 {
-  const int tid = threadIdx.x;
+  int const tid = threadIdx.x;
   int bid = blockIdx.x;
   int inner_bid = bid % num_inner_blocks;
   bid /= num_inner_blocks;
@@ -163,11 +163,11 @@ void transform(Shape shape,
                TransformFunc op,
                int thread_work_size,
                int num_inner_blocks,
-               const dim3& grid_dims,
-               const dim3& block_dims,
+               dim3 const& grid_dims,
+               dim3 const& block_dims,
                h2::gpu::DeviceStream stream)
 {
-  const int nd = shape.num_dims();
+  int const nd = shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                        \
   transform_kernel<ND,                                                         \
@@ -210,7 +210,7 @@ __global__ void transform_kernel(Array<ND> shape,
                                  int thread_work_size,
                                  int num_inner_blocks)
 {
-  const int tid = threadIdx.x;
+  int const tid = threadIdx.x;
   int bid = blockIdx.x;
   int inner_bid = bid % num_inner_blocks;
   bid /= num_inner_blocks;
@@ -264,11 +264,11 @@ void transform(Shape shape,
                TransformFunc op,
                int thread_work_size,
                int num_inner_blocks,
-               const dim3& grid_dims,
-               const dim3& block_dims,
+               dim3 const& grid_dims,
+               dim3 const& block_dims,
                h2::gpu::DeviceStream stream)
 {
-  const int nd = shape.num_dims();
+  int const nd = shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                        \
   transform_kernel<ND,                                                         \
@@ -315,7 +315,7 @@ __global__ void transform_kernel(Array<ND> shape,
                                  int thread_work_size,
                                  int num_inner_blocks)
 {
-  const int tid = threadIdx.x;
+  int const tid = threadIdx.x;
   int bid = blockIdx.x;
   int inner_bid = bid % num_inner_blocks;
   bid /= num_inner_blocks;
@@ -375,11 +375,11 @@ void transform(Shape shape,
                TransformFunc op,
                int thread_work_size,
                int num_inner_blocks,
-               const dim3& grid_dims,
-               const dim3& block_dims,
+               dim3 const& grid_dims,
+               dim3 const& block_dims,
                h2::gpu::DeviceStream stream)
 {
-  const int nd = shape.num_dims();
+  int const nd = shape.num_dims();
 #define CALL_KERNEL(ND)                                                        \
   transform_kernel<ND,                                                         \
                    DataType1,                                                  \
@@ -434,8 +434,8 @@ Transform(Tensor& tensor, TransformFunc op, h2::gpu::DeviceStream stream = 0)
     inner_dim,
     num_inner_blocks);
 
-  const auto shape = tensor.get_local_shape();
-  const auto strides =
+  auto const shape = tensor.get_local_shape();
+  auto const strides =
     get_strides(shape, tensor.get_overlap(), tensor.get_pitch());
 
   util::MPIPrintStreamDebug()
@@ -512,8 +512,8 @@ Transform(Tensor1& tensor1,
     inner_dim,
     num_inner_blocks);
 
-  const auto shape = tensor1.get_local_shape();
-  const auto strides =
+  auto const shape = tensor1.get_local_shape();
+  auto const strides =
     get_strides(shape, tensor1.get_overlap(), tensor1.get_pitch());
 
   util::MPIPrintStreamDebug()
@@ -598,8 +598,8 @@ Transform(Tensor1& tensor1,
     inner_dim,
     num_inner_blocks);
 
-  const auto shape = tensor1.get_local_shape();
-  const auto strides =
+  auto const shape = tensor1.get_local_shape();
+  auto const strides =
     get_strides(shape, tensor1.get_overlap(), tensor1.get_pitch());
 
   util::MPIPrintStreamDebug()
@@ -689,8 +689,8 @@ Transform(Tensor1& tensor1,
     inner_dim,
     num_inner_blocks);
 
-  const auto shape = tensor1.get_local_shape();
-  const auto strides =
+  auto const shape = tensor1.get_local_shape();
+  auto const strides =
     get_strides(shape, tensor1.get_overlap(), tensor1.get_pitch());
 
   util::MPIPrintStreamDebug()

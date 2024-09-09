@@ -47,7 +47,7 @@ public:
      @param dim The vector dimension.
      @param x The initial value of all elements.
    */
-  explicit Vector(int dim, const DataType& x) : m_data(dim, x) {}
+  explicit Vector(int dim, DataType const& x) : m_data(dim, x) {}
 
   /**
      Constructs a vector by copying another vector of possibly
@@ -58,9 +58,9 @@ public:
      @param v A vector of the same type.
    */
   template <typename T>
-  Vector(const Vector<T>& v)
+  Vector(Vector<T> const& v)
   {
-    for (const auto& x : v)
+    for (auto const& x : v)
     {
       m_data.push_back(x);
     }
@@ -74,9 +74,9 @@ public:
      @param v A std::vector to copy.
    */
   template <typename T>
-  explicit Vector(const std::vector<T>& v)
+  explicit Vector(std::vector<T> const& v)
   {
-    for (const auto& x : v)
+    for (auto const& x : v)
     {
       m_data.push_back(x);
     }
@@ -92,7 +92,7 @@ public:
   template <typename T>
   explicit Vector(std::initializer_list<T> l)
   {
-    for (const auto& x : l)
+    for (auto const& x : l)
     {
       m_data.push_back(x);
     }
@@ -150,7 +150,7 @@ public:
      @param x A vector to copy.
      @return *this.
    */
-  Vector operator=(const Vector& v)
+  Vector operator=(Vector const& v)
   {
     m_data = v.m_data;
     return *this;
@@ -162,7 +162,7 @@ public:
      @param x A scalar value to assign.
      @return *this.
    */
-  Vector operator=(const DataType& x)
+  Vector operator=(DataType const& x)
   {
     for (auto& i : m_data)
     {
@@ -176,7 +176,7 @@ public:
 
      @param x Value to append.
    */
-  void push_back(const DataType& x) { m_data.push_back(x); }
+  void push_back(DataType const& x) { m_data.push_back(x); }
 
   /**
      This is equivalent to size() of std::vector, however, it can be
@@ -218,7 +218,7 @@ public:
   /**
      @return A pointer to the underlying element storage.
    */
-  const DataType* data() const { return m_data.data(); }
+  DataType const* data() const { return m_data.data(); }
 
   template <typename T>
   std::vector<T> get_vector() const
@@ -273,7 +273,7 @@ public:
      @return The result vector.
    */
   template <typename Mapper>
-  Vector map(Mapper m, const Vector& v) const
+  Vector map(Mapper m, Vector const& v) const
   {
     assert_eq(length(), v.length());
     Vector r(length());
@@ -293,7 +293,7 @@ public:
      @return The result vector.
    */
   template <typename Mapper, typename MapType>
-  Vector<MapType> map(Mapper m, const Vector& v) const
+  Vector<MapType> map(Mapper m, Vector const& v) const
   {
     assert_eq(length(), v.length());
     Vector<MapType> r(length());
@@ -313,7 +313,7 @@ public:
      @return The result vector.
    */
   template <typename Mapper>
-  Vector map(Mapper m, const DataType& x) const
+  Vector map(Mapper m, DataType const& x) const
   {
     Vector r(length());
     for (int i = 0; i < length(); ++i)
@@ -332,7 +332,7 @@ public:
      @return The result vector.
    */
   template <typename Mapper, typename MapType>
-  Vector<MapType> map(Mapper m, const DataType& x) const
+  Vector<MapType> map(Mapper m, DataType const& x) const
   {
     Vector<MapType> r(length());
     for (int i = 0; i < length(); ++i)
@@ -351,7 +351,7 @@ public:
      @return The reduced value.
    */
   template <typename Reducer>
-  DataType reduce(Reducer r, const DataType& init) const
+  DataType reduce(Reducer r, DataType const& init) const
   {
     DataType result = init;
     for (int i = 0; i < length(); ++i)
@@ -374,7 +374,7 @@ public:
      @return The reduced value.
    */
   template <typename Mapper, typename Reducer, typename MapType>
-  MapType map_reduce(Mapper m, Reducer r, const MapType& init) const
+  MapType map_reduce(Mapper m, Reducer r, MapType const& init) const
   {
     MapType result = init;
     for (int i = 0; i < length(); ++i)
@@ -399,7 +399,7 @@ public:
    */
   template <typename Mapper, typename Reducer, typename MapType>
   MapType
-  map_reduce(Mapper m, const Vector& v, Reducer r, const MapType& init) const
+  map_reduce(Mapper m, Vector const& v, Reducer r, MapType const& init) const
   {
     assert_eq(length(), v.length());
     DataType result = init;
@@ -416,7 +416,7 @@ public:
      @param v A vector of the same type.
      @return The computed vector.
    */
-  Vector<DataType> operator+(const Vector& v) const
+  Vector<DataType> operator+(Vector const& v) const
   {
     return map(std::plus<DataType>(), v);
   }
@@ -427,7 +427,7 @@ public:
      @param v A vector of the same type.
      @return The computed vector.
    */
-  Vector operator-(const Vector& v) const
+  Vector operator-(Vector const& v) const
   {
     return map(std::minus<DataType>(), v);
   }
@@ -438,7 +438,7 @@ public:
      @param v A vector of the same type.
      @return The computed vector.
    */
-  Vector operator*(const Vector& v) const
+  Vector operator*(Vector const& v) const
   {
     return map(std::multiplies<DataType>(), v);
   }
@@ -449,7 +449,7 @@ public:
      @param v A vector of the same type.
      @return The computed vector.
    */
-  Vector operator/(const Vector& v) const
+  Vector operator/(Vector const& v) const
   {
     return map(std::divides<DataType>(), v);
   }
@@ -460,7 +460,7 @@ public:
      @param v A vector to compare with.
      @return True if they are equal.
    */
-  bool operator==(const Vector& v) const
+  bool operator==(Vector const& v) const
   {
     return map_reduce(
       std::equal_to<DataType>(), v, std::logical_and<bool>(), true);
@@ -474,7 +474,7 @@ public:
      @param v A vector to compare with.
      @return True if there is any mismatch.
    */
-  bool operator!=(const Vector& v) const { return !operator==(v); }
+  bool operator!=(Vector const& v) const { return !operator==(v); }
 
   /**
      Checks if all elements are equal.
@@ -482,7 +482,7 @@ public:
      @param v A scalar value to compare with.
      @return True if they are equal.
    */
-  bool operator==(const DataType& x) const
+  bool operator==(DataType const& x) const
   {
     return map<std::equal_to<DataType>, bool>(std::equal_to<DataType>(), x)
       .reduce(std::logical_and<bool>(), true);
@@ -496,7 +496,7 @@ public:
      @param v A scalar value to compare with.
      @return True if there is any mismatch.
    */
-  bool operator!=(const DataType& x) const { return !operator==(x); }
+  bool operator!=(DataType const& x) const { return !operator==(x); }
 
   /**
      Adds a vector element-wise.
@@ -504,7 +504,7 @@ public:
      @param v A vector to add.
      @return *this.
    */
-  Vector operator+=(const Vector& v)
+  Vector operator+=(Vector const& v)
   {
     return (*this) = map(std::plus<DataType>(), v);
   }
@@ -515,7 +515,7 @@ public:
      @param x A scalar multiplier value.
      @return The result vector.
    */
-  Vector operator*(const DataType& x) const
+  Vector operator*(DataType const& x) const
   {
     return map(std::multiplies<DataType>(), x);
   }
@@ -526,7 +526,7 @@ public:
      @param x A scalar divider value.
      @return The result vector.
    */
-  Vector operator/(const DataType& x) const
+  Vector operator/(DataType const& x) const
   {
     return map(std::divides<DataType>(), x);
   }
@@ -537,7 +537,7 @@ public:
      @param x A scalar value to add.
      @return The result vector.
    */
-  Vector operator+(const DataType& x) const
+  Vector operator+(DataType const& x) const
   {
     return map(std::plus<DataType>(), x);
   }
@@ -548,7 +548,7 @@ public:
      @param x A scalar value to subtract.
      @return The result vector.
    */
-  Vector operator-(const DataType& x) const
+  Vector operator-(DataType const& x) const
   {
     return map(std::minus<DataType>(), x);
   }
@@ -620,7 +620,7 @@ public:
 };
 
 template <typename DataType>
-inline std::ostream& operator<<(std::ostream& os, const Vector<DataType>& v)
+inline std::ostream& operator<<(std::ostream& os, Vector<DataType> const& v)
 {
   std::stringstream ss;
   ss << "{" << v.tostring() << "}";

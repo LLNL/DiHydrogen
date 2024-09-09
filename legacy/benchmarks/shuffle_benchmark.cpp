@@ -42,7 +42,7 @@ public:
   std::vector<float> fwd_time;
   std::vector<float> bwd_time;
   distconv_benchmark::BenchmarkConfig<NSD> m_cfg;
-  Profile(const distconv_benchmark::BenchmarkConfig<NSD>& cfg) : m_cfg(cfg) {}
+  Profile(distconv_benchmark::BenchmarkConfig<NSD> const& cfg) : m_cfg(cfg) {}
 
   std::ostream& print_as_row(std::ostream& os) const
   {
@@ -87,7 +87,7 @@ public:
 };
 
 template <int NSD, typename Allocator>
-int setup(const distconv_benchmark::BenchmarkConfig<NSD>& cfg,
+int setup(distconv_benchmark::BenchmarkConfig<NSD> const& cfg,
           MPI_Comm comm,
           Data<Allocator>& d)
 {
@@ -261,7 +261,7 @@ int test_shuffler(Data<tensor::BaseAllocator>& d,
 
 template <int NSD>
 int test_shuffler(Data<tensor::CUDAAllocator>& d,
-                  const distconv_benchmark::BenchmarkConfig<NSD>& cfg,
+                  distconv_benchmark::BenchmarkConfig<NSD> const& cfg,
                   MPI_Comm comm,
                   Profile<NSD>& prof)
 {
@@ -366,9 +366,9 @@ int test_shuffler(Data<tensor::CUDAAllocator>& d,
 }
 
 template <int NSD>
-void dump_prof(const Profile<NSD>& prof,
+void dump_prof(Profile<NSD> const& prof,
                int pid,
-               const distconv_benchmark::BenchmarkConfig<NSD>& cfg)
+               distconv_benchmark::BenchmarkConfig<NSD> const& cfg)
 {
   if (pid == 0)
   {
@@ -379,7 +379,7 @@ void dump_prof(const Profile<NSD>& prof,
 }
 
 template <int NSD, typename Allocator>
-int run_test(const distconv_benchmark::BenchmarkConfig<NSD>& cfg, MPI_Comm comm)
+int run_test(distconv_benchmark::BenchmarkConfig<NSD> const& cfg, MPI_Comm comm)
 {
   int pid;
   int np;
@@ -461,7 +461,7 @@ int main(int argc, char* argv[])
   DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
   DISTCONV_CHECK_MPI(MPI_Comm_size(MPI_COMM_WORLD, &np));
 
-  const int nsd = distconv_benchmark::parse_num_dims(argc, argv);
+  int const nsd = distconv_benchmark::parse_num_dims(argc, argv);
 
   if (nsd == 2)
   {

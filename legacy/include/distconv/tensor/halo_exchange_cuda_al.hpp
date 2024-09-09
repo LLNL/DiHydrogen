@@ -21,7 +21,7 @@ public:
   HaloExchangeAL(TensorType& tensor)
     : HaloExchange<DataType, Allocator, AlBackend>(tensor)
   {}
-  HaloExchangeAL(const HaloExchangeAL& x)
+  HaloExchangeAL(HaloExchangeAL const& x)
     : HaloExchange<DataType, Allocator, AlBackend>(x)
   {}
 
@@ -54,10 +54,10 @@ public:
       if (this->get_peer(dim, side) == MPI_PROC_NULL)
         continue;
       CommType& comm = side == Side::RHS ? comm_rhs : comm_lhs;
-      const h2::gpu::DeviceStream stream = comm->get_stream();
-      const int width_send =
+      h2::gpu::DeviceStream const stream = comm->get_stream();
+      int const width_send =
         side == Side::RHS ? width_rhs_send : width_lhs_send;
-      const int width_recv =
+      int const width_recv =
         side == Side::RHS ? width_rhs_recv : width_lhs_recv;
       auto send_buf = this->get_send_buffer(dim, side);
       auto recv_buf = this->get_recv_buffer(dim, side);

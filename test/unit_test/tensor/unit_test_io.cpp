@@ -52,7 +52,7 @@ TEMPLATE_LIST_TEST_CASE("Printing tensors works", "[tensor][io]", AllDevList)
     }
     std::stringstream ss;
     print(ss, tensor);
-    const char* expected = "[\n"
+    char const* expected = "[\n"
                            " [0, 2, 4, 6]\n"
                            " [1, 3, 5, 7]\n"
                            "]";
@@ -69,7 +69,7 @@ TEMPLATE_LIST_TEST_CASE("Printing tensors works", "[tensor][io]", AllDevList)
     }
     std::stringstream ss;
     print(ss, tensor);
-    const char* expected = "[\n"
+    char const* expected = "[\n"
                            " [\n"
                            "  [0, 4, 8, 12]\n"
                            "  [2, 6, 10, 14]\n"
@@ -84,7 +84,7 @@ TEMPLATE_LIST_TEST_CASE("Printing tensors works", "[tensor][io]", AllDevList)
 
   SECTION("Printing single-element tensors works")
   {
-    const char* expected[] = {"[1]",
+    char const* expected[] = {"[1]",
                               "[\n [1]\n]",
                               "[\n [\n  [1]\n ]\n]",
                               "[\n [\n  [\n   [1]\n  ]\n ]\n]",
@@ -113,7 +113,7 @@ TEMPLATE_LIST_TEST_CASE("Printing tensors works", "[tensor][io]", AllDevList)
     auto view = tensor.view();
     std::stringstream ss;
     print(ss, *view);
-    const char* expected = "[\n"
+    char const* expected = "[\n"
                            " [\n"
                            "  [0, 4, 8, 12]\n"
                            "  [2, 6, 10, 14]\n"
@@ -137,7 +137,7 @@ TEMPLATE_LIST_TEST_CASE("Printing tensors works", "[tensor][io]", AllDevList)
     auto view = tensor.view({ALL, IRng(1, 3)});
     std::stringstream ss;
     print(ss, *view);
-    const char* expected = "[\n"
+    char const* expected = "[\n"
                            " [2, 4]\n"
                            " [3, 5]\n"
                            "]";

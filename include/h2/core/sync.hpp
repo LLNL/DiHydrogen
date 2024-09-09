@@ -243,7 +243,7 @@ public:
 #endif
 
   SyncEvent(const SyncEvent&) = default;
-  SyncEvent& operator=(const SyncEvent&) = default;
+  SyncEvent& operator=(SyncEvent const&) = default;
 
   SyncEvent(SyncEvent&& other) : device(other.device)
   {
@@ -312,7 +312,7 @@ private:
 };
 
 /** Support printing synchronization events. */
-inline std::ostream& operator<<(std::ostream& os, const SyncEvent& event)
+inline std::ostream& operator<<(std::ostream& os, SyncEvent const& event)
 {
   H2_DEVICE_DISPATCH_SAME(event.get_device(),
                           os << event.get_device() << " sync event ("
@@ -321,8 +321,8 @@ inline std::ostream& operator<<(std::ostream& os, const SyncEvent& event)
 }
 
 /** Equality for synchronization events. */
-inline bool operator==(const SyncEvent& event1,
-                       const SyncEvent& event2) H2_NOEXCEPT
+inline bool operator==(SyncEvent const& event1,
+                       SyncEvent const& event2) H2_NOEXCEPT
 {
   if (event1.get_device() != event2.get_device())
   {
@@ -334,8 +334,8 @@ inline bool operator==(const SyncEvent& event1,
 }
 
 /** Inequality for synchronization events. */
-inline bool operator!=(const SyncEvent& event1,
-                       const SyncEvent& event2) H2_NOEXCEPT
+inline bool operator!=(SyncEvent const& event1,
+                       SyncEvent const& event2) H2_NOEXCEPT
 {
   if (event1.get_device() != event2.get_device())
   {
@@ -391,8 +391,8 @@ public:
   ~SyncEventRAII() { destroy_sync_event(event); }
 
   // Prevent copying.
-  SyncEventRAII(const SyncEventRAII&) = delete;
-  SyncEventRAII& operator=(const SyncEventRAII&) = delete;
+  SyncEventRAII(SyncEventRAII const&) = delete;
+  SyncEventRAII& operator=(SyncEventRAII const&) = delete;
 
   // Move constructor/assignment needs to be provided explicitly.
   SyncEventRAII(SyncEventRAII&& other) : event(std::move(other.event)) {}
@@ -460,7 +460,7 @@ public:
 
   /** Support conversion from an existing El::SyncInfo. */
   template <Device Dev>
-  explicit ComputeStream(const El::SyncInfo<Dev>& sync_info) : device(Dev)
+  explicit ComputeStream(El::SyncInfo<Dev> const& sync_info) : device(Dev)
   {
     H2_DEVICE_DISPATCH_CONST(Dev,
                              cpu_stream =
@@ -479,8 +479,8 @@ public:
                                internal::get_default_event<Dev>()));
   }
 
-  ComputeStream(const ComputeStream&) = default;
-  ComputeStream& operator=(const ComputeStream&) = default;
+  ComputeStream(ComputeStream const&) = default;
+  ComputeStream& operator=(ComputeStream const&) = default;
 
   ComputeStream(ComputeStream&& other) : device(other.device)
   {
@@ -503,20 +503,20 @@ public:
   Device get_device() const H2_NOEXCEPT { return device; }
 
   /** Record the current state of the stream in the given event. */
-  void add_sync_point(const SyncEvent& event) const
+  void add_sync_point(SyncEvent const& event) const
   {
     H2_DEVICE_DISPATCH_SAME(device, add_sync_point<Dev>(event));
   }
 
   template <Device ThisDev>
-  void add_sync_point(const SyncEvent& event) const
+  void add_sync_point(SyncEvent const& event) const
   {
     H2_DEVICE_DISPATCH_SAME(event.get_device(),
                             (add_sync_point<ThisDev, Dev>(event)));
   }
 
   template <Device ThisDev, Device EventDev>
-  void add_sync_point(const SyncEvent& event) const
+  void add_sync_point(SyncEvent const& event) const
   {
     H2_ASSERT_DEBUG(ThisDev == device,
                     "Incorrect device ",
@@ -553,20 +553,20 @@ public:
   }
 
   /** Have this stream wait for the provided event to complete. */
-  void wait_for(const SyncEvent& event) const
+  void wait_for(SyncEvent const& event) const
   {
     H2_DEVICE_DISPATCH_SAME(device, wait_for<Dev>(event));
   }
 
   template <Device ThisDev>
-  void wait_for(const SyncEvent& event) const
+  void wait_for(SyncEvent const& event) const
   {
     H2_DEVICE_DISPATCH_SAME(event.get_device(),
                             (wait_for<ThisDev, Dev>(event)));
   }
 
   template <Device ThisDev, Device EventDev>
-  void wait_for(const SyncEvent& event) const
+  void wait_for(SyncEvent const& event) const
   {
     H2_ASSERT_DEBUG(ThisDev == device,
                     "Incorrect device ",
@@ -608,20 +608,20 @@ public:
    * Have this stream wait for all work currently on the given stream
    * to complete.
    */
-  void wait_for(const ComputeStream& other_stream) const
+  void wait_for(ComputeStream const& other_stream) const
   {
     H2_DEVICE_DISPATCH_SAME(device, wait_for<Dev>(other_stream));
   }
 
   template <Device ThisDev>
-  void wait_for(const ComputeStream& other_stream) const
+  void wait_for(ComputeStream const& other_stream) const
   {
     H2_DEVICE_DISPATCH_SAME(other_stream.get_device(),
                             (wait_for<ThisDev, Dev>(other_stream)));
   }
 
   template <Device ThisDev, Device StreamDev>
-  void wait_for(const ComputeStream& other_stream) const
+  void wait_for(ComputeStream const& other_stream) const
   {
     H2_ASSERT_DEBUG(ThisDev == device,
                     "Incorrect device ",
@@ -723,7 +723,7 @@ private:
 
 /** Support printing compute streams. */
 inline std::ostream& operator<<(std::ostream& os,
-                                const ComputeStream& stream) H2_NOEXCEPT
+                                ComputeStream const& stream) H2_NOEXCEPT
 {
   H2_DEVICE_DISPATCH_SAME(stream.get_device(),
                           os << stream.get_device() << " stream ("
@@ -732,8 +732,8 @@ inline std::ostream& operator<<(std::ostream& os,
 }
 
 /** Equality for compute streams. */
-inline bool operator==(const ComputeStream& stream1,
-                       const ComputeStream& stream2) H2_NOEXCEPT
+inline bool operator==(ComputeStream const& stream1,
+                       ComputeStream const& stream2) H2_NOEXCEPT
 {
   if (stream1.get_device() != stream2.get_device())
   {
@@ -746,8 +746,8 @@ inline bool operator==(const ComputeStream& stream1,
 }
 
 /** Inequality for compute streams. */
-inline bool operator!=(const ComputeStream& stream1,
-                       const ComputeStream& stream2) H2_NOEXCEPT
+inline bool operator!=(ComputeStream const& stream1,
+                       ComputeStream const& stream2) H2_NOEXCEPT
 {
   if (stream1.get_device() != stream2.get_device())
   {
@@ -796,8 +796,8 @@ inline void destroy_compute_stream(ComputeStream& stream)
  * streams to complete.
  */
 template <typename... OtherStreams>
-inline void stream_wait_on_all(const ComputeStream& main,
-                               const OtherStreams&... others)
+inline void stream_wait_on_all(ComputeStream const& main,
+                               OtherStreams const&... others)
 {
   (main.wait_for(others), ...);
 }
@@ -807,8 +807,8 @@ inline void stream_wait_on_all(const ComputeStream& main,
  * stream to complete.
  */
 template <typename... OtherStreams>
-inline void all_wait_on_stream(const ComputeStream& main,
-                               const OtherStreams&... others)
+inline void all_wait_on_stream(ComputeStream const& main,
+                               OtherStreams const&... others)
 {
   (others.wait_for(main), ...);
 }
@@ -828,8 +828,8 @@ template <typename... OtherStreams>
 class MultiSync
 {
 public:
-  MultiSync(const ComputeStream& main_stream_,
-            const OtherStreams&... other_streams_)
+  MultiSync(ComputeStream const& main_stream_,
+            OtherStreams const&... other_streams_)
     : main_stream(main_stream_), other_streams(other_streams_...)
   {
     stream_wait_on_all(main_stream_, other_streams_...);
@@ -847,7 +847,7 @@ public:
    *
    * This enables a MultiSync to be passed in place of the main stream.
    */
-  operator const ComputeStream&() const H2_NOEXCEPT { return main_stream; }
+  operator ComputeStream const&() const H2_NOEXCEPT { return main_stream; }
 
   /** Return the main stream associated with this MultiSync. */
   ComputeStream get_main_stream() const H2_NOEXCEPT { return main_stream; }
@@ -868,8 +868,8 @@ private:
 /** Create a new MultiSync. */
 template <typename... OtherStreams>
 MultiSync<OtherStreams...>
-create_multi_sync(const ComputeStream& main,
-                  const OtherStreams&... other_streams)
+create_multi_sync(ComputeStream const& main,
+                  OtherStreams const&... other_streams)
 {
   return MultiSync(main, other_streams...);
 }
@@ -884,7 +884,7 @@ namespace std
 template <>
 struct hash<h2::SyncEvent>
 {
-  size_t operator()(const h2::SyncEvent& event) const H2_NOEXCEPT
+  size_t operator()(h2::SyncEvent const& event) const H2_NOEXCEPT
   {
     using h2::Device;
     H2_DEVICE_DISPATCH(event.get_device(),
@@ -896,7 +896,7 @@ struct hash<h2::SyncEvent>
 template <>
 struct hash<h2::ComputeStream>
 {
-  size_t operator()(const h2::ComputeStream& stream) const H2_NOEXCEPT
+  size_t operator()(h2::ComputeStream const& stream) const H2_NOEXCEPT
   {
     using h2::Device;
     H2_DEVICE_DISPATCH(stream.get_device(),

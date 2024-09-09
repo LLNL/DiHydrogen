@@ -58,7 +58,7 @@ public:
 // Generic implementation using atomicAdd
 // assumes ND == 3 or 4
 template <int ND, typename DataType, typename UnaryFunction, int BLOCK_SIZE>
-__global__ static void reduce_kernel(const DataType* src,
+__global__ static void reduce_kernel(DataType const* src,
                                      Array<ND> src_shape,
                                      Array<ND> src_strides,
                                      DataType* dst,
@@ -67,8 +67,8 @@ __global__ static void reduce_kernel(const DataType* src,
                                      UnaryFunction op,
                                      int thread_work_size)
 {
-  const int tid = threadIdx.x;
-  const int inner_size = src_shape[0] * src_shape[1];
+  int const tid = threadIdx.x;
+  int const inner_size = src_shape[0] * src_shape[1];
   int inner_idx = tid + blockIdx.x * BLOCK_SIZE * thread_work_size;
   src += blockIdx.y * src_strides[2];
   if (dst_shape[2] != 1)
@@ -116,8 +116,8 @@ __global__ static void reduce_kernel(const DataType* src,
   }
 }
 
-inline std::vector<int> find_reduce_dims(const Distribution& src_dist,
-                                         const Distribution& dst_dist)
+inline std::vector<int> find_reduce_dims(Distribution const& src_dist,
+                                         Distribution const& dst_dist)
 {
   std::vector<int> reduction_dims;
   int nd = src_dist.num_dims();
@@ -148,9 +148,9 @@ template <int ND, typename Tensor, typename UnaryFunction>
 struct ReduceSumFunctor
 {
   int operator()(Tensor& src,
-                 const Shape& local_reduction_shape,
+                 Shape const& local_reduction_shape,
                  Tensor& dst,
-                 const UnaryFunction& op,
+                 UnaryFunction const& op,
                  h2::gpu::DeviceStream stream)
   {
     using DataType = typename Tensor::data_type;
@@ -165,7 +165,7 @@ struct ReduceSumFunctor
         local_reduction_shape, grid_dims, thread_work_size);
 
       // const auto src_shape = src.get_local_shape();
-      const auto dst_shape = dst.get_local_shape();
+      auto const dst_shape = dst.get_local_shape();
       for (int i = 0; i < ND; ++i)
       {
         // reduce to a single entry or no reduction at all
@@ -175,9 +175,9 @@ struct ReduceSumFunctor
         assert_always(dst_shape[i] == 1
                       || dst_shape[i] == src.get_local_shape()[i]);
       }
-      const auto src_strides = get_strides<ND>(
+      auto const src_strides = get_strides<ND>(
         local_reduction_shape, src.get_overlap(), src.get_pitch());
-      const auto dst_strides = dst.get_strides();
+      auto const dst_strides = dst.get_strides();
       reduce_kernel<ND, DataType, UnaryFunction, block_size>
         <<<grid_dims, block_dims, 0, stream>>>(src.get_const_base_ptr(),
                                                Array<ND>(local_reduction_shape),
@@ -208,21 +208,21 @@ template <int ND,
           typename UnaryFunction1,
           typename UnaryFunction2,
           int BLOCK_SIZE>
-__global__ static void reduce_kernel2(const DataType* src,
+__global__ static void reduce_kernel2(DataType const* src,
                                       Array<ND> src_shape,
                                       Array<ND> src_strides,
                                       DataType* dst1,
                                       Array<ND> dst1_shape,
                                       Array<ND> dst1_strides,
-                                      const UnaryFunction1 op1,
+                                      UnaryFunction1 const op1,
                                       DataType* dst2,
                                       Array<ND> dst2_shape,
                                       Array<ND> dst2_strides,
-                                      const UnaryFunction2 op2,
+                                      UnaryFunction2 const op2,
                                       int thread_work_size)
 {
-  const int tid = threadIdx.x;
-  const int inner_size = src_shape[0] * src_shape[1];
+  int const tid = threadIdx.x;
+  int const inner_size = src_shape[0] * src_shape[1];
   int inner_idx = tid + blockIdx.x * BLOCK_SIZE * thread_work_size;
   src += blockIdx.y * src_strides[2];
   if (dst1_shape[2] != 1)
@@ -263,7 +263,7 @@ __global__ static void reduce_kernel2(const DataType* src,
     int tensor_offset = idx0 + idx1 * src_strides[1];
     if (inner_idx < inner_size)
     {
-      const DataType x = src[tensor_offset];
+      DataType const x = src[tensor_offset];
       DataType y1 = x;
 #ifdef DISTCONV_HAS_NVFUNCTIONAL_HEADER
       if (use_op1)
@@ -304,11 +304,11 @@ template <int ND,
 struct ReduceSumFunctor2
 {
   int operator()(Tensor& src,
-                 const Shape& local_reduction_shape,
+                 Shape const& local_reduction_shape,
                  Tensor& dst1,
-                 const UnaryFunction1& op1,
+                 UnaryFunction1 const& op1,
                  Tensor& dst2,
-                 const UnaryFunction2& op2,
+                 UnaryFunction2 const& op2,
                  h2::gpu::DeviceStream stream)
   {
     if (local_reduction_shape.size() > 0)
@@ -322,12 +322,12 @@ struct ReduceSumFunctor2
         local_reduction_shape, grid_dims, thread_work_size);
 
       // const auto src_shape = src.get_local_shape();
-      const auto dst1_shape = dst1.get_local_shape();
-      const auto dst2_shape = dst2.get_local_shape();
-      const auto src_strides = get_strides<ND>(
+      auto const dst1_shape = dst1.get_local_shape();
+      auto const dst2_shape = dst2.get_local_shape();
+      auto const src_strides = get_strides<ND>(
         local_reduction_shape, src.get_overlap(), src.get_pitch());
-      const auto dst1_strides = dst1.get_strides();
-      const auto dst2_strides = dst2.get_strides();
+      auto const dst1_strides = dst1.get_strides();
+      auto const dst2_strides = dst2.get_strides();
       reduce_kernel2<ND,
                      typename Tensor::data_type,
                      UnaryFunction1,
@@ -362,8 +362,8 @@ template <int ND, typename DataType, typename Locale, typename Allocator>
 void reduction_sanity_check(Tensor<DataType, Locale, Allocator>& src,
                             Tensor<DataType, Locale, Allocator>& dst)
 {
-  const auto& src_dist = src.get_distribution();
-  const auto& dst_dist = dst.get_distribution();
+  auto const& src_dist = src.get_distribution();
+  auto const& dst_dist = dst.get_distribution();
   for (int i = 0; i < ND; ++i)
   {
     assert_always(src_dist.get_locale_shape()[i]
@@ -411,7 +411,7 @@ template <int ND, typename DataType, typename Locale, typename Allocator>
 typename std::enable_if<std::is_same<Allocator, CUDAAllocator>::value,
                         int>::type
 ReduceSum(Tensor<DataType, Locale, Allocator>& src,
-          const Shape& local_reduction_region,
+          Shape const& local_reduction_region,
           Tensor<DataType, Locale, Allocator>& dst,
           h2::gpu::DeviceStream stream = 0)
 {
@@ -448,7 +448,7 @@ template <int ND,
 typename std::enable_if<std::is_same<Allocator, CUDAAllocator>::value,
                         int>::type
 ReduceSum(Tensor<DataType, Locale, Allocator>& src,
-          const Array<ND>& local_reduction_region,
+          Array<ND> const& local_reduction_region,
           Tensor<DataType, Locale, Allocator>& dst1,
           Tensor<DataType, Locale, Allocator>& dst2,
           h2::gpu::DeviceStream stream = 0)

@@ -6,7 +6,7 @@
 namespace p2p
 {
 
-__global__ void spin_wait_kernel(cuuint32_t v, volatile cuuint32_t* mem)
+__global__ void spin_wait_kernel(cuuint32_t v, cuuint32_t volatile* mem)
 {
   do
   {

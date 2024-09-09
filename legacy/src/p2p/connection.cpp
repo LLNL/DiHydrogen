@@ -10,7 +10,7 @@ namespace p2p
 {
 
 Connection::Connection(int peer,
-                       const internal::MPI& mpi,
+                       internal::MPI const& mpi,
                        util::EventPool& ev_pool)
   : m_peer(peer), m_mpi(mpi), m_ev_pool(ev_pool), m_connected(false)
 {
@@ -86,7 +86,7 @@ int Connection::get_dev() const
   return m_dev;
 }
 
-void Connection::add_or_replace_mapped_peer_memory(const void* peer,
+void Connection::add_or_replace_mapped_peer_memory(void const* peer,
                                                    void* mapped_addr)
 {
   auto it = m_remote_mem_map.find(peer);
@@ -98,7 +98,7 @@ void Connection::add_or_replace_mapped_peer_memory(const void* peer,
   return;
 }
 
-void* Connection::find_mapped_peer_memory(const void* peer)
+void* Connection::find_mapped_peer_memory(void const* peer)
 {
   auto it = m_remote_mem_map.find(peer);
   if (it == m_remote_mem_map.end())
@@ -106,7 +106,7 @@ void* Connection::find_mapped_peer_memory(const void* peer)
   return it->second;
 }
 
-void Connection::delete_peer_addr(const void* peer)
+void Connection::delete_peer_addr(void const* peer)
 {
   auto it = m_remote_mem_map.find(peer);
   P2P_ASSERT_ALWAYS(it != m_remote_mem_map.end() && "Peer memory not mapped\n");
@@ -114,7 +114,7 @@ void Connection::delete_peer_addr(const void* peer)
   return;
 }
 
-void Connection::delete_mapped_addr(const void* mapped_addr)
+void Connection::delete_mapped_addr(void const* mapped_addr)
 {
   bool matched = false;
   for (auto it = m_remote_mem_map.begin(); it != m_remote_mem_map.end(); ++it)

@@ -31,19 +31,19 @@ struct HaloExchangeAccumCUDAFunctor;
 template <typename DataType>
 struct HaloExchangeAccumCUDAFunctor<DataType, HaloExchangeAccumOp::ID>
 {
-  __device__ void operator()(DataType& x, const DataType y) { x = y; }
+  __device__ void operator()(DataType& x, DataType const y) { x = y; }
 };
 
 template <typename DataType>
 struct HaloExchangeAccumCUDAFunctor<DataType, HaloExchangeAccumOp::SUM>
 {
-  __device__ void operator()(DataType& x, const DataType y) { x += y; }
+  __device__ void operator()(DataType& x, DataType const y) { x += y; }
 };
 
 template <typename DataType>
 struct HaloExchangeAccumCUDAFunctor<DataType, HaloExchangeAccumOp::MAX>
 {
-  __device__ void operator()(DataType& x, const DataType y)
+  __device__ void operator()(DataType& x, DataType const y)
   {
     x = util::max(x, y);
   }
@@ -52,7 +52,7 @@ struct HaloExchangeAccumCUDAFunctor<DataType, HaloExchangeAccumOp::MAX>
 template <typename DataType>
 struct HaloExchangeAccumCUDAFunctor<DataType, HaloExchangeAccumOp::MIN>
 {
-  __device__ void operator()(DataType& x, const DataType y)
+  __device__ void operator()(DataType& x, DataType const y)
   {
     x = util::min(x, y);
   }
@@ -194,7 +194,7 @@ struct PackAndPutBlockFunctor
                                        || std::is_same<T, Vec2>::value
                                        || std::is_same<T, Vec4>::value,
                                      void>::type
-  operator()(const T& x, size_t offset_base, int thread_offset, int num_elms)
+  operator()(T const& x, size_t offset_base, int thread_offset, int num_elms)
   {
     if (thread_offset < num_elms)
     {
@@ -254,7 +254,7 @@ struct PackPutNotifyBlockFunctor
                                        || std::is_same<T, Vec2>::value
                                        || std::is_same<T, Vec4>::value,
                                      void>::type
-  operator()(const T& x, size_t offset_base, int thread_offset, int num_elms)
+  operator()(T const& x, size_t offset_base, int thread_offset, int num_elms)
   {
     if (thread_offset < num_elms)
     {

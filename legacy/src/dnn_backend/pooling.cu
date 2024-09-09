@@ -20,10 +20,10 @@ using Tensor =
 
 template <int ND, typename DataType>
 __global__ void bp_accumulate_sum_kernel(DataType* tensor,
-                                         const Array<ND> tensor_shape,
-                                         const Array<ND> dst_offset,
-                                         const Array<ND> src_offset,
-                                         const Array<ND> region)
+                                         Array<ND> const tensor_shape,
+                                         Array<ND> const dst_offset,
+                                         Array<ND> const src_offset,
+                                         Array<ND> const region)
 {
   index_t idx = threadIdx.x + blockIdx.x * blockDim.x;
   if (idx >= region.get_size())
@@ -47,12 +47,12 @@ __global__ void bp_accumulate_sum_kernel(DataType* tensor,
 
 template <int ND, typename DataType>
 void bp_accumulate_sum_nd(Tensor<DataType>& tensor,
-                          const dc::IndexVector& dst,
-                          const dc::IndexVector& src,
-                          const dc::tensor::Shape& shape)
+                          dc::IndexVector const& dst,
+                          dc::IndexVector const& src,
+                          dc::tensor::Shape const& shape)
 {
   auto size = shape.get_size();
-  const int bsize = 256;
+  int const bsize = 256;
   int gsize = (size + bsize - 1) / bsize;
   util::MPIPrintStreamDebug()
     << "Accumulating " << src << " to " << dst << " of sub tensor with shape "

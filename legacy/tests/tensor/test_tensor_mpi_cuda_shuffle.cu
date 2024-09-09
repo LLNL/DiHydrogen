@@ -108,21 +108,21 @@ __global__ void init_tensor<5>(DataType* buf,
 }
 
 template <int ND>
-__global__ void check_tensor(const DataType* buf,
+__global__ void check_tensor(DataType const* buf,
                              Array<ND> local_shape,
                              Array<ND> halo,
                              index_t pitch,
                              Array<ND> global_shape,
-                             const Array<ND> global_index_base,
+                             Array<ND> const global_index_base,
                              int* error_counter);
 
 template <>
-__global__ void check_tensor<3>(const DataType* buf,
+__global__ void check_tensor<3>(DataType const* buf,
                                 Array<3> local_shape,
                                 Array<3> halo,
                                 index_t pitch,
                                 Array<3> global_shape,
-                                const Array<3> global_index_base,
+                                Array<3> const global_index_base,
                                 int* error_counter)
 {
   Array<3> local_real_shape = local_shape + halo * 2;
@@ -158,12 +158,12 @@ __global__ void check_tensor<3>(const DataType* buf,
 }
 
 template <>
-__global__ void check_tensor<4>(const DataType* buf,
+__global__ void check_tensor<4>(DataType const* buf,
                                 Array<4> local_shape,
                                 Array<4> halo,
                                 index_t pitch,
                                 Array<4> global_shape,
-                                const Array<4> global_index_base,
+                                Array<4> const global_index_base,
                                 int* error_counter)
 {
   auto local_real_shape = local_shape + halo * 2;
@@ -207,12 +207,12 @@ __global__ void check_tensor<4>(const DataType* buf,
 }
 
 template <>
-__global__ void check_tensor<5>(const DataType* buf,
+__global__ void check_tensor<5>(DataType const* buf,
                                 Array<5> local_shape,
                                 Array<5> halo,
                                 index_t pitch,
                                 Array<5> global_shape,
-                                const Array<5> global_index_base,
+                                Array<5> const global_index_base,
                                 int* error_counter)
 {
   auto local_real_shape = local_shape + halo * 2;
@@ -261,7 +261,7 @@ __global__ void check_tensor<5>(const DataType* buf,
   }
 }
 
-bool is_p2p_capable(const Distribution& d)
+bool is_p2p_capable(Distribution const& d)
 {
   int num_procs = 1;
   for (int i = 0; i < d.num_dims() - 1; ++i)
@@ -272,9 +272,9 @@ bool is_p2p_capable(const Distribution& d)
 }
 
 template <int ND, typename TensorSrc, typename TensorDest>
-int test_copy_shuffle(const Shape& shape,
-                      const Distribution& dist_src,
-                      const Distribution& dist_dest,
+int test_copy_shuffle(Shape const& shape,
+                      Distribution const& dist_src,
+                      Distribution const& dist_dest,
                       ShuffleMethod method)
 {
   auto loc_src = get_locale<typename TensorSrc::locale_type>();
@@ -414,7 +414,7 @@ int test_copy_shuffle(const Shape& shape,
   return 0;
 }
 
-Distribution get_sample_dist(const Shape& shape, int np)
+Distribution get_sample_dist(Shape const& shape, int np)
 {
   auto last_dim = shape[get_sample_dim()];
   if (last_dim >= np)
@@ -433,10 +433,10 @@ Distribution get_sample_dist(const Shape& shape, int np)
 }
 
 template <int ND>
-int run_tests(const Shape& proc_dim, const Shape& shape, ShuffleMethod method)
+int run_tests(Shape const& proc_dim, Shape const& shape, ShuffleMethod method)
 {
   constexpr int NSD = ND - 2;
-  const auto create_spatial_overlap = []() {
+  auto const create_spatial_overlap = []() {
     IntVector v(NSD, 1);
     v.push_back(0);
     v.push_back(0);
@@ -626,8 +626,8 @@ int run_tests(const Shape& proc_dim, const Shape& shape, ShuffleMethod method)
  */
 int main(int argc, char* argv[])
 {
-  const auto pop_arg = [&argc, &argv] {
-    const std::string arg(*argv);
+  auto const pop_arg = [&argc, &argv] {
+    std::string const arg(*argv);
     argv++;
     argc--;
     return arg;
@@ -645,8 +645,8 @@ int main(int argc, char* argv[])
     MPI_COMM_WORLD, MPI_COMM_TYPE_SHARED, 0, MPI_INFO_NULL, &local_comm);
   MPI_Comm_size(local_comm, &local_comm_size);
 
-  const std::string bin = pop_arg();
-  const auto print_usage_and_exit = [bin](const std::string usage) {
+  std::string const bin = pop_arg();
+  auto const print_usage_and_exit = [bin](std::string const usage) {
     util::MPIRootPrintStreamError() << "Error! Usage: " << bin << " " << usage;
     MPI_Finalize();
     exit(1);
@@ -655,7 +655,7 @@ int main(int argc, char* argv[])
   // Parse the number of spatial dimensions
   if (argc < 1)
     print_usage_and_exit("ND");
-  const int NSD = std::stoi(pop_arg());
+  int const NSD = std::stoi(pop_arg());
   if (!(NSD == 2 || NSD == 3))
   {
     util::MPIRootPrintStreamError()
@@ -663,7 +663,7 @@ int main(int argc, char* argv[])
     MPI_Finalize();
     exit(1);
   }
-  const int ND = NSD + 2;
+  int const ND = NSD + 2;
 
   // Parse the proc shape
   std::vector<std::string> dim_names;
@@ -675,7 +675,7 @@ int main(int argc, char* argv[])
     dim_names.begin(),
     dim_names.end(),
     dim_names.begin(),
-    [](const std::string name) { return std::string("proc_") + name; });
+    [](std::string const name) { return std::string("proc_") + name; });
   if (argc < ND)
     print_usage_and_exit("ND" + util::join_spaced_array(dim_names));
   Shape proc_dim_v;
@@ -736,7 +736,7 @@ int main(int argc, char* argv[])
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
-  for (const auto method : methods)
+  for (auto const method : methods)
   {
     if (ND == 4)
     {

@@ -11,9 +11,9 @@
 namespace
 {
 
-__global__ void wait_kernel(const long long int cycles)
+__global__ void wait_kernel(long long int const cycles)
 {
-  const long long int start = clock64();
+  long long int const start = clock64();
   long long int cur;
   do
   {
@@ -44,12 +44,12 @@ void gpu_wait(double length, h2::gpu::DeviceStream stream)
 #endif
     freq_hz = static_cast<long long int>(freq_khz) * 1000ll;  // KHz -> Hz
   }
-  const long long int cycles = length * freq_hz;
+  long long int const cycles = length * freq_hz;
 
   h2::gpu::launch_kernel(wait_kernel, 1, 1, 0, stream, cycles);
 }
 
-void gpu_wait(double length, const h2::ComputeStream& stream)
+void gpu_wait(double length, h2::ComputeStream const& stream)
 {
   gpu_wait(length, stream.get_stream<h2::Device::GPU>());
 }

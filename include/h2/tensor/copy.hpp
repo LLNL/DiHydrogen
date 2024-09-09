@@ -32,10 +32,10 @@ namespace h2
 namespace internal
 {
 
-void copy_same_type(BaseTensor& dst, const BaseTensor& src);
+void copy_same_type(BaseTensor& dst, BaseTensor const& src);
 
 template <typename T>
-void copy_same_type(DistTensor<T>& dst, const DistTensor<T>& src)
+void copy_same_type(DistTensor<T>& dst, DistTensor<T> const& src)
 {
   dst.resize(src.shape(), src.dim_types(), src.distribution());
   dst.ensure();
@@ -44,7 +44,7 @@ void copy_same_type(DistTensor<T>& dst, const DistTensor<T>& src)
     return;  // No local data to copy.
   }
   Tensor<T>& dst_local = dst.local_tensor();
-  const Tensor<T>& src_local = src.local_tensor();
+  Tensor<T> const& src_local = src.local_tensor();
   if (src_local.is_contiguous())
   {
     copy_buffer<T>(dst_local.data(),
@@ -78,7 +78,7 @@ void copy_same_type(DistTensor<T>& dst, const DistTensor<T>& src)
  * dynamically dispatchable.
  */
 template <typename DstT, typename SrcT>
-void copy(Tensor<DstT>& dst, const Tensor<SrcT>& src)
+void copy(Tensor<DstT>& dst, Tensor<SrcT> const& src)
 {
   // Copying an empty tensor is permitted, but you cannot copy a lazy
   // tensor that has not been ensure'd.
@@ -99,7 +99,7 @@ void copy(Tensor<DstT>& dst, const Tensor<SrcT>& src)
   }
 }
 
-inline void copy(BaseTensor& dst, const BaseTensor& src)
+inline void copy(BaseTensor& dst, BaseTensor const& src)
 {
   if (src.is_empty())
   {
@@ -139,7 +139,7 @@ inline void copy(BaseTensor& dst, const BaseTensor& src)
  * This will not change the processor grid of `dst`.
  */
 template <typename DstT, typename SrcT>
-void copy(DistTensor<DstT>& dst, const DistTensor<SrcT>& src)
+void copy(DistTensor<DstT>& dst, DistTensor<SrcT> const& src)
 {
   // One could support copying between "similar" grids (same underlying
   // processes, different shape), but I don't see a use for that right
@@ -188,7 +188,7 @@ template <typename T>
 std::unique_ptr<Tensor<T>> make_accessible_on_device(
   Tensor<T>& src,
   Device dev,
-  const std::optional<ComputeStream> stream = std::nullopt)
+  std::optional<ComputeStream> const stream = std::nullopt)
 {
   if (src.get_device() == dev)
   {
@@ -226,9 +226,9 @@ std::unique_ptr<Tensor<T>> make_accessible_on_device(
 /** Version of `make_accessible_on_device` for const tensors. */
 template <typename T>
 std::unique_ptr<Tensor<T>> make_accessible_on_device(
-  const Tensor<T>& src,
+  Tensor<T> const& src,
   Device dev,
-  const std::optional<ComputeStream> stream = std::nullopt)
+  std::optional<ComputeStream> const stream = std::nullopt)
 {
   if (src.get_device() == dev)
   {
@@ -262,7 +262,7 @@ namespace impl
 {
 
 template <typename DstT, typename SrcT>
-void cast_impl(CPUDev_t, Tensor<DstT>& dst, const Tensor<SrcT>& src);
+void cast_impl(CPUDev_t, Tensor<DstT>& dst, Tensor<SrcT> const& src);
 #ifdef H2_HAS_GPU
 template <typename DstT, typename SrcT>
 void cast_impl(GPUDev_t, Tensor<DstT>& dst, const Tensor<SrcT>& src);
@@ -301,7 +301,7 @@ std::unique_ptr<Tensor<DstT>> cast(Tensor<SrcT>& src)
 
 /** Version of `cast` for const tensors. */
 template <typename DstT, typename SrcT>
-std::unique_ptr<Tensor<DstT>> cast(const Tensor<SrcT>& src)
+std::unique_ptr<Tensor<DstT>> cast(Tensor<SrcT> const& src)
 {
   if constexpr (std::is_same_v<SrcT, DstT>)
   {
@@ -324,6 +324,6 @@ template <typename DstT>
 std::unique_ptr<Tensor<DstT>> cast(BaseTensor& src);
 
 /** Fully runtime version of `cast`. */
-std::unique_ptr<BaseTensor> cast(const TypeInfo& type, BaseTensor& src);
+std::unique_ptr<BaseTensor> cast(TypeInfo const& type, BaseTensor& src);
 
 }  // namespace h2

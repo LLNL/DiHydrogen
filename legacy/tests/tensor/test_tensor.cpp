@@ -26,12 +26,12 @@ int test_view()
   auto dist = Distribution::make_localized_distribution(ND);
   TensorType t_view = get_tensor<TensorType>(shape, loc, dist);
 
-  View(t_view, (const int*) raw_buffer);
+  View(t_view, (int const*) raw_buffer);
   util::PrintStreamInfo() << "const view created";
 
   auto local_shape = t_view.get_local_shape();
   // auto base_offset = t_view.get_local_offset();
-  const int* view_buf = t_view.get_const_buffer();
+  int const* view_buf = t_view.get_const_buffer();
   for (index_t i = 0; i < local_shape[1]; ++i)
   {
     for (index_t j = 0; j < local_shape[0]; ++j)

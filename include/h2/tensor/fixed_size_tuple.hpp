@@ -90,9 +90,9 @@ struct FixedSizeTuple
     }
   }
 
-  FixedSizeTuple(const FixedSizeTuple& other) = default;
+  FixedSizeTuple(FixedSizeTuple const& other) = default;
   FixedSizeTuple(FixedSizeTuple&& other) = default;
-  FixedSizeTuple& operator=(const FixedSizeTuple& other) = default;
+  FixedSizeTuple& operator=(FixedSizeTuple const& other) = default;
   FixedSizeTuple& operator=(FixedSizeTuple&& other) = default;
 
   /**
@@ -101,7 +101,7 @@ struct FixedSizeTuple
    */
   template <typename U, typename OtherSizeType, OtherSizeType M>
   static constexpr FixedSizeTuple
-  convert_from(const FixedSizeTuple<U, OtherSizeType, M>& other)
+  convert_from(FixedSizeTuple<U, OtherSizeType, M> const& other)
   {
     static_assert(
       std::is_convertible_v<U, T>,
@@ -125,10 +125,10 @@ struct FixedSizeTuple
   /** Return a raw pointer to the tuple. */
   T* data() H2_NOEXCEPT { return data_.data(); }
 
-  const T* data() const H2_NOEXCEPT { return data_.data(); }
+  T const* data() const H2_NOEXCEPT { return data_.data(); }
 
   /** Return a constant raw pointer to the tuple. */
-  const T* const_data() const H2_NOEXCEPT { return data_.data(); }
+  T const* const_data() const H2_NOEXCEPT { return data_.data(); }
 
   /** Return a reference to the first element in the tuple. */
   constexpr T& front() H2_NOEXCEPT
@@ -137,7 +137,7 @@ struct FixedSizeTuple
     return data_[0];
   }
 
-  constexpr const T& front() const H2_NOEXCEPT
+  constexpr T const& front() const H2_NOEXCEPT
   {
     H2_ASSERT_DEBUG(size_ > 0, "Cannot access front in empty tuple");
     return data_[0];
@@ -150,7 +150,7 @@ struct FixedSizeTuple
     return data_[size_ - 1];
   }
 
-  constexpr const T& back() const H2_NOEXCEPT
+  constexpr T const& back() const H2_NOEXCEPT
   {
     H2_ASSERT_DEBUG(size_ > 0, "Cannot access back in empty tuple");
     return data_[size_ - 1];
@@ -243,7 +243,7 @@ struct FixedSizeTuple
   }
 
   /** Return the value of the tuple at the i'th index. */
-  constexpr const T& operator[](SizeType i) const H2_NOEXCEPT
+  constexpr T const& operator[](SizeType i) const H2_NOEXCEPT
   {
     H2_ASSERT_DEBUG(i < size_,
                     "Tuple index ",
@@ -302,7 +302,7 @@ struct FixedSizeTuple
    */
   template <typename U, typename OtherSizeType, OtherSizeType M>
   constexpr bool
-  operator==(const FixedSizeTuple<U, OtherSizeType, M>& other) const H2_NOEXCEPT
+  operator==(FixedSizeTuple<U, OtherSizeType, M> const& other) const H2_NOEXCEPT
   {
     if (size_ != other.size_)
     {
@@ -323,7 +323,7 @@ struct FixedSizeTuple
    */
   template <typename U, typename OtherSizeType, OtherSizeType M>
   constexpr bool
-  operator!=(const FixedSizeTuple<U, OtherSizeType, M>& other) const H2_NOEXCEPT
+  operator!=(FixedSizeTuple<U, OtherSizeType, M> const& other) const H2_NOEXCEPT
   {
     if (size_ != other.size_)
     {
@@ -343,10 +343,10 @@ struct FixedSizeTuple
 /** Print a tuple with some support for customization. */
 template <typename T, typename SizeType, SizeType N>
 inline void print_tuple(std::ostream& os,
-                        const FixedSizeTuple<T, SizeType, N>& tuple,
-                        const std::string start_brace = "{",
-                        const std::string end_brace = "}",
-                        const std::string separator = ", ")
+                        FixedSizeTuple<T, SizeType, N> const& tuple,
+                        std::string const start_brace = "{",
+                        std::string const end_brace = "}",
+                        std::string const separator = ", ")
 {
   os << start_brace;
   for (SizeType i = 0; i < tuple.size(); ++i)
@@ -364,7 +364,7 @@ inline void print_tuple(std::ostream& os,
 /** Operator overload for printing tuples (when the type is printable). */
 template <typename T, typename SizeType, SizeType N>
 inline std::ostream& operator<<(std::ostream& os,
-                                const FixedSizeTuple<T, SizeType, N>& tuple)
+                                FixedSizeTuple<T, SizeType, N> const& tuple)
 {
   print_tuple(os, tuple);
   return os;
@@ -381,7 +381,7 @@ template <typename T, typename SizeType, SizeType N>
 struct hash<h2::FixedSizeTuple<T, SizeType, N>>
 {
   size_t
-  operator()(const h2::FixedSizeTuple<T, SizeType, N>& tuple) const noexcept
+  operator()(h2::FixedSizeTuple<T, SizeType, N> const& tuple) const noexcept
   {
     // Mixing adapted from Boost.
     // Hash both the size and elements.

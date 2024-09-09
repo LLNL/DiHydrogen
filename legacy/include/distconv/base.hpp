@@ -27,14 +27,14 @@ enum Side
   LHS = 0,
   RHS = 1
 };
-const Side SIDES[2] = {LHS, RHS};
+Side const SIDES[2] = {LHS, RHS};
 
-inline Side operator~(const Side& s)
+inline Side operator~(Side const& s)
 {
   return static_cast<Side>((~static_cast<int>(s)) & 1);
 }
 
-inline std::ostream& operator<<(std::ostream& os, const Side& s)
+inline std::ostream& operator<<(std::ostream& os, Side const& s)
 {
   if (s == LHS)
   {
@@ -75,15 +75,15 @@ struct BoundaryAttributes
 {
   std::array<T, 2> m_attrs;
   BoundaryAttributes() = default;
-  BoundaryAttributes(const T& v) : BoundaryAttributes(v, v) {}
-  BoundaryAttributes(const T& lhs, const T& rhs)
+  BoundaryAttributes(T const& v) : BoundaryAttributes(v, v) {}
+  BoundaryAttributes(T const& lhs, T const& rhs)
     : m_attrs({0 == LHS ? lhs : rhs, 1 == RHS ? rhs : lhs})
   {}
 
   T& operator()(Side s) { return m_attrs[s]; }
-  const T& operator()(Side s) const { return m_attrs[s]; }
+  T const& operator()(Side s) const { return m_attrs[s]; }
   T* data() { return m_attrs.data(); }
-  const T* data() const { return m_attrs.data(); }
+  T const* data() const { return m_attrs.data(); }
 };
 
 template <typename F>
@@ -116,13 +116,13 @@ struct SpatialAttributes
   constexpr static int NSD = ND - 2;
   T m_attrs[NSD][2];
   SpatialAttributes() {}
-  SpatialAttributes(const T& attr_lhs, const T& attr_rhs)
+  SpatialAttributes(T const& attr_lhs, T const& attr_rhs)
   {
     apply_to_spatial_sides<ND>([&](int i, Side side) {
       (*this)(i, side) = side == LHS ? attr_lhs : attr_rhs;
     });
   }
-  SpatialAttributes& operator=(const SpatialAttributes<ND, T>& sa)
+  SpatialAttributes& operator=(SpatialAttributes<ND, T> const& sa)
   {
     apply_to_spatial_sides<ND>(
       [&](int i, Side side) { (*this)(i, side) = sa(i, side); });
@@ -132,7 +132,7 @@ struct SpatialAttributes
     assert_always(d < NSD);
     return m_attrs[d][s];
   }
-  const T& operator()(int d, Side s) const
+  T const& operator()(int d, Side s) const
   {
     assert_always(d < NSD);
     return m_attrs[d][s];
@@ -154,11 +154,11 @@ private:
 public:
   BoundaryAttributesV() = default;
 
-  BoundaryAttributesV(const T& lhs, const T& rhs) : m_default(lhs, rhs) {}
+  BoundaryAttributesV(T const& lhs, T const& rhs) : m_default(lhs, rhs) {}
 
-  BoundaryAttributesV(const T& attr) : BoundaryAttributesV(attr, attr) {}
+  BoundaryAttributesV(T const& attr) : BoundaryAttributesV(attr, attr) {}
 
-  BoundaryAttributesV& operator=(const BoundaryAttributesV& sa)
+  BoundaryAttributesV& operator=(BoundaryAttributesV const& sa)
   {
     m_default = sa.m_default;
     m_attrs = sa.m_attrs;
@@ -171,7 +171,7 @@ public:
     return m_attrs.at(d)(s);
   }
 
-  const T& operator()(int d, Side s) const { return m_attrs.at(d)(s); }
+  T const& operator()(int d, Side s) const { return m_attrs.at(d)(s); }
 
   T* operator()(int d)
   {
@@ -179,7 +179,7 @@ public:
     return m_attrs.at(d).data();
   }
 
-  const T* operator()(int d) const { return m_attrs.at(d).data(); }
+  T const* operator()(int d) const { return m_attrs.at(d).data(); }
 
   void clear() { m_attrs.clear(); }
 
@@ -209,7 +209,7 @@ enum class HaloExchangeMethod
 #endif  // DISTCONV_HAS_NVSHMEM
 };
 
-inline std::ostream& operator<<(std::ostream& os, const HaloExchangeMethod& m)
+inline std::ostream& operator<<(std::ostream& os, HaloExchangeMethod const& m)
 {
   if (m == HaloExchangeMethod::MPI)
   {
@@ -254,7 +254,7 @@ inline std::ostream& operator<<(std::ostream& os, const HaloExchangeMethod& m)
   }
 }
 
-inline HaloExchangeMethod GetHaloExchangeMethod(const std::string& method)
+inline HaloExchangeMethod GetHaloExchangeMethod(std::string const& method)
 {
   if (method == "MPI")
   {
@@ -326,7 +326,7 @@ enum class ShuffleMethod
 #endif  // DISTCONV_HAS_P2P
 };
 
-inline std::ostream& operator<<(std::ostream& os, const ShuffleMethod& m)
+inline std::ostream& operator<<(std::ostream& os, ShuffleMethod const& m)
 {
   if (m == ShuffleMethod::MPI)
   {
@@ -353,7 +353,7 @@ inline std::ostream& operator<<(std::ostream& os, const ShuffleMethod& m)
   }
 }
 
-inline ShuffleMethod GetShuffleMethod(const std::string& method)
+inline ShuffleMethod GetShuffleMethod(std::string const& method)
 {
   if (method == "MPI")
   {
@@ -390,7 +390,7 @@ enum class ChannelParallelismAlgorithm
 };
 
 inline std::ostream& operator<<(std::ostream& os,
-                                const ChannelParallelismAlgorithm& a)
+                                ChannelParallelismAlgorithm const& a)
 {
   if (a == ChannelParallelismAlgorithm::NONE)
   {
@@ -433,7 +433,7 @@ enum class BatchnormImpl
 #endif  // DISTCONV_HAS_NVSHMEM
 };
 
-inline std::ostream& operator<<(std::ostream& os, const BatchnormImpl& v)
+inline std::ostream& operator<<(std::ostream& os, BatchnormImpl const& v)
 {
   if (v == BatchnormImpl::MPI)
   {
@@ -476,7 +476,7 @@ inline std::ostream& operator<<(std::ostream& os, const BatchnormImpl& v)
   }
 }
 
-inline BatchnormImpl GetBatchnormImpl(const std::string& impl)
+inline BatchnormImpl GetBatchnormImpl(std::string const& impl)
 {
   if (impl == "MPI")
   {

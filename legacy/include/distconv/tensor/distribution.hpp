@@ -23,10 +23,10 @@ private:
   Shape m_block_size;
 
 public:
-  Distribution(const Shape& locale_shape,
-               const Shape& split_shape,
-               const IntVector& overlap,
-               const Shape& block_size)
+  Distribution(Shape const& locale_shape,
+               Shape const& split_shape,
+               IntVector const& overlap,
+               Shape const& block_size)
     : m_locale_shape(locale_shape),
       m_split_shape(split_shape),
       m_overlap(overlap),
@@ -37,19 +37,19 @@ public:
   }
 
 private:
-  Distribution(const Shape& locale_shape,
-               const Shape& split_shape,
-               const IntVector& overlap)
+  Distribution(Shape const& locale_shape,
+               Shape const& split_shape,
+               IntVector const& overlap)
     : Distribution(
         locale_shape, split_shape, overlap, Shape(locale_shape.num_dims(), 0))
   {}
 
-  Distribution(const Shape& locale_shape, const Shape& split_shape)
+  Distribution(Shape const& locale_shape, Shape const& split_shape)
     : Distribution(
         locale_shape, split_shape, IntVector(locale_shape.num_dims(), 0))
   {}
 
-  Distribution(const Shape& locale_shape)
+  Distribution(Shape const& locale_shape)
     : Distribution(locale_shape, locale_shape)
   {}
 
@@ -62,7 +62,7 @@ public:
     return Distribution(num_dims);
   }
 
-  static Distribution make_distribution(const Shape& locale_shape)
+  static Distribution make_distribution(Shape const& locale_shape)
   {
     return Distribution(locale_shape);
   }
@@ -72,14 +72,14 @@ public:
     return Distribution(Shape(locale_shape));
   }
 
-  static Distribution make_shared_distribution(const Shape& locale_shape)
+  static Distribution make_shared_distribution(Shape const& locale_shape)
   {
     int nd = locale_shape.num_dims();
     return Distribution(locale_shape, Shape(nd, 1));
   }
 
-  static Distribution make_shared_distribution(const Shape& locale_shape,
-                                               const Shape& split_shape)
+  static Distribution make_shared_distribution(Shape const& locale_shape,
+                                               Shape const& split_shape)
   {
     return Distribution(locale_shape, split_shape);
   }
@@ -91,8 +91,8 @@ public:
     return make_shared_distribution(Shape(locale_shape), Shape(split_shape));
   }
 
-  static Distribution make_overlapped_distribution(const Shape& locale_shape,
-                                                   const IntVector& overlap)
+  static Distribution make_overlapped_distribution(Shape const& locale_shape,
+                                                   IntVector const& overlap)
   {
     return Distribution(locale_shape, locale_shape, overlap);
   }
@@ -107,14 +107,14 @@ public:
 
   int num_dims() const { return m_locale_shape.num_dims(); }
 
-  bool operator==(const Distribution& d) const
+  bool operator==(Distribution const& d) const
   {
     return m_locale_shape == d.m_locale_shape
            && m_split_shape == d.m_split_shape && m_block_size == d.m_block_size
            && m_overlap == d.m_overlap;
   }
 
-  bool operator!=(const Distribution& d) const { return !operator==(d); }
+  bool operator!=(Distribution const& d) const { return !operator==(d); }
 
   Distribution get_non_overlapped_distribution() const
   {
@@ -123,19 +123,19 @@ public:
     return non_overlapped_dist;
   }
 
-  const Shape& get_locale_shape() const { return m_locale_shape; }
+  Shape const& get_locale_shape() const { return m_locale_shape; }
 
   index_t get_locale_shape(int dim) const { return m_locale_shape[dim]; }
 
-  void set_locale_shape(const Shape& locale_shape)
+  void set_locale_shape(Shape const& locale_shape)
   {
     m_locale_shape = locale_shape;
     sanity_check_shapes();
   }
 
-  const Shape& get_split_shape() const { return m_split_shape; }
+  Shape const& get_split_shape() const { return m_split_shape; }
 
-  void set_split_shape(const Shape& split_shape)
+  void set_split_shape(Shape const& split_shape)
   {
     m_split_shape = split_shape;
     sanity_check_shapes();
@@ -169,11 +169,11 @@ public:
     return get_num_ranks_per_split()[dim];
   }
 
-  const IntVector& get_overlap() const { return m_overlap; }
+  IntVector const& get_overlap() const { return m_overlap; }
 
   int get_overlap(int dim) const { return get_overlap()[dim]; }
 
-  const Shape& get_block_size() const { return m_block_size; }
+  Shape const& get_block_size() const { return m_block_size; }
 
   index_t get_block_size(int dim) const { return m_block_size[dim]; }
 
@@ -183,7 +183,7 @@ public:
     return;
   }
 
-  void set_overlap(const IntVector& overlap)
+  void set_overlap(IntVector const& overlap)
   {
     m_overlap = overlap;
     return;
@@ -191,7 +191,7 @@ public:
 
   void clear_overlap() { m_overlap = 0; }
 
-  void copy_overlap(const Distribution& d) { m_overlap = d.m_overlap; }
+  void copy_overlap(Distribution const& d) { m_overlap = d.m_overlap; }
 
   bool is_distributed(int dim) const { return get_split_shape()[dim] > 1; }
 
@@ -223,7 +223,7 @@ public:
   }
 
   template <int ND>
-  bool is_split_root(const Array<ND>& rank) const
+  bool is_split_root(Array<ND> const& rank) const
   {
     for (int i = 0; i < num_dims(); ++i)
     {
@@ -233,7 +233,7 @@ public:
     return true;
   }
 
-  bool is_split_root(const IntVector& rank) const
+  bool is_split_root(IntVector const& rank) const
   {
     for (int i = 0; i < num_dims(); ++i)
     {
@@ -285,7 +285,7 @@ public:
   }
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Distribution& d)
+inline std::ostream& operator<<(std::ostream& os, Distribution const& d)
 {
   return d.print(os);
 }

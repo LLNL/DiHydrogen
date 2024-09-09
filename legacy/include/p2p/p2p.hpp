@@ -21,14 +21,14 @@ class P2P
 public:
   using connection_type = std::shared_ptr<Connection>;
 
-  P2P(const internal::MPI& mpi);
+  P2P(internal::MPI const& mpi);
   virtual ~P2P();
 
   void enable_nvtx() const;
   void disable_nvtx() const;
 
-  int get_connections(const int* peers, connection_type* conns, int num_peers);
-  int get_connections(const std::vector<int>& peers,
+  int get_connections(int const* peers, connection_type* conns, int num_peers);
+  int get_connections(std::vector<int> const& peers,
                       std::vector<connection_type>& conns);
   int disconnect_all();
   int disconnect(connection_type* conns, int num_conns);
@@ -40,7 +40,7 @@ public:
               int num_conns);
 
   int exchange_addrs(std::vector<connection_type>& connections,
-                     const std::vector<void*>& local_addrs,
+                     std::vector<void*> const& local_addrs,
                      std::vector<void*>& peer_addrs);
   int exchange_addrs(connection_type* connections,
                      void* const* local_addrs,
@@ -48,7 +48,7 @@ public:
                      int num_conns);
   int exchange_addrs(connection_type* connections,
                      void* const* local_addrs,
-                     const size_t* local_offsets,
+                     size_t const* local_offsets,
                      void** peer_addrs,
                      size_t* peer_offsets,
                      int num_conns);
@@ -89,10 +89,10 @@ private:
   std::shared_ptr<Connection> connect(int peer, char* peer_name, int peer_dev);
   int init_driver_api();
 
-  int get_peer_host_names(const int* peers,
+  int get_peer_host_names(int const* peers,
                           int num_peers,
                           std::vector<char*>& names);
-  int get_peer_devices(const int* peers,
+  int get_peer_devices(int const* peers,
                        int num_peers,
                        std::vector<int>& peer_devices);
 };

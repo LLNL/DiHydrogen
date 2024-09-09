@@ -34,7 +34,7 @@ int main(int argc, char** argv)
   // initialization.
   Catch::Session session;
   {
-    const int return_code = session.applyCommandLine(argc, argv);
+    int const return_code = session.applyCommandLine(argc, argv);
     if (return_code != 0 || session.configData().showHelp)
     {
       return return_code;

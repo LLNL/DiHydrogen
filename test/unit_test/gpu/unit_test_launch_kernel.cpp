@@ -14,7 +14,7 @@
 using namespace h2;
 
 extern void
-unit_test_gpu_launch_kernel_test(int*, int, const h2::gpu::DeviceStream&);
+unit_test_gpu_launch_kernel_test(int*, int, h2::gpu::DeviceStream const&);
 
 TEST_CASE("Kernels successfully launch", "[gpu]")
 {

@@ -22,7 +22,7 @@ using Array = tensor::Array<ND>;
 using Shape = tensor::Shape;
 
 template <int ND>
-__device__ Array<ND> get_idx(size_t linear_offset, const Array<ND>& shape)
+__device__ Array<ND> get_idx(size_t linear_offset, Array<ND> const& shape)
 {
   Array<ND> idx;
 #pragma unroll
@@ -44,10 +44,10 @@ __device__ Array<ND> get_idx(size_t linear_offset, const Array<ND>& shape)
    @param dst_offset offset in the packing buffer.
  */
 template <int ND>
-__device__ void find_destination(const Array<ND>& src_local_idx,
-                                 const Array<ND>& src_local_shape,
-                                 const Array<ND>& dst_locale_shape,
-                                 const int* __restrict__ rank_limits,
+__device__ void find_destination(Array<ND> const& src_local_idx,
+                                 Array<ND> const& src_local_shape,
+                                 Array<ND> const& dst_locale_shape,
+                                 int const* __restrict__ rank_limits,
                                  int& dst_rank,
                                  size_t& dst_offset)
 {
@@ -112,8 +112,8 @@ __device__ void find_destination(const Array<ND>& src_local_idx,
 
 template <int ND>
 __device__ size_t get_strided_offset(size_t offset,
-                                     const Array<ND>& shape,
-                                     const Array<ND>& strides)
+                                     Array<ND> const& shape,
+                                     Array<ND> const& strides)
 {
   size_t real_offset = 0;
 #pragma unroll
@@ -136,9 +136,9 @@ __global__ void pack_kernel(const DataType* src,
                             DataType* __restrict__ buf,
                             const int* __restrict__ displs)
 {
-  const size_t size = src_local_shape.get_size();
-  const size_t gid = threadIdx.x + blockIdx.x * blockDim.x;
-  const size_t num_threads = blockDim.x * gridDim.x;
+  size_t const size = src_local_shape.get_size();
+  size_t const gid = threadIdx.x + blockIdx.x * blockDim.x;
+  size_t const num_threads = blockDim.x * gridDim.x;
 
 #ifdef PACK_USE_SHMEM
   extern __shared__ int shm[];
@@ -169,7 +169,7 @@ __global__ void pack_kernel(const DataType* src,
       packed ? offset
              : get_strided_offset(offset, src_local_shape, src_strides);
     DataType v = src[src_offset];
-    const Array<ND> idx = get_idx(offset, src_local_shape);
+    Array<ND> const idx = get_idx(offset, src_local_shape);
     int rank;
     size_t dst_offset;
 #ifdef PACK_USE_SHMEM
@@ -197,19 +197,19 @@ __global__ void pack_kernel(const DataType* src,
 }
 
 template <typename DataType, bool packed>
-void pack_kernel_dispatch(const DataType* src,
-                          const Shape& src_local_shape,
-                          const IndexVector& src_strides,
-                          const Shape& dst_locale_shape,
-                          const int* rank_limits,
+void pack_kernel_dispatch(DataType const* src,
+                          Shape const& src_local_shape,
+                          IndexVector const& src_strides,
+                          Shape const& dst_locale_shape,
+                          int const* rank_limits,
                           DataType* buf,
-                          const int* displs,
+                          int const* displs,
                           dim3 grid_dim,
                           dim3 block_dim,
                           int shm_size,
                           gpuStream_t stream)
 {
-  const int num_dims = src_local_shape.num_dims();
+  int const num_dims = src_local_shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                        \
   pack_kernel<ND, DataType, packed>                                            \
@@ -237,13 +237,13 @@ void pack_kernel_dispatch(const DataType* src,
 }
 
 template <typename DataType, bool packed>
-void pack(const DataType* src,
-          const Shape& src_local_shape,
-          const IndexVector& src_strides,
-          const Shape& dst_locale_shape,
-          const int* rank_limits,
+void pack(DataType const* src,
+          Shape const& src_local_shape,
+          IndexVector const& src_strides,
+          Shape const& dst_locale_shape,
+          int const* rank_limits,
           DataType* buf,
-          const int* displs,
+          int const* displs,
           gpuStream_t stream)
 {
   constexpr int block_size = 256;
@@ -279,9 +279,9 @@ __global__ void unpack_kernel2(DataType* tensor,
                                const DataType* __restrict__ packed_buf,
                                const int* __restrict__ displs)
 {
-  const size_t size = local_shape.get_size();
-  const size_t gid = threadIdx.x + blockIdx.x * blockDim.x;
-  const size_t num_threads = blockDim.x * gridDim.x;
+  size_t const size = local_shape.get_size();
+  size_t const gid = threadIdx.x + blockIdx.x * blockDim.x;
+  size_t const num_threads = blockDim.x * gridDim.x;
 
 #ifdef PACK_USE_SHMEM
   extern __shared__ int shm[];
@@ -310,7 +310,7 @@ __global__ void unpack_kernel2(DataType* tensor,
   {
     size_t src_offset =
       packed ? offset : get_strided_offset(offset, local_shape, strides);
-    const Array<ND> idx = get_idx(offset, local_shape);
+    Array<ND> const idx = get_idx(offset, local_shape);
     int rank;
     size_t dst_offset;
 #ifdef PACK_USE_SHMEM
@@ -328,18 +328,18 @@ __global__ void unpack_kernel2(DataType* tensor,
 
 template <typename DataType, bool packed>
 void unpack_kernel_dispatch(DataType* tensor,
-                            const Shape& local_shape,
-                            const IndexVector& strides,
-                            const Shape& locale_shape,
-                            const int* rank_limits,
-                            const DataType* packed_buf,
-                            const int* displs,
+                            Shape const& local_shape,
+                            IndexVector const& strides,
+                            Shape const& locale_shape,
+                            int const* rank_limits,
+                            DataType const* packed_buf,
+                            int const* displs,
                             dim3 grid_dim,
                             dim3 block_dim,
                             int shm_size,
                             gpuStream_t stream)
 {
-  const int num_dims = local_shape.num_dims();
+  int const num_dims = local_shape.num_dims();
 
 #define CALL_KERNEL(ND)                                                        \
   unpack_kernel2<ND, DataType, packed>                                         \
@@ -368,12 +368,12 @@ void unpack_kernel_dispatch(DataType* tensor,
 
 template <typename DataType, bool packed>
 void unpack(DataType* dst,
-            const Shape& shape,
-            const IndexVector& strides,
-            const Shape& locale_shape,
-            const int* rank_limits,
-            const DataType* buf,
-            const int* displs,
+            Shape const& shape,
+            IndexVector const& strides,
+            Shape const& locale_shape,
+            int const* rank_limits,
+            DataType const* buf,
+            int const* displs,
             gpuStream_t stream)
 {
   constexpr int block_size = 256;
@@ -405,7 +405,7 @@ namespace tensor
 {
 
 template <typename DataType>
-void TensorMPICUDAShuffler<DataType>::shuffle(const DataType* src,
+void TensorMPICUDAShuffler<DataType>::shuffle(DataType const* src,
                                               DataType* dst,
                                               gpuStream_t stream,
                                               bool is_forward)
@@ -415,20 +415,20 @@ void TensorMPICUDAShuffler<DataType>::shuffle(const DataType* src,
   // assert_always(src != nullptr);
   // assert_always(dst != nullptr);
 
-  const int* rank_limits_fwd = get_rank_limits_fwd(is_forward);
-  const int* rank_limits_bwd = get_rank_limits_bwd(is_forward);
-  const int* send_counts = get_send_counts(is_forward);
-  const int* recv_counts = get_recv_counts(is_forward);
-  const int* send_displs_h = get_send_displs_h(is_forward);
-  const int* recv_displs_h = get_recv_displs_h(is_forward);
-  const int* send_displs_d = get_send_displs_d(is_forward);
-  const int* recv_displs_d = get_recv_displs_d(is_forward);
+  int const* rank_limits_fwd = get_rank_limits_fwd(is_forward);
+  int const* rank_limits_bwd = get_rank_limits_bwd(is_forward);
+  int const* send_counts = get_send_counts(is_forward);
+  int const* recv_counts = get_recv_counts(is_forward);
+  int const* send_displs_h = get_send_displs_h(is_forward);
+  int const* recv_displs_h = get_recv_displs_h(is_forward);
+  int const* send_displs_d = get_send_displs_d(is_forward);
+  int const* recv_displs_d = get_recv_displs_d(is_forward);
 
-  const int num_ranks = get_src_locale_shape(is_forward).get_size();
-  const size_t send_buffer_size =
+  int const num_ranks = get_src_locale_shape(is_forward).get_size();
+  size_t const send_buffer_size =
     get_src_local_shape(is_forward).get_size() * sizeof(DataType);
   DataType* send_buf = get_src_buf(is_forward, stream);
-  const size_t recv_buffer_size =
+  size_t const recv_buffer_size =
     get_dst_local_shape(is_forward).get_size() * sizeof(DataType);
   DataType* recv_buf = get_dst_buf(is_forward, stream);
 

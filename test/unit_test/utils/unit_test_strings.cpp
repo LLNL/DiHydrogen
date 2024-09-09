@@ -46,7 +46,7 @@ struct TestStruct
   int foo;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const TestStruct& test)
+inline std::ostream& operator<<(std::ostream& os, TestStruct const& test)
 {
   os << test.foo;
   return os;

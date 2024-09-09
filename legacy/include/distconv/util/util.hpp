@@ -84,7 +84,7 @@ namespace util
 {
 
 template <typename I>
-std::string join(const std::string& delim, const I& begin, const I& end)
+std::string join(std::string const& delim, I const& begin, I const& end)
 {
   if (begin == end)
     return "";
@@ -97,14 +97,14 @@ std::string join(const std::string& delim, const I& begin, const I& end)
 }
 
 template <typename I>
-std::ostream& print_vector(std::ostream& os, const I& begin, const I& end)
+std::ostream& print_vector(std::ostream& os, I const& begin, I const& end)
 {
   os << "{" << join(", ", begin, end) << "}";
   return os;
 }
 
 template <typename I>
-std::string tostring(const I& begin, const I& end)
+std::string tostring(I const& begin, I const& end)
 {
   std::ostringstream ss;
   print_vector(ss, begin, end);
@@ -122,11 +122,11 @@ public:
   template <typename PrefixType>
   PrintStream(bool /*enable*/,
               std::ostream& /*os*/,
-              const PrefixType& /*prefix*/)
+              PrefixType const& /*prefix*/)
   {}
   ~PrintStream() = default;
   template <typename X>
-  PrintStream<false>& operator<<(const X&)
+  PrintStream<false>& operator<<(X const&)
   {
     return *this;
   }
@@ -141,7 +141,7 @@ class PrintStream<true>
 {
 public:
   template <typename PrefixType>
-  PrintStream(bool enable, std::ostream& os, const PrefixType& prefix)
+  PrintStream(bool enable, std::ostream& os, PrefixType const& prefix)
     : m_os(os), m_enable(enable)
   {
     ss << prefix;
@@ -157,20 +157,20 @@ public:
     }
   }
   std::ostringstream& operator()() { return ss; }
-  PrintStream<true>& operator<<(const char* x)
+  PrintStream<true>& operator<<(char const* x)
   {
     ss << x;
     m_printed_newline = x[std::strlen(x) - 1] == '\n';
     return *this;
   }
-  PrintStream<true>& operator<<(const std::string& x)
+  PrintStream<true>& operator<<(std::string const& x)
   {
     ss << x;
     m_printed_newline = x.back() == '\n';
     return *this;
   }
   template <typename X>
-  PrintStream<true>& operator<<(const X& x)
+  PrintStream<true>& operator<<(X const& x)
   {
     ss << x;
     return *this;
@@ -209,7 +209,7 @@ inline bool get_env_bool(char const* var_name, bool defval)
 class PrintStreamDebug : public PrintStream<true>
 {
 public:
-  PrintStreamDebug(const std::string& prefix = "[DEBUG] ")
+  PrintStreamDebug(std::string const& prefix = "[DEBUG] ")
     : PrintStream(get_env_bool("DISTCONV_PRINT_DEBUG", true), std::cerr, prefix)
   {}
 };
@@ -246,7 +246,7 @@ public:
 
 // Copied from https://stackoverflow.com/a/236803
 template <typename Out>
-inline void split(const std::string& s, char delim, Out result)
+inline void split(std::string const& s, char delim, Out result)
 {
   std::stringstream ss(s);
   std::string item;
@@ -256,7 +256,7 @@ inline void split(const std::string& s, char delim, Out result)
   }
 }
 // Copied from https://stackoverflow.com/a/236803
-inline std::vector<std::string> split(const std::string& s, char delim)
+inline std::vector<std::string> split(std::string const& s, char delim)
 {
   std::vector<std::string> elems;
   split(s, delim, std::back_inserter(elems));
@@ -271,20 +271,20 @@ inline T ceil(T x, T y)
 
 // Return whether all of the elements of `ary` is the same.
 template <typename T>
-inline bool are_all_elements_equal(const std::vector<T>& ary)
+inline bool are_all_elements_equal(std::vector<T> const& ary)
 {
   return std::equal(ary.begin() + 1, ary.end(), ary.begin());
 }
 
 // Split `str` with spaces and parse each of the separated string as int.
 template <typename T>
-std::vector<T> split_spaced_array(const std::string& str)
+std::vector<T> split_spaced_array(std::string const& str)
 {
-  const auto split = [](std::string s, const std::string delimiter) {
+  auto const split = [](std::string s, std::string const delimiter) {
     std::vector<std::string> sary;
     while (true)
     {
-      const auto pos = s.find(delimiter);
+      auto const pos = s.find(delimiter);
       if (pos != std::string::npos)
       {
         sary.push_back(s.substr(0, pos));
@@ -299,7 +299,7 @@ std::vector<T> split_spaced_array(const std::string& str)
     return sary;
   };
 
-  const std::vector<std::string> sary = split(str, ",");
+  std::vector<std::string> const sary = split(str, ",");
   std::vector<T> ary;
   // cf. https://gist.github.com/mark-d-holmberg/862733
   for (auto const& s : sary)
@@ -326,7 +326,7 @@ inline std::string to_string<std::string>(std::string const& i)
 
 // Join each element of `ary` with `delimiter` into a single string.
 template <typename V>
-std::string join_array(const V& ary, const std::string& delimiter)
+std::string join_array(V const& ary, std::string const& delimiter)
 {
   if (ary.begin() == ary.end())
   {
@@ -338,7 +338,7 @@ std::string join_array(const V& ary, const std::string& delimiter)
       ary.begin() + 1,
       ary.end(),
       to_string(ary[0]),
-      [delimiter](const std::string s, const typename V::value_type i) {
+      [delimiter](std::string const s, typename V::value_type const i) {
         return s + delimiter + to_string(i);
       });
   }
@@ -346,19 +346,19 @@ std::string join_array(const V& ary, const std::string& delimiter)
 
 // Wrappers of `join_array` with specific delimiters.
 template <typename T>
-inline std::string join_spaced_array(const std::vector<T>& ary)
+inline std::string join_spaced_array(std::vector<T> const& ary)
 {
   return join_array(ary, " ");
 }
 template <typename T>
-inline std::string join_xd_array(const std::vector<T>& ary)
+inline std::string join_xd_array(std::vector<T> const& ary)
 {
   return join_array(ary, "x");
 }
 
 // Return the reversed vector of `v`.
 template <typename V>
-inline V reverse(const V v)
+inline V reverse(V const v)
 {
   return V(v.rbegin(), v.rend());
 }

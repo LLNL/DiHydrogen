@@ -13,23 +13,23 @@
 #include "test_util.hpp"
 #include "test_util_cuda.hpp"
 
-int test_bandwidth(const int pid,
+int test_bandwidth(int const pid,
                    p2p::P2P& p2p,
-                   const size_t min_size,
-                   const size_t max_size,
-                   const int iter)
+                   size_t const min_size,
+                   size_t const max_size,
+                   int const iter)
 {
   void* buf1;
   P2P_CHECK_CUDA_ALWAYS(cudaMalloc(&buf1, max_size));
   cudaStream_t st;
   P2P_CHECK_CUDA_ALWAYS(cudaStreamCreate(&st));
-  const int peer = (pid % 2) == 0 ? pid + 1 : pid - 1;
+  int const peer = (pid % 2) == 0 ? pid + 1 : pid - 1;
   p2p::P2P::connection_type conn;
   p2p.get_connections(&peer, &conn, 1);
   cudaEvent_t ev1, ev2;
   P2P_CHECK_CUDA_ALWAYS(cudaEventCreate(&ev1));
   P2P_CHECK_CUDA_ALWAYS(cudaEventCreate(&ev2));
-  const int skip = 5;
+  int const skip = 5;
 
   p2p::logging::MPIRootPrintStreamInfo()
     << "Min size: " << min_size << ", max size: " << max_size << "\n";

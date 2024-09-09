@@ -22,7 +22,7 @@ namespace batchnorm
 template <typename TensorType>
 void channel_sums_and_sqsums(int num_dims,
                              int num_samples,
-                             const TensorType& input,
+                             TensorType const& input,
                              TensorType& sums,
                              TensorType& sqsums,
                              h2::gpu::DeviceStream stream);
@@ -39,11 +39,11 @@ void sums_to_statistics(index_t num_per_sum,
 template <typename TensorType>
 void batch_normalization(int num_dims,
                          int num_samples,
-                         const TensorType& input,
-                         const TensorType& mean,
-                         const TensorType& var,
-                         const TensorType& scale,
-                         const TensorType& bias,
+                         TensorType const& input,
+                         TensorType const& mean,
+                         TensorType const& var,
+                         TensorType const& scale,
+                         TensorType const& bias,
                          TensorType& output,
                          typename TensorType::data_type epsilon,
                          h2::gpu::DeviceStream stream);
@@ -84,13 +84,13 @@ template <typename TensorType>
 void backprop2(int num_dims,
                index_t num_samples,
                index_t num_per_sum,
-               const TensorType& input,
-               const TensorType& d_output,
-               const TensorType& mean,
-               const TensorType& var,
-               const TensorType& scale,
-               const TensorType& mean_gradient,
-               const TensorType& var_gradient,
+               TensorType const& input,
+               TensorType const& d_output,
+               TensorType const& mean,
+               TensorType const& var,
+               TensorType const& scale,
+               TensorType const& mean_gradient,
+               TensorType const& var_gradient,
                TensorType& d_input,
                typename TensorType::data_type epsilon,
                h2::gpu::DeviceStream stream);
@@ -164,7 +164,7 @@ public:
   ~BatchNormalization() = default;
 
   template <typename Tensor>
-  int forward_stage1(const Tensor& input,
+  int forward_stage1(Tensor const& input,
                      Tensor& mean,
                      Tensor& var,
                      bool is_training)
@@ -209,7 +209,7 @@ public:
   }
 
   template <typename Tensor>
-  int forward_stage2(const Tensor& input,
+  int forward_stage2(Tensor const& input,
                      Tensor& mean,
                      Tensor& var,
                      Tensor& running_mean,
@@ -326,11 +326,11 @@ public:
   }
 
   template <typename Tensor>
-  int backward_stage1(const Tensor& input,
-                      const Tensor& d_output,
-                      const Tensor& mean,
-                      const Tensor& var,
-                      const Tensor& scale,
+  int backward_stage1(Tensor const& input,
+                      Tensor const& d_output,
+                      Tensor const& mean,
+                      Tensor const& var,
+                      Tensor const& scale,
                       Tensor& scale_gradient,
                       Tensor& bias_gradient,
                       Tensor& mean_gradient,
@@ -393,13 +393,13 @@ public:
   }
 
   template <typename Tensor>
-  int backward_stage2(const Tensor& input,
-                      const Tensor& d_output,
-                      const Tensor& mean,
-                      const Tensor& var,
-                      const Tensor& scale,
-                      const Tensor& mean_gradient,
-                      const Tensor& var_gradient,
+  int backward_stage2(Tensor const& input,
+                      Tensor const& d_output,
+                      Tensor const& mean,
+                      Tensor const& var,
+                      Tensor const& scale,
+                      Tensor const& mean_gradient,
+                      Tensor const& var_gradient,
                       Tensor& d_input)
   {
     util::MPIPrintStreamDebug() << "BatchNormalization BP stage 2";
@@ -423,11 +423,11 @@ public:
   }
 
   template <typename Tensor>
-  int backward(const Tensor& input,
-               const Tensor& d_output,
-               const Tensor& mean,
-               const Tensor& var,
-               const Tensor& scale,
+  int backward(Tensor const& input,
+               Tensor const& d_output,
+               Tensor const& mean,
+               Tensor const& var,
+               Tensor const& scale,
                Tensor& scale_gradient,
                Tensor& bias_gradient,
                Tensor& mean_gradient,
@@ -471,7 +471,7 @@ private:
   bool m_global_stats;
 
   template <typename Tensor>
-  void channel_sums_and_sqsums(const Tensor& input, Tensor& mean, Tensor& var)
+  void channel_sums_and_sqsums(Tensor const& input, Tensor& mean, Tensor& var)
   {
     batchnorm::channel_sums_and_sqsums<Tensor>(
       m_num_dims, m_num_current_samples, input, mean, var, m_stream);
@@ -489,11 +489,11 @@ private:
   }
 
   template <typename Tensor>
-  void batch_normalization(const Tensor& input,
-                           const Tensor& mean,
-                           const Tensor& var,
-                           const Tensor& scale,
-                           const Tensor& bias,
+  void batch_normalization(Tensor const& input,
+                           Tensor const& mean,
+                           Tensor const& var,
+                           Tensor const& scale,
+                           Tensor const& bias,
                            Tensor& output)
   {
     batchnorm::batch_normalization<Tensor>(m_num_dims,
@@ -509,11 +509,11 @@ private:
   }
 
   template <typename Tensor>
-  void backprop1(const Tensor& input,
-                 const Tensor& d_output,
-                 const Tensor& mean,
-                 const Tensor& var,
-                 const Tensor& scale,
+  void backprop1(Tensor const& input,
+                 Tensor const& d_output,
+                 Tensor const& mean,
+                 Tensor const& var,
+                 Tensor const& scale,
                  Tensor& scale_gradient,
                  Tensor& bias_gradient,
                  Tensor& mean_gradient,
@@ -536,13 +536,13 @@ private:
 
   template <typename Tensor>
   void backprop2(index_t num_per_sum,
-                 const Tensor& input,
-                 const Tensor& d_output,
-                 const Tensor& mean,
-                 const Tensor& var,
-                 const Tensor& scale,
-                 const Tensor& mean_gradient,
-                 const Tensor& var_gradient,
+                 Tensor const& input,
+                 Tensor const& d_output,
+                 Tensor const& mean,
+                 Tensor const& var,
+                 Tensor const& scale,
+                 Tensor const& mean_gradient,
+                 Tensor const& var_gradient,
                  Tensor& d_input)
   {
     batchnorm::backprop2<Tensor>(m_num_dims,

@@ -15,7 +15,7 @@ namespace algorithms
 template <typename DataType, typename Locale, typename Allocator>
 typename std::enable_if<std::is_same<Allocator, BaseAllocator>::value,
                         int>::type
-ReduceSum(const Tensor<DataType, Locale, Allocator>& src,
+ReduceSum(Tensor<DataType, Locale, Allocator> const& src,
           Tensor<DataType, Locale, Allocator>& dst)
 {
   // TODO

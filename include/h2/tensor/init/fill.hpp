@@ -35,7 +35,7 @@ namespace h2
  * If stream is a GPU stream, this will be asynchronous.
  */
 template <typename T>
-void zero(T* data, const ComputeStream& stream, std::size_t count)
+void zero(T* data, ComputeStream const& stream, std::size_t count)
 {
   H2_ASSERT_DEBUG(count == 0 || data != nullptr, "Null buffers");
   static_assert(IsH2StorageType_v<T> || std::is_same_v<T*, void*>,
@@ -80,7 +80,7 @@ namespace impl
 {
 
 template <typename T>
-void fill_impl(CPUDev_t, Tensor<T>& tensor, const T& val);
+void fill_impl(CPUDev_t, Tensor<T>& tensor, T const& val);
 #ifdef H2_HAS_GPU
 template <typename T>
 void fill_impl(GPUDev_t, Tensor<T>& tensor, const T& val);
@@ -97,7 +97,7 @@ void fill_impl(GPUDev_t, Tensor<T>& tensor, const T& val);
  * need to be on the GPU.
  */
 template <typename T>
-void fill(Tensor<T>& tensor, const T& val)
+void fill(Tensor<T>& tensor, T const& val)
 {
   H2_DEVICE_DISPATCH_SAME(tensor.get_device(),
                           impl::fill_impl(DeviceT_v<Dev>, tensor, val));
@@ -112,6 +112,6 @@ void fill(Tensor<T>& tensor, const T& val)
  * need to be on the GPU.
  */
 template <typename T>
-void fill(BaseTensor& tensor, const T& val);
+void fill(BaseTensor& tensor, T const& val);
 
 }  // namespace h2

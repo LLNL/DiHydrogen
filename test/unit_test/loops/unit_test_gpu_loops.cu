@@ -16,13 +16,13 @@ using namespace h2;
 // Test helpers, use `gpu::launch_elementwise_loop`, etc. in real code.
 
 template <typename FuncT, typename... Args>
-void test_launch_naive_elementwise_loop(const FuncT func,
-                                        const ComputeStream& stream,
+void test_launch_naive_elementwise_loop(FuncT const func,
+                                        ComputeStream const& stream,
                                         std::size_t size,
                                         Args... args)
 {
-  const unsigned int block_size = gpu::num_threads_per_block;
-  const unsigned int num_blocks = (size + block_size - 1) / block_size;
+  unsigned int const block_size = gpu::num_threads_per_block;
+  unsigned int const num_blocks = (size + block_size - 1) / block_size;
 
   if (size == 0)
   {
@@ -41,14 +41,14 @@ void test_launch_naive_elementwise_loop(const FuncT func,
 
 template <typename FuncT, typename ImmediateT, typename... Args>
 void test_launch_naive_elementwise_loop_with_immediate(
-  const FuncT func,
-  const ComputeStream& stream,
+  FuncT const func,
+  ComputeStream const& stream,
   std::size_t size,
   ImmediateT imm,
   Args... args)
 {
-  const unsigned int block_size = gpu::num_threads_per_block;
-  const unsigned int num_blocks = (size + block_size - 1) / block_size;
+  unsigned int const block_size = gpu::num_threads_per_block;
+  unsigned int const num_blocks = (size + block_size - 1) / block_size;
 
   if (size == 0)
   {
@@ -71,13 +71,13 @@ template <std::size_t vec_width,
           std::size_t unroll_factor,
           typename FuncT,
           typename... Args>
-void test_launch_vectorized_elementwise_loop(const FuncT func,
-                                             const ComputeStream& stream,
+void test_launch_vectorized_elementwise_loop(FuncT const func,
+                                             ComputeStream const& stream,
                                              std::size_t size,
                                              Args... args)
 {
-  const unsigned int block_size = gpu::num_threads_per_block;
-  const unsigned int num_blocks = (size + block_size - 1) / block_size;
+  unsigned int const block_size = gpu::num_threads_per_block;
+  unsigned int const num_blocks = (size + block_size - 1) / block_size;
 
   if (size == 0)
   {
@@ -112,14 +112,14 @@ template <std::size_t vec_width,
           typename ImmediateT,
           typename... Args>
 void test_launch_vectorized_elementwise_loop_with_immediate(
-  const FuncT func,
-  const ComputeStream& stream,
+  FuncT const func,
+  ComputeStream const& stream,
   std::size_t size,
   ImmediateT imm,
   Args... args)
 {
-  const unsigned int block_size = gpu::num_threads_per_block;
-  const unsigned int num_blocks = (size + block_size - 1) / block_size;
+  unsigned int const block_size = gpu::num_threads_per_block;
+  unsigned int const num_blocks = (size + block_size - 1) / block_size;
 
   if (size == 0)
   {
@@ -196,7 +196,7 @@ TEMPLATE_LIST_TEST_CASE("Naive GPU element-wise loop works",
   {
     DeviceBuf<Type, Device::GPU> buf{32};
     buf.fill(static_cast<Type>(0));
-    const Type val = static_cast<Type>(42);
+    Type const val = static_cast<Type>(42);
     test_launch_naive_elementwise_loop(
       [val] H2_GPU_LAMBDA() { return val; }, stream, buf.size, buf.buf);
     for (std::size_t i = 0; i < buf.size; ++i)
@@ -230,7 +230,7 @@ TEMPLATE_LIST_TEST_CASE("Naive GPU element-wise loop works",
       stream,
       out_buf.size,
       out_buf.buf,
-      static_cast<const Type*>(in_buf.buf));
+      static_cast<Type const*>(in_buf.buf));
     for (std::size_t i = 0; i < in_buf.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(in_buf.buf, i, stream)
@@ -251,7 +251,7 @@ TEMPLATE_LIST_TEST_CASE("Naive GPU element-wise loop works",
       stream,
       buf1.size,
       buf1.buf,
-      static_cast<const Type*>(buf2.buf));
+      static_cast<Type const*>(buf2.buf));
     for (std::size_t i = 0; i < buf1.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(buf1.buf, i, stream)
@@ -272,8 +272,8 @@ TEMPLATE_LIST_TEST_CASE("Naive GPU element-wise loop works",
       stream,
       buf1.size,
       out_buf.buf,
-      static_cast<const Type*>(buf1.buf),
-      static_cast<const Type*>(buf2.buf));
+      static_cast<Type const*>(buf1.buf),
+      static_cast<Type const*>(buf2.buf));
     for (std::size_t i = 0; i < buf1.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(buf1.buf, i, stream)
@@ -296,8 +296,8 @@ TEMPLATE_LIST_TEST_CASE("Naive GPU element-wise loop works",
       stream,
       buf1.size,
       out_buf.buf,
-      static_cast<const Type*>(buf1.buf),
-      static_cast<const Type*>(buf2.buf));
+      static_cast<Type const*>(buf1.buf),
+      static_cast<Type const*>(buf2.buf));
     for (std::size_t i = 0; i < buf1.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(buf1.buf, i, stream)
@@ -346,7 +346,7 @@ TEMPLATE_LIST_TEST_CASE("Naive GPU element-wise loop with immediate works",
       out_buf.size,
       static_cast<Type>(1),
       out_buf.buf,
-      static_cast<const Type*>(in_buf.buf));
+      static_cast<Type const*>(in_buf.buf));
     for (std::size_t i = 0; i < in_buf.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(in_buf.buf, i, stream)
@@ -368,7 +368,7 @@ TEMPLATE_LIST_TEST_CASE("Naive GPU element-wise loop with immediate works",
       buf1.size,
       false,
       buf1.buf,
-      static_cast<const Type*>(buf2.buf));
+      static_cast<Type const*>(buf2.buf));
     for (std::size_t i = 0; i < buf1.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(buf1.buf, i, stream)
@@ -392,8 +392,8 @@ TEMPLATE_LIST_TEST_CASE("Naive GPU element-wise loop with immediate works",
       buf1.size,
       static_cast<Type>(1),
       out_buf.buf,
-      static_cast<const Type*>(buf1.buf),
-      static_cast<const Type*>(buf2.buf));
+      static_cast<Type const*>(buf1.buf),
+      static_cast<Type const*>(buf2.buf));
     for (std::size_t i = 0; i < buf1.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(buf1.buf, i, stream)
@@ -419,8 +419,8 @@ TEMPLATE_LIST_TEST_CASE("Naive GPU element-wise loop with immediate works",
       buf1.size,
       static_cast<Type>(1),
       out_buf.buf,
-      static_cast<const Type*>(buf1.buf),
-      static_cast<const Type*>(buf2.buf));
+      static_cast<Type const*>(buf1.buf),
+      static_cast<Type const*>(buf2.buf));
     for (std::size_t i = 0; i < buf1.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(buf1.buf, i, stream)
@@ -481,7 +481,7 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop works",
   {
     DeviceBuf<Type, Device::GPU> buf{32};
     buf.fill(static_cast<Type>(0));
-    const Type val = static_cast<Type>(42);
+    Type const val = static_cast<Type>(42);
     test_launch_vectorized_elementwise_loop<4, 4>(
       [val] H2_GPU_LAMBDA() { return val; }, stream, buf.size, buf.buf);
     for (std::size_t i = 0; i < buf.size; ++i)
@@ -515,7 +515,7 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop works",
       stream,
       out_buf.size,
       out_buf.buf,
-      static_cast<const Type*>(in_buf.buf));
+      static_cast<Type const*>(in_buf.buf));
     for (std::size_t i = 0; i < in_buf.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(in_buf.buf, i, stream)
@@ -536,7 +536,7 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop works",
       stream,
       buf1.size,
       buf1.buf,
-      static_cast<const Type*>(buf2.buf));
+      static_cast<Type const*>(buf2.buf));
     for (std::size_t i = 0; i < buf1.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(buf1.buf, i, stream)
@@ -557,8 +557,8 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop works",
       stream,
       buf1.size,
       out_buf.buf,
-      static_cast<const Type*>(buf1.buf),
-      static_cast<const Type*>(buf2.buf));
+      static_cast<Type const*>(buf1.buf),
+      static_cast<Type const*>(buf2.buf));
     for (std::size_t i = 0; i < buf1.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(buf1.buf, i, stream)
@@ -581,8 +581,8 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop works",
       stream,
       buf1.size,
       out_buf.buf,
-      static_cast<const Type*>(buf1.buf),
-      static_cast<const Type*>(buf2.buf));
+      static_cast<Type const*>(buf1.buf),
+      static_cast<Type const*>(buf2.buf));
     for (std::size_t i = 0; i < buf1.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(buf1.buf, i, stream)
@@ -604,7 +604,7 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop works",
       stream,
       out_buf.size,
       out_buf.buf,
-      static_cast<const Type*>(in_buf.buf));
+      static_cast<Type const*>(in_buf.buf));
     for (std::size_t i = 0; i < in_buf.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(in_buf.buf, i, stream)
@@ -624,7 +624,7 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop works",
       stream,
       out_buf.size,
       out_buf.buf,
-      static_cast<const Type*>(in_buf.buf));
+      static_cast<Type const*>(in_buf.buf));
     for (std::size_t i = 0; i < in_buf.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(in_buf.buf, i, stream)
@@ -644,7 +644,7 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop works",
       stream,
       out_buf.size,
       out_buf.buf,
-      static_cast<const Type*>(in_buf.buf));
+      static_cast<Type const*>(in_buf.buf));
     for (std::size_t i = 0; i < in_buf.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(in_buf.buf, i, stream)
@@ -664,7 +664,7 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop works",
       stream,
       out_buf.size,
       out_buf.buf,
-      static_cast<const Type*>(in_buf.buf));
+      static_cast<Type const*>(in_buf.buf));
     for (std::size_t i = 0; i < in_buf.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(in_buf.buf, i, stream)
@@ -684,7 +684,7 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop works",
       stream,
       out_buf.size,
       out_buf.buf,
-      static_cast<const Type*>(in_buf.buf));
+      static_cast<Type const*>(in_buf.buf));
     for (std::size_t i = 0; i < in_buf.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(in_buf.buf, i, stream)
@@ -731,7 +731,7 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop with immediate works",
       out_buf.size,
       static_cast<Type>(1),
       out_buf.buf,
-      static_cast<const Type*>(in_buf.buf));
+      static_cast<Type const*>(in_buf.buf));
     for (std::size_t i = 0; i < in_buf.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(in_buf.buf, i, stream)
@@ -753,7 +753,7 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop with immediate works",
       buf1.size,
       false,
       buf1.buf,
-      static_cast<const Type*>(buf2.buf));
+      static_cast<Type const*>(buf2.buf));
     for (std::size_t i = 0; i < buf1.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(buf1.buf, i, stream)
@@ -777,8 +777,8 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop with immediate works",
       buf1.size,
       static_cast<Type>(1),
       out_buf.buf,
-      static_cast<const Type*>(buf1.buf),
-      static_cast<const Type*>(buf2.buf));
+      static_cast<Type const*>(buf1.buf),
+      static_cast<Type const*>(buf2.buf));
     for (std::size_t i = 0; i < buf1.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(buf1.buf, i, stream)
@@ -804,8 +804,8 @@ TEMPLATE_LIST_TEST_CASE("Vectorized GPU element-wise loop with immediate works",
       buf1.size,
       static_cast<Type>(1),
       out_buf.buf,
-      static_cast<const Type*>(buf1.buf),
-      static_cast<const Type*>(buf2.buf));
+      static_cast<Type const*>(buf1.buf),
+      static_cast<Type const*>(buf2.buf));
     for (std::size_t i = 0; i < buf1.size; ++i)
     {
       REQUIRE(read_ele<Device::GPU>(buf1.buf, i, stream)

@@ -50,8 +50,8 @@ struct GetType<BenchmarkDataType::HALF>
 #endif  // H2_HAS_HALF
 
 const unsigned input_tensor_seed = 0;
-const unsigned filter_tensor_seed = 1;
-const unsigned d_output_tensor_seed = 2;
+unsigned const filter_tensor_seed = 1;
+unsigned const d_output_tensor_seed = 2;
 
 template <typename REAL>
 struct Initializer
@@ -65,10 +65,10 @@ struct Initializer
     }
   }
 
-  REAL get_initial_value(const IndexVector& indices, const Shape& dims)
+  REAL get_initial_value(IndexVector const& indices, Shape const& dims)
   {
-    const auto x = indices.reduce_sum();
-    const double rand1 = (double) (m_rands[x % num_rands]) / RAND_MAX;
+    auto const x = indices.reduce_sum();
+    double const rand1 = (double) (m_rands[x % num_rands]) / RAND_MAX;
     size_t offset = 0;
     {  // offset = w_idx + h_idx * w_dim + c_idx * w_dim * h_dim + ...;
       size_t d_prod = 1;
@@ -78,13 +78,13 @@ struct Initializer
         d_prod *= *(dims.begin() + std::distance(indices.begin(), i));
       }
     }
-    const double rand2 = (double) (m_rands[offset % num_rands]) / RAND_MAX;
+    double const rand2 = (double) (m_rands[offset % num_rands]) / RAND_MAX;
     const REAL v = (rand1 + rand2) / 2;
     return v;
   }
 
-  REAL get_initial_value(const std::vector<size_t> indices,
-                         const std::vector<size_t> dims)
+  REAL get_initial_value(std::vector<size_t> const indices,
+                         std::vector<size_t> const dims)
   {
     return get_initial_value(IndexVector(indices), Shape(dims));
   }
@@ -94,7 +94,7 @@ struct Initializer
 };
 
 template <typename T>
-inline T get_median(const std::vector<T>& v)
+inline T get_median(std::vector<T> const& v)
 {
   std::vector<T> tmp = v;
   int mean_idx = tmp.size() / 2 - 1 + tmp.size() % 2;
@@ -103,19 +103,19 @@ inline T get_median(const std::vector<T>& v)
 }
 
 template <typename T>
-inline T get_mean(const std::vector<T>& v)
+inline T get_mean(std::vector<T> const& v)
 {
   return std::accumulate(v.begin(), v.end(), 0.0) / v.size();
 }
 
 template <typename T>
-inline T get_min(const std::vector<T>& v)
+inline T get_min(std::vector<T> const& v)
 {
   return *std::min_element(v.begin(), v.end());
 }
 
 template <typename T>
-inline T get_max(const std::vector<T>& v)
+inline T get_max(std::vector<T> const& v)
 {
   return *std::max_element(v.begin(), v.end());
 }
@@ -251,7 +251,7 @@ public:
       global_stat(false),
       deconv(false)
   {}
-  BenchmarkConfig(const cxxopts::ParseResult& pr, const bool is_conv)
+  BenchmarkConfig(cxxopts::ParseResult const& pr, bool const is_conv)
     : BenchmarkConfig()
   {
     // The following arguments are required.
@@ -260,7 +260,7 @@ public:
     output_file = pr["output-file"].as<std::string>();
     substitute_nd_argument(i_n, i_c, i_s, pr["image-size"].as<std::string>());
     {
-      const auto s = pr["filter-size"].as<std::string>();
+      auto const s = pr["filter-size"].as<std::string>();
       if (is_conv)
         substitute_nd_argument(f_k, f_s, s);
       else
@@ -483,7 +483,7 @@ public:
   // Check if the numbers of spatial dimensions are correct.
   void assert_num_spatial_dims() const
   {
-    const std::vector<const int_vector*> svecs = {
+    std::vector<int_vector const*> const svecs = {
       &i_s, &f_s, &p_s, &pads, &strides, &dilations};
     for (auto i : svecs)
       assert_eq((unsigned int) NSD, i->size());
@@ -498,7 +498,7 @@ public:
 
   std::ostream& print(std::ostream& os) const
   {
-    const auto reverse_and_join_array = [](const int_vector v) {
+    auto const reverse_and_join_array = [](int_vector const v) {
       return distconv::util::join_xd_array(distconv::util::reverse(v));
     };
 
@@ -526,7 +526,7 @@ public:
 
   std::ostream& print_as_row(std::ostream& os) const
   {
-    const auto reverse_and_join_array = [](const int_vector v) {
+    auto const reverse_and_join_array = [](int_vector const v) {
       return distconv::util::join_spaced_array(distconv::util::reverse(v));
     };
 
@@ -545,18 +545,18 @@ public:
   // Parse `arg` as a space-separated int vector and substitute the
   // elements to `spatials`.
   static void substitute_nd_argument(int_vector& spatials,
-                                     const std::string arg)
+                                     std::string const arg)
   {
-    const int_vector size = distconv::util::split_spaced_array<int>(arg);
+    int_vector const size = distconv::util::split_spaced_array<int>(arg);
     spatials = distconv::util::reverse(int_vector(size.begin(), size.end()));
   }
 
   // Parse `arg` as a space-separated int vector and substitute the
   // first element to `k`, and the others to `spatials`.
   static void
-  substitute_nd_argument(int& k, int_vector& spatials, const std::string arg)
+  substitute_nd_argument(int& k, int_vector& spatials, std::string const arg)
   {
-    const int_vector size = distconv::util::split_spaced_array<int>(arg);
+    int_vector const size = distconv::util::split_spaced_array<int>(arg);
     assert_always(size.size() > 1);
     k = size[0];
     spatials =
@@ -568,9 +568,9 @@ public:
   static void substitute_nd_argument(int& n,
                                      int& c,
                                      int_vector& spatials,
-                                     const std::string arg)
+                                     std::string const arg)
   {
-    const int_vector size = distconv::util::split_spaced_array<int>(arg);
+    int_vector const size = distconv::util::split_spaced_array<int>(arg);
     assert_always(size.size() > 2);
     n = size[0];
     c = size[1];
@@ -587,17 +587,17 @@ std::ostream& operator<<(std::ostream& os, BenchmarkConfig<NSD>& cfg)
 
 template <int NSD>
 inline BenchmarkConfig<NSD>
-process_opt(int argc, char* argv[], int pid, const bool is_conv)
+process_opt(int argc, char* argv[], int pid, bool const is_conv)
 {
   // Human-readable notations of image/filter shapes
-  const std::string shape_notation =
+  std::string const shape_notation =
     std::string(" <N,C") + (NSD == 3 ? ",D" : "") + ",H,W>";
-  const std::string filter_shape_notation =
+  std::string const filter_shape_notation =
     std::string(" <K") + (NSD == 3 ? ",D" : "") + ",H,W>";
 
   // Return a comma-separated `{[n], [c], s, ..., s}` vector.
   // Each of `n` and `c` is available only if it is a positive.
-  const auto create_default_size = [](const int n, const int c, const int s) {
+  auto const create_default_size = [](int const n, int const c, int const s) {
     int_vector v;
     if (n > 0)
       v.push_back(n);
@@ -608,11 +608,11 @@ process_opt(int argc, char* argv[], int pid, const bool is_conv)
     return distconv::util::join_array(v, ",");
   };
 
-  const auto default_image_size = create_default_size(8, 16, 32);
-  const auto default_filter_size = create_default_size(0, is_conv ? 16 : 0, 3);
-  const auto default_proc_size = create_default_size(1, 1, 1);
-  const auto default_strides = create_default_size(0, 0, 1);
-  const auto default_dilations = create_default_size(0, 0, 1);
+  auto const default_image_size = create_default_size(8, 16, 32);
+  auto const default_filter_size = create_default_size(0, is_conv ? 16 : 0, 3);
+  auto const default_proc_size = create_default_size(1, 1, 1);
+  auto const default_strides = create_default_size(0, 0, 1);
+  auto const default_dilations = create_default_size(0, 0, 1);
 
   cxxopts::Options cmd_opts(argv[0], "Distributed Convolution Benchmark");
   cmd_opts.add_options()(
@@ -729,8 +729,8 @@ int parse_num_dims(int argc, char* argv[])
     "num-dims",
     "Number of spatial dimensions",
     cxxopts::value<int>()->default_value("2"));
-  const auto result = cmd_opts.parse(argc, argv);
-  const int nsd = result["num-dims"].as<int>();
+  auto const result = cmd_opts.parse(argc, argv);
+  int const nsd = result["num-dims"].as<int>();
   return nsd;
 }
 

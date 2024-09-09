@@ -144,7 +144,7 @@ struct TypeInfo
   /** Get the size of the type. */
   inline std::size_t get_size() const noexcept { return type_size; }
   /** Get the associated type_info. */
-  inline const std::type_info* get_type_info() const noexcept
+  inline std::type_info const* get_type_info() const noexcept
   {
     return type_info;
   }
@@ -152,7 +152,7 @@ struct TypeInfo
 private:
   TypeInfo(TokenType token_,
            std::size_t type_size_,
-           const std::type_info* type_info_)
+           std::type_info const* type_info_)
     : token(token_), type_size(type_size_), type_info(type_info_)
   {
     H2_ASSERT_DEBUG(token_ <= max_token,
@@ -167,23 +167,23 @@ private:
   /** Size of the type (i.e., `sizeof(T)`). */
   std::size_t type_size;
   /** Pointer to the `std::type_info` associated with the type. */
-  const std::type_info* type_info;
+  std::type_info const* type_info;
 };
 
 /** Equality for TypeInfo. */
-inline bool operator==(const TypeInfo& t1, const TypeInfo& t2)
+inline bool operator==(TypeInfo const& t1, TypeInfo const& t2)
 {
   return *t1.get_type_info() == *t2.get_type_info();
 }
 
 /** Inequality for TypeInfo. */
-inline bool operator!=(const TypeInfo& t1, const TypeInfo& t2)
+inline bool operator!=(TypeInfo const& t1, TypeInfo const& t2)
 {
   return *t1.get_type_info() != *t2.get_type_info();
 }
 
 /** Support printing TypeInfo. */
-inline std::ostream& operator<<(std::ostream& os, const TypeInfo& tinfo)
+inline std::ostream& operator<<(std::ostream& os, TypeInfo const& tinfo)
 {
   os << "TypeInfo(" << tinfo.get_type_info()->name()
      << ", token=" << tinfo.get_token() << ")";
@@ -205,7 +205,7 @@ inline TypeInfo get_h2_type()
 }
 
 /** True if a type is a native H2 compute type. */
-inline bool is_h2_compute_type(const TypeInfo& ti)
+inline bool is_h2_compute_type(TypeInfo const& ti)
 {
   return ti.get_token() < NumComputeTypes;
 }
@@ -215,7 +215,7 @@ inline bool is_h2_compute_type(const TypeInfo& ti)
  *
  * This is any type that has a token other than the max token.
  */
-inline bool is_compute_type(const TypeInfo& ti)
+inline bool is_compute_type(TypeInfo const& ti)
 {
   return ti.get_token() < TypeInfo::max_token;
 }

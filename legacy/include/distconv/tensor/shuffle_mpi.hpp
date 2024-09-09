@@ -30,8 +30,8 @@ class TensorMPIShuffleHelper
   using StreamType = typename Stream<Allocator>::type;
 
 public:
-  TensorMPIShuffleHelper(const TensorType& src_tensor,
-                         const TensorType& dst_tensor,
+  TensorMPIShuffleHelper(TensorType const& src_tensor,
+                         TensorType const& dst_tensor,
                          DataType* src_buf = nullptr,
                          DataType* dst_buf = nullptr)
     : m_src_local_shape(src_tensor.get_local_shape()),
@@ -69,27 +69,27 @@ public:
 
   virtual ~TensorMPIShuffleHelper() = default;
 
-  static size_t get_buf_size(const TensorType& tensor)
+  static size_t get_buf_size(TensorType const& tensor)
   {
     return get_buf_size(tensor.get_local_shape());
   }
 
-  static size_t get_buf_size(const Shape& tensor_local_shape)
+  static size_t get_buf_size(Shape const& tensor_local_shape)
   {
     return tensor_local_shape.get_size() * sizeof(DataType);
   }
 
-  const Shape m_src_local_shape;
-  const Shape m_dst_local_shape;
-  const IndexVector m_src_strides;
-  const IndexVector m_dst_strides;
-  const Shape m_src_locale_shape;
-  const Shape m_dst_locale_shape;
-  const IntVector m_src_overlap;
-  const IntVector m_dst_overlap;
-  const LocaleMPI m_loc;
-  const bool m_src_split_root;
-  const bool m_dst_split_root;
+  Shape const m_src_local_shape;
+  Shape const m_dst_local_shape;
+  IndexVector const m_src_strides;
+  IndexVector const m_dst_strides;
+  Shape const m_src_locale_shape;
+  Shape const m_dst_locale_shape;
+  IntVector const m_src_overlap;
+  IntVector const m_dst_overlap;
+  LocaleMPI const m_loc;
+  bool const m_src_split_root;
+  bool const m_dst_split_root;
 
   // Offsets in src tensor for each dst locale. Used in
   // packing. Linearized to a 1D array.
@@ -111,12 +111,12 @@ public:
 
   int get_num_peers() const { return m_peers.size(); }
 
-  void setup_rank_limits(const TensorType& src_tensor,
-                         const TensorType& dst_tensor,
+  void setup_rank_limits(TensorType const& src_tensor,
+                         TensorType const& dst_tensor,
                          std::vector<int>& rank_limits)
   {
     std::vector<int> host_buf;
-    const int num_dims = src_tensor.get_num_dims();
+    int const num_dims = src_tensor.get_num_dims();
     for (int i = 0; i < num_dims; ++i)
     {
       int dst_locale_dim = dst_tensor.get_locale_shape()[i];
@@ -158,11 +158,11 @@ public:
     rank_limits = host_buf;
   }
 
-  void optimize_find_destination(const TensorType& src_tensor,
-                                 const TensorType& dst_tensor,
+  void optimize_find_destination(TensorType const& src_tensor,
+                                 TensorType const& dst_tensor,
                                  std::vector<int>& rank_limits)
   {
-    const int num_dims = src_tensor.get_num_dims();
+    int const num_dims = src_tensor.get_num_dims();
     int rank_limits_idx = 0;
     for (int i = 0; i < num_dims; ++i)
     {
@@ -182,7 +182,7 @@ public:
       // At least 3 entries are needed and this is probably only
       // meaningful for a relatively large dimension. Skip dimension
       // if it's shorter.
-      const int opt_dim_threshold = 16;
+      int const opt_dim_threshold = 16;
       if (evenly_partitioned && dst_locale_dim >= opt_dim_threshold)
       {
         // This dimension is evenly partitioned and has enough space to
@@ -202,7 +202,7 @@ public:
     }
   }
 
-  void setup_displs(const TensorType& src_tensor, const TensorType& dst_tensor)
+  void setup_displs(TensorType const& src_tensor, TensorType const& dst_tensor)
   {
     int num_ranks = m_loc.get_size();
 
@@ -211,12 +211,12 @@ public:
     m_send_displs = std::vector<int>(num_ranks);
     m_recv_displs = std::vector<int>(num_ranks);
 
-    const Region src_local_region(src_tensor.get_global_index(),
+    Region const src_local_region(src_tensor.get_global_index(),
                                   m_src_local_shape);
-    const Region dst_local_region(dst_tensor.get_global_index(),
+    Region const dst_local_region(dst_tensor.get_global_index(),
                                   m_dst_local_shape);
-    const auto& loc_shape_dst = m_dst_locale_shape;
-    const auto& loc_shape_src = m_src_locale_shape;
+    auto const& loc_shape_dst = m_dst_locale_shape;
+    auto const& loc_shape_src = m_src_locale_shape;
     int cur_send_displs = 0;
     int cur_recv_displs = 0;
 
@@ -234,7 +234,7 @@ public:
       m_send_displs[pid] = cur_send_displs;
       m_recv_displs[pid] = cur_recv_displs;
       // send_counts & send_displs
-      const auto& dst_pid_idx = loc_shape_dst.get_index(pid);
+      auto const& dst_pid_idx = loc_shape_dst.get_index(pid);
       if (src_split_root
           && dst_tensor.get_distribution().is_split_root(dst_pid_idx))
       {
@@ -256,7 +256,7 @@ public:
       }
       cur_send_displs += m_send_counts[pid];
       // recv_counts & recv_displs
-      const auto src_pid_idx = loc_shape_src.get_index(pid);
+      auto const src_pid_idx = loc_shape_src.get_index(pid);
       if (dst_split_root
           && src_tensor.get_distribution().is_split_root(src_pid_idx))
       {
@@ -329,7 +329,7 @@ public:
     }
   }
 
-  const Shape& get_src_local_shape(bool is_forward) const
+  Shape const& get_src_local_shape(bool is_forward) const
   {
     if (is_forward)
     {
@@ -341,7 +341,7 @@ public:
     }
   }
 
-  const Shape& get_dst_local_shape(bool is_forward) const
+  Shape const& get_dst_local_shape(bool is_forward) const
   {
     if (is_forward)
     {
@@ -353,7 +353,7 @@ public:
     }
   }
 
-  const IndexVector& get_src_strides(bool is_forward) const
+  IndexVector const& get_src_strides(bool is_forward) const
   {
     if (is_forward)
     {
@@ -365,7 +365,7 @@ public:
     }
   }
 
-  const IndexVector& get_dst_strides(bool is_forward) const
+  IndexVector const& get_dst_strides(bool is_forward) const
   {
     if (is_forward)
     {
@@ -377,7 +377,7 @@ public:
     }
   }
 
-  const Shape& get_src_locale_shape(bool is_forward) const
+  Shape const& get_src_locale_shape(bool is_forward) const
   {
     if (is_forward)
     {
@@ -389,7 +389,7 @@ public:
     }
   }
 
-  const Shape& get_dst_locale_shape(bool is_forward) const
+  Shape const& get_dst_locale_shape(bool is_forward) const
   {
     if (is_forward)
     {
@@ -401,7 +401,7 @@ public:
     }
   }
 
-  const IntVector& get_src_overlap(bool is_forward) const
+  IntVector const& get_src_overlap(bool is_forward) const
   {
     if (is_forward)
     {
@@ -413,7 +413,7 @@ public:
     }
   }
 
-  const IntVector& get_dst_overlap(bool is_forward) const
+  IntVector const& get_dst_overlap(bool is_forward) const
   {
     if (is_forward)
     {
@@ -434,29 +434,29 @@ public:
     return is_forward ? m_dst_split_root : m_src_split_root;
   }
 
-  const int* get_rank_limits_fwd(bool is_forward) const
+  int const* get_rank_limits_fwd(bool is_forward) const
   {
     return is_forward ? m_rank_limits_fwd.data() : m_rank_limits_bwd.data();
   }
-  const int* get_rank_limits_bwd(bool is_forward) const
+  int const* get_rank_limits_bwd(bool is_forward) const
   {
     return is_forward ? m_rank_limits_bwd.data() : m_rank_limits_fwd.data();
   }
 
-  const int* get_send_counts(bool is_forward) const
+  int const* get_send_counts(bool is_forward) const
   {
     return is_forward ? m_send_counts.data() : m_recv_counts.data();
   }
-  const int* get_recv_counts(bool is_forward) const
+  int const* get_recv_counts(bool is_forward) const
   {
     return is_forward ? m_recv_counts.data() : m_send_counts.data();
   }
 
-  const int* get_send_displs(bool is_forward) const
+  int const* get_send_displs(bool is_forward) const
   {
     return is_forward ? m_send_displs.data() : m_recv_displs.data();
   }
-  const int* get_recv_displs(bool is_forward) const
+  int const* get_recv_displs(bool is_forward) const
   {
     return is_forward ? m_recv_displs.data() : m_send_displs.data();
   }
@@ -477,8 +477,8 @@ protected:
   static constexpr StreamType default_stream = Stream<Allocator>::default_value;
 
 public:
-  TensorMPIShuffler(const TensorType& src_tensor,
-                    const TensorType& dst_tensor,
+  TensorMPIShuffler(TensorType const& src_tensor,
+                    TensorType const& dst_tensor,
                     DataType* src_buf = nullptr,
                     DataType* dst_buf = nullptr)
     : m_helper(src_tensor, dst_tensor, src_buf, dst_buf)
@@ -490,21 +490,21 @@ public:
 
   virtual ~TensorMPIShuffler() = default;
 
-  void shuffle_forward(const DataType* src,
+  void shuffle_forward(DataType const* src,
                        DataType* dst,
                        StreamType stream = default_stream)
   {
     shuffle(src, dst, stream, true);
   }
 
-  void shuffle_backward(const DataType* src,
+  void shuffle_backward(DataType const* src,
                         DataType* dst,
                         StreamType stream = default_stream)
   {
     shuffle(src, dst, stream, false);
   }
 
-  static size_t get_buf_size(const TensorType& tensor)
+  static size_t get_buf_size(TensorType const& tensor)
   {
     return internal::TensorMPIShuffleHelper<DataType, Allocator>::get_buf_size(
       tensor);
@@ -515,9 +515,9 @@ protected:
   bool m_fwd_sample_to_spatial;
   bool m_bwd_sample_to_spatial;
 
-  bool is_sample_to_spatial(const TensorType& src, const TensorType& dst)
+  bool is_sample_to_spatial(TensorType const& src, TensorType const& dst)
   {
-    const int nd = src.get_num_dims();
+    int const nd = src.get_num_dims();
 
     // Only 4D and 5D tensors
     if (nd != 4 && nd != 5)
@@ -559,7 +559,7 @@ protected:
     return is_forward ? m_fwd_sample_to_spatial : m_bwd_sample_to_spatial;
   }
 
-  virtual void shuffle(const DataType* src,
+  virtual void shuffle(DataType const* src,
                        DataType* dst,
                        StreamType stream,
                        bool is_forward)
@@ -577,10 +577,10 @@ protected:
       assert_always(m_helper.get_dst_overlap(is_forward).reduce_sum() == 0);
     }
 
-    const int* rank_limits_fwd = m_helper.get_rank_limits_fwd(is_forward);
-    const int* rank_limits_bwd = m_helper.get_rank_limits_bwd(is_forward);
-    const int* send_displs = m_helper.get_send_displs(is_forward);
-    const int* recv_displs = m_helper.get_recv_displs(is_forward);
+    int const* rank_limits_fwd = m_helper.get_rank_limits_fwd(is_forward);
+    int const* rank_limits_bwd = m_helper.get_rank_limits_bwd(is_forward);
+    int const* send_displs = m_helper.get_send_displs(is_forward);
+    int const* recv_displs = m_helper.get_recv_displs(is_forward);
 
     auto send_buf = m_helper.get_src_buf(
       is_forward,
@@ -696,7 +696,7 @@ protected:
     util::profile_pop();
   }
 
-  virtual void transfer(const std::shared_ptr<DataType>& send_buf,
+  virtual void transfer(std::shared_ptr<DataType> const& send_buf,
                         std::shared_ptr<DataType>& recv_buf,
                         bool is_forward)
   {
@@ -742,7 +742,7 @@ protected:
     int rank_dim_offset = 1;
     size_t local_linear_offset = 1;
     int rank_limits_idx = 0;
-    const int ND = src_local_idx.length();
+    int const ND = src_local_idx.length();
     for (int i = 0; i < ND; ++i)
     {
       // Locate the i-th dim index of the destination rank
@@ -799,25 +799,25 @@ protected:
   }
 
   // NOTE: packed tensor is assumed
-  void pack(const DataType* src,
-            const Shape& src_local_shape,
-            const IndexVector& src_strides,
-            const Shape& dst_locale_shape,
-            const int* rank_limits,
+  void pack(DataType const* src,
+            Shape const& src_local_shape,
+            IndexVector const& src_strides,
+            Shape const& dst_locale_shape,
+            int const* rank_limits,
             DataType* buf,
-            const int* displs)
+            int const* displs)
   {
     if (src_local_shape.size() == 0)
       return;
 
-    const size_t size = src_local_shape.size();
-    const size_t gid = 0;
-    const size_t num_threads = 1;
+    size_t const size = src_local_shape.size();
+    size_t const gid = 0;
+    size_t const num_threads = 1;
 
     for (size_t offset = gid; offset < size; offset += num_threads)
     {
       DataType v = src[offset];
-      const auto idx = src_local_shape.get_index(offset);
+      auto const idx = src_local_shape.get_index(offset);
       int rank;
       size_t packed_buf_offset;
       find_destination(idx,
@@ -830,10 +830,10 @@ protected:
     }
   }
 
-  void pack_sample_to_spatial4(const DataType* src,
-                               const Shape& src_local_shape,
-                               const Shape& dst_local_shape,
-                               const Shape& dst_locale_shape,
+  void pack_sample_to_spatial4(DataType const* src,
+                               Shape const& src_local_shape,
+                               Shape const& dst_local_shape,
+                               Shape const& dst_locale_shape,
                                DataType* buf)
   {
     constexpr int ND = 4;
@@ -873,7 +873,7 @@ protected:
       dst_locale_stride *= dst_locale_shape[i];
     }
 
-    const int linear_len = dst_local_shape[0];
+    int const linear_len = dst_local_shape[0];
     constexpr int p3 = 0;
 #pragma omp parallel for collapse(5)
     for (int i3 = 0; i3 < (int) dst_local_shape[3]; ++i3)
@@ -910,10 +910,10 @@ protected:
     delete[] dst_offsets;
   }
 
-  void pack_sample_to_spatial5(const DataType* src,
-                               const Shape& src_local_shape,
-                               const Shape& dst_local_shape,
-                               const Shape& dst_locale_shape,
+  void pack_sample_to_spatial5(DataType const* src,
+                               Shape const& src_local_shape,
+                               Shape const& dst_local_shape,
+                               Shape const& dst_locale_shape,
                                DataType* buf)
   {
     constexpr int ND = 5;
@@ -958,7 +958,7 @@ protected:
       dst_locale_stride *= dst_locale_shape[i];
     }
 
-    const int linear_len = dst_local_shape[0];
+    int const linear_len = dst_local_shape[0];
     constexpr int p4 = 0;
 #pragma omp parallel for collapse(5)
     for (int i4 = 0; i4 < (int) dst_local_shape[4]; ++i4)
@@ -1003,23 +1003,23 @@ protected:
   }
 
   void unpack(DataType* dst,
-              const Shape& dst_local_shape,
-              const IndexVector& dst_strides,
-              const Shape& src_locale_shape,
-              const int* rank_limits,
-              const DataType* buf,
-              const int* displs)
+              Shape const& dst_local_shape,
+              IndexVector const& dst_strides,
+              Shape const& src_locale_shape,
+              int const* rank_limits,
+              DataType const* buf,
+              int const* displs)
   {
     if (dst_local_shape.size() == 0)
       return;
 
-    const size_t size = dst_local_shape.size();
-    const size_t gid = 0;
-    const size_t num_threads = 1;
+    size_t const size = dst_local_shape.size();
+    size_t const gid = 0;
+    size_t const num_threads = 1;
 
     for (size_t offset = gid; offset < size; offset += num_threads)
     {
-      const auto idx = dst_local_shape.get_index(offset);
+      auto const idx = dst_local_shape.get_index(offset);
       int rank;
       size_t packed_buf_offset;
       find_destination(idx,
@@ -1033,8 +1033,8 @@ protected:
   }
 
   void unpack_sample_to_spatial(DataType* dst,
-                                const Shape& dst_local_shape,
-                                const DataType* buf)
+                                Shape const& dst_local_shape,
+                                DataType const* buf)
   {
     if (dst_local_shape.size() == 0)
       return;
@@ -1042,10 +1042,10 @@ protected:
   }
 
   void unpack_sample_to_spatial_halo4(DataType* dst,
-                                      const Shape& dst_local_shape,
-                                      const IndexVector& dst_strides,
-                                      const DataType* buf,
-                                      const IntVector& dst_overlap)
+                                      Shape const& dst_local_shape,
+                                      IndexVector const& dst_strides,
+                                      DataType const* buf,
+                                      IntVector const& dst_overlap)
   {
     constexpr int ND = 4;
     if (dst_local_shape.size() == 0)
@@ -1060,7 +1060,7 @@ protected:
       buf_stride *= dst_local_shape[i];
     }
 
-    const int linear_len = dst_local_shape[0];
+    int const linear_len = dst_local_shape[0];
 #pragma omp parallel for collapse(3)
     for (int i3 = 0; i3 < (int) dst_local_shape[3]; ++i3)
     {
@@ -1079,10 +1079,10 @@ protected:
   }
 
   void unpack_sample_to_spatial_halo5(DataType* dst,
-                                      const Shape& dst_local_shape,
-                                      const IndexVector& dst_strides,
-                                      const DataType* buf,
-                                      const IntVector& dst_overlap)
+                                      Shape const& dst_local_shape,
+                                      IndexVector const& dst_strides,
+                                      DataType const* buf,
+                                      IntVector const& dst_overlap)
   {
     constexpr int ND = 4;
     if (dst_local_shape.size() == 0)
@@ -1097,7 +1097,7 @@ protected:
       buf_stride *= dst_local_shape[i];
     }
 
-    const int linear_len = dst_local_shape[0];
+    int const linear_len = dst_local_shape[0];
 #pragma omp parallel for collapse(4)
     for (int i4 = 0; i4 < (int) dst_local_shape[4]; ++i4)
     {

@@ -31,7 +31,7 @@ struct HostShadow<Tensor<DataType, LocaleMPI, CUDAAllocator>>
 
   HostShadow() = delete;
 
-  HostShadow(const TensorType& tensor)
+  HostShadow(TensorType const& tensor)
     : m_tensor(tensor),
       m_shadow(tensor.get_shape(),
                tensor.get_locale(),
@@ -42,7 +42,7 @@ struct HostShadow<Tensor<DataType, LocaleMPI, CUDAAllocator>>
     assert0(m_shadow.allocate());
   }
 
-  const ShadowTensorType& get_host_shadow() const { return m_shadow; }
+  ShadowTensorType const& get_host_shadow() const { return m_shadow; }
 
   ShadowTensorType& get_host_shadow() { return m_shadow; }
 
@@ -71,9 +71,9 @@ struct HostShadow<Tensor<DataType, LocaleMPI, CUDAHostPooledAllocator>>
 
   HostShadow() = delete;
 
-  HostShadow(const TensorType& tensor) : m_tensor(tensor) {}
+  HostShadow(TensorType const& tensor) : m_tensor(tensor) {}
 
-  const ShadowTensorType& get_host_shadow() const { return m_tensor; }
+  ShadowTensorType const& get_host_shadow() const { return m_tensor; }
 
   ShadowTensorType& get_host_shadow() { return m_tensor; }
 
@@ -89,21 +89,21 @@ template <typename DataType, typename StreamType>
 struct CopyLocalFunctor3D<DataType, CUDAAllocator, CUDAAllocator, StreamType>
 {
   int operator()(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dst,
-                 const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src,
+                 Tensor<DataType, LocaleMPI, CUDAAllocator> const& t_src,
                  StreamType stream)
   {
     // Use cudaMemcpy3D
-    const int nd = t_src.get_num_dims();
+    int const nd = t_src.get_num_dims();
     assert_always(nd >= 3);
     util::MPIPrintStreamDebug()
       << "CopyLocal from " << t_src << " to " << t_dst;
-    const auto& local_shape = t_src.get_local_shape();
+    auto const& local_shape = t_src.get_local_shape();
     assert_eq(local_shape, t_dst.get_local_shape());
     auto tr_shape = local_shape;
     tr_shape[0] = 1;
     tr_shape[1] = 1;
     tr_shape[2] = 1;
-    const size_t num_chunks = tr_shape.get_size();
+    size_t const num_chunks = tr_shape.get_size();
     int src_offset = 0;
     int dst_offset = 0;
     for (int i = 3; i < nd; ++i)
@@ -117,7 +117,7 @@ struct CopyLocalFunctor3D<DataType, CUDAAllocator, CUDAAllocator, StreamType>
       local_shape[0] * sizeof(DataType), local_shape[1], local_shape[2]);
     // cudaPitchedPtr does not have const void *
     p.srcPtr = GPU_MAKE_GPU_PITCHED_PTR(
-      const_cast<void*>(static_cast<const void*>(t_src.get_const_buffer())),
+      const_cast<void*>(static_cast<void const*>(t_src.get_const_buffer())),
       t_src.get_pitch() * sizeof(DataType),
       t_src.get_local_real_shape()[0],
       t_src.get_local_real_shape()[1]);
@@ -163,12 +163,12 @@ protected:
 
 template <typename DataType1, typename DataType2>
 int Cast(Tensor<DataType1, LocaleMPI, CUDAAllocator>& t_dest,
-         const Tensor<DataType2, LocaleMPI, CUDAAllocator>& t_src,
+         Tensor<DataType2, LocaleMPI, CUDAAllocator> const& t_src,
          h2::gpu::DeviceStream s);
 
 template <typename DataType>
 inline int Cast(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest,
-                const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src,
+                Tensor<DataType, LocaleMPI, CUDAAllocator> const& t_src,
                 h2::gpu::DeviceStream s)
 {
   return Copy(t_dest, t_src, s);
@@ -176,21 +176,21 @@ inline int Cast(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest,
 
 template <typename DataType1, typename DataType2>
 int CastScaleBias(Tensor<DataType1, LocaleMPI, CUDAAllocator>& t_dest,
-                  const Tensor<DataType2, LocaleMPI, CUDAAllocator>& t_src,
-                  const DataType1 alpha,
-                  const DataType1 beta,
+                  Tensor<DataType2, LocaleMPI, CUDAAllocator> const& t_src,
+                  DataType1 const alpha,
+                  DataType1 const beta,
                   h2::gpu::DeviceStream s);
 
 template <typename DataType>
 int Concatenate(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest,
-                const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src1,
-                const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src2,
+                Tensor<DataType, LocaleMPI, CUDAAllocator> const& t_src1,
+                Tensor<DataType, LocaleMPI, CUDAAllocator> const& t_src2,
                 h2::gpu::DeviceStream s);
 
 template <typename DataType>
 int Slice(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest1,
           Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest2,
-          const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src,
+          Tensor<DataType, LocaleMPI, CUDAAllocator> const& t_src,
           h2::gpu::DeviceStream s);
 
 }  // namespace tensor

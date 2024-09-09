@@ -50,7 +50,7 @@ struct ScaleFunctor
 template <typename DataType1, typename DataType2>
 struct CastFuctor
 {
-  __device__ void operator()(DataType1& x, const DataType2& y)
+  __device__ void operator()(DataType1& x, DataType2 const& y)
   {
     x = static_cast<DataType1>(y);
   }
@@ -59,10 +59,10 @@ struct CastFuctor
 template <typename DataType1, typename DataType2>
 struct CastScaleBiasFuctor
 {
-  CastScaleBiasFuctor(const DataType1 alpha, const DataType1 beta)
+  CastScaleBiasFuctor(DataType1 const alpha, DataType1 const beta)
     : m_alpba(alpha), m_beta(beta)
   {}
-  __device__ void operator()(DataType1& x, const DataType2& y)
+  __device__ void operator()(DataType1& x, DataType2 const& y)
   {
     x = m_alpba * static_cast<DataType1>(y) + m_beta;
   }
@@ -150,13 +150,13 @@ __device__ __forceinline__ void assign(DataType1& t1, DataType2& t2)
 {}
 
 template <typename DataType1, typename DataType2>
-__device__ __forceinline__ void assign(const DataType1& t1, DataType2& t2)
+__device__ __forceinline__ void assign(DataType1 const& t1, DataType2& t2)
 {
   t2 = t1;
 }
 
 template <typename DataType1, typename DataType2>
-__device__ __forceinline__ void assign(DataType1& t1, const DataType2& t2)
+__device__ __forceinline__ void assign(DataType1& t1, DataType2 const& t2)
 {
   t1 = t2;
 }
@@ -179,9 +179,9 @@ __global__ void concat_or_slice_kernel(DataType1* dst,
 {
   // NOTE: For simplicity, dimension of concat_dim is assumed to be traversed by
   // different thread blocks.
-  const int tid = threadIdx.x;
+  int const tid = threadIdx.x;
   int bid = blockIdx.x;
-  const int block_size = blockDim.x;
+  int const block_size = blockDim.x;
   DataType2* src = nullptr;
   Array<ND> src_strides;
   Array<ND> src_block_idx;
@@ -266,7 +266,7 @@ int ConcatenateOrSlice(
                       Tensor<DataType, LocaleMPI, CUDAAllocator>>::type& t_src2,
   h2::gpu::DeviceStream s)
 {
-  const int nd = t_dest.get_num_dims();
+  int const nd = t_dest.get_num_dims();
   int block_dim = 256;  // tunable
 
   int concat_dim = -1;
@@ -327,8 +327,8 @@ int ConcatenateOrSlice(
 
 template <typename DataType>
 int Concatenate(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest,
-                const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src1,
-                const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src2,
+                Tensor<DataType, LocaleMPI, CUDAAllocator> const& t_src1,
+                Tensor<DataType, LocaleMPI, CUDAAllocator> const& t_src2,
                 h2::gpu::DeviceStream s)
 {
   return internal::ConcatenateOrSlice<DataType, true>(
@@ -338,7 +338,7 @@ int Concatenate(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest,
 template <typename DataType>
 int Slice(Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest1,
           Tensor<DataType, LocaleMPI, CUDAAllocator>& t_dest2,
-          const Tensor<DataType, LocaleMPI, CUDAAllocator>& t_src,
+          Tensor<DataType, LocaleMPI, CUDAAllocator> const& t_src,
           h2::gpu::DeviceStream s)
 {
   return internal::ConcatenateOrSlice<DataType, false>(

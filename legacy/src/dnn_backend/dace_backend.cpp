@@ -24,7 +24,7 @@ typedef dacehandle_t (*initfunc_t)();
 
 template <class C, class T>
 std::basic_ostream<C, T>&
-write_s5d(std::basic_ostream<C, T>& os, const s5d& s, bool ignore_first = false)
+write_s5d(std::basic_ostream<C, T>& os, s5d const& s, bool ignore_first = false)
 {
   if (ignore_first)
   {
@@ -38,7 +38,7 @@ write_s5d(std::basic_ostream<C, T>& os, const s5d& s, bool ignore_first = false)
 
 template <class C, class T>
 std::basic_ostream<C, T>& write_convparams(std::basic_ostream<C, T>& os,
-                                           const ConvParams& p)
+                                           ConvParams const& p)
 {
   return os << p.pads[0] << '_' << p.pads[1] << '_' << p.pads[2] << '_'
             << p.strides[0] << '_' << p.strides[1] << '_' << p.strides[2] << '_'
@@ -49,7 +49,7 @@ std::basic_ostream<C, T>& write_convparams(std::basic_ostream<C, T>& os,
 std::string ConvDescriptor::hash(bool dynamic_minibatch_size) const
 {
   std::stringstream stream;
-  const char* ctype =
+  char const* ctype =
     (this->type == FORWARD
        ? "fwd"
        : (this->type == BACKWARD_FILTER ? "bwdfilt" : "bwddata"));
@@ -69,7 +69,7 @@ std::string ConvDescriptor::hash(bool dynamic_minibatch_size) const
   return stream.str();
 }
 
-bool operator<(const ConvParams& a, const ConvParams& b)
+bool operator<(ConvParams const& a, ConvParams const& b)
 {
   for (int i = 0; i < 3; ++i)
   {
@@ -95,7 +95,7 @@ bool operator<(const ConvParams& a, const ConvParams& b)
   return a.groups < b.groups;
 }
 
-bool operator==(const ConvParams& a, const ConvParams& b)
+bool operator==(ConvParams const& a, ConvParams const& b)
 {
   for (int i = 0; i < 3; ++i)
     if (a.pads[i] != b.pads[i])
@@ -109,7 +109,7 @@ bool operator==(const ConvParams& a, const ConvParams& b)
   return a.groups == b.groups;
 }
 
-bool operator<(const ConvDescriptor& a, const ConvDescriptor& b)
+bool operator<(ConvDescriptor const& a, ConvDescriptor const& b)
 {
   if (a.type < b.type)
     return true;
@@ -164,7 +164,7 @@ template <typename VendorBackendT>
 DaCeDNNBackend<VendorBackendT>::~DaCeDNNBackend()
 {
   // Loop over libraries and unload them
-  for (const auto& iter : m_dace_libraries)
+  for (auto const& iter : m_dace_libraries)
   {
     if (!unload(iter.second))
       util::MPIPrintStreamWarning()
@@ -471,11 +471,11 @@ bool DaCeDNNBackend<VendorBackendT>::descriptor_from_tensors(
 
 template <typename VendorBackendT>
 dace_state
-DaCeDNNBackend<VendorBackendT>::try_load(const std::string& hash,
+DaCeDNNBackend<VendorBackendT>::try_load(std::string const& hash,
                                          bool dynamic_minibatch_size) const
 {
   dace_state result;
-  const std::string& path = this->m_opts.jit_cache_path;
+  std::string const& path = this->m_opts.jit_cache_path;
   if (path.size() == 0)
   {
     util::MPIPrintStreamError()
@@ -578,7 +578,7 @@ bool DaCeDNNBackend<VendorBackendT>::unload(dace_state library)
 }
 
 template <typename VendorBackendT>
-bool DaCeDNNBackend<VendorBackendT>::invoke(const ConvDescriptor& desc,
+bool DaCeDNNBackend<VendorBackendT>::invoke(ConvDescriptor const& desc,
                                             void const* x,
                                             void const* w,
                                             void const* y,
@@ -622,7 +622,7 @@ bool DaCeDNNBackend<VendorBackendT>::invoke(const ConvDescriptor& desc,
 
 template <typename VendorBackendT>
 bool DaCeDNNBackend<VendorBackendT>::load_library_or_fallback(
-  const ConvDescriptor& desc, dace_state& library) const
+  ConvDescriptor const& desc, dace_state& library) const
 {
   auto iter = m_dace_libraries.find(desc);
 

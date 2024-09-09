@@ -8,19 +8,19 @@ namespace p2p
 class ConnectionNULL : public Connection
 {
 public:
-  ConnectionNULL(int peer, const internal::MPI& mpi, util::EventPool& ev_pool);
+  ConnectionNULL(int peer, internal::MPI const& mpi, util::EventPool& ev_pool);
   ~ConnectionNULL() override;
   Request connect_nb() override;
   Request register_addr_nb(void* self, void* peer) override;
-  int send(const void* src, size_t size, cudaStream_t stream) override;
+  int send(void const* src, size_t size, cudaStream_t stream) override;
   int recv(void* dst, size_t size, cudaStream_t stream) override;
-  int sendrecv(const void* send_src,
+  int sendrecv(void const* send_src,
                size_t send_size,
                void* recv_dst,
                size_t recv_size,
                cudaStream_t stream) override;
 
-  int put(const void* src,
+  int put(void const* src,
           void* dst,
           size_t size,
           cudaStream_t stream) override;

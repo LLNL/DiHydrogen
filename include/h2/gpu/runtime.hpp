@@ -127,7 +127,7 @@ constexpr static bool is_maybe_lambda_or_functor =
 
 template <typename T,
           typename = std::enable_if_t<is_maybe_lambda_or_functor<T>>>
-std::string convert_for_fmt(const T& v) noexcept
+std::string convert_for_fmt(T const& v) noexcept
 {
   return "<callable>";
 }
@@ -135,7 +135,7 @@ std::string convert_for_fmt(const T& v) noexcept
 template <typename T,
           typename = std::enable_if_t<!is_maybe_lambda_or_functor<T>>,
           typename = void>
-const T& convert_for_fmt(const T& v) noexcept
+T const& convert_for_fmt(T const& v) noexcept
 {
   return v;
 }
@@ -147,17 +147,17 @@ void* convert_for_fmt(T* const v) noexcept
 }
 
 template <typename T>
-const void* convert_for_fmt(const T* const v) noexcept
+void const* convert_for_fmt(T const* const v) noexcept
 {
-  return reinterpret_cast<const void*>(v);
+  return reinterpret_cast<void const*>(v);
 }
 
 }  // namespace internal
 
 template <typename... KernelArgs, typename... Args>
 inline void launch_kernel(void (*kernel)(KernelArgs...),
-                          const dim3& grid_dim,
-                          const dim3& block_dim,
+                          dim3 const& grid_dim,
+                          dim3 const& block_dim,
                           std::size_t shared_mem,
                           DeviceStream stream,
                           Args&&... args)

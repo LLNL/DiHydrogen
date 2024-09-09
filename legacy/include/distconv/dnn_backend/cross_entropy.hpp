@@ -15,7 +15,7 @@ template <>
 class CrossEntropy<BackendDNNLib>
 {
 public:
-  CrossEntropy(BackendDNNLib const& backend, const bool use_labels = false)
+  CrossEntropy(BackendDNNLib const& backend, bool const use_labels = false)
     : m_stream(backend.get_stream()), m_use_labels(use_labels)
   {}
   CrossEntropy(h2::gpu::DeviceStream stream, bool const use_labels = false)
@@ -25,7 +25,7 @@ public:
   ~CrossEntropy() = default;
 
   template <typename Tensor>
-  void setup(const Tensor& x_pred, const Tensor& x_truth, const Tensor& y)
+  void setup(Tensor const& x_pred, Tensor const& x_truth, Tensor const& y)
   {
     // Both tensors must have the same process grid
     assert_eq(x_pred.get_locale_shape(), x_truth.get_locale_shape());
@@ -73,11 +73,11 @@ public:
   }
 
   template <typename Tensor>
-  int forward(const Tensor& x_pred, const Tensor& x_truth, Tensor& y);
+  int forward(Tensor const& x_pred, Tensor const& x_truth, Tensor& y);
 
   template <typename Tensor>
-  int backward(const Tensor& x_pred,
-               const Tensor& x_truth,
+  int backward(Tensor const& x_pred,
+               Tensor const& x_truth,
                Tensor& dy,
                Tensor& dx_pred,
                Tensor& dx_truth);
@@ -86,7 +86,7 @@ private:
   h2::gpu::DeviceStream m_stream;
   std::unique_ptr<Al::NCCLBackend::comm_type> m_al;
   int m_num_procs_per_sample;
-  const bool m_use_labels;
+  bool const m_use_labels;
 };
 
 }  // namespace distconv

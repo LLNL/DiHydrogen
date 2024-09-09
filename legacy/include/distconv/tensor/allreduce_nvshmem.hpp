@@ -23,7 +23,7 @@ struct AllreduceNVSHMEMDevice
   AllreduceNVSHMEMDevice(int pid,
                          int np,
                          DataType* buf,
-                         const util::nvshmem::SyncArrayDevice& sync)
+                         util::nvshmem::SyncArrayDevice const& sync)
     : m_pid(pid), m_np(np), m_buf(buf), m_sync(sync)
   {
     auto log_np = std::log2((float) m_np);
@@ -42,11 +42,11 @@ struct AllreduceNVSHMEMDevice
   __device__ DataType recursive_doubling_block(DataType psum,
                                                size_t num_blocks_per_entry)
   {
-    const int tid = threadIdx.x;
-    const int block_offset =
+    int const tid = threadIdx.x;
+    int const block_offset =
       (blockIdx.x + blockIdx.y * gridDim.x + blockIdx.z * gridDim.x * gridDim.y)
       / num_blocks_per_entry;
-    const int sync_idx = block_offset * m_num_steps;
+    int const sync_idx = block_offset * m_num_steps;
     constexpr auto st = util::nvshmem::SyncType::NONE;
 
     DataType* tmp_buf =
@@ -104,7 +104,7 @@ public:
   using Allreduce<DataType>::allreduce;
 
   virtual void
-  allreduce(const DataType* send_buf, DataType* recv_buf, size_t count) override
+  allreduce(DataType const* send_buf, DataType* recv_buf, size_t count) override
   {
     if (m_np == 1)
     {
@@ -138,7 +138,7 @@ public:
   {
     auto log_np = std::log2((float) m_np);
     assert_always(std::ceil(log_np) == std::floor(log_np));
-    const int num_steps = log_np;
+    int const num_steps = log_np;
     ensure_buffer((num_blocks_per_entry + num_steps) * count);
     m_sync.ensure_size(num_steps * count);
   }
@@ -175,7 +175,7 @@ protected:
   }
 
   void
-  allreduce_naive(const DataType* send_buf, DataType* recv_buf, size_t count)
+  allreduce_naive(DataType const* send_buf, DataType* recv_buf, size_t count)
   {
     ensure_buffer(count);
     copy(send_buf, recv_buf, count);
@@ -186,7 +186,7 @@ protected:
     int next_pid = (m_pid + 1) % m_np;
     bool first_pe = m_pid == 0;
     bool last_pe = m_pid == m_np - 1;
-    const int counter_idx = 0;
+    int const counter_idx = 0;
 
     // wait
     if (!first_pe)
@@ -256,7 +256,7 @@ protected:
   }
 
   void
-  allreduce_native(const DataType* send_buf, DataType* recv_buf, size_t count)
+  allreduce_native(DataType const* send_buf, DataType* recv_buf, size_t count)
   {
     ensure_native_sync();
     ensure_native_buffer(count);
@@ -273,7 +273,7 @@ protected:
                                         m_stream);
   }
 
-  void recursive_doubling_host(const DataType* send_buf,
+  void recursive_doubling_host(DataType const* send_buf,
                                DataType* recv_buf,
                                size_t count)
   {
@@ -284,7 +284,7 @@ protected:
     copy(send_buf, recv_buf, count);
 
     int num_steps = log_np;
-    const size_t len = count * sizeof(DataType);
+    size_t const len = count * sizeof(DataType);
     // make sure there are sync objects for each stage
     m_sync.ensure_size(num_steps);
     for (int i = 0; i < num_steps; ++i)
@@ -319,19 +319,19 @@ protected:
     grid_size = (count + work_per_block - 1) / work_per_block;
   }
 
-  void recursive_doubling(const DataType* send_buf,
+  void recursive_doubling(DataType const* send_buf,
                           DataType* recv_buf,
                           size_t count);
-  void recursive_doubling_buffered(const DataType* send_buf,
+  void recursive_doubling_buffered(DataType const* send_buf,
                                    DataType* recv_buf,
                                    size_t count);
 
-  void recursive_doubling_block(const DataType* send_buf,
+  void recursive_doubling_block(DataType const* send_buf,
                                 DataType* recv_buf,
                                 size_t count);
 
-  void copy(const DataType* src, DataType* dst, size_t count);
-  void reduce(const DataType* src, DataType* dst, size_t count);
+  void copy(DataType const* src, DataType* dst, size_t count);
+  void reduce(DataType const* src, DataType* dst, size_t count);
 };
 
 }  // namespace tensor

@@ -154,7 +154,7 @@ void for_comms(Test t, int min_size = 1, int max_size = -1)
       h2::Comm& comm = get_comm(i);
       t(comm);
     }
-    catch (const internal::NotParticipatingException&)
+    catch (internal::NotParticipatingException const&)
     {}
     // If all the assertions in t pass, or we do not participate, we
     // reach this point. If there is a failure, we will not reach here.
@@ -238,7 +238,7 @@ all_grid_shapes(h2::ShapeTuple::type size,
   std::vector<type> factors = get_unique_factors(size, false);
   // Precompute the factorizations of all of the factors.
   std::unordered_map<type, std::vector<type>> factorizations;
-  for (const auto& factor : factors)
+  for (auto const& factor : factors)
   {
     factorizations[factor] = get_unique_factors(factor, false);
   }
@@ -257,7 +257,7 @@ all_grid_shapes(h2::ShapeTuple::type size,
       // Sanity-check:
       H2_ASSERT_ALWAYS(factorizations.count(cur_val),
                        "No factorizations for " + std::to_string(cur_val));
-      for (const auto& factor : factorizations.at(cur_val))
+      for (auto const& factor : factorizations.at(cur_val))
       {
         ShapeTuple new_shape;
         new_shape.set_size(cur_shape.size() + 1);
@@ -313,7 +313,7 @@ void for_grid_shapes(
 
   auto shapes = internal::all_grid_shapes(comm.Size(), min_size, max_size);
 
-  for (const auto& shape : shapes)
+  for (auto const& shape : shapes)
   {
     t(shape);
   }

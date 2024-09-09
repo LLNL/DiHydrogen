@@ -61,27 +61,27 @@ static constexpr struct no_save_backtrace_t
 class H2ExceptionBase : public std::exception
 {
 public:
-  H2ExceptionBase(const std::string& what_arg)
+  H2ExceptionBase(std::string const& what_arg)
   {
     set_what_and_maybe_collect_backtrace(what_arg, should_save_backtrace());
   }
 
-  H2ExceptionBase(const char* what_arg) : H2ExceptionBase(std::string(what_arg))
+  H2ExceptionBase(char const* what_arg) : H2ExceptionBase(std::string(what_arg))
   {}
 
-  H2ExceptionBase(const std::string& what_arg, save_backtrace_t)
+  H2ExceptionBase(std::string const& what_arg, save_backtrace_t)
   {
     set_what_and_maybe_collect_backtrace(what_arg, true);
   }
 
-  H2ExceptionBase(const std::string& what_arg, no_save_backtrace_t)
+  H2ExceptionBase(std::string const& what_arg, no_save_backtrace_t)
   {
     set_what_and_maybe_collect_backtrace(what_arg, false);
   }
 
-  H2ExceptionBase(const H2ExceptionBase& other) noexcept : what_(other.what_) {}
+  H2ExceptionBase(H2ExceptionBase const& other) noexcept : what_(other.what_) {}
 
-  H2ExceptionBase& operator=(const H2ExceptionBase& other) noexcept
+  H2ExceptionBase& operator=(H2ExceptionBase const& other) noexcept
   {
     what_ = other.what_;
     return *this;
@@ -89,7 +89,7 @@ public:
 
   virtual ~H2ExceptionBase() {}
 
-  virtual const char* what() const noexcept { return what_->c_str(); }
+  virtual char const* what() const noexcept { return what_->c_str(); }
 
 private:
   /**
@@ -104,7 +104,7 @@ private:
   static bool should_save_backtrace();
 
   /** Set up what_ and maybe collect a backtrace.. */
-  void set_what_and_maybe_collect_backtrace(const std::string& what_arg,
+  void set_what_and_maybe_collect_backtrace(std::string const& what_arg,
                                             bool collect_bt);
 };
 

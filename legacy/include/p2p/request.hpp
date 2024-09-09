@@ -62,11 +62,11 @@ public:
           DeviceStream stream,
           handler_type handler);
 
-  Request(const Request& req);
-  Request& operator=(const Request& req);
+  Request(Request const& req);
+  Request& operator=(Request const& req);
 
   Connection* get_connection();
-  const MPI_Request* get_mpi_requests() const;
+  MPI_Request const* get_mpi_requests() const;
   MPI_Request* get_mpi_requests();
   int wait_mpi();
   bool run_post_process(Request* req = nullptr);
@@ -78,10 +78,10 @@ public:
   void set_handler(handler_type handler);
 
   static int
-  wait(const Request* requests, int num_requests, internal::MPI& mpi);
+  wait(Request const* requests, int num_requests, internal::MPI& mpi);
 
   static void
-  process(const Request* requests, int num_requests, internal::MPI& mpi);
+  process(Request const* requests, int num_requests, internal::MPI& mpi);
 
 private:
   Kind m_kind;

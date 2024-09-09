@@ -9,12 +9,12 @@ namespace distconv
 namespace tensor
 {
 
-inline cudaStream_t get_gpu_stream(const DefaultStream& s)
+inline cudaStream_t get_gpu_stream(DefaultStream const& s)
 {
   return 0;
 }
 
-inline cudaStream_t get_gpu_stream(const cudaStream_t& s)
+inline cudaStream_t get_gpu_stream(cudaStream_t const& s)
 {
   return s;
 }

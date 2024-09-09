@@ -85,8 +85,8 @@ using is_same_size = meta::Force<is_same_size_t<TL>>;
 
 template <typename... KernelArgs, typename... Args>
 void launch_kernel_internal(void (*kernel)(KernelArgs...),
-                            const dim3& grid_dim,
-                            const dim3& block_dim,
+                            dim3 const& grid_dim,
+                            dim3 const& block_dim,
                             std::size_t shared_mem,
                             DeviceStream stream,
                             Args&&... args)
@@ -104,7 +104,7 @@ void launch_kernel_internal(void (*kernel)(KernelArgs...),
                   value)
   {
     void* kernel_args[] = {(void*) &args...};
-    H2_CHECK_CUDA(cudaLaunchKernel((const void*) kernel,
+    H2_CHECK_CUDA(cudaLaunchKernel((void const*) kernel,
                                    grid_dim,
                                    block_dim,
                                    kernel_args,
@@ -117,7 +117,7 @@ void launch_kernel_internal(void (*kernel)(KernelArgs...),
       std::tuple<KernelArgs...>{std::forward<Args>(args)...};
     std::array<void*, sizeof...(Args)> kernel_args{
       std::apply([](auto&&... args_) { return ((void*) &args_, ...); })};
-    H2_CHECK_CUDA(cudaLaunchKernel((const void*) kernel,
+    H2_CHECK_CUDA(cudaLaunchKernel((void const*) kernel,
                                    grid_dim,
                                    block_dim,
                                    kernel_args.data(),

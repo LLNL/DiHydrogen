@@ -24,7 +24,7 @@ namespace h2
 
 /** Write tensor to the given stream. */
 template <typename T>
-inline std::ostream& print(std::ostream& os, const Tensor<T>& tensor)
+inline std::ostream& print(std::ostream& os, Tensor<T> const& tensor)
 {
   if (tensor.is_empty())
   {

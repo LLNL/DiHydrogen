@@ -46,7 +46,7 @@ public:
   std::vector<float> conv_bwd_combined_filter_time;
   std::vector<float> conv_bwd_combined_bias_time;
   std::vector<float> conv_bwd_combined_all_time;
-  Profile(const BenchmarkConfig<NSD>& cfg)
+  Profile(BenchmarkConfig<NSD> const& cfg)
     : m_cfg(cfg),
       conv_fwd_time(cfg.run_count, 0),
       conv_bwd_data_time(cfg.run_count, 0),
@@ -129,7 +129,7 @@ template <int NSD, typename Backend, typename DataType>
 class Data
 {
 public:
-  const BenchmarkConfig<NSD>& m_cfg;
+  BenchmarkConfig<NSD> const& m_cfg;
   typename TensorType<Backend, DataType>::type input;
   typename TensorType<Backend, DataType>::type output;
   typename TensorType<Backend, DataType>::type filter;
@@ -139,7 +139,7 @@ public:
   typename TensorType<Backend, DataType>::type d_filter;
   typename TensorType<Backend, DataType>::type d_bias;
 
-  Data(const BenchmarkConfig<NSD>& cfg, MPI_Comm comm) : m_cfg(cfg)
+  Data(BenchmarkConfig<NSD> const& cfg, MPI_Comm comm) : m_cfg(cfg)
   {
     using Tensor = typename TensorType<Backend, DataType>::type;
 
@@ -153,19 +153,19 @@ public:
         * cfg.p_c * cfg.p_n
       == np);
 
-    const auto vector_concat =
-      [](const int_vector v, const int c, const int n) {
+    auto const vector_concat =
+      [](int_vector const v, int const c, int const n) {
         int_vector cn({c, n});
         cn.insert(cn.begin(), v.begin(), v.end());
-        return (const int_vector) cn;
+        return (int_vector const) cn;
       };
 
-    const auto input_shape = vector_concat(cfg.i_s, cfg.i_c, cfg.i_n);
-    const auto locale_shape = vector_concat(cfg.p_s, cfg.p_c, cfg.p_n);
-    const auto filter_dims = cfg.f_s;
-    const auto strides = cfg.strides;
-    const auto pads = cfg.pads;
-    const auto dilations = cfg.dilations;
+    auto const input_shape = vector_concat(cfg.i_s, cfg.i_c, cfg.i_n);
+    auto const locale_shape = vector_concat(cfg.p_s, cfg.p_c, cfg.p_n);
+    auto const filter_dims = cfg.f_s;
+    auto const strides = cfg.strides;
+    auto const pads = cfg.pads;
+    auto const dilations = cfg.dilations;
     util::MPIPrintStreamDebug()
       << "input_shape: " << util::join_array(input_shape, " ")
       << " locale_shape: " << util::join_array(locale_shape, " ");
@@ -293,7 +293,7 @@ public:
 
 template <int NSD, typename Backend, typename DataType>
 int test_convolution_forward(Data<NSD, Backend, DataType>& d,
-                             const BenchmarkConfig<NSD>& cfg,
+                             BenchmarkConfig<NSD> const& cfg,
                              MPI_Comm comm,
                              Backend& be,
                              Convolution<Backend, DataType>& conv,
@@ -382,7 +382,7 @@ int test_convolution_forward(Data<NSD, Backend, DataType>& d,
 
 template <int NSD, typename Backend, typename DataType>
 int test_convolution_backward_data(Data<NSD, Backend, DataType>& d,
-                                   const BenchmarkConfig<NSD>& cfg,
+                                   BenchmarkConfig<NSD> const& cfg,
                                    MPI_Comm comm,
                                    Backend& be,
                                    Convolution<Backend, DataType>& conv,
@@ -472,7 +472,7 @@ int test_convolution_backward_data(Data<NSD, Backend, DataType>& d,
 
 template <int NSD, typename Backend, typename DataType>
 int test_convolution_backward_filter(Data<NSD, Backend, DataType>& d,
-                                     const BenchmarkConfig<NSD>& cfg,
+                                     BenchmarkConfig<NSD> const& cfg,
                                      MPI_Comm comm,
                                      Backend& be,
                                      Convolution<Backend, DataType>& conv,
@@ -532,7 +532,7 @@ int test_convolution_backward_filter(Data<NSD, Backend, DataType>& d,
 
 template <int NSD, typename Backend, typename DataType>
 int test_convolution_backward_bias(Data<NSD, Backend, DataType>& d,
-                                   const BenchmarkConfig<NSD>& cfg,
+                                   BenchmarkConfig<NSD> const& cfg,
                                    MPI_Comm comm,
                                    Backend& be,
                                    Convolution<Backend, DataType>& conv,
@@ -583,7 +583,7 @@ int test_convolution_backward_bias(Data<NSD, Backend, DataType>& d,
 
 template <int NSD, typename Backend, typename DataType>
 int test_convolution_backward(Data<NSD, Backend, DataType>& d,
-                              const BenchmarkConfig<NSD>& cfg,
+                              BenchmarkConfig<NSD> const& cfg,
                               MPI_Comm comm,
                               Backend& be,
                               Convolution<Backend, DataType>& conv,
@@ -767,7 +767,7 @@ struct ConvolutionTester<NSD, ref::Backend, DataType>
 {
   ConvolutionTester() {}
   int operator()(Data<NSD, ref::Backend, DataType>& d,
-                 const BenchmarkConfig<NSD>& cfg,
+                 BenchmarkConfig<NSD> const& cfg,
                  MPI_Comm comm,
                  Profile<NSD>& prof)
   {
@@ -811,7 +811,7 @@ struct ConvolutionTester<NSD, cudnn::BackendCUDNN, DataType>
 {
   ConvolutionTester() {}
   int operator()(Data<NSD, cudnn::BackendCUDNN, DataType>& d,
-                 const BenchmarkConfig<NSD>& cfg,
+                 BenchmarkConfig<NSD> const& cfg,
                  MPI_Comm comm,
                  Profile<NSD>& prof)
   {
@@ -943,7 +943,7 @@ int main(int argc, char* argv[])
   DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
   DISTCONV_CHECK_MPI(MPI_Comm_size(MPI_COMM_WORLD, &np));
 
-  const int nsd = distconv_benchmark::parse_num_dims(argc, argv);
+  int const nsd = distconv_benchmark::parse_num_dims(argc, argv);
 
   if (nsd == 2)
   {

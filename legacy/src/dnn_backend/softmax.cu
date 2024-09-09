@@ -153,7 +153,7 @@ DataType get_min()
 }
 
 template <typename Tensor>
-void set_kernel_params(const Tensor& tensor,
+void set_kernel_params(Tensor const& tensor,
                        int& num_samples,
                        size_t& sample_size,
                        dim3& gdim)
@@ -175,7 +175,7 @@ template <typename DataType,
           typename Map,
           typename Reduce,
           typename AtomicReduce>
-__global__ void reduce_per_sample_kernel(const DataType* __restrict__ x,
+__global__ void reduce_per_sample_kernel(DataType const* __restrict__ x,
                                          size_t sample_size,
                                          Map map,
                                          Reduce reduce,
@@ -212,8 +212,8 @@ template <typename DataType,
           typename Map,
           typename Reduce,
           typename AtomicReduce>
-__global__ void reduce_per_sample_kernel(const DataType* __restrict__ x,
-                                         const DataType* __restrict__ y,
+__global__ void reduce_per_sample_kernel(DataType const* __restrict__ x,
+                                         DataType const* __restrict__ y,
                                          size_t sample_size,
                                          Map map,
                                          Reduce reduce,
@@ -249,9 +249,9 @@ __global__ void reduce_per_sample_kernel(const DataType* __restrict__ x,
 
 template <typename DataType, int BLOCK_SIZE, typename Map>
 __global__ void
-map_per_sample_kernel(const DataType* __restrict__ x,
-                      const DataType* __restrict__ y,
-                      const DataType* __restrict__ sample_values,
+map_per_sample_kernel(DataType const* __restrict__ x,
+                      DataType const* __restrict__ y,
+                      DataType const* __restrict__ sample_values,
                       size_t sample_size,
                       DataType* __restrict__ z,
                       Map map)
@@ -267,7 +267,7 @@ map_per_sample_kernel(const DataType* __restrict__ x,
   y += sample_idx * sample_size;
   z += sample_idx * sample_size;
 
-  const auto sample_value = sample_values[sample_idx];
+  auto const sample_value = sample_values[sample_idx];
 
   for (; sample_offset < block_end; sample_offset += BLOCK_SIZE)
   {
@@ -284,9 +284,9 @@ template <typename DataType,
           typename Reduce,
           typename AtomicReduce>
 __global__ void
-map_and_reduce_per_sample_kernel(const DataType* __restrict__ x,
+map_and_reduce_per_sample_kernel(DataType const* __restrict__ x,
                                  size_t sample_size,
-                                 const DataType* __restrict__ sample_values,
+                                 DataType const* __restrict__ sample_values,
                                  Map map,
                                  Reduce reduce,
                                  AtomicReduce atomic_reduce,
@@ -303,7 +303,7 @@ map_and_reduce_per_sample_kernel(const DataType* __restrict__ x,
   x += sample_idx * sample_size;
   y += sample_idx * sample_size;
 
-  const auto sample_value = sample_values[sample_idx];
+  auto const sample_value = sample_values[sample_idx];
 
   DataType local_sum = reduce.init();
   for (; sample_offset < block_end; sample_offset += BLOCK_SIZE)
@@ -326,7 +326,7 @@ map_and_reduce_per_sample_kernel(const DataType* __restrict__ x,
 template <typename DataType, int BLOCK_SIZE, typename Map>
 __global__ void
 update_per_sample_kernel(DataType* __restrict__ x,
-                         const DataType* __restrict__ sample_values,
+                         DataType const* __restrict__ sample_values,
                          size_t sample_size,
                          Map map)
 {
@@ -339,7 +339,7 @@ update_per_sample_kernel(DataType* __restrict__ x,
 
   x += sample_idx * sample_size;
 
-  const auto sample_val = sample_values[sample_idx];
+  auto const sample_val = sample_values[sample_idx];
 
   for (; sample_offset < block_end; sample_offset += BLOCK_SIZE)
   {
@@ -349,7 +349,7 @@ update_per_sample_kernel(DataType* __restrict__ x,
 }
 
 template <typename Tensor, typename DataType>
-void compute_max(const Tensor& tensor,
+void compute_max(Tensor const& tensor,
                  DataType* sample_max,
                  h2::gpu::DeviceStream stream)
 {
@@ -386,8 +386,8 @@ struct exp_shifted
 };
 
 template <typename Tensor, typename DataType>
-void compute_exp(const Tensor& x,
-                 const DataType* sample_max,
+void compute_exp(Tensor const& x,
+                 DataType const* sample_max,
                  Tensor& y,
                  DataType* sample_exp,
                  h2::gpu::DeviceStream stream)
@@ -429,7 +429,7 @@ struct SoftmaxOp
 };
 
 template <typename Tensor, typename DataType>
-void compute_softmax(const DataType* sample_exp,
+void compute_softmax(DataType const* sample_exp,
                      Tensor& output_tensor,
                      h2::gpu::DeviceStream stream)
 {
@@ -451,8 +451,8 @@ void compute_softmax(const DataType* sample_exp,
 }
 
 template <typename Tensor, typename DataType>
-void bp_dotproduct(const Tensor& y,
-                   const Tensor& dy,
+void bp_dotproduct(Tensor const& y,
+                   Tensor const& dy,
                    DataType* sample_dp,
                    h2::gpu::DeviceStream stream)
 {
@@ -502,8 +502,8 @@ struct bp_compute_func
 };
 
 template <typename Tensor, typename DataType>
-void bp_compute_gradient(const Tensor& y,
-                         const Tensor& dy,
+void bp_compute_gradient(Tensor const& y,
+                         Tensor const& dy,
                          DataType* sample_dp,
                          Tensor& dx,
                          h2::gpu::DeviceStream stream)
@@ -529,14 +529,14 @@ void bp_compute_gradient(const Tensor& y,
 }
 
 template <typename DataType, int BLOCK_SIZE>
-__global__ void fp_channel_kernel(const DataType* __restrict__ x,
+__global__ void fp_channel_kernel(DataType const* __restrict__ x,
                                   size_t spatial_size,
                                   int num_channels,
                                   DataType* __restrict__ y)
 {
   size_t offset = blockIdx.x * BLOCK_SIZE + threadIdx.x;
-  const size_t sample_size = spatial_size * num_channels;
-  const int sample_idx = blockIdx.y;
+  size_t const sample_size = spatial_size * num_channels;
+  int const sample_idx = blockIdx.y;
   // https://stackoverflow.com/questions/27570552/templated-cuda-kernel-with-dynamic-shared-memory
   //
   // Note (trb 02/14/2022): Using __align__(sizeof(DataType)) was
@@ -546,7 +546,7 @@ __global__ void fp_channel_kernel(const DataType* __restrict__ x,
   // https://stackoverflow.com/questions/27570552/templated-cuda-kernel-with-dynamic-shared-memory/49224531
   extern __shared__ __align__(sizeof(double)) unsigned char x_cache_char[];
   DataType* x_cache = reinterpret_cast<DataType*>(x_cache_char);
-  const int cache_idx = threadIdx.x;
+  int const cache_idx = threadIdx.x;
   constexpr auto min_output = util::min<DataType>();
 
   if (offset >= spatial_size)
@@ -586,7 +586,7 @@ __global__ void fp_channel_kernel(const DataType* __restrict__ x,
 }
 
 template <typename Tensor>
-int fp_channel(const Tensor& x, Tensor& y, h2::gpu::DeviceStream stream)
+int fp_channel(Tensor const& x, Tensor& y, h2::gpu::DeviceStream stream)
 {
   using DataType = typename Tensor::data_type;
 
@@ -612,18 +612,18 @@ int fp_channel(const Tensor& x, Tensor& y, h2::gpu::DeviceStream stream)
 }
 
 template <typename DataType, int BLOCK_SIZE>
-__global__ void bp_channel_kernel(const DataType* __restrict__ y,
-                                  const DataType* __restrict__ dy,
+__global__ void bp_channel_kernel(DataType const* __restrict__ y,
+                                  DataType const* __restrict__ dy,
                                   size_t spatial_size,
                                   int num_channels,
                                   DataType* __restrict__ dx)
 {
   size_t offset = blockIdx.x * BLOCK_SIZE + threadIdx.x;
-  const size_t sample_size = spatial_size * num_channels;
-  const int sample_idx = blockIdx.y;
+  size_t const sample_size = spatial_size * num_channels;
+  int const sample_idx = blockIdx.y;
   extern __shared__ __align__(sizeof(double)) unsigned char cache_char[];
   DataType* cache = reinterpret_cast<DataType*>(cache_char);
-  const int cache_idx = threadIdx.x;
+  int const cache_idx = threadIdx.x;
   constexpr auto min_output = util::min<DataType>();
 
   if (offset >= spatial_size)
@@ -662,8 +662,8 @@ __global__ void bp_channel_kernel(const DataType* __restrict__ y,
 }
 
 template <typename Tensor>
-int bp_channel(const Tensor& y,
-               const Tensor& dy,
+int bp_channel(Tensor const& y,
+               Tensor const& dy,
                Tensor& dx,
                h2::gpu::DeviceStream stream)
 {
@@ -696,7 +696,7 @@ int bp_channel(const Tensor& y,
 }  // namespace
 
 template <typename Tensor>
-int Softmax<BackendDNNLib>::forward(const Tensor& x, Tensor& y)
+int Softmax<BackendDNNLib>::forward(Tensor const& x, Tensor& y)
 {
   using DataType = typename Tensor::data_type;
   util::MPIPrintStreamDebug() << "Softmax FP: " << x << ", " << y;
@@ -738,8 +738,8 @@ int Softmax<BackendDNNLib>::forward(const Tensor& x, Tensor& y)
 }
 
 template <typename Tensor>
-int Softmax<BackendDNNLib>::backward(const Tensor& y,
-                                     const Tensor& dy,
+int Softmax<BackendDNNLib>::backward(Tensor const& y,
+                                     Tensor const& dy,
                                      Tensor& dx)
 {
   using DataType = typename Tensor::data_type;

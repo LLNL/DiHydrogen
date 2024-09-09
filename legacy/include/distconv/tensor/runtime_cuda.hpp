@@ -44,11 +44,11 @@ public:
 
   size_t& size() { return std::get<1>(m_chunk); }
 
-  const size_t& size() const { return std::get<1>(m_chunk); }
+  size_t const& size() const { return std::get<1>(m_chunk); }
 
   bool& taken() { return std::get<2>(m_chunk); }
 
-  const bool& taken() const { return std::get<2>(m_chunk); }
+  bool const& taken() const { return std::get<2>(m_chunk); }
 
   void set_taken(bool f) { taken() = f; }
 

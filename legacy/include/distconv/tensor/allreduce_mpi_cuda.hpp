@@ -24,7 +24,7 @@ public:
   using AllreduceMPI<DataType>::allreduce;
 
   virtual void
-  allreduce(const DataType* send_buf, DataType* recv_buf, size_t count) override
+  allreduce(DataType const* send_buf, DataType* recv_buf, size_t count) override
   {
     assert_always(send_buf != nullptr);
     assert_always(recv_buf != nullptr);

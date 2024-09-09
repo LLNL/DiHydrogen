@@ -46,7 +46,7 @@ inline std::ostream& operator<<(std::ostream& os, cudnnDataType_t& dt)
 
 struct CUDNNConvolutionFwdAlgorithms
 {
-  const static int num = 10;
+  static int const num = 10;
   using algo_pair = std::pair<cudnnConvolutionFwdAlgo_t, std::string>;
   algo_pair algos[num] = {
     std::make_pair(CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_GEMM, "IMPLICIT_GEMM"),
@@ -72,7 +72,7 @@ struct CUDNNConvolutionFwdAlgorithms
     }
     return -1;
   }
-  static int get_index(const std::string& name)
+  static int get_index(std::string const& name)
   {
     CUDNNConvolutionFwdAlgorithms x;
     for (unsigned i = 0; i < x.num; ++i)
@@ -87,31 +87,31 @@ struct CUDNNConvolutionFwdAlgorithms
     CUDNNConvolutionFwdAlgorithms x;
     return x.algos[get_index(algo)].second;
   }
-  static cudnnConvolutionFwdAlgo_t get_algo(const std::string& name)
+  static cudnnConvolutionFwdAlgo_t get_algo(std::string const& name)
   {
     CUDNNConvolutionFwdAlgorithms x;
     return x.algos[get_index(name)].first;
   }
-  static std::string get_real_name(const std::string& name)
+  static std::string get_real_name(std::string const& name)
   {
     return get_name(get_algo(name));
   }
 };
 
 inline std::ostream& operator<<(std::ostream& os,
-                                const cudnnConvolutionFwdAlgo_t& algo)
+                                cudnnConvolutionFwdAlgo_t const& algo)
 {
   return os << CUDNNConvolutionFwdAlgorithms::get_name(algo);
 }
 
-inline std::string get_name(const cudnnConvolutionFwdAlgo_t& algo)
+inline std::string get_name(cudnnConvolutionFwdAlgo_t const& algo)
 {
   return CUDNNConvolutionFwdAlgorithms::get_name(algo);
 }
 
 struct CUDNNConvolutionBwdDataAlgorithms
 {
-  const static int num = 8;
+  static int const num = 8;
   using algo_pair = std::pair<cudnnConvolutionBwdDataAlgo_t, std::string>;
   algo_pair algos[num] = {
     std::make_pair(CUDNN_CONVOLUTION_BWD_DATA_ALGO_0, "ALGO_0"),
@@ -134,7 +134,7 @@ struct CUDNNConvolutionBwdDataAlgorithms
     }
     return -1;
   }
-  static int get_index(const std::string& name)
+  static int get_index(std::string const& name)
   {
     CUDNNConvolutionBwdDataAlgorithms x;
     for (unsigned i = 0; i < x.num; ++i)
@@ -149,31 +149,31 @@ struct CUDNNConvolutionBwdDataAlgorithms
     CUDNNConvolutionBwdDataAlgorithms x;
     return x.algos[get_index(algo)].second;
   }
-  static cudnnConvolutionBwdDataAlgo_t get_algo(const std::string& name)
+  static cudnnConvolutionBwdDataAlgo_t get_algo(std::string const& name)
   {
     CUDNNConvolutionBwdDataAlgorithms x;
     return x.algos[get_index(name)].first;
   }
-  static std::string get_real_name(const std::string& name)
+  static std::string get_real_name(std::string const& name)
   {
     return get_name(get_algo(name));
   }
 };
 
 inline std::ostream& operator<<(std::ostream& os,
-                                const cudnnConvolutionBwdDataAlgo_t& algo)
+                                cudnnConvolutionBwdDataAlgo_t const& algo)
 {
   return os << CUDNNConvolutionBwdDataAlgorithms::get_name(algo);
 }
 
-inline std::string get_name(const cudnnConvolutionBwdDataAlgo_t& algo)
+inline std::string get_name(cudnnConvolutionBwdDataAlgo_t const& algo)
 {
   return CUDNNConvolutionBwdDataAlgorithms::get_name(algo);
 }
 
 struct CUDNNConvolutionBwdFilterAlgorithms
 {
-  const static int num = 9;
+  static int const num = 9;
   using algo_pair = std::pair<cudnnConvolutionBwdFilterAlgo_t, std::string>;
   algo_pair algos[num] = {
     std::make_pair(CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0, "ALGO_0"),
@@ -199,7 +199,7 @@ struct CUDNNConvolutionBwdFilterAlgorithms
     }
     return -1;
   }
-  static int get_index(const std::string& name)
+  static int get_index(std::string const& name)
   {
     CUDNNConvolutionBwdFilterAlgorithms x;
     for (unsigned i = 0; i < x.num; ++i)
@@ -216,26 +216,26 @@ struct CUDNNConvolutionBwdFilterAlgorithms
     assert_always(idx != -1);
     return x.algos[idx].second;
   }
-  static cudnnConvolutionBwdFilterAlgo_t get_algo(const std::string& name)
+  static cudnnConvolutionBwdFilterAlgo_t get_algo(std::string const& name)
   {
     CUDNNConvolutionBwdFilterAlgorithms x;
     int idx = get_index(name);
     assert_always(idx != -1);
     return x.algos[idx].first;
   }
-  static std::string get_real_name(const std::string& name)
+  static std::string get_real_name(std::string const& name)
   {
     return get_name(get_algo(name));
   }
 };
 
 inline std::ostream& operator<<(std::ostream& os,
-                                const cudnnConvolutionBwdFilterAlgo_t& algo)
+                                cudnnConvolutionBwdFilterAlgo_t const& algo)
 {
   return os << CUDNNConvolutionBwdFilterAlgorithms::get_name(algo);
 }
 
-inline std::string get_name(const cudnnConvolutionBwdFilterAlgo_t& algo)
+inline std::string get_name(cudnnConvolutionBwdFilterAlgo_t const& algo)
 {
   return CUDNNConvolutionBwdFilterAlgorithms::get_name(algo);
 }
@@ -253,7 +253,7 @@ inline std::ostream& operator<<(std::ostream& os, cudnnTensorFormat_t& fmt)
   return os << fmt_string;
 }
 
-inline std::string tostring(const cudnnTensorDescriptor_t& desc)
+inline std::string tostring(cudnnTensorDescriptor_t const& desc)
 {
   int req_num_dim = 8;
   cudnnDataType_t dt;
@@ -283,12 +283,12 @@ inline std::string tostring(const cudnnTensorDescriptor_t& desc)
 }
 
 inline std::ostream& operator<<(std::ostream& os,
-                                const cudnnTensorDescriptor_t& d)
+                                cudnnTensorDescriptor_t const& d)
 {
   return os << tostring(d);
 }
 
-inline std::string tostring(const cudnnFilterDescriptor_t& desc)
+inline std::string tostring(cudnnFilterDescriptor_t const& desc)
 {
   int req_num_dim = 8;
   cudnnDataType_t dt;
@@ -311,12 +311,12 @@ inline std::string tostring(const cudnnFilterDescriptor_t& desc)
 }
 
 inline std::ostream& operator<<(std::ostream& os,
-                                const cudnnFilterDescriptor_t& d)
+                                cudnnFilterDescriptor_t const& d)
 {
   return os << tostring(d);
 }
 
-inline std::string tostring(const cudnnConvolutionDescriptor_t& desc)
+inline std::string tostring(cudnnConvolutionDescriptor_t const& desc)
 {
   int req_array_length = 4;
   int array_length = 0;
@@ -361,7 +361,7 @@ inline std::string tostring(const cudnnConvolutionDescriptor_t& desc)
 }
 
 inline std::ostream& operator<<(std::ostream& os,
-                                const cudnnConvolutionDescriptor_t& d)
+                                cudnnConvolutionDescriptor_t const& d)
 {
   return os << tostring(d);
 }
@@ -376,7 +376,7 @@ inline cudnnDataType_t get_cudnn_type<float>()
 }
 
 template <>
-inline cudnnDataType_t get_cudnn_type<const float>()
+inline cudnnDataType_t get_cudnn_type<float const>()
 {
   return CUDNN_DATA_FLOAT;
 }
@@ -388,7 +388,7 @@ inline cudnnDataType_t get_cudnn_type<double>()
 }
 
 template <>
-inline cudnnDataType_t get_cudnn_type<const double>()
+inline cudnnDataType_t get_cudnn_type<double const>()
 {
   return CUDNN_DATA_DOUBLE;
 }
@@ -400,7 +400,7 @@ inline cudnnDataType_t get_cudnn_type<half>()
 }
 
 template <>
-inline cudnnDataType_t get_cudnn_type<const half>()
+inline cudnnDataType_t get_cudnn_type<half const>()
 {
   return CUDNN_DATA_HALF;
 }
@@ -424,7 +424,7 @@ inline std::string get_cudnn_version_number_string()
 
 inline std::vector<int> get_cudnn_dims(int num_samples,
                                        int num_channels,
-                                       const std::vector<int>& spatial_dims)
+                                       std::vector<int> const& spatial_dims)
 {
   std::vector<int> dims;
   dims.push_back(num_samples);
@@ -435,8 +435,8 @@ inline std::vector<int> get_cudnn_dims(int num_samples,
 
 inline std::vector<int> get_cudnn_strides(int num_samples,
                                           int num_channels,
-                                          const std::vector<int>& spatial_dims,
-                                          const std::string& fmt)
+                                          std::vector<int> const& spatial_dims,
+                                          std::string const& fmt)
 {
   int num_spatial_dims = spatial_dims.size();
   std::vector<int> strides(2 + num_spatial_dims);

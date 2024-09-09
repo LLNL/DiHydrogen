@@ -103,7 +103,7 @@ public:
              int_vector windows,
              int_vector pads,
              int_vector strides,
-             const std::string& mode)
+             std::string const& mode)
   {
     {
       // All of the dimensions must be the same
@@ -157,7 +157,7 @@ public:
     assert_eq(output.get_distribution(), output.get_distribution());
 
     {
-      const int_vector dilations(m_num_spatial_dims, 1);
+      int_vector const dilations(m_num_spatial_dims, 1);
       internal::get_halo_sizes(input,
                                IntVector(windows),
                                IntVector(strides),
@@ -222,7 +222,7 @@ public:
 
     set_num_samples(output.get_local_shape()[-1]);
 
-    const void* input_ptr =
+    void const* input_ptr =
       input.get_const_base_ptr()
       - input.get_local_offset(IndexVector(m_halo_bwd_recv), true);
 
@@ -239,9 +239,9 @@ public:
 
   template <typename Tensor>
   int backward(typename Tensor::data_type alpha,
-               const Tensor& output,
-               const Tensor& d_output,
-               const Tensor& input,
+               Tensor const& output,
+               Tensor const& d_output,
+               Tensor const& input,
                typename Tensor::data_type beta,
                Tensor& d_input)
   {
@@ -253,7 +253,7 @@ public:
 
     if (d_output.get_local_size() > 0)
     {
-      const void* input_ptr =
+      void const* input_ptr =
         input.get_const_base_ptr()
         - input.get_local_offset(IndexVector(m_halo_bwd_recv), true);
       // Assumes d_input has the same distribution as input
@@ -295,8 +295,8 @@ public:
 
 private:
   BackendDNNLib& m_be;
-  const int m_num_dims;
-  const int m_num_spatial_dims;
+  int const m_num_dims;
+  int const m_num_spatial_dims;
   IntVector m_halo_fwd_send;
   IntVector m_halo_bwd_send;
   IntVector m_halo_fwd_recv;
@@ -341,8 +341,8 @@ private:
     m_boundary_comms;
 
   template <typename Tensor>
-  void setup_pooling_descriptor(const Tensor& input,
-                                const Tensor& output,
+  void setup_pooling_descriptor(Tensor const& input,
+                                Tensor const& output,
                                 int_vector windows,
                                 int_vector pads,
                                 int_vector strides,
@@ -455,7 +455,7 @@ private:
       GPU_PROFILE_RANGE_POP();
   }
 
-  void setup_boundary_streams(const IndexVector& split_idx)
+  void setup_boundary_streams(IndexVector const& split_idx)
   {
     apply_to_spatial_sides(m_num_dims, [this](int i, Side side) {
       int idx = get_boundary_stream_index(i, side);

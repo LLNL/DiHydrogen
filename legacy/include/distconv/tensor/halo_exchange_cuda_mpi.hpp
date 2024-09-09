@@ -19,7 +19,7 @@ public:
   HaloExchangeMPI(TensorType& tensor)
     : HaloExchange<DataType, Allocator, AlBackend>(tensor)
   {}
-  HaloExchangeMPI(const HaloExchangeMPI& x)
+  HaloExchangeMPI(HaloExchangeMPI const& x)
     : HaloExchange<DataType, Allocator, AlBackend>(x)
   {}
 
@@ -39,7 +39,7 @@ public:
                 bool skip_unpack,
                 HaloExchangeAccumOp op = HaloExchangeAccumOp::ID) override
   {
-    const int tag = 0;
+    int const tag = 0;
 
     if (!this->is_exchange_required(
           dim, width_rhs_send, width_rhs_recv, width_lhs_send, width_lhs_recv))
@@ -58,11 +58,11 @@ public:
     {
       if (this->get_peer(dim, side) == MPI_PROC_NULL)
         continue;
-      const h2::gpu::DeviceStream stream =
+      h2::gpu::DeviceStream const stream =
         side == Side::RHS ? comm_rhs->get_stream() : comm_lhs->get_stream();
-      const int width_send =
+      int const width_send =
         side == Side::RHS ? width_rhs_send : width_lhs_send;
-      const int width_recv =
+      int const width_recv =
         side == Side::RHS ? width_rhs_recv : width_lhs_recv;
       auto send_buf = this->get_send_buffer(dim, side);
       auto recv_buf = this->get_recv_buffer(dim, side);

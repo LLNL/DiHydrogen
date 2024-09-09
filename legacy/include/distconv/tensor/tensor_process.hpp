@@ -12,14 +12,14 @@ class LocaleProcess
 public:
   int get_size() const { return 1; }
   int get_rank() const { return 0; }
-  IndexVector get_rank_idx(const Distribution& dist) const
+  IndexVector get_rank_idx(Distribution const& dist) const
   {
     return IndexVector(dist.num_dims(), 0);
   }
 };
 
 template <typename Locale>
-inline std::ostream& PrintLocale(std::ostream& os, const Locale& l)
+inline std::ostream& PrintLocale(std::ostream& os, Locale const& l)
 {
   return os << "[" << l.get_rank() << "/" << l.get_size() << "]";
 }
@@ -38,13 +38,13 @@ public:
       update_local_real_shape();
   }
 
-  TensorImpl(const TensorImpl<TensorType>& x) : TensorImpl(x.m_tensor) {}
+  TensorImpl(TensorImpl<TensorType> const& x) : TensorImpl(x.m_tensor) {}
 
-  TensorImpl(TensorType* tensor, const TensorImpl<TensorType>& x)
+  TensorImpl(TensorType* tensor, TensorImpl<TensorType> const& x)
     : TensorImpl(tensor)
   {}
 
-  TensorImpl<TensorType>& operator=(const TensorImpl<TensorType>& x)
+  TensorImpl<TensorType>& operator=(TensorImpl<TensorType> const& x)
   {
     m_tensor = x.m_tensor;
     m_local_real_shape = 0;
@@ -78,13 +78,13 @@ public:
     return;
   }
 
-  void set_shape(const Shape& shape)
+  void set_shape(Shape const& shape)
   {
     m_tensor->m_shape = shape;
     update_local_real_shape();
   }
 
-  void set_distribution(const Distribution& dist)
+  void set_distribution(Distribution const& dist)
   {
     m_tensor->m_dist = dist;
     update_local_real_shape();
@@ -102,7 +102,7 @@ public:
     return global_idx;
   }
 
-  index_t get_local_offset(const IndexVector idx,
+  index_t get_local_offset(IndexVector const idx,
                            bool idx_include_halo = false) const
   {
     auto real_idx = idx;
@@ -124,7 +124,7 @@ public:
 protected:
   void update_local_real_shape()
   {
-    const auto& dist = m_tensor->get_distribution();
+    auto const& dist = m_tensor->get_distribution();
     m_local_real_shape = Shape(m_tensor->get_num_dims(), 0);
     for (int i = 0; i < m_tensor->get_num_dims(); ++i)
     {
@@ -145,7 +145,7 @@ inline int View(Tensor<DataType, LocaleProcess, Allocator>& t_proc,
 
 template <typename DataType, typename Allocator>
 inline int View(Tensor<DataType, LocaleProcess, Allocator>& t_proc,
-                const DataType* raw_ptr)
+                DataType const* raw_ptr)
 {
   t_proc.set_view(raw_ptr);
   return 0;

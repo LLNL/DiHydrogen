@@ -66,8 +66,8 @@ inline char const* error_string(DeviceError status) noexcept
 
 template <typename... KernelArgs, typename... Args>
 void launch_kernel_internal(void (*kernel)(KernelArgs...),
-                            const dim3& grid_dim,
-                            const dim3& block_dim,
+                            dim3 const& grid_dim,
+                            dim3 const& block_dim,
                             std::size_t shared_mem,
                             DeviceStream stream,
                             Args&&... args)

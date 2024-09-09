@@ -12,7 +12,7 @@ using namespace p2p::logging;
 namespace p2p
 {
 
-ConnectionSelf::ConnectionSelf(const internal::MPI& mpi,
+ConnectionSelf::ConnectionSelf(internal::MPI const& mpi,
                                util::EventPool& ev_pool)
   : Connection(mpi.get_rank(), mpi, ev_pool)
 {}
@@ -35,7 +35,7 @@ Request ConnectionSelf::register_addr_nb(void* self, void* peer)
   return Request();
 }
 
-int ConnectionSelf::send(const void* src, size_t size, cudaStream_t stream)
+int ConnectionSelf::send(void const* src, size_t size, cudaStream_t stream)
 {
   P2P_ASSERT_ALWAYS(0 && "Not implemented");
   return 0;
@@ -47,7 +47,7 @@ int ConnectionSelf::recv(void* dst, size_t size, cudaStream_t stream)
   return 0;
 }
 
-int ConnectionSelf::sendrecv(const void* send_src,
+int ConnectionSelf::sendrecv(void const* send_src,
                              size_t send_size,
                              void* recv_dst,
                              size_t recv_size,
@@ -57,7 +57,7 @@ int ConnectionSelf::sendrecv(const void* send_src,
   return 0;
 }
 
-int ConnectionSelf::put(const void* src,
+int ConnectionSelf::put(void const* src,
                         void* dst,
                         size_t size,
                         cudaStream_t stream)

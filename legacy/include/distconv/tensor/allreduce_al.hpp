@@ -23,7 +23,7 @@ public:
   virtual ~AllreduceAl() = default;
 
   virtual void
-  allreduce(const DataType* send_buf, DataType* recv_buf, size_t count) override
+  allreduce(DataType const* send_buf, DataType* recv_buf, size_t count) override
   {
     Al::Allreduce<AlBackend, DataType>(
       send_buf, recv_buf, count, Al::ReductionOperator::sum, m_comm);

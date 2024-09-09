@@ -17,10 +17,10 @@ public:
 
 template <typename Tensor>
 void apply4d(typename Tensor::data_type alpha,
-             const Tensor& x,
+             Tensor const& x,
              index_t x_n,
              index_t x_c,
-             const Tensor& filter,
+             Tensor const& filter,
              index_t f_k,
              index_t f_c,
              bool rotate,
@@ -40,8 +40,8 @@ void apply4d(typename Tensor::data_type alpha,
   auto f_shape = filter.get_local_shape();
   index_t fh_len = f_shape[1];
   index_t fw_len = f_shape[0];
-  const int padding_h = paddings[1];
-  const int padding_w = paddings[0];
+  int const padding_h = paddings[1];
+  int const padding_w = paddings[0];
   index_t h_sweep_len = h_len + padding_h * 2 - fh_len + 1;
   index_t w_sweep_len = w_len + padding_w * 2 - fw_len + 1;
   for (index_t h = 0; h < h_sweep_len; ++h)
@@ -94,10 +94,10 @@ void apply4d(typename Tensor::data_type alpha,
 
 template <typename Tensor>
 void apply5d(typename Tensor::data_type alpha,
-             const Tensor& x,
+             Tensor const& x,
              index_t x_n,
              index_t x_c,
-             const Tensor& filter,
+             Tensor const& filter,
              index_t f_k,
              index_t f_c,
              bool rotate,
@@ -119,9 +119,9 @@ void apply5d(typename Tensor::data_type alpha,
   index_t fh_len = f_shape[2];
   index_t fw_len = f_shape[1];
   index_t fd_len = f_shape[0];
-  const int padding_h = paddings[2];
-  const int padding_w = paddings[1];
-  const int padding_d = paddings[0];
+  int const padding_h = paddings[2];
+  int const padding_w = paddings[1];
+  int const padding_d = paddings[0];
   index_t h_sweep_len = h_len + padding_h * 2 - fh_len + 1;
   index_t w_sweep_len = w_len + padding_w * 2 - fw_len + 1;
   index_t d_sweep_len = d_len + padding_d * 2 - fd_len + 1;
@@ -187,10 +187,10 @@ void apply5d(typename Tensor::data_type alpha,
 
 template <typename Tensor>
 void apply(typename Tensor::data_type alpha,
-           const Tensor& x,
+           Tensor const& x,
            index_t x_n,
            index_t x_c,
-           const Tensor& filter,
+           Tensor const& filter,
            index_t f_k,
            index_t f_c,
            bool rotate,
@@ -260,32 +260,32 @@ public:
   {}
 
   template <typename Tensor>
-  void setup(const Tensor& input,
-             const Tensor& filter,
-             const Tensor& output,
-             const Tensor& d_input,
-             const Tensor& d_filter,
-             const Tensor& d_output,
-             const int_vector& pads,
-             const int_vector& strides,
-             const int_vector dilations,
+  void setup(Tensor const& input,
+             Tensor const& filter,
+             Tensor const& output,
+             Tensor const& d_input,
+             Tensor const& d_filter,
+             Tensor const& d_output,
+             int_vector const& pads,
+             int_vector const& strides,
+             int_vector const dilations,
              int num_groups,
-             const std::string& fwd_algo,
-             const std::string& bwd_data_algo,
-             const std::string& bwd_filter_algo,
+             std::string const& fwd_algo,
+             std::string const& bwd_data_algo,
+             std::string const& bwd_filter_algo,
              size_t ws_size)
   {
     m_strides = strides;
   }
 
   template <typename Tensor>
-  void setup_bias(const Tensor& bias)
+  void setup_bias(Tensor const& bias)
   {
     return;
   }
 
   template <typename Tensor>
-  void setup_bias_gradient(const Tensor& bias_gradient)
+  void setup_bias_gradient(Tensor const& bias_gradient)
   {
     return;
   }
@@ -301,7 +301,7 @@ public:
               bool dump_profile = false)
   {
     int_vector paddings, strides;
-    const auto& dist = input.get_distribution();
+    auto const& dist = input.get_distribution();
     for (auto i = 0; i < m_num_dims; i++)
     {
       int p = (filter.get_shape()[i] - 1) / 2;
@@ -368,7 +368,7 @@ public:
   {
     // Note halo exchange not implemented
 
-    const auto& dist = d_output.get_distribution();
+    auto const& dist = d_output.get_distribution();
     int_vector paddings, strides;
     for (auto i = 0; i < m_num_dims; i++)
     {
@@ -416,7 +416,7 @@ public:
                       bool skip_chanfilt_comm = false,
                       bool dump_profile = false)
   {
-    const auto& dist = input.get_distribution();
+    auto const& dist = input.get_distribution();
     int_vector paddings, strides;
     for (auto i = 0; i < m_num_dims; i++)
     {
@@ -489,7 +489,7 @@ protected:
   int m_num_dims;
   int_vector m_strides;
 
-  bool has_halo(const tensor::Distribution& dist, int dim)
+  bool has_halo(tensor::Distribution const& dist, int dim)
   {
     return dist.is_distributed(dim) && dist.get_overlap(dim);
   }

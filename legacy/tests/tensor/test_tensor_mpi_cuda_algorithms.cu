@@ -49,7 +49,7 @@ __global__ void init_tensor(DataType* buf,
 }
 
 template <typename DataType, typename UnaryFunction>
-__global__ void check_tensor(const DataType* buf,
+__global__ void check_tensor(DataType const* buf,
                              Array<3> local_shape,
                              Array<3> halo,
                              index_t pitch,
@@ -94,17 +94,17 @@ __global__ void check_tensor(const DataType* buf,
 template <typename DataType>
 struct times2_functor
 {
-  __device__ DataType operator()(const DataType x) const { return x * 2; }
+  __device__ DataType operator()(DataType const x) const { return x * 2; }
 };
 
 template <typename DataType>
 struct copy_functor
 {
-  __device__ void operator()(const DataType& x, DataType& y) const { y = x; }
+  __device__ void operator()(DataType const& x, DataType& y) const { y = x; }
 };
 
 template <typename TensorType>
-inline int test_transform(const Shape& shape, const Distribution& dist)
+inline int test_transform(Shape const& shape, Distribution const& dist)
 {
   using LocaleType = typename TensorType::locale_type;
   LocaleType loc = get_locale<LocaleType>();
@@ -200,11 +200,11 @@ inline int test_transform(const Shape& shape, const Distribution& dist)
 }
 
 template <int ND, typename TensorType>
-inline int test_reduce(const Shape& shape,
-                       const Shape& reduce_shape,
-                       const Distribution& dist)
+inline int test_reduce(Shape const& shape,
+                       Shape const& reduce_shape,
+                       Distribution const& dist)
 {
-  const int num_dims = shape.num_dims();
+  int const num_dims = shape.num_dims();
   using DataType = typename TensorType::data_type;
   using LocaleType = typename TensorType::locale_type;
 
@@ -332,12 +332,12 @@ inline int test_reduce(const Shape& shape,
 }
 
 template <int ND, typename TensorType, typename UnaryFunction>
-inline int test_transform_reduce(const Shape& shape,
-                                 const Shape& reduce_shape,
-                                 const Distribution& dist,
-                                 const UnaryFunction& op)
+inline int test_transform_reduce(Shape const& shape,
+                                 Shape const& reduce_shape,
+                                 Distribution const& dist,
+                                 UnaryFunction const& op)
 {
-  const int num_dims = shape.num_dims();
+  int const num_dims = shape.num_dims();
   using DataType = typename TensorType::data_type;
   using LocaleType = typename TensorType::locale_type;
   LocaleType loc = get_locale<LocaleType>();
@@ -437,14 +437,14 @@ template <int ND,
           typename TensorType,
           typename UnaryFunction1,
           typename UnaryFunction2>
-inline int test_transform_reduce2(const Shape& shape,
-                                  const Shape& reduce_shape1,
-                                  const Shape& reduce_shape2,
-                                  const Distribution& dist,
-                                  const UnaryFunction1& op1,
-                                  const UnaryFunction2& op2)
+inline int test_transform_reduce2(Shape const& shape,
+                                  Shape const& reduce_shape1,
+                                  Shape const& reduce_shape2,
+                                  Distribution const& dist,
+                                  UnaryFunction1 const& op1,
+                                  UnaryFunction2 const& op2)
 {
-  const int num_dims = shape.num_dims();
+  int const num_dims = shape.num_dims();
   using DataType = typename TensorType::data_type;
   using LocaleType = typename TensorType::locale_type;
   LocaleType loc = get_locale<LocaleType>();

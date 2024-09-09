@@ -15,11 +15,11 @@ class MPI
 public:
   MPI(MPI_Comm comm);
   int get_rank() const;
-  int send(const void* buf, size_t size, int dst);
-  int isend(const void* buf, size_t size, int dst, MPI_Request* req);
+  int send(void const* buf, size_t size, int dst);
+  int isend(void const* buf, size_t size, int dst, MPI_Request* req);
   int recv(void* buf, size_t size, int src);
   int irecv(void* buf, size_t size, int src, MPI_Request* req);
-  int sendrecv(const void* send_buf,
+  int sendrecv(void const* send_buf,
                size_t send_size,
                int dst,
                void* recv_buf,

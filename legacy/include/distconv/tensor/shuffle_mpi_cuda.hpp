@@ -20,8 +20,8 @@ protected:
   using TensorType = Tensor<DataType, LocaleMPI, CUDAAllocator>;
 
 public:
-  TensorMPICUDAShuffler(const TensorType& src_tensor,
-                        const TensorType& dst_tensor,
+  TensorMPICUDAShuffler(TensorType const& src_tensor,
+                        TensorType const& dst_tensor,
                         DataType* src_buf = nullptr,
                         DataType* dst_buf = nullptr)
     : m_src_local_shape(src_tensor.get_local_shape()),
@@ -85,35 +85,35 @@ public:
       DISTCONV_CHECK_GPU(GPU_FREE(m_recv_displs_d));
   }
 
-  void shuffle_forward(const DataType* src,
+  void shuffle_forward(DataType const* src,
                        DataType* dst,
                        h2::gpu::DeviceStream stream = 0);
-  void shuffle_backward(const DataType* src,
+  void shuffle_backward(DataType const* src,
                         DataType* dst,
                         h2::gpu::DeviceStream stream = 0);
 
-  static size_t get_buf_size(const TensorType& tensor)
+  static size_t get_buf_size(TensorType const& tensor)
   {
     return get_buf_size(tensor.get_local_shape());
   }
 
-  static size_t get_buf_size(const Shape& tensor_local_shape)
+  static size_t get_buf_size(Shape const& tensor_local_shape)
   {
     return tensor_local_shape.get_size() * sizeof(DataType);
   }
 
 protected:
-  const Shape m_src_local_shape;
-  const Shape m_dst_local_shape;
-  const IndexVector m_src_strides;
-  const IndexVector m_dst_strides;
-  const Shape m_src_locale_shape;
-  const Shape m_dst_locale_shape;
-  const IntVector m_src_overlap;
-  const IntVector m_dst_overlap;
-  const LocaleMPI& m_loc;
-  const bool m_src_split_root;
-  const bool m_dst_split_root;
+  Shape const m_src_local_shape;
+  Shape const m_dst_local_shape;
+  IndexVector const m_src_strides;
+  IndexVector const m_dst_strides;
+  Shape const m_src_locale_shape;
+  Shape const m_dst_locale_shape;
+  IntVector const m_src_overlap;
+  IntVector const m_dst_overlap;
+  LocaleMPI const& m_loc;
+  bool const m_src_split_root;
+  bool const m_dst_split_root;
 
   // Offsets in src tensor for each dst locale. Used in
   // packing. Linearized to a 1D array.
@@ -137,12 +137,12 @@ protected:
 
   int get_num_peers() const { return m_peers.size(); }
 
-  void setup_rank_limits(const TensorType& src_tensor,
-                         const TensorType& dst_tensor,
+  void setup_rank_limits(TensorType const& src_tensor,
+                         TensorType const& dst_tensor,
                          int*& rank_limits)
   {
     std::vector<int> host_buf;
-    const int num_dims = src_tensor.get_num_dims();
+    int const num_dims = src_tensor.get_num_dims();
     for (int i = 0; i < num_dims; ++i)
     {
       int dst_locale_dim = dst_tensor.get_locale_shape()[i];
@@ -185,11 +185,11 @@ protected:
     h2::gpu::mem_copy(rank_limits, host_buf.data(), host_buf.size());
   }
 
-  void optimize_find_destination(const TensorType& src_tensor,
-                                 const TensorType& dst_tensor,
+  void optimize_find_destination(TensorType const& src_tensor,
+                                 TensorType const& dst_tensor,
                                  std::vector<int>& rank_limits)
   {
-    const int num_dims = src_tensor.get_num_dims();
+    int const num_dims = src_tensor.get_num_dims();
     int rank_limits_idx = 0;
     for (int i = 0; i < num_dims; ++i)
     {
@@ -209,7 +209,7 @@ protected:
       // At least 3 entries are needed and this is probably only
       // meaningful for a relatively large dimension. Skip dimension
       // if it's shorter.
-      const int opt_dim_threshold = 16;
+      int const opt_dim_threshold = 16;
       if (evenly_partitioned && dst_locale_dim >= opt_dim_threshold)
       {
         // This dimension is evenly partitioned and has enough space to
@@ -229,7 +229,7 @@ protected:
     }
   }
 
-  void setup_displs(const TensorType& src_tensor, const TensorType& dst_tensor)
+  void setup_displs(TensorType const& src_tensor, TensorType const& dst_tensor)
   {
     int num_ranks = m_loc.get_size();
 
@@ -240,12 +240,12 @@ protected:
     DISTCONV_GPU_MALLOC(&m_send_displs_d, sizeof(int) * num_ranks);
     DISTCONV_GPU_MALLOC(&m_recv_displs_d, sizeof(int) * num_ranks);
 
-    const Region src_local_region(src_tensor.get_global_index(),
+    Region const src_local_region(src_tensor.get_global_index(),
                                   m_src_local_shape);
-    const Region dst_local_region(dst_tensor.get_global_index(),
+    Region const dst_local_region(dst_tensor.get_global_index(),
                                   m_dst_local_shape);
-    const auto& loc_shape_dst = m_dst_locale_shape;
-    const auto& loc_shape_src = m_src_locale_shape;
+    auto const& loc_shape_dst = m_dst_locale_shape;
+    auto const& loc_shape_src = m_src_locale_shape;
     int cur_send_displs = 0;
     int cur_recv_displs = 0;
 
@@ -263,7 +263,7 @@ protected:
       m_send_displs_h[pid] = cur_send_displs;
       m_recv_displs_h[pid] = cur_recv_displs;
       // send_counts & send_displs
-      const auto& dst_pid_idx = loc_shape_dst.get_index(pid);
+      auto const& dst_pid_idx = loc_shape_dst.get_index(pid);
       if (src_split_root
           && dst_tensor.get_distribution().is_split_root(dst_pid_idx))
       {
@@ -285,7 +285,7 @@ protected:
       }
       cur_send_displs += m_send_counts[pid];
       // recv_counts & recv_displs
-      const auto src_pid_idx = loc_shape_src.get_index(pid);
+      auto const src_pid_idx = loc_shape_src.get_index(pid);
       if (dst_split_root
           && src_tensor.get_distribution().is_split_root(src_pid_idx))
       {
@@ -314,7 +314,7 @@ protected:
     h2::gpu::mem_copy(m_recv_displs_d, m_recv_displs_h, num_ranks);
   }
 
-  void shuffle(const DataType* src,
+  void shuffle(DataType const* src,
                DataType* dst,
                h2::gpu::DeviceStream stream,
                bool is_forward);
@@ -367,7 +367,7 @@ protected:
     }
   }
 
-  virtual void transfer(const DataType* send_buf,
+  virtual void transfer(DataType const* send_buf,
                         size_t send_buffer_size,
                         DataType* recv_buf,
                         size_t recv_buffer_size,
@@ -442,7 +442,7 @@ protected:
     }
   }
 
-  const Shape& get_src_local_shape(bool is_forward) const
+  Shape const& get_src_local_shape(bool is_forward) const
   {
     if (is_forward)
     {
@@ -454,7 +454,7 @@ protected:
     }
   }
 
-  const Shape& get_dst_local_shape(bool is_forward) const
+  Shape const& get_dst_local_shape(bool is_forward) const
   {
     if (is_forward)
     {
@@ -466,7 +466,7 @@ protected:
     }
   }
 
-  const IndexVector& get_src_strides(bool is_forward) const
+  IndexVector const& get_src_strides(bool is_forward) const
   {
     if (is_forward)
     {
@@ -478,7 +478,7 @@ protected:
     }
   }
 
-  const IndexVector& get_dst_strides(bool is_forward) const
+  IndexVector const& get_dst_strides(bool is_forward) const
   {
     if (is_forward)
     {
@@ -490,7 +490,7 @@ protected:
     }
   }
 
-  const Shape& get_src_locale_shape(bool is_forward) const
+  Shape const& get_src_locale_shape(bool is_forward) const
   {
     if (is_forward)
     {
@@ -502,7 +502,7 @@ protected:
     }
   }
 
-  const Shape& get_dst_locale_shape(bool is_forward) const
+  Shape const& get_dst_locale_shape(bool is_forward) const
   {
     if (is_forward)
     {
@@ -514,7 +514,7 @@ protected:
     }
   }
 
-  const IntVector& get_src_overlap(bool is_forward) const
+  IntVector const& get_src_overlap(bool is_forward) const
   {
     if (is_forward)
     {
@@ -526,7 +526,7 @@ protected:
     }
   }
 
-  const IntVector& get_dst_overlap(bool is_forward) const
+  IntVector const& get_dst_overlap(bool is_forward) const
   {
     if (is_forward)
     {
@@ -547,38 +547,38 @@ protected:
     return is_forward ? m_dst_split_root : m_src_split_root;
   }
 
-  const int* get_rank_limits_fwd(bool is_forward) const
+  int const* get_rank_limits_fwd(bool is_forward) const
   {
     return is_forward ? m_rank_limits_fwd : m_rank_limits_bwd;
   }
-  const int* get_rank_limits_bwd(bool is_forward) const
+  int const* get_rank_limits_bwd(bool is_forward) const
   {
     return is_forward ? m_rank_limits_bwd : m_rank_limits_fwd;
   }
 
-  const int* get_send_counts(bool is_forward) const
+  int const* get_send_counts(bool is_forward) const
   {
     return is_forward ? m_send_counts : m_recv_counts;
   }
-  const int* get_recv_counts(bool is_forward) const
+  int const* get_recv_counts(bool is_forward) const
   {
     return is_forward ? m_recv_counts : m_send_counts;
   }
 
-  const int* get_send_displs_h(bool is_forward) const
+  int const* get_send_displs_h(bool is_forward) const
   {
     return is_forward ? m_send_displs_h : m_recv_displs_h;
   }
-  const int* get_recv_displs_h(bool is_forward) const
+  int const* get_recv_displs_h(bool is_forward) const
   {
     return is_forward ? m_recv_displs_h : m_send_displs_h;
   }
 
-  const int* get_send_displs_d(bool is_forward) const
+  int const* get_send_displs_d(bool is_forward) const
   {
     return is_forward ? m_send_displs_d : m_recv_displs_d;
   }
-  const int* get_recv_displs_d(bool is_forward) const
+  int const* get_recv_displs_d(bool is_forward) const
   {
     return is_forward ? m_recv_displs_d : m_send_displs_d;
   }

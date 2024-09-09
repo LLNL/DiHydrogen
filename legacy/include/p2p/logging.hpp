@@ -21,14 +21,14 @@ class PrintStream<false>
 public:
   PrintStream(std::ostream& os = std::cerr) {}
   template <typename PrefixType>
-  PrintStream(std::ostream& os, const PrefixType& prefix)
+  PrintStream(std::ostream& os, PrefixType const& prefix)
   {}
   template <typename PrefixType>
-  PrintStream(const PrefixType& prefix)
+  PrintStream(PrefixType const& prefix)
   {}
   ~PrintStream() = default;
   template <typename X>
-  PrintStream& operator<<(const X&)
+  PrintStream& operator<<(X const&)
   {
     return *this;
   }
@@ -40,12 +40,12 @@ class PrintStream<true>
 public:
   PrintStream(std::ostream& os = std::cerr) : m_os(os) {}
   template <typename PrefixType>
-  PrintStream(std::ostream& os, const PrefixType& prefix) : m_os(os)
+  PrintStream(std::ostream& os, PrefixType const& prefix) : m_os(os)
   {
     ss << prefix;
   }
   template <typename PrefixType>
-  PrintStream(const PrefixType& prefix) : m_os(std::cerr)
+  PrintStream(PrefixType const& prefix) : m_os(std::cerr)
   {
     ss << prefix;
   }
@@ -59,7 +59,7 @@ public:
   }
   std::stringstream& operator()() { return ss; }
   template <typename X>
-  PrintStream<true>& operator<<(const X& x)
+  PrintStream<true>& operator<<(X const& x)
   {
     ss << x;
     return *this;

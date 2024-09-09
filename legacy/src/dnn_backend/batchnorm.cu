@@ -38,22 +38,22 @@ namespace
 
 template <int ND, typename DataType, int BLOCK_SIZE>
 __global__ void
-channel_sums_and_sqsums_kernel(const DataType* __restrict__ input,
+channel_sums_and_sqsums_kernel(DataType const* __restrict__ input,
                                DataType* __restrict__ sums,
                                DataType* __restrict__ sqsums,
                                tensor::Array<ND> shape,
                                tensor::Array<ND> input_strides)
 {
-  const int tid = threadIdx.x;
-  const index_t gidx = threadIdx.x + blockIdx.x * blockDim.x;
-  const int ch_idx = blockIdx.y;
-  const int num_channels = shape[get_channel_dim()];
-  const int num_samples = shape[get_sample_dim()];
+  int const tid = threadIdx.x;
+  index_t const gidx = threadIdx.x + blockIdx.x * blockDim.x;
+  int const ch_idx = blockIdx.y;
+  int const num_channels = shape[get_channel_dim()];
+  int const num_samples = shape[get_sample_dim()];
 
   DataType sum = DataType(0);
   DataType sqsum = DataType(0);
 
-  const index_t channel_size = shape.get_size() / num_channels / num_samples;
+  index_t const channel_size = shape.get_size() / num_channels / num_samples;
 
   if (gidx < channel_size)
   {
@@ -68,7 +68,7 @@ channel_sums_and_sqsums_kernel(const DataType* __restrict__ input,
     input_offset += ch_idx * input_strides[-2];
     for (int s = 0; s < num_samples; ++s)
     {
-      const DataType x = input[input_offset];
+      DataType const x = input[input_offset];
       sum += x;
       sqsum += x * x;
 
@@ -91,18 +91,18 @@ channel_sums_and_sqsums_kernel(const DataType* __restrict__ input,
 
 template <int ND, typename DataType, int BLOCK_SIZE, typename DataTypeV>
 __global__ void
-channel_sums_and_sqsums_opt_kernel(const DataTypeV* __restrict__ input,
+channel_sums_and_sqsums_opt_kernel(DataTypeV const* __restrict__ input,
                                    DataType* __restrict__ sums,
                                    DataType* __restrict__ sqsums,
-                                   const int num_channels,
-                                   const int num_samples,
-                                   const index_t spatial_size,
-                                   const index_t spatial_real_size)
+                                   int const num_channels,
+                                   int const num_samples,
+                                   index_t const spatial_size,
+                                   index_t const spatial_real_size)
 {
-  const int tid = threadIdx.x;
-  const int idx = threadIdx.x + blockIdx.x * blockDim.x;
-  const int ch_idx = blockIdx.y;
-  const auto sample_offset = spatial_real_size * num_channels;
+  int const tid = threadIdx.x;
+  int const idx = threadIdx.x + blockIdx.x * blockDim.x;
+  int const ch_idx = blockIdx.y;
+  auto const sample_offset = spatial_real_size * num_channels;
 
   auto sum = DataType(0);
   auto sqsum = DataType(0);
@@ -111,7 +111,7 @@ channel_sums_and_sqsums_opt_kernel(const DataTypeV* __restrict__ input,
   {
     for (int i = idx; i < spatial_size; i += BLOCK_SIZE * gridDim.x)
     {
-      const auto x = input[offset + i];
+      auto const x = input[offset + i];
       sum += util::sum(x);
       sqsum += util::sum(x * x);
     }
@@ -133,7 +133,7 @@ channel_sums_and_sqsums_opt_kernel(const DataTypeV* __restrict__ input,
 
 template <int ND, typename Tensor>
 void channel_sums_and_sqsums_opt(int num_samples,
-                                 const Tensor& input,
+                                 Tensor const& input,
                                  Tensor& sums,
                                  Tensor& sqsums,
                                  h2::gpu::DeviceStream stream)
@@ -145,7 +145,7 @@ void channel_sums_and_sqsums_opt(int num_samples,
   if (input.get_local_size() == 0 || !input.is_split_root())
     return;
 
-  const int num_channels = input.get_local_shape()[get_channel_dim()];
+  int const num_channels = input.get_local_shape()[get_channel_dim()];
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
   constexpr index_t thread_work_size = 8;
@@ -165,7 +165,7 @@ void channel_sums_and_sqsums_opt(int num_samples,
     dim3 grid_dim(num_blocks_per_channel, num_channels);
     channel_sums_and_sqsums_opt_kernel<ND, DataType, block_size, DataTypeV>
       <<<grid_dim, block_dim, 0, stream>>>(
-        reinterpret_cast<const DataTypeV*>(input.get_const_base_ptr()),
+        reinterpret_cast<DataTypeV const*>(input.get_const_base_ptr()),
         sums.get_base_ptr(),
         sqsums.get_base_ptr(),
         num_channels,
@@ -191,7 +191,7 @@ void channel_sums_and_sqsums_opt(int num_samples,
 
 template <int ND, typename Tensor>
 void channel_sums_and_sqsums(int num_samples,
-                             const Tensor& input,
+                             Tensor const& input,
                              Tensor& sums,
                              Tensor& sqsums,
                              h2::gpu::DeviceStream stream)
@@ -229,7 +229,7 @@ void channel_sums_and_sqsums(int num_samples,
     return;
   }
 
-  const int num_channels = input.get_local_shape()[get_channel_dim()];
+  int const num_channels = input.get_local_shape()[get_channel_dim()];
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
   index_t channel_size = input.get_local_size() / num_channels / num_samples;
@@ -252,7 +252,7 @@ void channel_sums_and_sqsums(int num_samples,
 template <typename Tensor>
 void channel_sums_and_sqsums(int num_dims,
                              int num_samples,
-                             const Tensor& input,
+                             Tensor const& input,
                              Tensor& sums,
                              Tensor& sqsums,
                              h2::gpu::DeviceStream stream)
@@ -299,8 +299,8 @@ struct sums_to_statistics_functor
                              DataType& running_mean,
                              DataType& running_var)
   {
-    const DataType mean = global_mean / m_num_per_sum;
-    const DataType sqmean = global_var / m_num_per_sum;
+    DataType const mean = global_mean / m_num_per_sum;
+    DataType const sqmean = global_var / m_num_per_sum;
     DataType var = sqmean - mean * mean;
     var = var > DataType(0) ? var : DataType(0);
     var *= m_num_per_sum / (m_num_per_sum - DataType(1));
@@ -367,28 +367,28 @@ __device__ inline float rsqrt(float x)
 
 template <int ND, typename DataType>
 __global__ void
-batch_normalization_kernel(const DataType* __restrict__ input,
-                           const DataType* __restrict__ global_mean,
-                           const DataType* __restrict__ global_var,
-                           const DataType* __restrict__ global_scale,
-                           const DataType* __restrict__ global_bias,
+batch_normalization_kernel(DataType const* __restrict__ input,
+                           DataType const* __restrict__ global_mean,
+                           DataType const* __restrict__ global_var,
+                           DataType const* __restrict__ global_scale,
+                           DataType const* __restrict__ global_bias,
                            DataType* __restrict__ output,
                            DataType epsilon,
                            tensor::Array<ND> shape,
                            tensor::Array<ND> input_strides,
                            tensor::Array<ND> output_strides)
 {
-  const int ch_idx = blockIdx.y;
-  const int num_channels = shape[get_channel_dim()];
-  const int num_samples = shape[get_sample_dim()];
-  const DataType mean = global_mean[ch_idx];
-  const DataType var = global_var[ch_idx];
-  const DataType scale = global_scale[ch_idx];
-  const DataType bias = global_bias[ch_idx];
-  const DataType inv_stdev = rsqrt(var + epsilon);
+  int const ch_idx = blockIdx.y;
+  int const num_channels = shape[get_channel_dim()];
+  int const num_samples = shape[get_sample_dim()];
+  DataType const mean = global_mean[ch_idx];
+  DataType const var = global_var[ch_idx];
+  DataType const scale = global_scale[ch_idx];
+  DataType const bias = global_bias[ch_idx];
+  DataType const inv_stdev = rsqrt(var + epsilon);
 
-  const index_t gidx = threadIdx.x + blockIdx.x * blockDim.x;
-  const index_t channel_size = shape.get_size() / num_channels / num_samples;
+  index_t const gidx = threadIdx.x + blockIdx.x * blockDim.x;
+  index_t const channel_size = shape.get_size() / num_channels / num_samples;
 
   if (gidx < channel_size)
   {
@@ -405,7 +405,7 @@ batch_normalization_kernel(const DataType* __restrict__ input,
     output_offset += ch_idx * output_strides[-2];
     for (int s = 0; s < num_samples; ++s)
     {
-      const DataType x = input[input_offset];
+      DataType const x = input[input_offset];
       DataType xhat = (x - mean) * inv_stdev;
       DataType y = scale * xhat + bias;
       output[output_offset] = y;
@@ -418,25 +418,25 @@ batch_normalization_kernel(const DataType* __restrict__ input,
 
 template <int ND, typename DataType, typename DataTypeV>
 __global__ void
-batch_normalization_opt_kernel(const DataTypeV* __restrict__ input,
-                               const DataType* __restrict__ global_mean,
-                               const DataType* __restrict__ global_var,
-                               const DataType* __restrict__ global_scale,
-                               const DataType* __restrict__ global_bias,
+batch_normalization_opt_kernel(DataTypeV const* __restrict__ input,
+                               DataType const* __restrict__ global_mean,
+                               DataType const* __restrict__ global_var,
+                               DataType const* __restrict__ global_scale,
+                               DataType const* __restrict__ global_bias,
                                DataTypeV* __restrict__ output,
                                DataType epsilon,
                                index_t spatial_size,
                                int num_channels)
 {
-  const auto ch_idx = blockIdx.y;
-  const auto sample_idx = blockIdx.z;
-  const auto mean = global_mean[ch_idx];
-  const auto var = global_var[ch_idx];
-  const auto scale = global_scale[ch_idx];
-  const auto bias = global_bias[ch_idx];
-  const auto inv_stdev = rsqrt(var + epsilon);
+  auto const ch_idx = blockIdx.y;
+  auto const sample_idx = blockIdx.z;
+  auto const mean = global_mean[ch_idx];
+  auto const var = global_var[ch_idx];
+  auto const scale = global_scale[ch_idx];
+  auto const bias = global_bias[ch_idx];
+  auto const inv_stdev = rsqrt(var + epsilon);
 
-  const auto num_threads_per_channel = blockDim.x * gridDim.x;
+  auto const num_threads_per_channel = blockDim.x * gridDim.x;
 
   auto block_offset = (ch_idx + sample_idx * num_channels) * spatial_size;
   input += block_offset;
@@ -454,11 +454,11 @@ batch_normalization_opt_kernel(const DataTypeV* __restrict__ input,
 
 template <int ND, typename TensorType>
 void batch_normalization_opt(int num_samples,
-                             const TensorType& input,
-                             const TensorType& mean,
-                             const TensorType& var,
-                             const TensorType& scale,
-                             const TensorType& bias,
+                             TensorType const& input,
+                             TensorType const& mean,
+                             TensorType const& var,
+                             TensorType const& scale,
+                             TensorType const& bias,
                              TensorType& output,
                              typename TensorType::data_type epsilon,
                              h2::gpu::DeviceStream stream)
@@ -468,7 +468,7 @@ void batch_normalization_opt(int num_samples,
   if (output.get_local_size() == 0)
     return;
   assert_eq(num_samples, (int) input.get_local_shape()[get_sample_dim()]);
-  const int num_channels = input.get_local_shape()[get_channel_dim()];
+  int const num_channels = input.get_local_shape()[get_channel_dim()];
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
   index_t channel_size = input.get_local_size() / num_channels / num_samples;
@@ -482,7 +482,7 @@ void batch_normalization_opt(int num_samples,
     using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
     batch_normalization_opt_kernel<ND, DataType, DataTypeV>
       <<<grid_dim, block_dim, 0, stream>>>(
-        reinterpret_cast<const DataTypeV*>(input.get_const_buffer()),
+        reinterpret_cast<DataTypeV const*>(input.get_const_buffer()),
         mean.get_const_base_ptr(),
         var.get_const_base_ptr(),
         scale.get_const_base_ptr(),
@@ -511,11 +511,11 @@ void batch_normalization_opt(int num_samples,
 
 template <int ND, typename TensorType>
 void batch_normalization(int num_samples,
-                         const TensorType& input,
-                         const TensorType& mean,
-                         const TensorType& var,
-                         const TensorType& scale,
-                         const TensorType& bias,
+                         TensorType const& input,
+                         TensorType const& mean,
+                         TensorType const& var,
+                         TensorType const& scale,
+                         TensorType const& bias,
                          TensorType& output,
                          typename TensorType::data_type epsilon,
                          h2::gpu::DeviceStream stream)
@@ -540,7 +540,7 @@ void batch_normalization(int num_samples,
   if (output.get_local_size() == 0)
     return;
   assert_eq(num_samples, (int) input.get_local_shape()[get_sample_dim()]);
-  const int num_channels = input.get_local_shape()[get_channel_dim()];
+  int const num_channels = input.get_local_shape()[get_channel_dim()];
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
   index_t channel_size = input.get_local_size() / num_channels / num_samples;
@@ -568,11 +568,11 @@ void batch_normalization(int num_samples,
 template <typename TensorType>
 void batch_normalization(int num_dims,
                          int num_samples,
-                         const TensorType& input,
-                         const TensorType& mean,
-                         const TensorType& var,
-                         const TensorType& scale,
-                         const TensorType& bias,
+                         TensorType const& input,
+                         TensorType const& mean,
+                         TensorType const& var,
+                         TensorType const& scale,
+                         TensorType const& bias,
                          TensorType& output,
                          typename TensorType::data_type epsilon,
                          h2::gpu::DeviceStream stream)
@@ -615,25 +615,25 @@ template <int ND,
           typename DataType2,
           typename DataTypeV,
           int BLOCK_SIZE>
-__global__ void forward_all_kernel(const DataTypeV* __restrict__ input,
+__global__ void forward_all_kernel(DataTypeV const* __restrict__ input,
                                    DataType* __restrict__ running_mean,
                                    DataType* __restrict__ running_var,
-                                   const DataType* __restrict__ scale,
-                                   const DataType* __restrict__ bias,
+                                   DataType const* __restrict__ scale,
+                                   DataType const* __restrict__ bias,
                                    DataTypeV* __restrict__ output,
                                    DataType decay,
                                    DataType epsilon,
-                                   const int sample_size,
-                                   const int channel_size,
-                                   const int spatial_size,
-                                   const int spatial_real_size,
-                                   const size_t num_per_sum,
+                                   int const sample_size,
+                                   int const channel_size,
+                                   int const spatial_size,
+                                   int const spatial_real_size,
+                                   size_t const num_per_sum,
                                    AllreduceNVSHMEMDevice<DataType2> ar)
 {
   __shared__ DataType2 shared_stat[BLOCK_SIZE];
-  const int tid = threadIdx.x;
-  const int bid = blockIdx.x;
-  const auto sample_offset = spatial_real_size * channel_size;
+  int const tid = threadIdx.x;
+  int const bid = blockIdx.x;
+  auto const sample_offset = spatial_real_size * channel_size;
 
   index_t offset = spatial_real_size * bid;
   DataType2 stat = {DataType(0), DataType(0)};
@@ -642,7 +642,7 @@ __global__ void forward_all_kernel(const DataTypeV* __restrict__ input,
   {
     for (int i = tid; i < spatial_size; i += BLOCK_SIZE)
     {
-      const auto x = input[offset + i];
+      auto const x = input[offset + i];
       stat.x += util::sum(x);
       stat.y += util::sum(x * x);
     }
@@ -665,7 +665,7 @@ __global__ void forward_all_kernel(const DataTypeV* __restrict__ input,
   stat = shared_stat[0];
 
   // Output channel sum to global memory
-  const int ch_idx = blockIdx.x;
+  int const ch_idx = blockIdx.x;
   if (tid == 0)
   {
     // Assumes only one block per entry
@@ -688,8 +688,8 @@ __global__ void forward_all_kernel(const DataTypeV* __restrict__ input,
   stat = shared_stat[0];
 
   // fuse the batch_normalization kernel here
-  const auto scale_ch = scale[ch_idx];
-  const auto bias_ch = bias[ch_idx];
+  auto const scale_ch = scale[ch_idx];
+  auto const bias_ch = bias[ch_idx];
 
   offset = spatial_real_size * bid;
 
@@ -698,7 +698,7 @@ __global__ void forward_all_kernel(const DataTypeV* __restrict__ input,
     for (int i = tid; i < spatial_size; i += BLOCK_SIZE)
     {
       auto idx = offset + i;
-      const auto x = input[idx];
+      auto const x = input[idx];
       auto xhat = (x - stat.x) * stat.y;
       auto y = xhat * scale_ch + bias_ch;
       output[idx] = y;
@@ -708,7 +708,7 @@ __global__ void forward_all_kernel(const DataTypeV* __restrict__ input,
 }
 
 template <int ND, typename Tensor>
-void forward_all(const Tensor& input,
+void forward_all(Tensor const& input,
                  Tensor& mean,
                  Tensor& var,
                  Tensor& running_mean,
@@ -724,10 +724,10 @@ void forward_all(const Tensor& input,
   using DataType = typename Tensor::data_type;
   using DataType2 = typename util::GetVectorType<DataType, 2>::type;
 
-  const auto shape = input.get_local_shape();
-  const auto real_shape = input.get_local_real_shape();
-  const int num_samples = shape[get_sample_dim()];
-  const int num_channels = shape[get_channel_dim()];
+  auto const shape = input.get_local_shape();
+  auto const real_shape = input.get_local_real_shape();
+  int const num_samples = shape[get_sample_dim()];
+  int const num_channels = shape[get_channel_dim()];
 
   int spatial_size = shape[0] * shape[1];
   int spatial_real_size = real_shape[0] * real_shape[1];
@@ -766,7 +766,7 @@ void forward_all(const Tensor& input,
     using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
     forward_all_kernel<ND, DataType, DataType2, DataTypeV, block_size>
       <<<grid_dim, block_dim, 0, stream>>>(
-        reinterpret_cast<const DataTypeV*>(input.get_const_base_ptr()),
+        reinterpret_cast<DataTypeV const*>(input.get_const_base_ptr()),
         running_mean.get_base_ptr(),
         running_var.get_base_ptr(),
         scale.get_base_ptr(),
@@ -805,7 +805,7 @@ void forward_all(const Tensor& input,
 
 template <typename Tensor>
 void forward_all(int num_dims,
-                 const Tensor& input,
+                 Tensor const& input,
                  Tensor& mean,
                  Tensor& var,
                  Tensor& running_mean,
@@ -874,11 +874,11 @@ namespace
 {
 
 template <int ND, typename DataType, int BLOCK_SIZE>
-__global__ void backprop1_kernel(const DataType* __restrict__ input,
-                                 const DataType* __restrict__ d_output,
-                                 const DataType* __restrict__ global_mean,
-                                 const DataType* __restrict__ global_var,
-                                 const DataType* __restrict__ global_scale,
+__global__ void backprop1_kernel(DataType const* __restrict__ input,
+                                 DataType const* __restrict__ d_output,
+                                 DataType const* __restrict__ global_mean,
+                                 DataType const* __restrict__ global_var,
+                                 DataType const* __restrict__ global_scale,
                                  DataType* __restrict__ global_dscale,
                                  DataType* __restrict__ global_dbias,
                                  DataType* __restrict__ global_dmean,
@@ -888,24 +888,24 @@ __global__ void backprop1_kernel(const DataType* __restrict__ input,
                                  tensor::Array<ND> input_strides,
                                  tensor::Array<ND> d_output_strides)
 {
-  const int tid = threadIdx.x;
-  const index_t gidx = threadIdx.x + blockIdx.x * blockDim.x;
-  const int ch_idx = blockIdx.y;
-  const int num_channels = shape[get_channel_dim()];
-  const int num_samples = shape[get_sample_dim()];
+  int const tid = threadIdx.x;
+  index_t const gidx = threadIdx.x + blockIdx.x * blockDim.x;
+  int const ch_idx = blockIdx.y;
+  int const num_channels = shape[get_channel_dim()];
+  int const num_samples = shape[get_sample_dim()];
 
-  const DataType mean = global_mean[ch_idx];
-  const DataType var = global_var[ch_idx];
-  const DataType scale = global_scale[ch_idx];
-  const DataType inv_stdev = rsqrt(var + epsilon);
-  const DataType dvar_factor = inv_stdev * inv_stdev * inv_stdev / 2;
+  DataType const mean = global_mean[ch_idx];
+  DataType const var = global_var[ch_idx];
+  DataType const scale = global_scale[ch_idx];
+  DataType const inv_stdev = rsqrt(var + epsilon);
+  DataType const dvar_factor = inv_stdev * inv_stdev * inv_stdev / 2;
 
   DataType dscale = DataType(0);
   DataType dbias = DataType(0);
   DataType dmean = DataType(0);
   DataType dvar = DataType(0);
 
-  const index_t channel_size = shape.get_size() / num_channels / num_samples;
+  index_t const channel_size = shape.get_size() / num_channels / num_samples;
 
   if (gidx < channel_size)
   {
@@ -922,12 +922,12 @@ __global__ void backprop1_kernel(const DataType* __restrict__ input,
     d_output_offset += ch_idx * d_output_strides[-2];
     for (int sample_idx = 0; sample_idx < num_samples; ++sample_idx)
     {
-      const DataType x = input[input_offset];
-      const DataType xhat = (x - mean) * inv_stdev;
-      const DataType dy = d_output[d_output_offset];
+      DataType const x = input[input_offset];
+      DataType const xhat = (x - mean) * inv_stdev;
+      DataType const dy = d_output[d_output_offset];
       dscale += dy * xhat;
       dbias += dy;
-      const DataType dxhat = dy * scale;
+      DataType const dxhat = dy * scale;
       dmean += -dxhat * inv_stdev;
       dvar += -dxhat * (x - mean) * dvar_factor;
 
@@ -957,33 +957,33 @@ __global__ void backprop1_kernel(const DataType* __restrict__ input,
 }
 
 template <int ND, typename DataType, int BLOCK_SIZE, typename DataTypeV>
-__global__ void backprop1_opt_kernel(const DataTypeV* __restrict__ input,
-                                     const DataTypeV* __restrict__ d_output,
-                                     const DataType* __restrict__ global_mean,
-                                     const DataType* __restrict__ global_var,
-                                     const DataType* __restrict__ global_scale,
+__global__ void backprop1_opt_kernel(DataTypeV const* __restrict__ input,
+                                     DataTypeV const* __restrict__ d_output,
+                                     DataType const* __restrict__ global_mean,
+                                     DataType const* __restrict__ global_var,
+                                     DataType const* __restrict__ global_scale,
                                      DataType* __restrict__ global_dscale,
                                      DataType* __restrict__ global_dbias,
                                      DataType* __restrict__ global_dmean,
                                      DataType* __restrict__ global_dvar,
                                      DataType epsilon,
-                                     const int num_channels,
-                                     const int num_samples,
-                                     const index_t spatial_size,
-                                     const index_t input_spatial_real_size,
-                                     const index_t output_spatial_real_size)
+                                     int const num_channels,
+                                     int const num_samples,
+                                     index_t const spatial_size,
+                                     index_t const input_spatial_real_size,
+                                     index_t const output_spatial_real_size)
 {
-  const int tid = threadIdx.x;
-  const index_t idx = threadIdx.x + blockIdx.x * blockDim.x;
-  const int ch_idx = blockIdx.y;
-  const auto i_sample_offset = input_spatial_real_size * num_channels;
-  const auto o_sample_offset = output_spatial_real_size * num_channels;
+  int const tid = threadIdx.x;
+  index_t const idx = threadIdx.x + blockIdx.x * blockDim.x;
+  int const ch_idx = blockIdx.y;
+  auto const i_sample_offset = input_spatial_real_size * num_channels;
+  auto const o_sample_offset = output_spatial_real_size * num_channels;
 
-  const auto mean = global_mean[ch_idx];
-  const auto var = global_var[ch_idx];
-  const auto scale = global_scale[ch_idx];
-  const auto inv_stdev = rsqrt(var + epsilon);
-  const auto dvar_factor = inv_stdev * inv_stdev * inv_stdev / 2;
+  auto const mean = global_mean[ch_idx];
+  auto const var = global_var[ch_idx];
+  auto const scale = global_scale[ch_idx];
+  auto const inv_stdev = rsqrt(var + epsilon);
+  auto const dvar_factor = inv_stdev * inv_stdev * inv_stdev / 2;
 
   DataType dscale = DataType(0);
   DataType dbias = DataType(0);
@@ -997,12 +997,12 @@ __global__ void backprop1_opt_kernel(const DataTypeV* __restrict__ input,
   {
     for (auto i = idx; i < spatial_size; i += BLOCK_SIZE * gridDim.x)
     {
-      const auto x = input[i_offset + i];
-      const auto xhat = (x - mean) * inv_stdev;
-      const auto dy = d_output[o_offset + i];
+      auto const x = input[i_offset + i];
+      auto const xhat = (x - mean) * inv_stdev;
+      auto const dy = d_output[o_offset + i];
       dscale += util::sum(dy * xhat);
       dbias += util::sum(dy);
-      const auto dxhat = dy * scale;
+      auto const dxhat = dy * scale;
       dmean -= util::sum(dxhat * inv_stdev);
       dvar -= util::sum(dxhat * (x - mean) * dvar_factor);
     }
@@ -1032,11 +1032,11 @@ __global__ void backprop1_opt_kernel(const DataTypeV* __restrict__ input,
 
 template <int ND, typename TensorType>
 void backprop1_opt(int num_samples,
-                   const TensorType& input,
-                   const TensorType& d_output,
-                   const TensorType& mean,
-                   const TensorType& var,
-                   const TensorType& scale,
+                   TensorType const& input,
+                   TensorType const& d_output,
+                   TensorType const& mean,
+                   TensorType const& var,
+                   TensorType const& scale,
                    TensorType& scale_gradient,
                    TensorType& bias_gradient,
                    TensorType& mean_gradient,
@@ -1045,7 +1045,7 @@ void backprop1_opt(int num_samples,
                    h2::gpu::DeviceStream stream)
 {
   using DataType = typename TensorType::data_type;
-  const int num_channels = input.get_local_shape()[get_channel_dim()];
+  int const num_channels = input.get_local_shape()[get_channel_dim()];
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
   constexpr index_t thread_work_size = 8;
@@ -1069,8 +1069,8 @@ void backprop1_opt(int num_samples,
     dim3 grid_dim(num_blocks_per_channel, num_channels);
     backprop1_opt_kernel<ND, DataType, block_size, DataTypeV>
       <<<grid_dim, block_dim, 0, stream>>>(
-        reinterpret_cast<const DataTypeV*>(input.get_const_base_ptr()),
-        reinterpret_cast<const DataTypeV*>(d_output.get_const_base_ptr()),
+        reinterpret_cast<DataTypeV const*>(input.get_const_base_ptr()),
+        reinterpret_cast<DataTypeV const*>(d_output.get_const_base_ptr()),
         mean.get_const_base_ptr(),
         var.get_const_base_ptr(),
         scale.get_const_base_ptr(),
@@ -1111,11 +1111,11 @@ void backprop1_opt(int num_samples,
 
 template <int ND, typename TensorType>
 void backprop1(int num_samples,
-               const TensorType& input,
-               const TensorType& d_output,
-               const TensorType& mean,
-               const TensorType& var,
-               const TensorType& scale,
+               TensorType const& input,
+               TensorType const& d_output,
+               TensorType const& mean,
+               TensorType const& var,
+               TensorType const& scale,
                TensorType& scale_gradient,
                TensorType& bias_gradient,
                TensorType& mean_gradient,
@@ -1175,9 +1175,9 @@ void backprop1(int num_samples,
     return;
   }
 
-  const auto input_strides = input.get_strides();
-  const auto d_output_strides = d_output.get_strides();
-  const int num_channels = input.get_local_shape()[get_channel_dim()];
+  auto const input_strides = input.get_strides();
+  auto const d_output_strides = d_output.get_strides();
+  int const num_channels = input.get_local_shape()[get_channel_dim()];
   // CUDA grid dimension limitation
   assert_always(num_channels < 65535);
   constexpr int block_size = 256;
@@ -1207,11 +1207,11 @@ void backprop1(int num_samples,
 template <typename TensorType>
 void backprop1(int num_dims,
                int num_samples,
-               const TensorType& input,
-               const TensorType& d_output,
-               const TensorType& mean,
-               const TensorType& var,
-               const TensorType& scale,
+               TensorType const& input,
+               TensorType const& d_output,
+               TensorType const& mean,
+               TensorType const& var,
+               TensorType const& scale,
                TensorType& scale_gradient,
                TensorType& bias_gradient,
                TensorType& mean_gradient,
@@ -1275,14 +1275,14 @@ namespace
 
 template <int ND, typename DataType>
 __global__ void backprop2_kernel(
-  const DataType* input,  // no __restrict__ so input can be reused for d_input
+  DataType const* input,  // no __restrict__ so input can be reused for d_input
                           // as a memory optimization
-  const DataType* __restrict__ d_output,
-  const DataType* __restrict__ global_mean,
-  const DataType* __restrict__ global_var,
-  const DataType* __restrict__ global_scale,
-  const DataType* __restrict__ global_dmean,
-  const DataType* __restrict__ global_dvar,
+  DataType const* __restrict__ d_output,
+  DataType const* __restrict__ global_mean,
+  DataType const* __restrict__ global_var,
+  DataType const* __restrict__ global_scale,
+  DataType const* __restrict__ global_dmean,
+  DataType const* __restrict__ global_dvar,
   DataType* d_input,  // no __restrict__ so input can be reused for d_input as
                       // a memory optimization
   DataType epsilon,
@@ -1292,22 +1292,22 @@ __global__ void backprop2_kernel(
   tensor::Array<ND> d_output_strides,
   tensor::Array<ND> d_input_strides)
 {
-  const index_t gidx = threadIdx.x + blockIdx.x * blockDim.x;
-  const int ch_idx = blockIdx.y;
-  const int num_channels = shape[get_channel_dim()];
-  const int num_samples = shape[-1];
+  index_t const gidx = threadIdx.x + blockIdx.x * blockDim.x;
+  int const ch_idx = blockIdx.y;
+  int const num_channels = shape[get_channel_dim()];
+  int const num_samples = shape[-1];
 
-  const DataType mean = global_mean[ch_idx];
-  const DataType var = global_var[ch_idx];
-  const DataType scale = global_scale[ch_idx];
-  const DataType dmean = global_dmean[ch_idx];
-  const DataType dvar = global_dvar[ch_idx];
+  DataType const mean = global_mean[ch_idx];
+  DataType const var = global_var[ch_idx];
+  DataType const scale = global_scale[ch_idx];
+  DataType const dmean = global_dmean[ch_idx];
+  DataType const dvar = global_dvar[ch_idx];
 
-  const DataType inv_stdev = rsqrt(var + epsilon);
-  const DataType dmean_term = dmean / num_per_sum;
-  const DataType dvar_term = dvar * 2 / (num_per_sum - 1);
+  DataType const inv_stdev = rsqrt(var + epsilon);
+  DataType const dmean_term = dmean / num_per_sum;
+  DataType const dvar_term = dvar * 2 / (num_per_sum - 1);
 
-  const index_t channel_size = shape.get_size() / num_channels / num_samples;
+  index_t const channel_size = shape.get_size() / num_channels / num_samples;
 
   if (gidx < channel_size)
   {
@@ -1326,9 +1326,9 @@ __global__ void backprop2_kernel(
     d_input_offset += ch_idx * d_input_strides[-2];
     for (int s = 0; s < num_samples; ++s)
     {
-      const DataType x = input[input_offset];
-      const DataType dy = d_output[d_output_offset];
-      const DataType dxhat = dy * scale;
+      DataType const x = input[input_offset];
+      DataType const dy = d_output[d_output_offset];
+      DataType const dxhat = dy * scale;
       DataType dx = dxhat * inv_stdev;
       dx += dmean_term;
       dx += dvar_term * (x - mean);
@@ -1343,14 +1343,14 @@ __global__ void backprop2_kernel(
 
 template <int ND, typename DataType, typename DataTypeV>
 __global__ void backprop2_opt_kernel(
-  const DataTypeV* input,  // no __restrict__ so input can be reused for
+  DataTypeV const* input,  // no __restrict__ so input can be reused for
                            // d_input as a memory optimization
-  const DataTypeV* __restrict__ d_output,
-  const DataType* __restrict__ global_mean,
-  const DataType* __restrict__ global_var,
-  const DataType* __restrict__ global_scale,
-  const DataType* __restrict__ global_dmean,
-  const DataType* __restrict__ global_dvar,
+  DataTypeV const* __restrict__ d_output,
+  DataType const* __restrict__ global_mean,
+  DataType const* __restrict__ global_var,
+  DataType const* __restrict__ global_scale,
+  DataType const* __restrict__ global_dmean,
+  DataType const* __restrict__ global_dvar,
   DataTypeV* d_input,  // no __restrict__ so input can be reused for d_input as
                        // a memory optimization
   DataType epsilon,
@@ -1358,18 +1358,18 @@ __global__ void backprop2_opt_kernel(
   index_t spatial_size,
   int num_channels)
 {
-  const auto ch_idx = blockIdx.y;
-  const auto sample_idx = blockIdx.z;
-  const auto mean = global_mean[ch_idx];
-  const auto var = global_var[ch_idx];
-  const auto scale = global_scale[ch_idx];
-  const auto dmean = global_dmean[ch_idx];
-  const auto dvar = global_dvar[ch_idx];
-  const auto inv_stdev = rsqrt(var + epsilon);
-  const auto dmean_term = dmean / num_per_sum;
-  const auto dvar_term = dvar * 2 / (num_per_sum - 1);
+  auto const ch_idx = blockIdx.y;
+  auto const sample_idx = blockIdx.z;
+  auto const mean = global_mean[ch_idx];
+  auto const var = global_var[ch_idx];
+  auto const scale = global_scale[ch_idx];
+  auto const dmean = global_dmean[ch_idx];
+  auto const dvar = global_dvar[ch_idx];
+  auto const inv_stdev = rsqrt(var + epsilon);
+  auto const dmean_term = dmean / num_per_sum;
+  auto const dvar_term = dvar * 2 / (num_per_sum - 1);
 
-  const auto num_threads_per_channel = blockDim.x * gridDim.x;
+  auto const num_threads_per_channel = blockDim.x * gridDim.x;
 
   auto block_offset = (ch_idx + sample_idx * num_channels) * spatial_size;
   input += block_offset;
@@ -1379,9 +1379,9 @@ __global__ void backprop2_opt_kernel(
   for (index_t idx = threadIdx.x + blockIdx.x * blockDim.x; idx < spatial_size;
        idx += num_threads_per_channel)
   {
-    const auto x = input[idx];
-    const auto dy = d_output[idx];
-    const auto dxhat = dy * scale;
+    auto const x = input[idx];
+    auto const dy = d_output[idx];
+    auto const dxhat = dy * scale;
     auto dx = dxhat * inv_stdev;
     dx = dx + dmean_term;
     dx = dx + (x - mean) * dvar_term;
@@ -1392,13 +1392,13 @@ __global__ void backprop2_opt_kernel(
 template <int ND, typename TensorType>
 void backprop2_opt(index_t num_samples,
                    index_t num_per_sum,
-                   const TensorType& input,
-                   const TensorType& d_output,
-                   const TensorType& mean,
-                   const TensorType& var,
-                   const TensorType& scale,
-                   const TensorType& mean_gradient,
-                   const TensorType& var_gradient,
+                   TensorType const& input,
+                   TensorType const& d_output,
+                   TensorType const& mean,
+                   TensorType const& var,
+                   TensorType const& scale,
+                   TensorType const& mean_gradient,
+                   TensorType const& var_gradient,
                    TensorType& d_input,
                    typename TensorType::data_type epsilon,
                    h2::gpu::DeviceStream stream)
@@ -1408,7 +1408,7 @@ void backprop2_opt(index_t num_samples,
   if (input.get_local_size() == 0)
     return;
   assert_eq(num_samples, (int) input.get_local_shape()[get_sample_dim()]);
-  const int num_channels = input.get_local_shape()[get_channel_dim()];
+  int const num_channels = input.get_local_shape()[get_channel_dim()];
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
   index_t channel_size = input.get_local_size() / num_channels / num_samples;
@@ -1422,8 +1422,8 @@ void backprop2_opt(index_t num_samples,
     using DataTypeV = typename util::GetVectorType<DataType, 4>::type;
     backprop2_opt_kernel<ND, DataType, DataTypeV>
       <<<grid_dim, block_dim, 0, stream>>>(
-        reinterpret_cast<const DataTypeV*>(input.get_const_buffer()),
-        reinterpret_cast<const DataTypeV*>(d_output.get_const_buffer()),
+        reinterpret_cast<DataTypeV const*>(input.get_const_buffer()),
+        reinterpret_cast<DataTypeV const*>(d_output.get_const_buffer()),
         mean.get_const_base_ptr(),
         var.get_const_base_ptr(),
         scale.get_const_base_ptr(),
@@ -1458,13 +1458,13 @@ void backprop2_opt(index_t num_samples,
 template <int ND, typename TensorType>
 void backprop2(index_t num_samples,
                index_t num_per_sum,
-               const TensorType& input,
-               const TensorType& d_output,
-               const TensorType& mean,
-               const TensorType& var,
-               const TensorType& scale,
-               const TensorType& mean_gradient,
-               const TensorType& var_gradient,
+               TensorType const& input,
+               TensorType const& d_output,
+               TensorType const& mean,
+               TensorType const& var,
+               TensorType const& scale,
+               TensorType const& mean_gradient,
+               TensorType const& var_gradient,
                TensorType& d_input,
                typename TensorType::data_type epsilon,
                h2::gpu::DeviceStream stream)
@@ -1500,7 +1500,7 @@ void backprop2(index_t num_samples,
 
   if (d_input.get_local_size() == 0)
     return;
-  const int num_channels = input.get_local_shape()[get_channel_dim()];
+  int const num_channels = input.get_local_shape()[get_channel_dim()];
   constexpr int block_size = 256;
   dim3 block_dim(block_size);
   index_t channel_size = input.get_local_size() / num_channels / num_samples;
@@ -1535,13 +1535,13 @@ template <typename TensorType>
 void backprop2(int num_dims,
                index_t num_samples,
                index_t num_per_sum,
-               const TensorType& input,
-               const TensorType& d_output,
-               const TensorType& mean,
-               const TensorType& var,
-               const TensorType& scale,
-               const TensorType& mean_gradient,
-               const TensorType& var_gradient,
+               TensorType const& input,
+               TensorType const& d_output,
+               TensorType const& mean,
+               TensorType const& var,
+               TensorType const& scale,
+               TensorType const& mean_gradient,
+               TensorType const& var_gradient,
                TensorType& d_input,
                typename TensorType::data_type epsilon,
                h2::gpu::DeviceStream stream)

@@ -243,15 +243,15 @@ protected:
                                TensorDescriptor_t const& ydesc,
                                ConvDescriptor& result) const;
 
-  dace_state try_load(const std::string& hash,
+  dace_state try_load(std::string const& hash,
                       bool dynamic_minibatch_size) const;
 
   bool unload(dace_state library);
 
-  bool load_library_or_fallback(const ConvDescriptor& desc,
+  bool load_library_or_fallback(ConvDescriptor const& desc,
                                 dace_state& library) const;
 
-  bool invoke(const ConvDescriptor& desc,
+  bool invoke(ConvDescriptor const& desc,
               void const*,
               void const*,
               void const*,

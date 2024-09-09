@@ -9,7 +9,7 @@ namespace p2p
 {
 
 ConnectionMPI::ConnectionMPI(int peer,
-                             const internal::MPI& mpi,
+                             internal::MPI const& mpi,
                              util::EventPool& ev_pool)
   : Connection(peer, mpi, ev_pool), m_req_counter(0)
 {
@@ -97,7 +97,7 @@ void ConnectionMPI::notify_callback(cudaStream_t stream,
   return;
 }
 
-int ConnectionMPI::send(const void* buf, size_t size, cudaStream_t stream)
+int ConnectionMPI::send(void const* buf, size_t size, cudaStream_t stream)
 {
   logging::MPIPrintStreamDebug() << "Sending msg of size " << size << "\n";
   void* host = m_pinned_mem_pool.get(size);
@@ -134,7 +134,7 @@ int ConnectionMPI::recv(void* dst, size_t size, cudaStream_t stream)
   return 0;
 }
 
-int ConnectionMPI::sendrecv(const void* send_buf,
+int ConnectionMPI::sendrecv(void const* send_buf,
                             size_t send_size,
                             void* recv_buf,
                             size_t recv_size,
@@ -169,7 +169,7 @@ int ConnectionMPI::sendrecv(const void* send_buf,
   return 0;
 }
 
-int ConnectionMPI::put(const void* src,
+int ConnectionMPI::put(void const* src,
                        void* dst,
                        size_t size,
                        cudaStream_t stream)
@@ -277,7 +277,7 @@ void ConnectionMPI::process_requests(std::list<Req>& requests)
   }
 }
 
-void ConnectionMPI::process_sendrecv(const Req& r)
+void ConnectionMPI::process_sendrecv(Req const& r)
 {
   logging::MPIPrintStreamDebug() << "Processing SENDRECV\n";
   void* send_buf = r.m_addr1;

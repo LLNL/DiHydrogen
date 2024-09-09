@@ -74,21 +74,21 @@ __global__ void init_tensor<4>(int* buf,
 }
 
 template <int ND>
-__global__ void check_tensor(const int* buf,
+__global__ void check_tensor(int const* buf,
                              Array<ND> local_shape,
                              Array<ND> halo,
                              index_t pitch,
                              Array<ND> global_shape,
-                             const Array<ND> global_index_base,
+                             Array<ND> const global_index_base,
                              int* error_counter);
 
 template <>
-__global__ void check_tensor<3>(const int* buf,
+__global__ void check_tensor<3>(int const* buf,
                                 Array<3> local_shape,
                                 Array<3> halo,
                                 index_t pitch,
                                 Array<3> global_shape,
-                                const Array<3> global_index_base,
+                                Array<3> const global_index_base,
                                 int* error_counter)
 {
   Array<3> local_real_shape = local_shape + halo * 2;
@@ -132,12 +132,12 @@ __global__ void check_tensor<3>(const int* buf,
 }
 
 template <>
-__global__ void check_tensor<4>(const int* buf,
+__global__ void check_tensor<4>(int const* buf,
                                 Array<4> local_shape,
                                 Array<4> halo,
                                 index_t pitch,
                                 Array<4> global_shape,
-                                const Array<4> global_index_base,
+                                Array<4> const global_index_base,
                                 int* error_counter)
 {
   Array<4> local_real_shape = local_shape + halo * 2;

@@ -22,7 +22,7 @@ public:
   ~Softmax() = default;
 
   template <typename Tensor>
-  void setup(const Tensor& input, SoftmaxMode mode)
+  void setup(Tensor const& input, SoftmaxMode mode)
   {
     m_mode = mode;
     auto loc_shape = input.get_locale_shape();
@@ -36,10 +36,10 @@ public:
   }
 
   template <typename Tensor>
-  int forward(const Tensor& x, Tensor& y);
+  int forward(Tensor const& x, Tensor& y);
 
   template <typename Tensor>
-  int backward(const Tensor& y, const Tensor& dy, Tensor& dx);
+  int backward(Tensor const& y, Tensor const& dy, Tensor& dx);
 
 private:
   h2::gpu::DeviceStream m_stream;

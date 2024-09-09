@@ -23,32 +23,32 @@ namespace internal
  *  This is dest_size_per_sample * num_samples.
  */
 template <typename DataType>
-__global__ void pack_for_rs_kernel(const DataType* __restrict__ src,
+__global__ void pack_for_rs_kernel(DataType const* __restrict__ src,
                                    DataType* __restrict__ dst,
-                                   const size_t num_samples,
-                                   const size_t num_channels,
-                                   const size_t num_dests,
-                                   const size_t src_size,
-                                   const size_t sample_size,
-                                   const size_t channel_size,
-                                   const size_t channels_per_dest,
-                                   const size_t dest_size_per_sample,
-                                   const size_t dst_size)
+                                   size_t const num_samples,
+                                   size_t const num_channels,
+                                   size_t const num_dests,
+                                   size_t const src_size,
+                                   size_t const sample_size,
+                                   size_t const channel_size,
+                                   size_t const channels_per_dest,
+                                   size_t const dest_size_per_sample,
+                                   size_t const dst_size)
 {
   // Input has complete samples.
   // Want to be able to scatter channels of each sample to their destination.
   // This will swizzle the src into a buffer such that the channels to go to
   // each destination are contiguous and ordered correctly.
-  const size_t gid = threadIdx.x + blockIdx.x * blockDim.x;
-  const size_t num_threads = blockDim.x * gridDim.x;
+  size_t const gid = threadIdx.x + blockIdx.x * blockDim.x;
+  size_t const num_threads = blockDim.x * gridDim.x;
   for (size_t pos = gid; pos < src_size; pos += num_threads)
   {
-    const size_t sample = pos / sample_size;
-    const size_t channel = (pos - sample * sample_size) / channel_size;
-    const size_t dest = channel / channels_per_dest;
-    const size_t offset =
+    size_t const sample = pos / sample_size;
+    size_t const channel = (pos - sample * sample_size) / channel_size;
+    size_t const dest = channel / channels_per_dest;
+    size_t const offset =
       pos - sample * sample_size - dest * dest_size_per_sample;
-    const size_t dest_idx =
+    size_t const dest_idx =
       dest * dst_size + sample * dest_size_per_sample + offset;
     dst[dest_idx] = src[pos];
   }
@@ -67,14 +67,14 @@ __global__ void pack_for_rs_kernel(const DataType* __restrict__ src,
  * @param dest_sample_size Size of a sample on the destination.
  */
 template <typename DataType>
-__global__ void unpack_from_ag_kernel(const DataType* __restrict__ packed_buf,
+__global__ void unpack_from_ag_kernel(DataType const* __restrict__ packed_buf,
                                       DataType* __restrict__ dst,
-                                      const size_t num_samples,
-                                      const size_t num_sources,
-                                      const size_t size,
-                                      const size_t source_buf_size,
-                                      const size_t source_sample_size,
-                                      const size_t dest_sample_size)
+                                      size_t const num_samples,
+                                      size_t const num_sources,
+                                      size_t const size,
+                                      size_t const source_buf_size,
+                                      size_t const source_sample_size,
+                                      size_t const dest_sample_size)
 {
   // Need to reorder the data in input to reassemble samples.
   // The allgather is conducted on the original buffer, which is ordered
@@ -82,15 +82,15 @@ __global__ void unpack_from_ag_kernel(const DataType* __restrict__ packed_buf,
   // which results in non-contiguous data after gathering.
   // This will swizzle src into a buffer so that the channels of each sample
   // are contiguous.
-  const size_t gid = threadIdx.x + blockIdx.x * blockDim.x;
-  const size_t num_threads = blockDim.x * gridDim.x;
+  size_t const gid = threadIdx.x + blockIdx.x * blockDim.x;
+  size_t const num_threads = blockDim.x * gridDim.x;
   for (size_t pos = gid; pos < size; pos += num_threads)
   {
-    const size_t source = pos / source_buf_size;
-    const size_t sample = (pos - source * source_buf_size) / source_sample_size;
-    const size_t offset =
+    size_t const source = pos / source_buf_size;
+    size_t const sample = (pos - source * source_buf_size) / source_sample_size;
+    size_t const offset =
       pos - sample * source_sample_size - source * source_buf_size;
-    const size_t dest_idx =
+    size_t const dest_idx =
       sample * dest_sample_size + source * source_sample_size + offset;
     dst[dest_idx] = packed_buf[pos];
   }

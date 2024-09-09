@@ -62,7 +62,7 @@ public:
     }
   }
   template <typename T>
-  Array(const std::vector<T>& d)
+  Array(std::vector<T> const& d)
   {
     assert_always(ND == d.size());
     auto it = d.begin();
@@ -74,7 +74,7 @@ public:
   }
 
   template <typename T>
-  Array(const Vector<T>& d)
+  Array(Vector<T> const& d)
   {
     assert_always(ND == d.length());
     auto it = d.begin();
@@ -99,7 +99,7 @@ public:
   TENSOR_FUNC_DECL DataType& front() { return operator[](0); }
   TENSOR_FUNC_DECL DataType back() const { return operator[](-1); }
   TENSOR_FUNC_DECL DataType& back() { return operator[](-1); }
-  TENSOR_FUNC_DECL bool operator==(const Array<ND, DataType>& s) const
+  TENSOR_FUNC_DECL bool operator==(Array<ND, DataType> const& s) const
   {
     for (int i = 0; i < ND; ++i)
     {
@@ -110,7 +110,7 @@ public:
     }
     return true;
   }
-  TENSOR_FUNC_DECL bool operator!=(const Array<ND, DataType>& s) const
+  TENSOR_FUNC_DECL bool operator!=(Array<ND, DataType> const& s) const
   {
     return !(*this == s);
   }
@@ -141,7 +141,7 @@ public:
 
   template <typename DataTypeX>
   TENSOR_FUNC_DECL Array<ND, DataType>
-  operator+(const Array<ND, DataTypeX>& x) const
+  operator+(Array<ND, DataTypeX> const& x) const
   {
     Array<ND, DataType> sum;
     for (int i = 0; i < ND; ++i)
@@ -153,7 +153,7 @@ public:
 
   template <typename DataTypeX>
   TENSOR_FUNC_DECL Array<ND, DataType>
-  operator-(const Array<ND, DataTypeX>& x) const
+  operator-(Array<ND, DataTypeX> const& x) const
   {
     Array<ND, DataType> sum;
     for (int i = 0; i < ND; ++i)
@@ -165,7 +165,7 @@ public:
 
   template <typename DataTypeX>
   TENSOR_FUNC_DECL Array<ND, DataType>
-  operator*(const Array<ND, DataTypeX>& x) const
+  operator*(Array<ND, DataTypeX> const& x) const
   {
     Array<ND, DataType> sum;
     for (int i = 0; i < ND; ++i)
@@ -177,7 +177,7 @@ public:
 
   template <typename DataTypeX>
   TENSOR_FUNC_DECL Array<ND, DataType>
-  operator/(const Array<ND, DataTypeX>& x) const
+  operator/(Array<ND, DataTypeX> const& x) const
   {
     Array<ND, DataType> sum;
     for (int i = 0; i < ND; ++i)
@@ -199,7 +199,7 @@ public:
   }
 
   template <typename DataTypeX>
-  Array<ND, DataType> operator+(const Vector<DataTypeX>& x) const
+  Array<ND, DataType> operator+(Vector<DataTypeX> const& x) const
   {
     Array<ND, DataType> sum;
     for (int i = 0; i < ND; ++i)
@@ -257,7 +257,7 @@ private:
 };
 
 template <int ND, typename DataType>
-inline std::ostream& operator<<(std::ostream& os, const Array<ND, DataType>& s)
+inline std::ostream& operator<<(std::ostream& os, Array<ND, DataType> const& s)
 {
   std::stringstream ss;
   ss << "(";
@@ -274,7 +274,7 @@ inline std::ostream& operator<<(std::ostream& os, const Array<ND, DataType>& s)
 }
 
 template <int ND, typename DataType>
-inline Array<ND, DataType> MakeArray(const std::vector<DataType>& v)
+inline Array<ND, DataType> MakeArray(std::vector<DataType> const& v)
 {
   assert_always(ND == v.size());
   Array<ND, DataType> a;
@@ -291,10 +291,10 @@ class ArrayTraverser
 public:
   static constexpr int num_dims = ND;
   using data_type = DataType;
-  ArrayTraverser(const Array<ND, DataType>& array) : m_array(array), m_index(0)
+  ArrayTraverser(Array<ND, DataType> const& array) : m_array(array), m_index(0)
   {}
 
-  static ArrayTraverser<ND, DataType> begin(const Array<ND, DataType>& a)
+  static ArrayTraverser<ND, DataType> begin(Array<ND, DataType> const& a)
   {
     auto t = ArrayTraverser<ND, DataType>(a);
     if (a.get_size() == 0)
@@ -304,7 +304,7 @@ public:
     return t;
   }
 
-  static ArrayTraverser<ND, DataType> end(const Array<ND, DataType>& a)
+  static ArrayTraverser<ND, DataType> end(Array<ND, DataType> const& a)
   {
     auto it = ArrayTraverser<ND, DataType>(a);
     it.set_end();
@@ -337,12 +337,12 @@ public:
     return cur;
   }
 
-  bool operator==(const ArrayTraverser<ND, DataType>& it) const
+  bool operator==(ArrayTraverser<ND, DataType> const& it) const
   {
     return m_index == it.m_index && m_array == it.m_array;
   }
 
-  bool operator!=(const ArrayTraverser<ND, DataType>& it) const
+  bool operator!=(ArrayTraverser<ND, DataType> const& it) const
   {
     return !(*this == it);
   }
@@ -350,13 +350,13 @@ public:
   void set_end() { m_index = m_array; }
 
 protected:
-  const Array<ND, DataType>& m_array;
+  Array<ND, DataType> const& m_array;
   Array<ND, DataType> m_index;
 };
 
 template <int ND, typename IndexType>
-TENSOR_FUNC_DECL index_t get_offset(const Array<ND, IndexType>& index,
-                                    const Array<ND, IndexType>& shape)
+TENSOR_FUNC_DECL index_t get_offset(Array<ND, IndexType> const& index,
+                                    Array<ND, IndexType> const& shape)
 {
   return get_offset(index, shape, shape[0]);
 }
@@ -407,7 +407,7 @@ TENSOR_FUNC_DECL index_t get_offset(const Array<ND, IndexType>& index,
 
 template <int ND, typename IndexType>
 TENSOR_FUNC_DECL Array<ND, IndexType>
-get_index(IndexType offset, const Array<ND, IndexType>& shape)
+get_index(IndexType offset, Array<ND, IndexType> const& shape)
 {
   Array<ND> index;
   for (int i = 0; i < ND; ++i)
@@ -425,10 +425,10 @@ public:
 
   Shape() = default;
 
-  Shape(const Vector<index_t>& v) : Vector(v) {}
+  Shape(Vector<index_t> const& v) : Vector(v) {}
 
   template <int ND>
-  Shape(const Array<ND, index_t>& a) : Vector(ND)
+  Shape(Array<ND, index_t> const& a) : Vector(ND)
   {
     for (int i = 0; i < ND; ++i)
     {
@@ -461,7 +461,7 @@ public:
   class IndexIterator
   {
   public:
-    IndexIterator(const Shape& shape)
+    IndexIterator(Shape const& shape)
       : m_shape(shape), m_index(shape.num_dims(), 0)
     {
       if (shape.size() == 0)
@@ -496,17 +496,17 @@ public:
       return cur;
     }
 
-    bool operator==(const IndexIterator& it) const
+    bool operator==(IndexIterator const& it) const
     {
       return m_index == it.m_index && m_shape == it.m_shape;
     }
 
-    bool operator!=(const IndexIterator& it) const { return !(*this == it); }
+    bool operator!=(IndexIterator const& it) const { return !(*this == it); }
 
     void set_end() { m_index = m_shape; }
 
   protected:
-    const IndexVector m_shape;
+    IndexVector const m_shape;
     IndexVector m_index;
   };
 
@@ -521,14 +521,14 @@ public:
 };
 
 template <int ND, typename IndexType>
-index_t get_offset(const Array<ND, IndexType>& index, const Shape& shape)
+index_t get_offset(Array<ND, IndexType> const& index, Shape const& shape)
 {
   return get_offset(index, Array<ND, IndexType>(shape));
 }
 
 template <int ND, typename IndexType>
-index_t get_offset(const Array<ND, IndexType>& index,
-                   const Shape& shape,
+index_t get_offset(Array<ND, IndexType> const& index,
+                   Shape const& shape,
                    IndexType pitch)
 {
   return get_offset(index, Array<ND, IndexType>(shape), pitch);
@@ -536,7 +536,7 @@ index_t get_offset(const Array<ND, IndexType>& index,
 
 // REFACTORING: duplicate of the above functions
 inline index_t
-get_offset(const IndexVector& index, const Shape& shape, index_t pitch)
+get_offset(IndexVector const& index, Shape const& shape, index_t pitch)
 {
   index_t offset = 0;
   index_t stride = 1;
@@ -556,7 +556,7 @@ get_offset(const IndexVector& index, const Shape& shape, index_t pitch)
   return offset;
 }
 
-inline index_t get_offset(const IndexVector& index, const Shape& shape)
+inline index_t get_offset(IndexVector const& index, Shape const& shape)
 {
   return get_offset(index, shape, shape[0]);
 }
@@ -568,13 +568,13 @@ class Region
 
 public:
   Region() = default;
-  Region(const IndexType& offset, const ExtentType& extent)
+  Region(IndexType const& offset, ExtentType const& extent)
     : m_offset(offset), m_extent(extent)
   {
     assert_eq(m_offset.length(), m_extent.num_dims());
   }
-  const IndexType& get_offset() const { return m_offset; }
-  const ExtentType& get_extent() const { return m_extent; }
+  IndexType const& get_offset() const { return m_offset; }
+  ExtentType const& get_extent() const { return m_extent; }
 
   index_t get_size() const { return get_extent().get_size(); }
 
@@ -582,7 +582,7 @@ public:
 
   int num_dims() const { return m_extent.num_dims(); }
 
-  Region intersect(const Region& x) const
+  Region intersect(Region const& x) const
   {
     assert_eq(num_dims(), x.num_dims());
     Region r(IndexType(num_dims(), 0), ExtentType(num_dims(), 0));
@@ -610,7 +610,7 @@ protected:
   Shape m_extent;
 };
 
-inline std::ostream& operator<<(std::ostream& os, const Region& r)
+inline std::ostream& operator<<(std::ostream& os, Region const& r)
 {
   std::stringstream ss;
   ss << "(offset: " << r.get_offset() << ", extent: " << r.get_extent() << ")";
@@ -618,8 +618,8 @@ inline std::ostream& operator<<(std::ostream& os, const Region& r)
 }
 
 template <int ND>
-Array<ND> get_strides(const Array<ND>& logical_shape,
-                      const Array<ND>& overlap,
+Array<ND> get_strides(Array<ND> const& logical_shape,
+                      Array<ND> const& overlap,
                       index_t pitch)
 {
   Array<ND> real_shape = logical_shape + overlap * 2;
@@ -639,15 +639,15 @@ Array<ND> get_strides(const Array<ND>& logical_shape,
 }
 
 template <int ND>
-Array<ND> get_strides(const Array<ND>& logical_shape,
-                      const IntVector& overlap,
+Array<ND> get_strides(Array<ND> const& logical_shape,
+                      IntVector const& overlap,
                       index_t pitch)
 {
   return get_strides(logical_shape, Array<ND>(overlap), pitch);
 }
 
 inline IndexVector
-get_strides(const Shape& logical_shape, const IntVector& overlap, index_t pitch)
+get_strides(Shape const& logical_shape, IntVector const& overlap, index_t pitch)
 {
   Shape real_shape = logical_shape + overlap * 2;
   real_shape[0] = pitch;

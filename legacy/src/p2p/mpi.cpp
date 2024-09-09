@@ -39,7 +39,7 @@ MPI_Comm MPI::get_comm()
   return m_comm;
 }
 
-int MPI::send(const void* buf, size_t size, int dst)
+int MPI::send(void const* buf, size_t size, int dst)
 {
 #ifdef P2P_MPI_LOGGING_DEBUG
   logging::MPIPrintStreamDebug()
@@ -50,7 +50,7 @@ int MPI::send(const void* buf, size_t size, int dst)
   return 0;
 }
 
-int MPI::isend(const void* buf, size_t size, int dst, MPI_Request* req)
+int MPI::isend(void const* buf, size_t size, int dst, MPI_Request* req)
 {
 #ifdef P2P_MPI_LOGGING_DEBUG
   logging::MPIPrintStreamDebug()
@@ -83,7 +83,7 @@ int MPI::irecv(void* buf, size_t size, int src, MPI_Request* req)
   return 0;
 }
 
-int MPI::sendrecv(const void* send_buf,
+int MPI::sendrecv(void const* send_buf,
                   size_t send_size,
                   int dst,
                   void* recv_buf,

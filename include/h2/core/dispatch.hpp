@@ -256,7 +256,7 @@ private:
 
 /** Call the function in the dispatch entry with args. */
 template <typename... Args>
-void dispatch_call(const DispatchFunctionEntry& func, Args&&... args)
+void dispatch_call(DispatchFunctionEntry const& func, Args&&... args)
 {
   void* func_args[] = {(void*) &args...};
   func.caller(func.func_ptr, func_args);
@@ -330,13 +330,13 @@ constexpr std::size_t dispatch_key_top_byte_shift =
  * that has a `get_type_info` method.
  */
 template <typename TypeInfoHaver>
-inline TypeInfo get_type_info(const TypeInfoHaver& x)
+inline TypeInfo get_type_info(TypeInfoHaver const& x)
 {
   return x.get_type_info();
 }
 
 template <>
-inline TypeInfo get_type_info<TypeInfo>(const TypeInfo& tinfo)
+inline TypeInfo get_type_info<TypeInfo>(TypeInfo const& tinfo)
 {
   return tinfo;
 }
@@ -346,7 +346,7 @@ inline TypeInfo get_type_info<TypeInfo>(const TypeInfo& tinfo)
  * in `get_type_info`.
  */
 template <typename TypeInfoHaver>
-inline TypeInfo::TokenType get_type_token(const TypeInfoHaver& x)
+inline TypeInfo::TokenType get_type_token(TypeInfoHaver const& x)
 {
   return get_type_info(x).get_token();
 }
@@ -356,7 +356,7 @@ inline TypeInfo::TokenType get_type_token(const TypeInfoHaver& x)
  * compute type.
  */
 template <typename... TypeInfoHavers>
-bool all_h2_compute_types(const TypeInfoHavers&... args)
+bool all_h2_compute_types(TypeInfoHavers const&... args)
 {
   return (is_h2_compute_type(get_type_info(args)) && ...);
 }
@@ -366,7 +366,7 @@ bool all_h2_compute_types(const TypeInfoHavers&... args)
  * (whether or not it is a native H2 compute type).
  */
 template <typename... TypeInfoHavers>
-bool all_compute_types(const TypeInfoHavers&... args)
+bool all_compute_types(TypeInfoHavers const&... args)
 {
   return (is_compute_type(get_type_info(args)) && ...);
 }
@@ -375,7 +375,7 @@ bool all_compute_types(const TypeInfoHavers&... args)
  * True if a non-native H2 compute type is present.
  */
 template <typename... TypeInfoHavers>
-bool contains_nonnative_compute_type(const TypeInfoHavers&... args)
+bool contains_nonnative_compute_type(TypeInfoHavers const&... args)
 {
   H2_ASSERT_DEBUG(all_compute_types(std::forward<TypeInfoHavers>(args)...),
                   "Cannot check for non-native compute types when non-compute "
@@ -387,7 +387,7 @@ bool contains_nonnative_compute_type(const TypeInfoHavers&... args)
 /** Construct a native dispatch key for dispatching on tokens. */
 template <std::size_t N>
 constexpr NativeDispatchKeyT<N>
-get_native_dispatch_key(const std::array<TypeInfo::TokenType, N>& tokens)
+get_native_dispatch_key(std::array<TypeInfo::TokenType, N> const& tokens)
 {
   NativeDispatchKeyT<N> dispatch_key = 0;
   // Shift tokens, with the first being leftmost, to construct the key.
@@ -402,7 +402,7 @@ get_native_dispatch_key(const std::array<TypeInfo::TokenType, N>& tokens)
 /** Construct a native dispatch key for dispatching on args. */
 template <typename... TypeInfoHavers>
 constexpr NativeDispatchKeyT<sizeof...(TypeInfoHavers)>
-get_native_dispatch_key(const TypeInfoHavers&... args)
+get_native_dispatch_key(TypeInfoHavers const&... args)
 {
   H2_ASSERT_DEBUG(
     all_h2_compute_types(args...),
@@ -413,21 +413,21 @@ get_native_dispatch_key(const TypeInfoHavers&... args)
 }
 
 /** Add a dispatch entry to the dispatch table for the name and key. */
-void add_dispatch_entry(const std::string& name,
-                        const DispatchKeyT& dispatch_key,
-                        const DispatchFunctionEntry& dispatch_entry);
+void add_dispatch_entry(std::string const& name,
+                        DispatchKeyT const& dispatch_key,
+                        DispatchFunctionEntry const& dispatch_entry);
 
 /** Return true if a dispatch entry exists for the name and key. */
-bool has_dispatch_entry(const std::string& name,
-                        const DispatchKeyT& dispatch_key);
+bool has_dispatch_entry(std::string const& name,
+                        DispatchKeyT const& dispatch_key);
 
 /**
  * Return the dispatch entry for name and key.
  *
  * Throws if the entry is not present.
  */
-const DispatchFunctionEntry&
-get_dispatch_entry(const std::string& name, const DispatchKeyT& dispatch_key);
+DispatchFunctionEntry const&
+get_dispatch_entry(std::string const& name, DispatchKeyT const& dispatch_key);
 
 /**
  * Call the dispatch entry for name and key with the given arguments.
@@ -435,8 +435,8 @@ get_dispatch_entry(const std::string& name, const DispatchKeyT& dispatch_key);
  * Throws if the entry is not present.
  */
 template <typename... Args>
-void call_dispatch_entry(const std::string& name,
-                         const DispatchKeyT& dispatch_key,
+void call_dispatch_entry(std::string const& name,
+                         DispatchKeyT const& dispatch_key,
                          Args&&... args)
 {
   auto entry = get_dispatch_entry(name, dispatch_key);
@@ -446,7 +446,7 @@ void call_dispatch_entry(const std::string& name,
 /** Construct a dispatch key for dispatching on tokens. */
 template <std::size_t N>
 constexpr DispatchKeyT
-get_dispatch_key(const std::array<TypeInfo::TokenType, N>& tokens)
+get_dispatch_key(std::array<TypeInfo::TokenType, N> const& tokens)
 {
   static_assert(N <= max_dispatch_types,
                 "Attempt to get dispatch key for too many types");
@@ -463,7 +463,7 @@ get_dispatch_key(const std::array<TypeInfo::TokenType, N>& tokens)
 
 /** Construct a dispatch key for dispatching on args. */
 template <typename... TypeInfoHavers>
-constexpr internal::DispatchKeyT get_dispatch_key(const TypeInfoHavers&... args)
+constexpr internal::DispatchKeyT get_dispatch_key(TypeInfoHavers const&... args)
 {
   H2_ASSERT_DEBUG(internal::all_compute_types(args...),
                   "Cannot construct dispatch keys for non-compute types");
@@ -483,8 +483,8 @@ constexpr internal::DispatchKeyT get_dispatch_key(const TypeInfoHavers&... args)
  * @param func[in] Pointer to the function to dispatch to.
  */
 template <typename... Args>
-void dispatch_register(const std::string& name,
-                       const internal::DispatchKeyT& dispatch_key,
+void dispatch_register(std::string const& name,
+                       internal::DispatchKeyT const& dispatch_key,
                        void (*func)(Args...))
 {
   internal::DispatchFunctionEntry dispatch_entry{
@@ -494,15 +494,15 @@ void dispatch_register(const std::string& name,
 }
 
 /** Unregister a dynamic dispatch entry. */
-void dispatch_unregister(const std::string& name,
-                         const internal::DispatchKeyT& dispatch_key);
+void dispatch_unregister(std::string const& name,
+                         internal::DispatchKeyT const& dispatch_key);
 
 /** Wrapper for dispatching on a set number of types. */
 template <std::size_t num_types>
 struct DispatchOn
 {
   template <typename... Args>
-  DispatchOn(const Args&... args)
+  DispatchOn(Args const&... args)
     : tokens{{internal::get_type_token(args)...}},
       all_native(internal::all_h2_compute_types(args...))
   {
@@ -526,14 +526,14 @@ struct DispatchOn
  */
 template <std::size_t N, std::size_t num_types, typename... Args>
 void do_dispatch(
-  const std::array<internal::DispatchFunctionEntry, N>& dispatch_table,
-  const std::string& name,
-  const DispatchOn<num_types>& dispatch_types,
+  std::array<internal::DispatchFunctionEntry, N> const& dispatch_table,
+  std::string const& name,
+  DispatchOn<num_types> const& dispatch_types,
   Args&&... args)
 {
   if (dispatch_types.all_native)
   {
-    const auto native_dispatch_key =
+    auto const native_dispatch_key =
       internal::get_native_dispatch_key(dispatch_types.tokens);
     H2_ASSERT_DEBUG(native_dispatch_key < dispatch_table.size(),
                     "Native dispatch key exceeds dispatch table size");
@@ -542,7 +542,7 @@ void do_dispatch(
   }
   else
   {
-    const auto dispatch_key = internal::get_dispatch_key(dispatch_types.tokens);
+    auto const dispatch_key = internal::get_dispatch_key(dispatch_types.tokens);
     internal::call_dispatch_entry(
       name, dispatch_key, std::forward<Args>(args)...);
   }

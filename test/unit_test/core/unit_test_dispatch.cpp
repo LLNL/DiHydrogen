@@ -93,7 +93,7 @@ namespace
 {
 
 template <typename T1, typename T2>
-void dyndist_test(CPUDev_t, Tensor<T1>& dst, const Tensor<T2>& src)
+void dyndist_test(CPUDev_t, Tensor<T1>& dst, Tensor<T2> const& src)
 {
   for (DataIndexType i = 0; i < src.numel(); ++i)
   {
@@ -103,7 +103,7 @@ void dyndist_test(CPUDev_t, Tensor<T1>& dst, const Tensor<T2>& src)
 
 void dyndist_cust_test(CPUDev_t,
                        Tensor<dyndist_cust_type_t>& dst,
-                       const Tensor<dyndist_cust_type_t>& src)
+                       Tensor<dyndist_cust_type_t> const& src)
 {
   for (DataIndexType i = 0; i < src.numel(); ++i)
   {
@@ -130,7 +130,7 @@ void dyndist_test(GPUDev_t, Tensor<T1>& dst, const Tensor<T2>& src)
 // This exists but is not used if we do not test with GPU support.
 [[maybe_unused]] void dyndist_cust_test(GPUDev_t,
                                         Tensor<dyndist_cust_type_t>& dst,
-                                        const Tensor<dyndist_cust_type_t>& src)
+                                        Tensor<dyndist_cust_type_t> const& src)
 {
   for (DataIndexType i = 0; i < src.numel(); ++i)
   {
@@ -151,137 +151,137 @@ void dyndist_tester(BaseTensor& dst, const BaseTensor& src)
   static std::array<h2::internal::DispatchFunctionEntry, 16>
     _dispatch_table_dyndist_tester_cpu = {{
       {reinterpret_cast<void*>(
-         static_cast<void (*)(CPUDev_t, Tensor<float>&, const Tensor<float>&)>(
+         static_cast<void (*)(CPUDev_t, Tensor<float>&, Tensor<float> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<void,
                                               CPUDev_t,
                                               Tensor<float>&,
-                                              const Tensor<float>&>::call},
+                                              Tensor<float> const&>::call},
       {reinterpret_cast<void*>(
-         static_cast<void (*)(CPUDev_t, Tensor<float>&, const Tensor<double>&)>(
+         static_cast<void (*)(CPUDev_t, Tensor<float>&, Tensor<double> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<void,
                                               CPUDev_t,
                                               Tensor<float>&,
-                                              const Tensor<double>&>::call},
+                                              Tensor<double> const&>::call},
       {reinterpret_cast<void*>(
          static_cast<void (*)(
-           CPUDev_t, Tensor<float>&, const Tensor<std::int32_t>&)>(
+           CPUDev_t, Tensor<float>&, Tensor<std::int32_t> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<
          void,
          CPUDev_t,
          Tensor<float>&,
-         const Tensor<std::int32_t>&>::call},
+         Tensor<std::int32_t> const&>::call},
       {reinterpret_cast<void*>(
          static_cast<void (*)(
-           CPUDev_t, Tensor<float>&, const Tensor<std::uint32_t>&)>(
+           CPUDev_t, Tensor<float>&, Tensor<std::uint32_t> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<
          void,
          CPUDev_t,
          Tensor<float>&,
-         const Tensor<std::uint32_t>&>::call},
+         Tensor<std::uint32_t> const&>::call},
       {reinterpret_cast<void*>(
-         static_cast<void (*)(CPUDev_t, Tensor<double>&, const Tensor<float>&)>(
+         static_cast<void (*)(CPUDev_t, Tensor<double>&, Tensor<float> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<void,
                                               CPUDev_t,
                                               Tensor<double>&,
-                                              const Tensor<float>&>::call},
+                                              Tensor<float> const&>::call},
       {reinterpret_cast<void*>(
          static_cast<void (*)(
-           CPUDev_t, Tensor<double>&, const Tensor<double>&)>(dyndist_test)),
+           CPUDev_t, Tensor<double>&, Tensor<double> const&)>(dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<void,
                                               CPUDev_t,
                                               Tensor<double>&,
-                                              const Tensor<double>&>::call},
+                                              Tensor<double> const&>::call},
       {reinterpret_cast<void*>(
          static_cast<void (*)(
-           CPUDev_t, Tensor<double>&, const Tensor<std::int32_t>&)>(
+           CPUDev_t, Tensor<double>&, Tensor<std::int32_t> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<
          void,
          CPUDev_t,
          Tensor<double>&,
-         const Tensor<std::int32_t>&>::call},
+         Tensor<std::int32_t> const&>::call},
       {reinterpret_cast<void*>(
          static_cast<void (*)(
-           CPUDev_t, Tensor<double>&, const Tensor<std::uint32_t>&)>(
+           CPUDev_t, Tensor<double>&, Tensor<std::uint32_t> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<
          void,
          CPUDev_t,
          Tensor<double>&,
-         const Tensor<std::uint32_t>&>::call},
+         Tensor<std::uint32_t> const&>::call},
       {reinterpret_cast<void*>(
          static_cast<void (*)(
-           CPUDev_t, Tensor<std::int32_t>&, const Tensor<float>&)>(
+           CPUDev_t, Tensor<std::int32_t>&, Tensor<float> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<void,
                                               CPUDev_t,
                                               Tensor<std::int32_t>&,
-                                              const Tensor<float>&>::call},
+                                              Tensor<float> const&>::call},
       {reinterpret_cast<void*>(
          static_cast<void (*)(
-           CPUDev_t, Tensor<std::int32_t>&, const Tensor<double>&)>(
+           CPUDev_t, Tensor<std::int32_t>&, Tensor<double> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<void,
                                               CPUDev_t,
                                               Tensor<std::int32_t>&,
-                                              const Tensor<double>&>::call},
+                                              Tensor<double> const&>::call},
       {reinterpret_cast<void*>(
          static_cast<void (*)(
-           CPUDev_t, Tensor<std::int32_t>&, const Tensor<std::int32_t>&)>(
+           CPUDev_t, Tensor<std::int32_t>&, Tensor<std::int32_t> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<
          void,
          CPUDev_t,
          Tensor<std::int32_t>&,
-         const Tensor<std::int32_t>&>::call},
+         Tensor<std::int32_t> const&>::call},
       {reinterpret_cast<void*>(
          static_cast<void (*)(
-           CPUDev_t, Tensor<std::int32_t>&, const Tensor<std::uint32_t>&)>(
+           CPUDev_t, Tensor<std::int32_t>&, Tensor<std::uint32_t> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<
          void,
          CPUDev_t,
          Tensor<std::int32_t>&,
-         const Tensor<std::uint32_t>&>::call},
+         Tensor<std::uint32_t> const&>::call},
       {reinterpret_cast<void*>(
          static_cast<void (*)(
-           CPUDev_t, Tensor<std::uint32_t>&, const Tensor<float>&)>(
+           CPUDev_t, Tensor<std::uint32_t>&, Tensor<float> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<void,
                                               CPUDev_t,
                                               Tensor<std::uint32_t>&,
-                                              const Tensor<float>&>::call},
+                                              Tensor<float> const&>::call},
       {reinterpret_cast<void*>(
          static_cast<void (*)(
-           CPUDev_t, Tensor<std::uint32_t>&, const Tensor<double>&)>(
+           CPUDev_t, Tensor<std::uint32_t>&, Tensor<double> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<void,
                                               CPUDev_t,
                                               Tensor<std::uint32_t>&,
-                                              const Tensor<double>&>::call},
+                                              Tensor<double> const&>::call},
       {reinterpret_cast<void*>(
          static_cast<void (*)(
-           CPUDev_t, Tensor<std::uint32_t>&, const Tensor<std::int32_t>&)>(
+           CPUDev_t, Tensor<std::uint32_t>&, Tensor<std::int32_t> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<
          void,
          CPUDev_t,
          Tensor<std::uint32_t>&,
-         const Tensor<std::int32_t>&>::call},
+         Tensor<std::int32_t> const&>::call},
       {reinterpret_cast<void*>(
          static_cast<void (*)(
-           CPUDev_t, Tensor<std::uint32_t>&, const Tensor<std::uint32_t>&)>(
+           CPUDev_t, Tensor<std::uint32_t>&, Tensor<std::uint32_t> const&)>(
            dyndist_test)),
        &h2::internal::DispatchFunctionWrapper<
          void,
          CPUDev_t,
          Tensor<std::uint32_t>&,
-         const Tensor<std::uint32_t>&>::call},
+         Tensor<std::uint32_t> const&>::call},
     }};
 #ifdef H2_HAS_GPU
   static std::array<h2::internal::DispatchFunctionEntry, 16>
@@ -488,7 +488,7 @@ TEMPLATE_LIST_TEST_CASE("Dynamic dispatch to non-native compute type works",
                                      get_h2_type<dyndist_cust_type_t>()),
                     static_cast<void (*)(CPUDev_t,
                                          Tensor<dyndist_cust_type_t>&,
-                                         const Tensor<dyndist_cust_type_t>&)>(
+                                         Tensor<dyndist_cust_type_t> const&)>(
                       dyndist_cust_test));
 #ifdef H2_TEST_WITH_GPU
   dispatch_register("dyndist_tester_gpu",

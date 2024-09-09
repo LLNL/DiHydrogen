@@ -20,7 +20,7 @@ public:
   using Allreduce<DataType>::allreduce;
 
   virtual void
-  allreduce(const DataType* send_buf, DataType* recv_buf, size_t count) override
+  allreduce(DataType const* send_buf, DataType* recv_buf, size_t count) override
   {
     if (send_buf == recv_buf)
     {

@@ -9,7 +9,7 @@ using namespace distconv;
 using namespace distconv::tensor;
 
 template <int ND>
-index_t get_linearlized_offset(const Array<ND>& offset, const Array<ND>& dim)
+index_t get_linearlized_offset(Array<ND> const& offset, Array<ND> const& dim)
 {
   index_t x = 0;
   index_t d = 1;
@@ -21,7 +21,7 @@ index_t get_linearlized_offset(const Array<ND>& offset, const Array<ND>& dim)
   return x;
 }
 
-index_t get_linearlized_offset(const IndexVector& offset, const Shape& dim)
+index_t get_linearlized_offset(IndexVector const& offset, Shape const& dim)
 {
   index_t x = 0;
   index_t d = 1;
@@ -42,23 +42,23 @@ inline Locale get_locale()
 
 template <typename TensorType>
 inline TensorType get_tensor(typename TensorType::locale_type& loc,
-                             const Distribution& dist)
+                             Distribution const& dist)
 {
   TensorType tensor(loc, dist);
   return tensor;
 }
 
 template <typename TensorType>
-inline TensorType get_tensor(const Shape& shape,
+inline TensorType get_tensor(Shape const& shape,
                              typename TensorType::locale_type& loc,
-                             const Distribution& dist)
+                             Distribution const& dist)
 {
   TensorType tensor(shape, loc, dist);
   return tensor;
 }
 
 template <typename TensorType>
-inline int test_alloc(const Shape& shape, const Distribution& dist)
+inline int test_alloc(Shape const& shape, Distribution const& dist)
 {
   using LocaleType = typename TensorType::locale_type;
   LocaleType loc = get_locale<LocaleType>();
@@ -78,7 +78,7 @@ inline int test_alloc(const Shape& shape, const Distribution& dist)
 }
 
 template <typename TensorType>
-inline int test_data_access(const Shape& shape, const Distribution& dist)
+inline int test_data_access(Shape const& shape, Distribution const& dist)
 {
   using LocaleType = typename TensorType::locale_type;
   LocaleType loc = get_locale<LocaleType>();
@@ -128,7 +128,7 @@ inline int test_data_access(const Shape& shape, const Distribution& dist)
 }
 
 template <typename TensorType>
-inline int test_data_access4(const Shape& shape, const Distribution& dist)
+inline int test_data_access4(Shape const& shape, Distribution const& dist)
 {
   using LocaleType = typename TensorType::locale_type;
   LocaleType loc = get_locale<LocaleType>();

@@ -16,7 +16,7 @@ using namespace p2p::logging;
 namespace p2p
 {
 
-P2P::P2P(const internal::MPI& mpi) : m_mpi(mpi), m_stream_mem_enabled(false)
+P2P::P2P(internal::MPI const& mpi) : m_mpi(mpi), m_stream_mem_enabled(false)
 {
   m_rank = m_mpi.get_rank();
   P2P_CHECK_CUDA_ALWAYS(cudaGetDevice(&m_dev));
@@ -49,7 +49,7 @@ void P2P::disable_nvtx() const
   cfg.insert_nvtx_mark = false;
 }
 
-int P2P::get_peer_host_names(const int* peers,
+int P2P::get_peer_host_names(int const* peers,
                              int num_peers,
                              std::vector<char*>& names)
 {
@@ -69,7 +69,7 @@ int P2P::get_peer_host_names(const int* peers,
   return 0;
 }
 
-int P2P::get_peer_devices(const int* peers,
+int P2P::get_peer_devices(int const* peers,
                           int num_peers,
                           std::vector<int>& peer_devices)
 {
@@ -92,14 +92,14 @@ int P2P::get_peer_devices(const int* peers,
   return 0;
 }
 
-int P2P::get_connections(const std::vector<int>& peers,
+int P2P::get_connections(std::vector<int> const& peers,
                          std::vector<connection_type>& conns)
 {
   conns.resize(peers.size());
   return get_connections(peers.data(), conns.data(), peers.size());
 }
 
-int P2P::get_connections(const int* peers,
+int P2P::get_connections(int const* peers,
                          connection_type* conns,
                          int num_peers)
 {
@@ -264,7 +264,7 @@ int P2P::barrier(std::shared_ptr<Connection>* connections,
 }
 
 int P2P::exchange_addrs(std::vector<connection_type>& connections,
-                        const std::vector<void*>& local_addrs,
+                        std::vector<void*> const& local_addrs,
                         std::vector<void*>& peer_addrs)
 {
   int num_conns = connections.size();
@@ -275,7 +275,7 @@ int P2P::exchange_addrs(std::vector<connection_type>& connections,
 
 int P2P::exchange_addrs(connection_type* connections,
                         void* const* local_addrs,
-                        const size_t* local_offsets,
+                        size_t const* local_offsets,
                         void** peer_addrs,
                         size_t* peer_offsets,
                         int num_conns)
@@ -385,7 +385,7 @@ int P2P::exchange(connection_type* connections,
   for (int i = 0; i < num_conns; ++i)
   {
     auto conn = connections[i];
-    const auto conn_ptr = conn.get();
+    auto const conn_ptr = conn.get();
     if (typeid(*conn_ptr) == typeid(ConnectionMPI))
     {
       logging::MPIPrintStreamDebug()

@@ -59,7 +59,7 @@ struct Options
           bool enable_profiling = false,
           float ws_capacity_factor = 1.0f,
           bool jit_verbose = false,
-          const std::string& jit_cache_path = ".jitcache");
+          std::string const& jit_cache_path = ".jitcache");
 };  // struct Options
 
 // Manage the collection of streams.

@@ -17,7 +17,7 @@ public:
   std::vector<float> fwd_time;
   std::vector<float> bwd_time;
   BenchmarkConfig<NSD> m_cfg;
-  Profile(const BenchmarkConfig<NSD>& cfg) : m_cfg(cfg) {}
+  Profile(BenchmarkConfig<NSD> const& cfg) : m_cfg(cfg) {}
 
   std::ostream& print_as_row(std::ostream& os)
   {
@@ -50,9 +50,9 @@ public:
   typename TensorType<Backend, DataType>::type output;
   typename TensorType<Backend, DataType>::type d_input;
   typename TensorType<Backend, DataType>::type d_output;
-  const BenchmarkConfig<NSD> m_cfg;
+  BenchmarkConfig<NSD> const m_cfg;
 
-  Data(const BenchmarkConfig<NSD>& cfg, MPI_Comm comm) : m_cfg(cfg)
+  Data(BenchmarkConfig<NSD> const& cfg, MPI_Comm comm) : m_cfg(cfg)
   {
     using Tensor = typename TensorType<Backend, DataType>::type;
 
@@ -69,19 +69,19 @@ public:
     assert_always(cfg.p_c == 1
                   && "Decomposition over dimension C not supported yet");
 
-    const auto vector_concat =
-      [](const int_vector v, const int c, const int n) {
+    auto const vector_concat =
+      [](int_vector const v, int const c, int const n) {
         int_vector cn({c, n});
         cn.insert(cn.begin(), v.begin(), v.end());
-        return (const int_vector) cn;
+        return (int_vector const) cn;
       };
 
-    const auto input_shape = vector_concat(cfg.i_s, cfg.i_c, cfg.i_n);
-    const auto locale_shape = vector_concat(cfg.p_s, cfg.p_c, cfg.p_n);
-    const auto window = cfg.f_s;
-    const auto strides = cfg.strides;
-    const auto pads = cfg.pads;
-    const int_vector dilations(cfg.get_num_spatial_dims(), 1);
+    auto const input_shape = vector_concat(cfg.i_s, cfg.i_c, cfg.i_n);
+    auto const locale_shape = vector_concat(cfg.p_s, cfg.p_c, cfg.p_n);
+    auto const window = cfg.f_s;
+    auto const strides = cfg.strides;
+    auto const pads = cfg.pads;
+    int_vector const dilations(cfg.get_num_spatial_dims(), 1);
     input = create_input_tensor<Tensor>(input_shape,
                                         locale_shape,
                                         window,
@@ -161,7 +161,7 @@ struct PoolingTester<NSD, ref::Backend, DataType>
 {
   PoolingTester() {}
   int operator()(Data<NSD, ref::Backend, DataType>& d,
-                 const BenchmarkConfig<NSD>& cfg,
+                 BenchmarkConfig<NSD> const& cfg,
                  MPI_Comm comm,
                  Profile<NSD>& prof)
   {
@@ -173,7 +173,7 @@ struct PoolingTester<NSD, ref::Backend, DataType>
 
 template <int NSD, typename Backend, typename DataType>
 int test_forward(Data<NSD, Backend, DataType>& d,
-                 const BenchmarkConfig<NSD>& cfg,
+                 BenchmarkConfig<NSD> const& cfg,
                  MPI_Comm comm,
                  Backend& be,
                  Profile<NSD>& prof)
@@ -233,7 +233,7 @@ int test_forward(Data<NSD, Backend, DataType>& d,
 
 template <int NSD, typename Backend, typename DataType>
 int test_backward(Data<NSD, Backend, DataType>& d,
-                  const BenchmarkConfig<NSD>& cfg,
+                  BenchmarkConfig<NSD> const& cfg,
                   MPI_Comm comm,
                   Backend& be,
                   Profile<NSD>& prof)
@@ -299,7 +299,7 @@ struct PoolingTester<NSD, cudnn::BackendCUDNN, DataType>
 {
   PoolingTester() {}
   int operator()(Data<NSD, cudnn::BackendCUDNN, DataType>& d,
-                 const BenchmarkConfig<NSD>& cfg,
+                 BenchmarkConfig<NSD> const& cfg,
                  MPI_Comm comm,
                  Profile<NSD>& prof)
   {
@@ -343,7 +343,7 @@ int main(int argc, char* argv[])
   DISTCONV_CHECK_MPI(MPI_Init(&argc, &argv));
   DISTCONV_CHECK_MPI(MPI_Comm_rank(MPI_COMM_WORLD, &pid));
 
-  const int nsd = distconv_benchmark::parse_num_dims(argc, argv);
+  int const nsd = distconv_benchmark::parse_num_dims(argc, argv);
 
   if (nsd == 2)
   {

@@ -32,34 +32,34 @@ namespace base
  * as in the Tensor constructor.
  */
 std::unique_ptr<BaseTensor>
-make_tensor(const TypeInfo& tinfo,
+make_tensor(TypeInfo const& tinfo,
             Device device,
-            const ShapeTuple& shape,
-            const DimensionTypeTuple& dim_types,
-            const StrideTuple& strides = {},
+            ShapeTuple const& shape,
+            DimensionTypeTuple const& dim_types,
+            StrideTuple const& strides = {},
             TensorAllocationStrategy alloc_type = StrictAlloc,
-            const std::optional<ComputeStream> stream = std::nullopt);
+            std::optional<ComputeStream> const stream = std::nullopt);
 
 /** Create a view of tensor. */
 std::unique_ptr<BaseTensor> view(BaseTensor& tensor);
 
 /** Create a subview of tensor. */
 std::unique_ptr<BaseTensor> view(BaseTensor& tensor,
-                                 const IndexRangeTuple& coords);
+                                 IndexRangeTuple const& coords);
 
 /** Create a constant view of tensor. */
-std::unique_ptr<BaseTensor> view(const BaseTensor& tensor);
+std::unique_ptr<BaseTensor> view(BaseTensor const& tensor);
 
 /** Create a constant subview of tensor. */
-std::unique_ptr<BaseTensor> view(const BaseTensor& tensor,
-                                 const IndexRangeTuple& coords);
+std::unique_ptr<BaseTensor> view(BaseTensor const& tensor,
+                                 IndexRangeTuple const& coords);
 
 /** Create a constant view of tensor. */
-std::unique_ptr<BaseTensor> const_view(const BaseTensor& tensor);
+std::unique_ptr<BaseTensor> const_view(BaseTensor const& tensor);
 
 /** Create a constant subview of tensor. */
-std::unique_ptr<BaseTensor> const_view(const BaseTensor& tensor,
-                                       const IndexRangeTuple& coords);
+std::unique_ptr<BaseTensor> const_view(BaseTensor const& tensor,
+                                       IndexRangeTuple const& coords);
 
 }  // namespace base
 }  // namespace h2

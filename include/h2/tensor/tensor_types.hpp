@@ -53,7 +53,7 @@ enum class DimensionType
 using DT = DimensionType;  // Alias to save you some typing.
 
 /** Support printing DimensionType. */
-inline std::ostream& operator<<(std::ostream& os, const DimensionType& dim_type)
+inline std::ostream& operator<<(std::ostream& os, DimensionType const& dim_type)
 {
   switch (dim_type)
   {
@@ -163,13 +163,13 @@ private:
 };
 
 /** Equality for ranges. */
-inline constexpr bool operator==(const IndexRange& ir1, const IndexRange& ir2)
+inline constexpr bool operator==(IndexRange const& ir1, IndexRange const& ir2)
 {
   return ir1.start() == ir2.start() && ir1.end() == ir2.end();
 }
 
 /** Inequality for ranges. */
-inline constexpr bool operator!=(const IndexRange& ir1, const IndexRange& ir2)
+inline constexpr bool operator!=(IndexRange const& ir1, IndexRange const& ir2)
 {
   return ir1.start() != ir2.start() || ir1.end() != ir2.end();
 }
@@ -180,7 +180,7 @@ using IRng = IndexRange;  // Alias to save you some typing.
 static constexpr IndexRange ALL(0, std::numeric_limits<DimType>::max());
 
 /** Support printing IndexRange. */
-inline std::ostream& operator<<(std::ostream& os, const IndexRange& ir)
+inline std::ostream& operator<<(std::ostream& os, IndexRange const& ir)
 {
   if (ir == ALL)
   {
@@ -222,7 +222,7 @@ enum class ViewType
 };
 
 /** Support printing ViewType. */
-inline std::ostream& operator<<(std::ostream& os, const ViewType& vt)
+inline std::ostream& operator<<(std::ostream& os, ViewType const& vt)
 {
   switch (vt)
   {

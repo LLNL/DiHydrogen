@@ -50,10 +50,10 @@ public:
    * Construct a tensor with the given shape and dimension types,
    * distributed over the given processor grid.
    */
-  BaseDistTensor(const ShapeTuple& shape_,
-                 const DimensionTypeTuple& dim_types_,
+  BaseDistTensor(ShapeTuple const& shape_,
+                 DimensionTypeTuple const& dim_types_,
                  ProcessorGrid grid_,
-                 const DistributionTypeTuple& dist_types_)
+                 DistributionTypeTuple const& dist_types_)
     : tensor_shape(shape_),
       tensor_dim_types(dim_types_),
       tensor_grid(grid_),
@@ -217,11 +217,11 @@ protected:
 
   /** Construct a tensor with the given view type. */
   BaseDistTensor(ViewType view_type_,
-                 const ShapeTuple& shape_,
-                 const DimensionTypeTuple& dim_types_,
+                 ShapeTuple const& shape_,
+                 DimensionTypeTuple const& dim_types_,
                  ProcessorGrid grid_,
-                 const DistributionTypeTuple& dist_types_,
-                 const ShapeTuple& local_shape_)
+                 DistributionTypeTuple const& dist_types_,
+                 ShapeTuple const& local_shape_)
     : tensor_shape(shape_),
       tensor_dim_types(dim_types_),
       tensor_grid(grid_),

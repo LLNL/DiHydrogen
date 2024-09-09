@@ -36,26 +36,26 @@ namespace internal
 template <typename T, Device Dev>
 struct Allocator
 {
-  static T* allocate(std::size_t size, const ComputeStream& stream);
-  static void deallocate(T* buf, const ComputeStream& stream);
+  static T* allocate(std::size_t size, ComputeStream const& stream);
+  static void deallocate(T* buf, ComputeStream const& stream);
 };
 
 template <typename T>
 struct Allocator<T, Device::CPU>
 {
-  static T* allocate(std::size_t size, const ComputeStream&)
+  static T* allocate(std::size_t size, ComputeStream const&)
   {
     return new T[size];
   }
 
-  static void deallocate(T* buf, const ComputeStream&) { delete[] buf; }
+  static void deallocate(T* buf, ComputeStream const&) { delete[] buf; }
 };
 
 #ifdef H2_HAS_GPU
 template <typename T>
 struct Allocator<T, Device::GPU>
 {
-  static T* allocate(std::size_t size, const ComputeStream& stream)
+  static T* allocate(std::size_t size, ComputeStream const& stream)
   {
     T* buf = nullptr;
     // FIXME: add H2_CHECK_GPU...
@@ -69,7 +69,7 @@ struct Allocator<T, Device::GPU>
     return buf;
   }
 
-  static void deallocate(T* buf, const ComputeStream&)
+  static void deallocate(T* buf, ComputeStream const&)
   {
     H2_ASSERT(gpu::default_cub_allocator().DeviceFree(buf) == 0,
               std::runtime_error,
@@ -86,7 +86,7 @@ class ManagedBuffer
 {
 public:
   ManagedBuffer(Device dev,
-                const std::optional<ComputeStream> stream_ = std::nullopt)
+                std::optional<ComputeStream> const stream_ = std::nullopt)
     : buf(nullptr),
       buf_size(0),
       device(dev),
@@ -95,7 +95,7 @@ public:
 
   ManagedBuffer(std::size_t size_,
                 Device dev,
-                const std::optional<ComputeStream> stream_ = std::nullopt)
+                std::optional<ComputeStream> const stream_ = std::nullopt)
     : buf(nullptr),
       buf_size(size_),
       device(dev),
@@ -117,8 +117,8 @@ public:
     }
   }
 
-  ManagedBuffer(const ManagedBuffer&) = delete;
-  ManagedBuffer& operator=(const ManagedBuffer&) = delete;
+  ManagedBuffer(ManagedBuffer const&) = delete;
+  ManagedBuffer& operator=(ManagedBuffer const&) = delete;
 
   ManagedBuffer(ManagedBuffer&& other)
     : buf(other.buf),
@@ -143,15 +143,15 @@ public:
 
   T* data() H2_NOEXCEPT { return buf; }
 
-  const T* data() const H2_NOEXCEPT { return buf; }
+  T const* data() const H2_NOEXCEPT { return buf; }
 
-  const T* const_data() const H2_NOEXCEPT { return buf; }
+  T const* const_data() const H2_NOEXCEPT { return buf; }
 
   std::size_t size() const H2_NOEXCEPT { return buf_size; }
 
   Device get_device() const H2_NOEXCEPT { return device; }
 
-  const ComputeStream& get_stream() const H2_NOEXCEPT { return stream; }
+  ComputeStream const& get_stream() const H2_NOEXCEPT { return stream; }
 
 private:
   T* buf;

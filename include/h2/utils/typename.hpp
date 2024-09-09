@@ -25,7 +25,7 @@ namespace internal
  *
  * This will attempt to provide a readable name.
  */
-std::string get_type_name(const std::type_info& tinfo);
+std::string get_type_name(std::type_info const& tinfo);
 }  // namespace internal
 
 /** Return a string naming the given type. */

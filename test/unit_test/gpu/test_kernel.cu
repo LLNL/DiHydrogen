@@ -19,7 +19,7 @@ __global__ void test_kernel(int* buf, int val)
 
 void unit_test_gpu_launch_kernel_test(int* buf,
                                       int val,
-                                      const h2::gpu::DeviceStream& stream)
+                                      h2::gpu::DeviceStream const& stream)
 {
   h2::gpu::launch_kernel(test_kernel, 1, 1, 0, stream, buf, val);
 }

@@ -14,8 +14,8 @@ namespace p2p
 
 bool ConnectionIPC::is_ipc_capable(int peer,
                                    internal::MPI& mpi,
-                                   const char* self_name,
-                                   const char* peer_name,
+                                   char const* self_name,
+                                   char const* peer_name,
                                    int self_dev,
                                    int peer_dev)
 {
@@ -48,7 +48,7 @@ bool ConnectionIPC::is_ipc_capable(int peer,
 
 ConnectionIPC::ConnectionIPC(int peer,
                              int dev,
-                             const internal::MPI& mpi,
+                             internal::MPI const& mpi,
                              util::EventPool& ev_pool)
   : Connection(peer, mpi, ev_pool),
     m_dev_peer(dev),
@@ -161,7 +161,7 @@ int ConnectionIPC::register_addr_post(void* data)
   P2P_ASSERT_ALWAYS(data != nullptr);
   auto peer_data = static_cast<register_addr_data*>(data);
   P2P_ASSERT_ALWAYS(peer_data != nullptr);
-  const void* peer = peer_data->first;
+  void const* peer = peer_data->first;
   // peer may be null when there should be no transfer to the peer
   if (!peer)
   {
@@ -218,7 +218,7 @@ int ConnectionIPC::deregister_addr(void* mapped_addr)
   return 0;
 }
 
-int ConnectionIPC::send(const void* src, size_t size, cudaStream_t stream)
+int ConnectionIPC::send(void const* src, size_t size, cudaStream_t stream)
 {
   P2P_ASSERT_ALWAYS(0 && "Not implemented");
   return 0;
@@ -230,7 +230,7 @@ int ConnectionIPC::recv(void* dst, size_t size, cudaStream_t stream)
   return 0;
 }
 
-int ConnectionIPC::sendrecv(const void* send_src,
+int ConnectionIPC::sendrecv(void const* send_src,
                             size_t send_size,
                             void* recv_dst,
                             size_t recv_size,
@@ -240,7 +240,7 @@ int ConnectionIPC::sendrecv(const void* send_src,
   return 0;
 }
 
-int ConnectionIPC::put(const void* src,
+int ConnectionIPC::put(void const* src,
                        void* dst,
                        size_t size,
                        cudaStream_t stream)

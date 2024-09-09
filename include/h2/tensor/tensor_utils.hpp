@@ -23,7 +23,7 @@ namespace h2
  * Convert a `ScalarIndexTuple` to a corresponding `IndexRangeTuple`.
  */
 constexpr inline IndexRangeTuple
-scalar2range_tuple(const ScalarIndexTuple& tuple) H2_NOEXCEPT
+scalar2range_tuple(ScalarIndexTuple const& tuple) H2_NOEXCEPT
 {
   IndexRangeTuple ir_tuple(TuplePad<IndexRangeTuple>(tuple.size()));
   for (ScalarIndexTuple::size_type i = 0; i < tuple.size(); ++i)
@@ -39,7 +39,7 @@ scalar2range_tuple(const ScalarIndexTuple& tuple) H2_NOEXCEPT
  * This is the starting point of each index range in the tuple.
  */
 constexpr inline ScalarIndexTuple
-get_index_range_start(const IndexRangeTuple& coords) H2_NOEXCEPT
+get_index_range_start(IndexRangeTuple const& coords) H2_NOEXCEPT
 {
   ScalarIndexTuple coords_start(TuplePad<ScalarIndexTuple>(coords.size()));
   for (typename IndexRangeTuple::size_type i = 0; i < coords.size(); ++i)
@@ -57,10 +57,10 @@ get_index_range_start(const IndexRangeTuple& coords) H2_NOEXCEPT
  * range itself is empty.
  */
 constexpr inline bool
-is_index_range_empty(const IndexRangeTuple& coords) H2_NOEXCEPT
+is_index_range_empty(IndexRangeTuple const& coords) H2_NOEXCEPT
 {
   return coords.is_empty()
-         || any_of(coords, [](const typename IndexRangeTuple::type& c) {
+         || any_of(coords, [](typename IndexRangeTuple::type const& c) {
               return c.is_empty();
             });
 }
@@ -74,8 +74,8 @@ is_index_range_empty(const IndexRangeTuple& coords) H2_NOEXCEPT
  * empty shape.)
  */
 constexpr inline ShapeTuple
-get_index_range_shape(const IndexRangeTuple& coords,
-                      const ShapeTuple& shape) H2_NOEXCEPT
+get_index_range_shape(IndexRangeTuple const& coords,
+                      ShapeTuple const& shape) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(coords.size() <= shape.size(),
                   "coords size (",
@@ -108,8 +108,8 @@ get_index_range_shape(const IndexRangeTuple& coords,
  * Return true if an index range is contained within a given shape.
  */
 constexpr inline bool
-is_index_range_contained(const IndexRangeTuple& coords,
-                         const ShapeTuple& shape) H2_NOEXCEPT
+is_index_range_contained(IndexRangeTuple const& coords,
+                         ShapeTuple const& shape) H2_NOEXCEPT
 {
   if (coords.size() > shape.size())
   {
@@ -132,8 +132,8 @@ is_index_range_contained(const IndexRangeTuple& coords,
  * The index ranges may not be scalar.
  */
 constexpr inline bool
-do_index_ranges_intersect(const IndexRange& ir1,
-                          const IndexRange& ir2) H2_NOEXCEPT
+do_index_ranges_intersect(IndexRange const& ir1,
+                          IndexRange const& ir2) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(!ir1.is_scalar() && !ir2.is_scalar(),
                   "Cannot intersect scalar index ranges ",
@@ -151,8 +151,8 @@ do_index_ranges_intersect(const IndexRange& ir1,
  * The index ranges may not have scalar entries.
  */
 constexpr inline bool
-do_index_ranges_intersect(const IndexRangeTuple& ir1,
-                          const IndexRangeTuple& ir2) H2_NOEXCEPT
+do_index_ranges_intersect(IndexRangeTuple const& ir1,
+                          IndexRangeTuple const& ir2) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(ir1.size() == ir2.size(),
                   "Index ranges ",
@@ -176,7 +176,7 @@ do_index_ranges_intersect(const IndexRangeTuple& ir1,
  * The index ranges must have a non-empty intersection.
  */
 constexpr inline IndexRange
-intersect_index_ranges(const IndexRange& ir1, const IndexRange& ir2) H2_NOEXCEPT
+intersect_index_ranges(IndexRange const& ir1, IndexRange const& ir2) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(do_index_ranges_intersect(ir1, ir2),
                   "Index ranges ",
@@ -194,8 +194,8 @@ intersect_index_ranges(const IndexRange& ir1, const IndexRange& ir2) H2_NOEXCEPT
  * The index ranges must have a non-empty intersection.
  */
 constexpr inline IndexRangeTuple
-intersect_index_ranges(const IndexRangeTuple& ir1,
-                       const IndexRangeTuple& ir2) H2_NOEXCEPT
+intersect_index_ranges(IndexRangeTuple const& ir1,
+                       IndexRangeTuple const& ir2) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(ir1.size() == ir2.size(),
                   "Index ranges ",
@@ -217,8 +217,8 @@ intersect_index_ranges(const IndexRangeTuple& ir1,
 /**
  * Return true if the given scalar index is a valid index within shape.
  */
-constexpr inline bool is_index_in_shape(const ScalarIndexTuple& idx,
-                                        const ShapeTuple& shape) H2_NOEXCEPT
+constexpr inline bool is_index_in_shape(ScalarIndexTuple const& idx,
+                                        ShapeTuple const& shape) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(idx.size() == shape.size(),
                   "Scalar indices ",
@@ -245,8 +245,8 @@ constexpr inline bool is_index_in_shape(const ScalarIndexTuple& idx,
  * end.
  */
 constexpr inline ScalarIndexTuple
-next_scalar_index(const ScalarIndexTuple& idx,
-                  const ShapeTuple& shape) H2_NOEXCEPT
+next_scalar_index(ScalarIndexTuple const& idx,
+                  ShapeTuple const& shape) H2_NOEXCEPT
 {
   H2_ASSERT_DEBUG(idx.size() == shape.size(),
                   "Scalar indices ",
@@ -290,9 +290,9 @@ next_scalar_index(const ScalarIndexTuple& idx,
  * @todo In the future, we could specialize for specific dimensions.
  */
 template <typename Func>
-void for_ndim(const ShapeTuple& shape,
+void for_ndim(ShapeTuple const& shape,
               Func f,
-              const ScalarIndexTuple& start = ScalarIndexTuple())
+              ScalarIndexTuple const& start = ScalarIndexTuple())
 {
   H2_ASSERT_DEBUG(start.is_empty() || start.size() == shape.size(),
                   "Start index ",
@@ -308,11 +308,11 @@ void for_ndim(const ShapeTuple& shape,
       ? ScalarIndexTuple(TuplePad<ScalarIndexTuple>(shape.size(), 0))
       : start;
   // Upper-bound is the number of elements in shape.
-  const DataIndexType ub = product<DataIndexType>(shape);
+  DataIndexType const ub = product<DataIndexType>(shape);
   // Determine the start by computing the number of skipped indices,
   // essentially by computing an index in a contiguous shape.
   // (Skip this if we know we start from 0.)
-  const DataIndexType start_index =
+  DataIndexType const start_index =
     start.is_empty() ? 0
                      : inner_product<DataIndexType>(
                          coord, prefix_product<DataIndexType>(shape));

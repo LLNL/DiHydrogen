@@ -43,7 +43,7 @@ struct CUDAAllocator
     TENSOR_CHECK_CUDA(cudaFree(p));
   }
   static void
-  copy(void* dst, const void* src, size_t size, cudaStream_t stream = 0)
+  copy(void* dst, void const* src, size_t size, cudaStream_t stream = 0)
   {
     TENSOR_CHECK_CUDA(
       cudaMemcpyAsync(dst, src, size, cudaMemcpyDeviceToDevice, stream));
@@ -54,7 +54,7 @@ struct CUDAAllocator
     TENSOR_CHECK_CUDA(cudaMemsetAsync(p, v, size, stream));
   }
   static void copyin(void* dst,
-                     const void* src,
+                     void const* src,
                      size_t size,
                      size_t,
                      size_t,
@@ -64,7 +64,7 @@ struct CUDAAllocator
       cudaMemcpyAsync(dst, src, size, cudaMemcpyHostToDevice, stream));
   }
   static void copyout(void* dst,
-                      const void* src,
+                      void const* src,
                       size_t size,
                       size_t,
                       size_t,
@@ -94,18 +94,18 @@ struct CUDAPitchedAllocator
       cudaMemset2DAsync(p, pitch, v, ldim, size / ldim, stream));
     TENSOR_CHECK_CUDA(cudaStreamSynchronize(stream));
   }
-  static void copy(void* dst, const void* src, size_t size)
+  static void copy(void* dst, void const* src, size_t size)
   {
     TENSOR_CHECK_CUDA(cudaMemcpy(dst, src, size, cudaMemcpyDeviceToDevice));
   }
   static void
-  copyin(void* dst, const void* src, size_t size, size_t pitch, size_t ldim)
+  copyin(void* dst, void const* src, size_t size, size_t pitch, size_t ldim)
   {
     TENSOR_CHECK_CUDA(cudaMemcpy2D(
       dst, pitch, src, ldim, ldim, size / ldim, cudaMemcpyHostToDevice));
   }
   static void
-  copyout(void* dst, const void* src, size_t size, size_t pitch, size_t ldim)
+  copyout(void* dst, void const* src, size_t size, size_t pitch, size_t ldim)
   {
     TENSOR_CHECK_CUDA(cudaMemcpy2D(
       dst, ldim, src, pitch, ldim, size / ldim, cudaMemcpyDeviceToHost));
@@ -131,12 +131,12 @@ struct CUDAHostPooledAllocator
     std::memset(p, v, size);
   }
   static void
-  copyin(void* dst, const void* src, size_t real_size, size_t, size_t)
+  copyin(void* dst, void const* src, size_t real_size, size_t, size_t)
   {
     std::memcpy(dst, src, real_size);
   }
   static void
-  copyout(void* dst, const void* src, size_t real_size, size_t, size_t)
+  copyout(void* dst, void const* src, size_t real_size, size_t, size_t)
   {
     std::memcpy(dst, src, real_size);
   }
@@ -158,7 +158,7 @@ inline typename std::enable_if<
          && std::is_same<AllocDst, BaseAllocator>::value),
   int>::type
 Copy(Memory<AllocDst>& dst,
-     const Memory<AllocSrc>& src,
+     Memory<AllocSrc> const& src,
      size_t x_len,
      size_t y_len,
      size_t x_dst_offset,
@@ -170,7 +170,7 @@ Copy(Memory<AllocDst>& dst,
   size_t src_offset = x_src_offset + src.get_pitch() * y_src_offset;
   size_t dst_offset = x_dst_offset + dst.get_pitch() * y_dst_offset;
   void* dst_ptr = (char*) dst.get() + dst_offset;
-  const void* src_ptr = (char*) src.get() + src_offset;
+  void const* src_ptr = (char*) src.get() + src_offset;
   cudaStream_t s = get_gpu_stream(stream);
   if (dst.get_pitch() == x_len && src.get_pitch() == x_len)
   {

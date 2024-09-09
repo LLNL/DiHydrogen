@@ -19,7 +19,7 @@ struct add_const;
 template <typename T>
 struct add_const<true, T>
 {
-  using type = const T;
+  using type = T const;
 };
 
 template <typename T>
@@ -54,7 +54,7 @@ struct MemoryProperty
   }
 };
 
-inline std::ostream& operator<<(std::ostream& os, const MemoryProperty& mp)
+inline std::ostream& operator<<(std::ostream& os, MemoryProperty const& mp)
 {
   return mp.print(os);
 }
@@ -83,7 +83,7 @@ public:
 
   ~Memory() = default;
 
-  Memory(const Memory<Allocator>& m)
+  Memory(Memory<Allocator> const& m)
     : m_property(m.m_property),
       m_managed_ptr(m.m_managed_ptr),
       m_alias_ptr(m.m_alias_ptr),
@@ -229,14 +229,14 @@ public:
     Allocator::copyout(p, get(), get_size(), get_pitch(), get_ldim());
   }
 
-  void copyin(const void* p)
+  void copyin(void const* p)
   {
     void* dst = get();
     assert_always(dst != nullptr);
     Allocator::copyin(dst, p, get_size(), get_pitch(), get_ldim());
   }
 
-  int alias(const Memory<Allocator>& m)
+  int alias(Memory<Allocator> const& m)
   {
     nullify();
     m_property = m.m_property;
@@ -252,7 +252,7 @@ public:
     return 0;
   }
 
-  int alias(const void* ptr, size_t size, size_t ldim, size_t pitch)
+  int alias(void const* ptr, size_t size, size_t ldim, size_t pitch)
   {
     nullify();
     m_alias_const_ptr = ptr;
@@ -276,11 +276,11 @@ protected:
   // std::shared_ptr<element_type> m_managed_ptr;
   std::shared_ptr<void> m_managed_ptr;
   void* m_alias_ptr;
-  const void* m_alias_const_ptr;
+  void const* m_alias_const_ptr;
 };
 
 template <typename Allocator>
-inline std::ostream& operator<<(std::ostream& os, const Memory<Allocator>& m)
+inline std::ostream& operator<<(std::ostream& os, Memory<Allocator> const& m)
 {
   return m.print(os);
 }
@@ -307,12 +307,12 @@ struct BaseAllocator
     std::memset(p, v, size);
   }
   static void
-  copyin(void* dst, const void* src, size_t real_size, size_t, size_t)
+  copyin(void* dst, void const* src, size_t real_size, size_t, size_t)
   {
     std::memcpy(dst, src, real_size);
   }
   static void
-  copyout(void* dst, const void* src, size_t real_size, size_t, size_t)
+  copyout(void* dst, void const* src, size_t real_size, size_t, size_t)
   {
     std::memcpy(dst, src, real_size);
   }
@@ -335,7 +335,7 @@ struct BasePitchedAllocator
     std::memset(p, v, pitch * size / ldim);
   }
   static void
-  copyin(void* dst, const void* src, size_t size, size_t pitch, size_t ldim)
+  copyin(void* dst, void const* src, size_t size, size_t pitch, size_t ldim)
   {
     size_t nrows = size / ldim;
     size_t dst_offset = 0;
@@ -348,7 +348,7 @@ struct BasePitchedAllocator
     }
   }
   static void
-  copyout(void* dst, const void* src, size_t size, size_t pitch, size_t ldim)
+  copyout(void* dst, void const* src, size_t size, size_t pitch, size_t ldim)
   {
     size_t nrows = size / ldim;
     size_t dst_offset = 0;
@@ -388,7 +388,7 @@ inline
                             && std::is_same<AllocSrc, BaseAllocator>::value,
                           int>::type
   Copy(Memory<AllocDst>& dst,
-       const Memory<AllocSrc>& src,
+       Memory<AllocSrc> const& src,
        size_t x_len,
        size_t y_len,
        size_t x_dst_offset,

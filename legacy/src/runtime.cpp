@@ -22,7 +22,7 @@ void initialize()
   }
 }
 
-const Config& get_config()
+Config const& get_config()
 {
   initialize();
   return cfg;

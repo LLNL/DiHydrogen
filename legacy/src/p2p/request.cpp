@@ -77,7 +77,7 @@ Request::Request(Kind kind,
   }
 }
 
-Request::Request(const Request& req)
+Request::Request(Request const& req)
   : m_kind(req.m_kind),
     m_conn(req.m_conn),
     m_num_requests(req.m_num_requests),
@@ -91,7 +91,7 @@ Request::Request(const Request& req)
   }
 }
 
-Request& Request::operator=(const Request& req)
+Request& Request::operator=(Request const& req)
 {
   m_kind = req.m_kind;
   m_conn = req.m_conn;
@@ -116,7 +116,7 @@ MPI_Request* Request::get_mpi_requests()
   return m_requests;
 }
 
-const MPI_Request* Request::get_mpi_requests() const
+MPI_Request const* Request::get_mpi_requests() const
 {
   return m_requests;
 }
@@ -199,7 +199,7 @@ Request::Kind Request::get_kind() const
   return m_kind;
 }
 
-int Request::wait(const Request* requests, int num_requests, internal::MPI& mpi)
+int Request::wait(Request const* requests, int num_requests, internal::MPI& mpi)
 {
   int num_mpi_req = 0;
   for (int i = 0; i < num_requests; ++i)
@@ -231,7 +231,7 @@ void Request::set_handler(handler_type handler)
   m_handler = handler;
 }
 
-void Request::process(const Request* requests,
+void Request::process(Request const* requests,
                       int num_requests,
                       internal::MPI& mpi)
 {

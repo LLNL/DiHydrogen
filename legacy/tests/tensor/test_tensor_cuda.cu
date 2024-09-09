@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
 {
   h2::gpu::set_gpu(0);
 
-  const int ND = 3;
+  int const ND = 3;
   using DataType = int;
   using TensorCUDA = Tensor<DataType, LocaleCUDA, CUDAAllocator>;
   using TensorCUDAPitch = Tensor<DataType, LocaleCUDA, CUDAPitchedAllocator>;

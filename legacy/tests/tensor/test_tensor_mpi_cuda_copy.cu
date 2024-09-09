@@ -23,9 +23,9 @@ inline LocaleMPI get_locale<LocaleMPI>()
 }
 
 template <int ND, typename TensorSrc, typename TensorDest>
-int test_copy_shuffle(const Array<ND>& shape,
-                      const Distribution& dist_src,
-                      const Distribution& dist_dest)
+int test_copy_shuffle(Array<ND> const& shape,
+                      Distribution const& dist_src,
+                      Distribution const& dist_dest)
 {
   util::MPIRootPrintStreamInfo() << "test_copy_shuffle";
   auto loc_dest = get_locale<typename TensorDest::locale_type>();
@@ -75,9 +75,9 @@ int test_copy_shuffle(const Array<ND>& shape,
 }
 
 template <int ND, typename TensorSrc, typename TensorDest>
-int test_copy_shuffle_from_host_to_device(const Array<ND>& shape,
-                                          const Distribution& dist_src,
-                                          const Distribution& dist_dest)
+int test_copy_shuffle_from_host_to_device(Array<ND> const& shape,
+                                          Distribution const& dist_src,
+                                          Distribution const& dist_dest)
 {
   util::MPIRootPrintStreamInfo() << "test_copy_shuffle";
 
@@ -86,7 +86,7 @@ int test_copy_shuffle_from_host_to_device(const Array<ND>& shape,
   auto t_src = get_tensor<TensorSrc>(shape, loc_src, dist_src);
   assert_always(t_src.allocate() == 0);
 
-  const auto local_shape = t_src.get_local_shape();
+  auto const local_shape = t_src.get_local_shape();
   int* buf = t_src.get_buffer();
   assert_always(buf);
   for (auto it = local_shape.index_begin(); it != local_shape.index_end(); ++it)
@@ -120,9 +120,9 @@ int test_copy_shuffle_from_host_to_device(const Array<ND>& shape,
 }
 
 template <int ND, typename TensorSrc, typename TensorDest>
-int test_copy_shuffle_from_device_to_host(const Array<ND>& shape,
-                                          const Distribution& dist_src,
-                                          const Distribution& dist_dest)
+int test_copy_shuffle_from_device_to_host(Array<ND> const& shape,
+                                          Distribution const& dist_src,
+                                          Distribution const& dist_dest)
 {
   util::MPIRootPrintStreamInfo() << "test_copy_shuffle";
   auto loc_dest = get_locale<typename TensorDest::locale_type>();
@@ -172,14 +172,14 @@ int test_copy_shuffle_from_device_to_host(const Array<ND>& shape,
 }
 
 template <int ND>
-void test(const Shape& proc_dim, const Shape& shape)
+void test(Shape const& proc_dim, Shape const& shape)
 {
   using DataType = int;
   using TensorMPI = Tensor<DataType, LocaleMPI, CUDAAllocator>;
   using TensorHost = Tensor<DataType, LocaleMPI, BaseAllocator>;
   using TensorHostPinned = Tensor<DataType, LocaleMPI, CUDAHostPooledAllocator>;
 
-  const auto sample_dist = make_sample_distribution(ND, proc_dim.size());
+  auto const sample_dist = make_sample_distribution(ND, proc_dim.size());
   IntVector overlap(ND, 1);
   overlap[get_sample_dim()] = 0;
   overlap[get_channel_dim()] = 0;

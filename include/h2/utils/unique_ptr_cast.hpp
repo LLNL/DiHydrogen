@@ -34,13 +34,13 @@ std::unique_ptr<DerivedT> downcast_uptr(std::unique_ptr<BaseT>& p)
 }
 
 template <typename DerivedT, typename BaseT>
-std::unique_ptr<const DerivedT> downcast_uptr(std::unique_ptr<const BaseT>& p)
+std::unique_ptr<DerivedT const> downcast_uptr(std::unique_ptr<BaseT const>& p)
 {
   static_assert(
     std::is_base_of_v<BaseT, DerivedT>,
     "Cannot cast a unique_ptr from a base class to a non-derived class");
-  return std::unique_ptr<const DerivedT>(
-    static_cast<const DerivedT*>(p.release()));
+  return std::unique_ptr<DerivedT const>(
+    static_cast<DerivedT const*>(p.release()));
 }
 
 }  // namespace h2

@@ -28,7 +28,7 @@ public:
       m_p2p_conn_established(tensor.get_num_dims(), false)
   {}
 
-  HaloExchangeHybrid(const HaloExchangeHybrid& x)
+  HaloExchangeHybrid(HaloExchangeHybrid const& x)
     : HaloExchange<DataType, Allocator, AlBackend>(x.m_tensor),
       m_p2p(x.m_p2p),
       m_halo_peer(nullptr),
@@ -36,7 +36,7 @@ public:
       m_p2p_conn_established(this->m_tensor.get_num_dims(), false)
   {}
 
-  HaloExchangeHybrid& operator=(const HaloExchangeHybrid& x) = delete;
+  HaloExchangeHybrid& operator=(HaloExchangeHybrid const& x) = delete;
 
   virtual ~HaloExchangeHybrid() { close_addrs(); }
 
@@ -72,10 +72,10 @@ public:
       if (this->get_peer(dim, side) == MPI_PROC_NULL)
         continue;
       CommType& comm = side == Side::RHS ? comm_rhs : comm_lhs;
-      const cudaStream_t stream = comm->get_stream();
-      const int width_send =
+      cudaStream_t const stream = comm->get_stream();
+      int const width_send =
         side == Side::RHS ? width_rhs_send : width_lhs_send;
-      const int width_recv =
+      int const width_recv =
         side == Side::RHS ? width_rhs_recv : width_lhs_recv;
       auto send_buf = this->get_send_buffer(dim, side);
       auto recv_buf = this->get_recv_buffer(dim, side);

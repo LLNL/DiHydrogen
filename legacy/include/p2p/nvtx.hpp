@@ -9,7 +9,7 @@ namespace p2p
 namespace internal
 {
 
-inline void nvtx_start(const char* id)
+inline void nvtx_start(char const* id)
 {
   if (cfg.insert_nvtx_mark)
   {

@@ -42,7 +42,7 @@ struct CUDAAllocator
     TENSOR_CHECK_HIP(hipFree(p));
   }
   static void
-  copy(void* dst, const void* src, size_t size, hipStream_t stream = 0)
+  copy(void* dst, void const* src, size_t size, hipStream_t stream = 0)
   {
     h2::gpu::mem_copy(dst, src, size, stream);
   }
@@ -52,7 +52,7 @@ struct CUDAAllocator
     TENSOR_CHECK_HIP(hipMemsetAsync(p, v, size, stream));
   }
   static void copyin(void* dst,
-                     const void* src,
+                     void const* src,
                      size_t size,
                      size_t,
                      size_t,
@@ -61,7 +61,7 @@ struct CUDAAllocator
     h2::gpu::mem_copy(dst, src, size, stream);
   }
   static void copyout(void* dst,
-                      const void* src,
+                      void const* src,
                       size_t size,
                       size_t,
                       size_t,
@@ -89,18 +89,18 @@ struct CUDAPitchedAllocator
     TENSOR_CHECK_HIP(hipMemset2DAsync(p, pitch, v, ldim, size / ldim, stream));
     h2::gpu::sync(stream);
   }
-  static void copy(void* dst, const void* src, size_t size)
+  static void copy(void* dst, void const* src, size_t size)
   {
     h2::gpu::mem_copy(dst, src, size);
   }
   static void
-  copyin(void* dst, const void* src, size_t size, size_t pitch, size_t ldim)
+  copyin(void* dst, void const* src, size_t size, size_t pitch, size_t ldim)
   {
     TENSOR_CHECK_HIP(hipMemcpy2D(
       dst, pitch, src, ldim, ldim, size / ldim, hipMemcpyHostToDevice));
   }
   static void
-  copyout(void* dst, const void* src, size_t size, size_t pitch, size_t ldim)
+  copyout(void* dst, void const* src, size_t size, size_t pitch, size_t ldim)
   {
     TENSOR_CHECK_HIP(hipMemcpy2D(
       dst, ldim, src, pitch, ldim, size / ldim, hipMemcpyDeviceToHost));
@@ -126,12 +126,12 @@ struct CUDAHostPooledAllocator
     std::memset(p, v, size);
   }
   static void
-  copyin(void* dst, const void* src, size_t real_size, size_t, size_t)
+  copyin(void* dst, void const* src, size_t real_size, size_t, size_t)
   {
     std::memcpy(dst, src, real_size);
   }
   static void
-  copyout(void* dst, const void* src, size_t real_size, size_t, size_t)
+  copyout(void* dst, void const* src, size_t real_size, size_t, size_t)
   {
     std::memcpy(dst, src, real_size);
   }
@@ -153,7 +153,7 @@ inline typename std::enable_if<
          && std::is_same<AllocDst, BaseAllocator>::value),
   int>::type
 Copy(Memory<AllocDst>& dst,
-     const Memory<AllocSrc>& src,
+     Memory<AllocSrc> const& src,
      size_t x_len,
      size_t y_len,
      size_t x_dst_offset,
@@ -165,7 +165,7 @@ Copy(Memory<AllocDst>& dst,
   size_t src_offset = x_src_offset + src.get_pitch() * y_src_offset;
   size_t dst_offset = x_dst_offset + dst.get_pitch() * y_dst_offset;
   void* dst_ptr = (char*) dst.get() + dst_offset;
-  const void* src_ptr = (char*) src.get() + src_offset;
+  void const* src_ptr = (char*) src.get() + src_offset;
   hipStream_t s = get_gpu_stream(stream);
   if (dst.get_pitch() == x_len && src.get_pitch() == x_len)
   {

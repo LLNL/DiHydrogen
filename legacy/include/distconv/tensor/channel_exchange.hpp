@@ -21,9 +21,9 @@ public:
 
   ChannelExchange() {}
 
-  ChannelExchange(const ChannelExchange<DataType>& x) {}
+  ChannelExchange(ChannelExchange<DataType> const& x) {}
 
-  ChannelExchange& operator=(const ChannelExchange& x) { return *this; }
+  ChannelExchange& operator=(ChannelExchange const& x) { return *this; }
 
   virtual ~ChannelExchange() {}
 
@@ -86,14 +86,14 @@ public:
   }
 
 protected:
-  index_t get_sample_size(const TensorType& t) const
+  index_t get_sample_size(TensorType const& t) const
   {
     IndexVector idx = IndexVector(t.get_num_dims(), 0);
     idx[-1] = 1;
     return t.get_local_offset(idx);
   }
 
-  index_t get_channel_size(const TensorType& t) const
+  index_t get_channel_size(TensorType const& t) const
   {
     IndexVector idx = IndexVector(t.get_num_dims(), 0);
     idx[-2] = 1;

@@ -45,8 +45,8 @@ __global__
                                size_t num_halo_points,
                                OpType op)
 {
-  const size_t num_threads = blockDim.x * gridDim.x;
-  const bool fwd_halo = side == Side::RHS;
+  size_t const num_threads = blockDim.x * gridDim.x;
+  bool const fwd_halo = side == Side::RHS;
   for (size_t packed_offset = threadIdx.x + blockIdx.x * blockDim.x;
        packed_offset < num_halo_points;
        packed_offset += num_threads)
@@ -105,16 +105,16 @@ traverse_halo_generic_kernel(DataType* tensor,
 
 template <typename DataType, typename OpType>
 void traverse_halo_generic(DataType* tensor,
-                           const Shape& shape,
+                           Shape const& shape,
                            int dim,
                            Side side,
                            bool inner,
                            int halo_width,
                            size_t num_halo_points,
                            OpType op,
-                           const int nd,
-                           const dim3& grid_dims,
-                           const dim3& block_dims,
+                           int const nd,
+                           dim3 const& grid_dims,
+                           dim3 const& block_dims,
                            h2::gpu::DeviceStream s)
 {
 #define CALL_KERNEL(ND)                                                        \
@@ -373,13 +373,13 @@ template <int ND,
           Side side,
           int halo_width>
 __device__ static void traverse_halo_opt_dim1(DataType* __restrict__ tensor,
-                                              const Array<ND>& shape,
+                                              Array<ND> const& shape,
                                               OpType op)
 {
   constexpr int dim = 1;
   auto sample_idx = blockIdx.y;
   auto ch_offset = ND == 5 ? shape[0] * shape[2] : shape[0];
-  const auto sample_offset = ch_offset * shape[-2];
+  auto const sample_offset = ch_offset * shape[-2];
   int halo_tensor_base = 0;
   if (side == Side::RHS)
   {
@@ -406,8 +406,8 @@ __device__ static void traverse_halo_opt_dim1(DataType* __restrict__ tensor,
   ch_offset *= gridDim.x;
   for (int ch_idx = blockIdx.x; ch_idx < shape[-2]; ch_idx += gridDim.x)
   {
-    const size_t packed_offset_common = offset_common * halo_width;
-    const size_t tensor_offset_common = offset_common * shape[1];
+    size_t const packed_offset_common = offset_common * halo_width;
+    size_t const tensor_offset_common = offset_common * shape[1];
     if (ND == 5)
     {
       traverse_halo_opt_dim1_5d_apply<DataType, OpType, halo_width>(
@@ -496,7 +496,7 @@ template <int ND,
           Side side,
           int halo_width>
 __device__ static void traverse_halo_opt_dim2(DataType* __restrict__ tensor,
-                                              const Array<ND>& shape,
+                                              Array<ND> const& shape,
                                               OpType op)
 {
   constexpr int dim = 2;
@@ -901,7 +901,7 @@ void TraverseHalo(Tensor& tensor,
   using ConstDataType = std::conditional_t<OpType::modifies_tensor,
                                            typename Tensor::data_type,
                                            typename Tensor::const_data_type>;
-  const int num_dims = tensor.get_num_dims();
+  int const num_dims = tensor.get_num_dims();
   int available_halo_width = tensor.get_halo_width(dim);
   assert_always(halo_width <= available_halo_width);
   if (inner)

@@ -63,9 +63,9 @@ public:
     }
     for (auto side : SIDES)
     {
-      const int width_send =
+      int const width_send =
         side == Side::RHS ? width_rhs_send : width_lhs_send;
-      const int width_recv =
+      int const width_recv =
         side == Side::RHS ? width_rhs_recv : width_lhs_recv;
       cudaStream_t stream =
         side == Side::RHS ? comm_rhs->get_stream() : comm_lhs->get_stream();

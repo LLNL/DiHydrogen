@@ -34,9 +34,9 @@ namespace h2
  */
 template <typename T>
 void copy_buffer(T* dst,
-                 const ComputeStream& dst_stream,
-                 const T* src,
-                 const ComputeStream& src_stream,
+                 ComputeStream const& dst_stream,
+                 T const* src,
+                 ComputeStream const& src_stream,
                  std::size_t count)
 {
   H2_ASSERT_DEBUG(count == 0 || (dst != nullptr && src != nullptr),
@@ -44,8 +44,8 @@ void copy_buffer(T* dst,
   // TODO: Debug check: Assert buffers do not overlap.
   static_assert(IsH2StorageType_v<T> || std::is_same_v<T*, void*>,
                 "Attempt to copy a buffer with a non-storage type");
-  const Device src_dev = src_stream.get_device();
-  const Device dst_dev = dst_stream.get_device();
+  Device const src_dev = src_stream.get_device();
+  Device const dst_dev = dst_stream.get_device();
   if (src_dev == Device::CPU && dst_dev == Device::CPU)
   {
     if constexpr (std::is_same_v<T*, void*>)

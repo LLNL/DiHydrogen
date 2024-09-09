@@ -182,7 +182,7 @@ TEMPLATE_LIST_TEST_CASE("Tensors can be created", "[tensor]", AllDevList)
   REQUIRE_NOTHROW(
     TensorType(Dev, null_buf, {0}, {DT::Any}, {1}, ComputeStream{Dev}));
   REQUIRE_NOTHROW(TensorType(Dev,
-                             const_cast<const DataType*>(null_buf),
+                             const_cast<DataType const*>(null_buf),
                              {0},
                              {DT::Any},
                              {1},
@@ -220,7 +220,7 @@ TEMPLATE_LIST_TEST_CASE("Tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(tensor.const_get({0, 0}) == tensor.data());
   REQUIRE_FALSE(tensor.is_lazy());
 
-  const TensorType const_tensor =
+  TensorType const const_tensor =
     TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
   REQUIRE(const_tensor.get_type_info() == get_h2_type<DataType>());
   REQUIRE(const_tensor.shape() == ShapeTuple{4, 6});
@@ -273,8 +273,8 @@ TEMPLATE_LIST_TEST_CASE("Base tensor metadata is sane", "[tensor]", AllDevList)
   REQUIRE(tensor->get_view_type() == ViewType::None);
   REQUIRE(tensor->get_device() == TestType::value);
 
-  std::unique_ptr<const BaseTensor> const_tensor =
-    std::make_unique<const TensorType>(
+  std::unique_ptr<BaseTensor const> const_tensor =
+    std::make_unique<TensorType const>(
       Dev, ShapeTuple{4, 6}, DTTuple{DT::Sample, DT::Any});
   REQUIRE(const_tensor->get_type_info() == get_h2_type<DataType>());
   REQUIRE(const_tensor->shape() == ShapeTuple{4, 6});
@@ -790,7 +790,7 @@ TEMPLATE_LIST_TEST_CASE("Viewing constant tensors works",
   constexpr Device Dev = TestType::value;
   using TensorType = Tensor<DataType>;
 
-  const TensorType tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
+  TensorType const tensor = TensorType(Dev, {4, 6}, {DT::Sample, DT::Any});
 
   SECTION("Basic views work")
   {

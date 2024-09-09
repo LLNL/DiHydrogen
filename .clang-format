@@ -101,6 +101,7 @@ NamespaceIndentation: None
 # PenaltyExcessCharacter
 # PenaltyReturnTypeOnItsOwnLine
 PointerAlignment: Left
+QualifierAlignment: Right
 ReflowComments: true
 SortIncludes: true
 SortUsingDeclarations: true

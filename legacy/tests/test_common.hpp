@@ -106,7 +106,7 @@ public:
       mode(mode_t::NORMAL)
   {}
 
-  Config(const cxxopts::ParseResult& pr) : Config()
+  Config(cxxopts::ParseResult const& pr) : Config()
   {
     if (pr.count("image-height") > 0)
     {
@@ -411,7 +411,7 @@ int init_tensor_random(Tensor& t,
   auto* host = (data_type*) malloc(buf_size);
 
   Initializer<typename Tensor::data_type> random_init(seed, alpha);
-  const auto global_shape = t.get_shape();
+  auto const global_shape = t.get_shape();
   for (auto it = local_shape.index_begin(); it != local_shape.index_end(); ++it)
   {
     auto global_index = t.get_global_index(*it);
@@ -478,9 +478,9 @@ int init_tensor_constant(Tensor& t, typename Tensor::data_type x)
 
 template <typename DataType>
 int dump_tensor(
-  const tensor::Tensor<DataType, tensor::LocaleProcess, tensor::BaseAllocator>&
+  tensor::Tensor<DataType, tensor::LocaleProcess, tensor::BaseAllocator> const&
     t,
-  const std::string& file_path)
+  std::string const& file_path)
 {
   std::ofstream out;
   out.open(file_path, std::ios::out | std::ios::trunc);
@@ -497,8 +497,8 @@ int dump_tensor(
 
 template <typename DataType, typename Alloccator>
 int dump_tensor(
-  const tensor::Tensor<DataType, tensor::LocaleMPI, Alloccator>& t,
-  const std::string& file_path)
+  tensor::Tensor<DataType, tensor::LocaleMPI, Alloccator> const& t,
+  std::string const& file_path)
 {
   using TensorProcType =
     tensor::Tensor<DataType, tensor::LocaleProcess, tensor::BaseAllocator>;
@@ -515,8 +515,8 @@ int dump_tensor(
 
 template <typename DataType, typename Alloccator>
 int dump_shared_tensor(
-  const tensor::Tensor<DataType, tensor::LocaleMPI, Alloccator>& t,
-  const std::string& file_path,
+  tensor::Tensor<DataType, tensor::LocaleMPI, Alloccator> const& t,
+  std::string const& file_path,
   bool binary = false)
 {
   if (t.get_locale().get_rank() == 0)

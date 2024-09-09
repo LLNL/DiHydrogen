@@ -38,12 +38,12 @@ public:
                 "Cannot create a tensor with a non-storage type");
 
   DistTensor(Device device,
-             const ShapeTuple& shape_,
-             const DimensionTypeTuple& dim_types_,
+             ShapeTuple const& shape_,
+             DimensionTypeTuple const& dim_types_,
              ProcessorGrid grid_,
-             const DistributionTypeTuple& dist_types_,
+             DistributionTypeTuple const& dist_types_,
              TensorAllocationStrategy alloc_type = StrictAlloc,
-             const std::optional<ComputeStream> stream = std::nullopt)
+             std::optional<ComputeStream> const stream = std::nullopt)
     : BaseDistTensor(shape_, dim_types_, grid_, dist_types_),
       tensor_local(device,
                    this->tensor_local_shape,
@@ -55,7 +55,7 @@ public:
   DistTensor(Device device,
              ProcessorGrid grid_,
              TensorAllocationStrategy alloc_type = StrictAlloc,
-             const std::optional<ComputeStream> stream = std::nullopt)
+             std::optional<ComputeStream> const stream = std::nullopt)
     : DistTensor(device,
                  ShapeTuple(),
                  DimensionTypeTuple(),
@@ -67,13 +67,13 @@ public:
 
   DistTensor(Device device,
              T* buffer,
-             const ShapeTuple& global_shape_,
-             const DimensionTypeTuple& dim_types_,
+             ShapeTuple const& global_shape_,
+             DimensionTypeTuple const& dim_types_,
              ProcessorGrid grid_,
-             const DistributionTypeTuple& dist_types_,
-             const ShapeTuple& local_shape_,
-             const StrideTuple& local_strides_,
-             const ComputeStream& stream)
+             DistributionTypeTuple const& dist_types_,
+             ShapeTuple const& local_shape_,
+             StrideTuple const& local_strides_,
+             ComputeStream const& stream)
     : BaseDistTensor(ViewType::Mutable,
                      global_shape_,
                      dim_types_,
@@ -85,14 +85,14 @@ public:
   {}
 
   DistTensor(Device device,
-             const T* buffer,
-             const ShapeTuple& global_shape_,
-             const DimensionTypeTuple& dim_types_,
+             T const* buffer,
+             ShapeTuple const& global_shape_,
+             DimensionTypeTuple const& dim_types_,
              ProcessorGrid grid_,
-             const DistributionTypeTuple& dist_types_,
-             const ShapeTuple& local_shape_,
-             const StrideTuple& local_strides_,
-             const ComputeStream& stream)
+             DistributionTypeTuple const& dist_types_,
+             ShapeTuple const& local_shape_,
+             StrideTuple const& local_strides_,
+             ComputeStream const& stream)
     : BaseDistTensor(ViewType::Const,
                      global_shape_,
                      dim_types_,
@@ -105,13 +105,13 @@ public:
 
   /** Internal constructor for views. */
   DistTensor(ViewType view_type_,
-             const Tensor<T>& orig_tensor_local_,
-             const ShapeTuple& local_shape_,
-             const IndexRangeTuple& local_coords_,
-             const ShapeTuple& shape_,
-             const DimensionTypeTuple& dim_types_,
+             Tensor<T> const& orig_tensor_local_,
+             ShapeTuple const& local_shape_,
+             IndexRangeTuple const& local_coords_,
+             ShapeTuple const& shape_,
+             DimensionTypeTuple const& dim_types_,
              ProcessorGrid grid_,
-             const DistributionTypeTuple& dist_types_,
+             DistributionTypeTuple const& dist_types_,
              Passkey<DistTensor<T>>)
     : BaseDistTensor(
         view_type_, shape_, dim_types_, grid_, dist_types_, local_shape_),
@@ -127,10 +127,10 @@ public:
 
   /** Internal constructor for cloning. */
   DistTensor(Tensor<T>& local_tensor_clone,
-             const ShapeTuple& shape_,
-             const DimensionTypeTuple& dim_types_,
+             ShapeTuple const& shape_,
+             DimensionTypeTuple const& dim_types_,
              ProcessorGrid grid_,
-             const DistributionTypeTuple& dist_types_,
+             DistributionTypeTuple const& dist_types_,
              Passkey<DistTensor<T>>)
     : BaseDistTensor(ViewType::None,
                      shape_,
@@ -149,7 +149,7 @@ public:
    * Using it leads to ambiguity in mutable vs const views. Create a
    * view or copy explicitly instead.
    */
-  DistTensor(const DistTensor&) = delete;
+  DistTensor(DistTensor const&) = delete;
 
   /**
    * Disable copy assignment.
@@ -157,7 +157,7 @@ public:
    * Using it leads to ambiguity in mutable vs const views. Create a
    * view or copy explicitly instead.
    */
-  DistTensor& operator=(const DistTensor&) = delete;
+  DistTensor& operator=(DistTensor const&) = delete;
 
   /** Move construction */
   DistTensor(DistTensor&&) = default;
@@ -238,7 +238,7 @@ public:
    *
    * It is an error to call this on a view.
    */
-  void resize(const ShapeTuple& new_shape)
+  void resize(ShapeTuple const& new_shape)
   {
     resize(new_shape, this->tensor_dim_types, this->tensor_dist_types);
   }
@@ -251,8 +251,8 @@ public:
    *
    * It is an error to call this on a view.
    */
-  void resize(const ShapeTuple& new_shape,
-              const DimensionTypeTuple& new_dim_types)
+  void resize(ShapeTuple const& new_shape,
+              DimensionTypeTuple const& new_dim_types)
   {
     resize(new_shape, new_dim_types, this->tensor_dist_types);
   }
@@ -266,9 +266,9 @@ public:
    *
    * It is an error to call this on a view.
    */
-  void resize(const ShapeTuple& new_shape,
-              const DimensionTypeTuple& new_dim_types,
-              const DistributionTypeTuple& new_dist_types)
+  void resize(ShapeTuple const& new_shape,
+              DimensionTypeTuple const& new_dim_types,
+              DistributionTypeTuple const& new_dist_types)
   {
     H2_ASSERT_ALWAYS(!this->is_view(), "Cannot resize a view");
     H2_ASSERT_ALWAYS(new_shape.size() == this->tensor_grid.ndim(),
@@ -305,19 +305,19 @@ public:
   T* data() { return tensor_local.data(); }
 
   /** Return a raw constant pointer to the underlying local storage. */
-  const T* data() const { return tensor_local.data(); }
+  T const* data() const { return tensor_local.data(); }
 
   /** Return a raw constant pointer to the underlying local storage. */
-  const T* const_data() const { return tensor_local.const_data(); }
+  T const* const_data() const { return tensor_local.const_data(); }
 
   /** Return the underlying local tensor. */
   Tensor<T>& local_tensor() { return tensor_local; }
 
   /** Return a constant reference to the underlying local tensor. */
-  const Tensor<T>& local_tensor() const { return tensor_local; }
+  Tensor<T> const& local_tensor() const { return tensor_local; }
 
   /** Return a constant reference to the underlying local tensor. */
-  const Tensor<T>& const_local_tensor() const { return tensor_local; }
+  Tensor<T> const& const_local_tensor() const { return tensor_local; }
 
   /**
    * Ensure memory is backing this tensor, allocating if necessary.
@@ -397,7 +397,7 @@ public:
    * eliminated from a distributed tensor, unless the entire view is
    * empty.
    */
-  std::unique_ptr<DistTensor<T>> view(const IndexRangeTuple& coords)
+  std::unique_ptr<DistTensor<T>> view(IndexRangeTuple const& coords)
   {
     return make_view(coords, ViewType::Mutable);
   }
@@ -405,13 +405,13 @@ public:
   /**
    * Return a constant view of a subtensor of this tensor.
    */
-  std::unique_ptr<DistTensor<T>> view(const IndexRangeTuple& coords) const
+  std::unique_ptr<DistTensor<T>> view(IndexRangeTuple const& coords) const
   {
     return make_view(coords, ViewType::Const);
   }
 
   /** Convenience wrapper for view(coords). */
-  std::unique_ptr<DistTensor<T>> operator()(const IndexRangeTuple& coords)
+  std::unique_ptr<DistTensor<T>> operator()(IndexRangeTuple const& coords)
   {
     return view(coords);
   }
@@ -437,13 +437,13 @@ public:
   }
 
   /** Return a constant view of a subtensor of this tensor. */
-  std::unique_ptr<DistTensor<T>> const_view(const IndexRangeTuple& coords) const
+  std::unique_ptr<DistTensor<T>> const_view(IndexRangeTuple const& coords) const
   {
     return make_view(coords, ViewType::Const);
   }
 
   /** Convenience wrapper for const_view(coords). */
-  std::unique_ptr<DistTensor<T>> operator()(const IndexRangeTuple& coords) const
+  std::unique_ptr<DistTensor<T>> operator()(IndexRangeTuple const& coords) const
   {
     return const_view(coords);
   }
@@ -453,7 +453,7 @@ public:
     return tensor_local.get_stream();
   }
 
-  void set_stream(const ComputeStream& stream)
+  void set_stream(ComputeStream const& stream)
   {
     tensor_local.set_stream(stream);
   }
@@ -475,7 +475,7 @@ private:
                      this->tensor_shape);
     H2_ASSERT_ALWAYS(
       !any_of(index_range,
-              [](const IndexRangeTuple::type& x) { return x.is_scalar(); }),
+              [](IndexRangeTuple::type const& x) { return x.is_scalar(); }),
       "Scalar indices (",
       index_range,
       ") are not permitted in global views");

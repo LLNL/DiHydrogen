@@ -39,13 +39,13 @@ public:
     }
   }
 
-  HaloExchange(const HaloExchange<DataType, CUDAAllocator, AlBackend>& x)
+  HaloExchange(HaloExchange<DataType, CUDAAllocator, AlBackend> const& x)
     : HaloExchange(x.m_tensor)
   {
     m_peers = x.m_peers;
   }
 
-  HaloExchange& operator=(const HaloExchange& x)
+  HaloExchange& operator=(HaloExchange const& x)
   {
     m_tensor = x.m_tensor;
     m_peers = x.m_peers;
@@ -61,10 +61,10 @@ public:
     with MPI. Explicit barrier is used with the P2P-based
     implementation.
    */
-  virtual void exchange(const IntVector& widths_rhs_send,
-                        const IntVector& widths_rhs_recv,
-                        const IntVector& widths_lhs_send,
-                        const IntVector& widths_lhs_recv,
+  virtual void exchange(IntVector const& widths_rhs_send,
+                        IntVector const& widths_rhs_recv,
+                        IntVector const& widths_lhs_send,
+                        IntVector const& widths_lhs_recv,
                         BoundaryAttributesV<CommType>& comms,
                         h2::gpu::DeviceStream stream_main,
                         bool rendezvous,
@@ -166,8 +166,8 @@ public:
              op);
   }
 
-  void unpack(const IntVector& widths_rhs_recv,
-              const IntVector& widths_lhs_recv,
+  void unpack(IntVector const& widths_rhs_recv,
+              IntVector const& widths_lhs_recv,
               BoundaryAttributesV<h2::gpu::DeviceStream>& streams,
               h2::gpu::DeviceStream stream_main,
               bool sync_back,
@@ -344,7 +344,7 @@ protected:
                                     int width_lhs_send,
                                     int width_lhs_recv)
   {
-    const auto& dist = m_tensor.get_distribution();
+    auto const& dist = m_tensor.get_distribution();
     return dist.is_distributed(dim) && dist.get_split_shape()[dim] > 1
            && (width_rhs_send > 0 || width_rhs_recv > 0 || width_lhs_send > 0
                || width_lhs_recv > 0)
@@ -371,8 +371,8 @@ protected:
       return MPI_PROC_NULL;
     }
 
-    const auto& dist = m_tensor.get_distribution();
-    const auto& locale_shape = dist.get_locale_shape();
+    auto const& dist = m_tensor.get_distribution();
+    auto const& locale_shape = dist.get_locale_shape();
 
     int peer_dim_idx = m_tensor.get_proc_index()[dim];
     if (side == Side::RHS)
@@ -455,11 +455,11 @@ protected:
     {
       if (get_peer(dim, side) == MPI_PROC_NULL)
         continue;
-      const int width_recv =
+      int const width_recv =
         side == Side::RHS ? width_rhs_recv : width_lhs_recv;
       if (width_recv == 0)
         continue;
-      const h2::gpu::DeviceStream stream =
+      h2::gpu::DeviceStream const stream =
         side == Side::RHS ? stream_rhs : stream_lhs;
       auto recv_buf = get_recv_buffer(dim, side);
       unpack_done = true;

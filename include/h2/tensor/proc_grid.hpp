@@ -54,7 +54,7 @@ public:
   /**
    * Construct a processor grid of the given shape over the communicator.
    */
-  ProcessorGrid(const Comm& comm_, ShapeTuple shape_)
+  ProcessorGrid(Comm const& comm_, ShapeTuple shape_)
   {
     H2_ASSERT_ALWAYS(comm_.Size() == product<RankType>(shape_),
                      "Grid size (",
@@ -75,7 +75,7 @@ public:
   Comm& comm() H2_NOEXCEPT { return *grid_comm; }
 
   /** Get a constant reference to the underlying communicator. */
-  const Comm& comm() const H2_NOEXCEPT { return *grid_comm; }
+  Comm const& comm() const H2_NOEXCEPT { return *grid_comm; }
 
   /** Return the shape of the grid. */
   ShapeTuple shape() const H2_NOEXCEPT { return grid_shape; }
@@ -157,7 +157,7 @@ public:
    * world) is part of this grid.
    */
   bool participating(RankType rank,
-                     const Comm& comm = El::mpi::COMM_WORLD) const H2_NOEXCEPT
+                     Comm const& comm = El::mpi::COMM_WORLD) const H2_NOEXCEPT
   {
     MPI_Group this_group;
     MPI_Comm_group(grid_comm->GetMPIComm(), &this_group);
@@ -172,7 +172,7 @@ public:
   /**
    * Return true if rank in the provided grid is part of this grid.
    */
-  bool participating(RankType rank, const ProcessorGrid& grid) const H2_NOEXCEPT
+  bool participating(RankType rank, ProcessorGrid const& grid) const H2_NOEXCEPT
   {
     return participating(rank, *grid.grid_comm);
   }
@@ -183,7 +183,7 @@ public:
    * Two grids are identical if they have the same shape and use the
    * same underlying communicator.
    */
-  bool is_identical_to(const ProcessorGrid& other) const H2_NOEXCEPT
+  bool is_identical_to(ProcessorGrid const& other) const H2_NOEXCEPT
   {
     return (grid_shape == other.grid_shape)
            && (grid_comm->GetMPIComm() == other.grid_comm->GetMPIComm());
@@ -196,7 +196,7 @@ public:
    * underlying communicators consist of the same processes in the same
    * order (i.e., they are `MPI_CONGRUENT`).
    */
-  bool is_congruent_to(const ProcessorGrid& other) const H2_NOEXCEPT
+  bool is_congruent_to(ProcessorGrid const& other) const H2_NOEXCEPT
   {
     if (grid_shape != other.grid_shape)
     {
@@ -227,13 +227,13 @@ private:
  * Two grids are equal when they have the same shape and the same
  * underlying communicator.
  */
-inline bool operator==(const ProcessorGrid& grid1, const ProcessorGrid& grid2)
+inline bool operator==(ProcessorGrid const& grid1, ProcessorGrid const& grid2)
 {
   return grid1.is_identical_to(grid2);
 }
 
 /** Inequality for processor grids. */
-inline bool operator!=(const ProcessorGrid& grid1, const ProcessorGrid& grid2)
+inline bool operator!=(ProcessorGrid const& grid1, ProcessorGrid const& grid2)
 {
   return !grid1.is_identical_to(grid2);
 }

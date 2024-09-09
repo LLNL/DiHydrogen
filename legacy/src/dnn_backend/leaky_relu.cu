@@ -16,7 +16,7 @@ struct ForwardFunctor
 {
   DataType m_negative_slope;
   ForwardFunctor(DataType negative_slope) : m_negative_slope(negative_slope) {}
-  __device__ void operator()(const DataType& x, DataType& y)
+  __device__ void operator()(DataType const& x, DataType& y)
   {
     auto factor = (x > 0) ? (DataType) 1 : m_negative_slope;
     y = x * factor;
@@ -28,7 +28,7 @@ struct BackwardFunctor
 {
   DataType m_negative_slope;
   BackwardFunctor(DataType negative_slope) : m_negative_slope(negative_slope) {}
-  __device__ void operator()(const DataType& x, const DataType& y, DataType& dx)
+  __device__ void operator()(DataType const& x, DataType const& y, DataType& dx)
   {
     auto factor = (x > 0) ? (DataType) 1 : m_negative_slope;
     dx = y * factor;

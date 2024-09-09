@@ -70,14 +70,14 @@ struct PairwiseSyncDevice
       nvshmem_quiet();
     }
 
-    const auto counter = *m_local_counter;
+    auto const counter = *m_local_counter;
 
     nvshmem_long_p((CounterType*) m_shmem_counter, counter, peer);
   }
 
   __device__ __forceinline__ void wait()
   {
-    const auto counter = *m_local_counter;
+    auto const counter = *m_local_counter;
     nvshmem_long_wait_until((long*) m_shmem_counter, NVSHMEM_CMP_GE, counter);
   }
 
@@ -99,7 +99,7 @@ struct PairwiseSyncDevice
 #endif
 
   CounterType* m_local_counter;
-  volatile CounterType* m_shmem_counter;
+  CounterType volatile* m_shmem_counter;
 };
 
 struct PairwiseSync
@@ -154,7 +154,7 @@ struct SyncArrayDevice
 
   __device__ __forceinline__ void wait(int idx)
   {
-    const auto counter = m_local_counter[idx];
+    auto const counter = m_local_counter[idx];
     nvshmem_long_wait_until(
       (long*) m_shmem_counter + idx, NVSHMEM_CMP_GE, counter);
   }
@@ -180,7 +180,7 @@ struct SyncArrayDevice
 #endif
 
   CounterType* m_local_counter;
-  volatile CounterType* m_shmem_counter;
+  CounterType volatile* m_shmem_counter;
 };
 
 struct SyncArray

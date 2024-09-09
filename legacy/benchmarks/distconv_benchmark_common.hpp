@@ -181,8 +181,8 @@ inline int init_tensor_constant(Tensor& t, typename Tensor::data_type x)
 
 template <typename DataType, typename Alloccator>
 inline int dump_shared_tensor(
-  const tensor::Tensor<DataType, tensor::LocaleMPI, Alloccator>& t,
-  const std::string& file_path,
+  tensor::Tensor<DataType, tensor::LocaleMPI, Alloccator> const& t,
+  std::string const& file_path,
   bool binary)
 {
   if (t.get_locale().get_rank() == 0)
@@ -358,7 +358,7 @@ template <int NSD,
           template <int, typename, typename> class Data,
           template <int> class Profile,
           template <int, typename, typename> class Tester>
-inline int run_test_with_backend(const BenchmarkConfig<NSD>& cfg, MPI_Comm comm)
+inline int run_test_with_backend(BenchmarkConfig<NSD> const& cfg, MPI_Comm comm)
 {
   if (cfg.data_type == BenchmarkDataType::FLOAT)
   {
@@ -400,7 +400,7 @@ template <int NSD,
           template <int, typename, typename> class Data,
           template <int> class Profile,
           template <int, typename, typename> class Tester>
-inline int run_test(const BenchmarkConfig<NSD>& cfg, MPI_Comm comm)
+inline int run_test(BenchmarkConfig<NSD> const& cfg, MPI_Comm comm)
 {
   if (cfg.backend == "Ref")
   {

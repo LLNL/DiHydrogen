@@ -19,9 +19,9 @@ inline LocaleMPI get_locale<LocaleMPI>()
 }
 
 template <typename TensorSrc, typename TensorDest>
-int test_copy_shuffle(const Shape& shape,
-                      const Distribution& dist_src,
-                      const Distribution& dist_dest)
+int test_copy_shuffle(Shape const& shape,
+                      Distribution const& dist_src,
+                      Distribution const& dist_dest)
 {
   util::MPIRootPrintStreamInfo() << "test_copy_shuffle\n";
   assert_eq(shape.num_dims(), 3);

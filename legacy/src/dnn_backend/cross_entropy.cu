@@ -31,24 +31,24 @@ namespace
   - Each sample is taken care by gridDim.x blocks
  */
 template <typename DataType, int BLOCK_SIZE>
-__global__ void fp_local(const DataType* __restrict__ prediction,
-                         const DataType* __restrict__ ground_truth,
+__global__ void fp_local(DataType const* __restrict__ prediction,
+                         DataType const* __restrict__ ground_truth,
                          DataType* __restrict__ y,
-                         const index_t sample_size,
-                         const index_t sample_spatial_size,
-                         const index_t sample_channel_size,
-                         const bool use_labels,
+                         index_t const sample_size,
+                         index_t const sample_spatial_size,
+                         index_t const sample_channel_size,
+                         bool const use_labels,
                          int thread_work_size)
 {
-  const int tid = threadIdx.x;
-  const int sample_idx = blockIdx.y;
+  int const tid = threadIdx.x;
+  int const sample_idx = blockIdx.y;
 
   prediction += sample_idx * sample_size;
   ground_truth += sample_idx * sample_size;
 
   index_t offset = tid + blockIdx.x * BLOCK_SIZE;
-  const int offset_stride = BLOCK_SIZE * gridDim.x;
-  const index_t offset_limit =
+  int const offset_stride = BLOCK_SIZE * gridDim.x;
+  index_t const offset_limit =
     min(sample_size, offset + offset_stride * thread_work_size);
 
   auto psum = DataType(0.);
@@ -57,11 +57,11 @@ __global__ void fp_local(const DataType* __restrict__ prediction,
     DataType xhat;
     if (use_labels)
     {
-      const auto spatial = offset % sample_spatial_size;
-      const auto channel = (offset / sample_spatial_size) % sample_channel_size;
-      const auto sample = offset / sample_spatial_size / sample_channel_size;
-      const auto offset_truth = spatial + sample * sample_spatial_size;
-      const int truth_label = ground_truth[offset_truth];
+      auto const spatial = offset % sample_spatial_size;
+      auto const channel = (offset / sample_spatial_size) % sample_channel_size;
+      auto const sample = offset / sample_spatial_size / sample_channel_size;
+      auto const offset_truth = spatial + sample * sample_spatial_size;
+      int const truth_label = ground_truth[offset_truth];
       xhat = DataType(truth_label == channel ? 1. : 0.);
     }
     else
@@ -70,7 +70,7 @@ __global__ void fp_local(const DataType* __restrict__ prediction,
     }
     if (xhat > DataType(0.))
     {
-      const auto x = prediction[offset];
+      auto const x = prediction[offset];
       psum += -xhat * log(x);
     }
   }
@@ -90,19 +90,19 @@ __global__ void fp_local(const DataType* __restrict__ prediction,
   - Each sample is taken care by gridDim.x blocks
  */
 template <typename DataType, int BLOCK_SIZE>
-__global__ void bp_local(const DataType* __restrict__ x_pred,
-                         const DataType* __restrict__ x_truth,
-                         const DataType* __restrict__ dy,
+__global__ void bp_local(DataType const* __restrict__ x_pred,
+                         DataType const* __restrict__ x_truth,
+                         DataType const* __restrict__ dy,
                          DataType* __restrict__ dx_pred,
                          DataType* __restrict__ dx_truth,
-                         const index_t sample_size,
-                         const index_t sample_spatial_size,
-                         const index_t sample_channel_size,
-                         const bool use_labels,
+                         index_t const sample_size,
+                         index_t const sample_spatial_size,
+                         index_t const sample_channel_size,
+                         bool const use_labels,
                          int thread_work_size)
 {
-  const int tid = threadIdx.x;
-  const int sample_idx = blockIdx.y;
+  int const tid = threadIdx.x;
+  int const sample_idx = blockIdx.y;
 
   x_pred += sample_idx * sample_size;
   dx_pred += sample_idx * sample_size;
@@ -110,22 +110,22 @@ __global__ void bp_local(const DataType* __restrict__ x_pred,
   dx_truth += sample_idx * sample_size;
 
   index_t offset = tid + blockIdx.x * BLOCK_SIZE;
-  const int offset_stride = BLOCK_SIZE * gridDim.x;
-  const index_t offset_limit =
+  int const offset_stride = BLOCK_SIZE * gridDim.x;
+  index_t const offset_limit =
     min(sample_size, offset + offset_stride * thread_work_size);
 
-  const auto dy_sample = dy[sample_idx];
+  auto const dy_sample = dy[sample_idx];
   for (; offset < offset_limit; offset += offset_stride)
   {
-    const auto x = x_pred[offset];
+    auto const x = x_pred[offset];
     DataType xhat;
     if (use_labels)
     {
-      const auto spatial = offset % sample_spatial_size;
-      const auto channel = (offset / sample_spatial_size) % sample_channel_size;
-      const auto sample = offset / sample_spatial_size / sample_channel_size;
-      const auto offset_truth = spatial + sample * sample_spatial_size;
-      const int truth_label = x_truth[offset_truth];
+      auto const spatial = offset % sample_spatial_size;
+      auto const channel = (offset / sample_spatial_size) % sample_channel_size;
+      auto const sample = offset / sample_spatial_size / sample_channel_size;
+      auto const offset_truth = spatial + sample * sample_spatial_size;
+      int const truth_label = x_truth[offset_truth];
       xhat = DataType(truth_label == channel ? 1. : 0.);
     }
     else
@@ -144,8 +144,8 @@ __global__ void bp_local(const DataType* __restrict__ x_pred,
 }  // namespace
 
 template <typename Tensor>
-int CrossEntropy<BackendDNNLib>::forward(const Tensor& x_pred,
-                                         const Tensor& x_truth,
+int CrossEntropy<BackendDNNLib>::forward(Tensor const& x_pred,
+                                         Tensor const& x_truth,
                                          Tensor& y)
 {
   using DataType = typename Tensor::data_type;
@@ -159,7 +159,7 @@ int CrossEntropy<BackendDNNLib>::forward(const Tensor& x_pred,
   assert_eq(x_pred.get_local_size(), x_pred.get_local_real_size());
   assert_eq(x_truth.get_local_size(), x_truth.get_local_real_size());
 
-  const auto num_samples = x_pred.get_local_shape()[-1];
+  auto const num_samples = x_pred.get_local_shape()[-1];
 
   if (num_samples == 0)
     return 0;
@@ -175,9 +175,9 @@ int CrossEntropy<BackendDNNLib>::forward(const Tensor& x_pred,
     dim3 bdim(block_size);
     dim3 gdim(num_blocks_per_sample, num_samples);
 
-    const auto sample_channel_size =
+    auto const sample_channel_size =
       x_pred.get_local_shape()[x_pred.get_num_spatial_dims()];
-    const auto sample_spatial_size = sample_size / sample_channel_size;
+    auto const sample_spatial_size = sample_size / sample_channel_size;
     assert_eq(sample_channel_size * sample_spatial_size, sample_size);
 
     fp_local<DataType, block_size>
@@ -201,8 +201,8 @@ int CrossEntropy<BackendDNNLib>::forward(const Tensor& x_pred,
 }
 
 template <typename Tensor>
-int CrossEntropy<BackendDNNLib>::backward(const Tensor& x_pred,
-                                          const Tensor& x_truth,
+int CrossEntropy<BackendDNNLib>::backward(Tensor const& x_pred,
+                                          Tensor const& x_truth,
                                           Tensor& dy,
                                           Tensor& dx_pred,
                                           Tensor& dx_truth)
@@ -213,7 +213,7 @@ int CrossEntropy<BackendDNNLib>::backward(const Tensor& x_pred,
 
   if (m_num_procs_per_sample > 1)
   {
-    const auto num_samples = x_pred.get_local_shape()[-1];
+    auto const num_samples = x_pred.get_local_shape()[-1];
     Al::Bcast<Al::NCCLBackend, DataType>(
       dy.get_buffer(), num_samples, 0, *m_al.get());
   }
@@ -236,9 +236,9 @@ int CrossEntropy<BackendDNNLib>::backward(const Tensor& x_pred,
   dim3 bdim(block_size);
   dim3 gdim(num_blocks_per_sample, num_samples);
 
-  const auto sample_channel_size =
+  auto const sample_channel_size =
     x_pred.get_local_shape()[x_pred.get_num_spatial_dims()];
-  const auto sample_spatial_size = sample_size / sample_channel_size;
+  auto const sample_spatial_size = sample_size / sample_channel_size;
   assert_eq(sample_channel_size * sample_spatial_size, sample_size);
 
   bp_local<DataType, block_size>

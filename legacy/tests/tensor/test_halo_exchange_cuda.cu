@@ -112,22 +112,22 @@ __global__ void init_tensor<5>(DataType* buf,
 }
 
 template <int ND>
-__global__ void check_tensor(const DataType* buf,
-                             const Array<ND> local_shape,
-                             const Array<ND> halo,
+__global__ void check_tensor(DataType const* buf,
+                             Array<ND> const local_shape,
+                             Array<ND> const halo,
                              index_t pitch,
-                             const Array<ND> global_shape,
-                             const Array<ND> global_index_base,
+                             Array<ND> const global_shape,
+                             Array<ND> const global_index_base,
                              int check_dim,
                              int* error_counter);
 
 template <>
-__global__ void check_tensor<4>(const DataType* buf,
-                                const Array<4> local_shape,
-                                const Array<4> halo,
+__global__ void check_tensor<4>(DataType const* buf,
+                                Array<4> const local_shape,
+                                Array<4> const halo,
                                 index_t pitch,
-                                const Array<4> global_shape,
-                                const Array<4> global_index_base,
+                                Array<4> const global_shape,
+                                Array<4> const global_index_base,
                                 int dim,
                                 int* error_counter)
 {
@@ -202,12 +202,12 @@ __global__ void check_tensor<4>(const DataType* buf,
 }
 
 template <>
-__global__ void check_tensor<5>(const DataType* buf,
-                                const Array<5> local_shape,
-                                const Array<5> halo,
+__global__ void check_tensor<5>(DataType const* buf,
+                                Array<5> const local_shape,
+                                Array<5> const halo,
                                 index_t pitch,
-                                const Array<5> global_shape,
-                                const Array<5> global_index_base,
+                                Array<5> const global_shape,
+                                Array<5> const global_index_base,
                                 int dim,
                                 int* error_counter)
 {
@@ -288,22 +288,22 @@ __global__ void check_tensor<5>(const DataType* buf,
 }
 
 template <int ND>
-__global__ void check_tensor_reverse(const DataType* buf,
-                                     const Array<ND> local_shape,
-                                     const Array<ND> halo,
+__global__ void check_tensor_reverse(DataType const* buf,
+                                     Array<ND> const local_shape,
+                                     Array<ND> const halo,
                                      index_t pitch,
-                                     const Array<ND> global_shape,
-                                     const Array<ND> global_index_base,
+                                     Array<ND> const global_shape,
+                                     Array<ND> const global_index_base,
                                      int check_dim,
                                      int* error_counter);
 
 template <>
-__global__ void check_tensor_reverse<4>(const DataType* buf,
-                                        const Array<4> local_shape,
-                                        const Array<4> halo,
+__global__ void check_tensor_reverse<4>(DataType const* buf,
+                                        Array<4> const local_shape,
+                                        Array<4> const halo,
                                         index_t pitch,
-                                        const Array<4> global_shape,
-                                        const Array<4> global_index_base,
+                                        Array<4> const global_shape,
+                                        Array<4> const global_index_base,
                                         int dim,
                                         int* error_counter)
 {
@@ -405,12 +405,12 @@ __global__ void check_tensor_reverse<4>(const DataType* buf,
 }
 
 template <>
-__global__ void check_tensor_reverse<5>(const DataType* buf,
-                                        const Array<5> local_shape,
-                                        const Array<5> halo,
+__global__ void check_tensor_reverse<5>(DataType const* buf,
+                                        Array<5> const local_shape,
+                                        Array<5> const halo,
                                         index_t pitch,
-                                        const Array<5> global_shape,
-                                        const Array<5> global_index_base,
+                                        Array<5> const global_shape,
+                                        Array<5> const global_index_base,
                                         int dim,
                                         int* error_counter)
 {
@@ -540,7 +540,7 @@ void nvshmem_barrier(HaloExchangeMethod method)
 #endif
 }
 
-bool is_nvshmem_method_used(const std::vector<HaloExchangeMethod>& methods)
+bool is_nvshmem_method_used(std::vector<HaloExchangeMethod> const& methods)
 {
   bool used = false;
 #ifdef DISTCONV_HAS_NVSHMEM
@@ -557,8 +557,8 @@ bool is_nvshmem_method_used(const std::vector<HaloExchangeMethod>& methods)
 }
 
 template <int ND, typename Tensor>
-int test_halo_exchange(const Array<ND>& shape,
-                       const Distribution& dist,
+int test_halo_exchange(Array<ND> const& shape,
+                       Distribution const& dist,
                        HaloExchangeMethod method,
                        int pid,
                        int np)
@@ -740,8 +740,8 @@ int test_halo_exchange(const Array<ND>& shape,
 }
 
 template <int ND, typename Tensor>
-int test_halo_exchange_reverse(const Array<ND>& shape,
-                               const Distribution& dist,
+int test_halo_exchange_reverse(Array<ND> const& shape,
+                               Distribution const& dist,
                                HaloExchangeMethod method,
                                int pid,
                                int np)
@@ -925,9 +925,9 @@ int test_halo_exchange_reverse(const Array<ND>& shape,
 template <int ND, typename Tensor>
 int run_test(int pid,
              int np,
-             const Array<ND>& tensor_shape,
+             Array<ND> const& tensor_shape,
              HaloExchangeMethod method,
-             const Distribution& dist)
+             Distribution const& dist)
 {
   MPI_Barrier(MPI_COMM_WORLD);
   nvshmem_barrier(method);
@@ -945,12 +945,12 @@ int run_test(int pid,
 template <int ND, typename Tensor>
 int dispatch_tests(int pid,
                    int np,
-                   const Shape& proc_dim,
-                   const Shape& tensor_shape,
+                   Shape const& proc_dim,
+                   Shape const& tensor_shape,
                    HaloExchangeMethod method)
 {
-  const auto create_spatial_overlap = [](const Shape& proc_dim,
-                                         const int size) {
+  auto const create_spatial_overlap = [](Shape const& proc_dim,
+                                         int const size) {
     IntVector v(ND - 2, size);
     v.push_back(0);
     v.push_back(0);
@@ -1003,8 +1003,8 @@ int dispatch_tests(int pid,
  */
 int main(int argc, char* argv[])
 {
-  const auto pop_arg = [&argc, &argv] {
-    const std::string arg(*argv);
+  auto const pop_arg = [&argc, &argv] {
+    std::string const arg(*argv);
     argv++;
     argc--;
     return arg;
@@ -1032,8 +1032,8 @@ int main(int argc, char* argv[])
   MPI_Comm_rank(MPI_COMM_WORLD, &pid);
   MPI_Comm_size(MPI_COMM_WORLD, &np);
 
-  const std::string bin = pop_arg();
-  const auto print_usage_and_exit = [bin](const std::string usage) {
+  std::string const bin = pop_arg();
+  auto const print_usage_and_exit = [bin](std::string const usage) {
     util::MPIRootPrintStreamError() << "Error! Usage: " << bin << " " << usage;
     MPI_Finalize();
     exit(1);
@@ -1044,7 +1044,7 @@ int main(int argc, char* argv[])
   // Parse the number of spatial dimensions
   if (argc < 1)
     print_usage_and_exit("ND");
-  const int NSD = std::stoi(pop_arg());
+  int const NSD = std::stoi(pop_arg());
   if (!(NSD == 2 || NSD == 3))
   {
     util::MPIRootPrintStreamError()
@@ -1052,7 +1052,7 @@ int main(int argc, char* argv[])
     MPI_Finalize();
     exit(1);
   }
-  const int ND = NSD + 2;
+  int const ND = NSD + 2;
 
   // Parse the proc shape
   std::vector<std::string> dim_names;
@@ -1064,7 +1064,7 @@ int main(int argc, char* argv[])
     dim_names.begin(),
     dim_names.end(),
     dim_names.begin(),
-    [](const std::string name) { return std::string("proc_") + name; });
+    [](std::string const name) { return std::string("proc_") + name; });
   if (argc < ND)
     print_usage_and_exit("ND" + util::join_spaced_array(dim_names));
   Shape proc_dim_v;

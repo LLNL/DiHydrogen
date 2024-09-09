@@ -22,7 +22,7 @@ struct DefaultErrorPolicy
 {
   struct UnknownIDError : public std::exception
   {
-    const char* what() const noexcept override
+    char const* what() const noexcept override
     {
       return "Unknown type identifier.";
     }

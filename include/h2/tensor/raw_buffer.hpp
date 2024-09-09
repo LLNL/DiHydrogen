@@ -38,14 +38,14 @@ template <typename T>
 class RawBuffer
 {
 public:
-  RawBuffer(Device dev, const ComputeStream& stream_)
+  RawBuffer(Device dev, ComputeStream const& stream_)
     : RawBuffer(dev, 0, false, stream_)
   {}
 
   RawBuffer(Device dev,
             std::size_t size,
             bool defer_alloc,
-            const ComputeStream& stream_)
+            ComputeStream const& stream_)
     : buffer(nullptr),
       buffer_size(size),
       unowned_buffer(false),
@@ -61,7 +61,7 @@ public:
   RawBuffer(Device dev,
             T* external_buffer,
             std::size_t size,
-            const ComputeStream& stream_)
+            ComputeStream const& stream_)
     : buffer(external_buffer),
       buffer_size(size),
       unowned_buffer(true),
@@ -95,7 +95,7 @@ public:
     if (buffer)
     {
       // Wait for all pending operations.
-      for (const auto& [other_stream, event] : pending_streams)
+      for (auto const& [other_stream, event] : pending_streams)
       {
         stream.wait_for(event);
       }
@@ -128,22 +128,22 @@ public:
 
   T* data() H2_NOEXCEPT { return buffer; }
 
-  const T* data() const H2_NOEXCEPT { return buffer; }
+  T const* data() const H2_NOEXCEPT { return buffer; }
 
-  const T* const_data() const H2_NOEXCEPT { return buffer; }
+  T const* const_data() const H2_NOEXCEPT { return buffer; }
 
   std::size_t size() const H2_NOEXCEPT { return buffer_size; }
 
-  const ComputeStream& get_stream() const H2_NOEXCEPT { return stream; }
+  ComputeStream const& get_stream() const H2_NOEXCEPT { return stream; }
 
-  void set_stream(const ComputeStream& stream_) { stream = stream_; }
+  void set_stream(ComputeStream const& stream_) { stream = stream_; }
 
   /**
    * Inform the RawBuffer that a stream is no longer using the
    * RawBuffer, but may have pending operations, and therefore needs to
    * be sync'd with the RawBuffer's stream.
    */
-  void register_release([[maybe_unused]] const ComputeStream& other_stream)
+  void register_release([[maybe_unused]] ComputeStream const& other_stream)
   {
     // When we only have CPU devices, there is nothing to do.
 #ifdef H2_HAS_GPU
@@ -159,7 +159,7 @@ public:
       if (pending_streams.count(other_stream))
       {
         // Update the existing event.
-        const auto& event = pending_streams[other_stream];
+        auto const& event = pending_streams[other_stream];
         other_stream.add_sync_point<Device::GPU, Device::GPU>(event);
       }
       else
@@ -194,7 +194,7 @@ private:
 
 /** Support printing RawBuffer. */
 template <typename T>
-inline std::ostream& operator<<(std::ostream& os, const RawBuffer<T>& buf)
+inline std::ostream& operator<<(std::ostream& os, RawBuffer<T> const& buf)
 {
   os << "RawBuffer<" << TypeName<T>() << ", " << buf.get_device() << ", "
      << buf.get_stream() << ">(" << buf.const_data() << ", " << buf.size()
@@ -208,9 +208,9 @@ namespace internal
 template <typename T, Device Dev>
 struct DeviceBufferPrinter
 {
-  static void print(const T* buf,
+  static void print(T const* buf,
                     std::size_t size,
-                    const ComputeStream& stream,
+                    ComputeStream const& stream,
                     std::ostream& os);
 };
 
@@ -218,7 +218,7 @@ template <typename T>
 struct DeviceBufferPrinter<T, Device::CPU>
 {
   static void
-  print(const T* buf, std::size_t size, const ComputeStream&, std::ostream& os)
+  print(T const* buf, std::size_t size, ComputeStream const&, std::ostream& os)
   {
     H2_ASSERT_DEBUG(size == 0 || buf != nullptr,
                     "Attempt to print null buffer");
@@ -238,9 +238,9 @@ struct DeviceBufferPrinter<T, Device::CPU>
 template <typename T>
 struct DeviceBufferPrinter<T, Device::GPU>
 {
-  static void print(const T* buf,
+  static void print(T const* buf,
                     std::size_t size,
-                    const ComputeStream& stream,
+                    ComputeStream const& stream,
                     std::ostream& os)
   {
     H2_ASSERT_DEBUG(size == 0 || buf != nullptr,
@@ -275,7 +275,7 @@ struct DeviceBufferPrinter<T, Device::GPU>
 /** Print the contents of a RawBuffer. */
 template <typename T>
 inline std::ostream& raw_buffer_contents(std::ostream& os,
-                                         const RawBuffer<T>& buf)
+                                         RawBuffer<T> const& buf)
 {
   H2_DEVICE_DISPATCH_SAME(
     buf.get_device(),

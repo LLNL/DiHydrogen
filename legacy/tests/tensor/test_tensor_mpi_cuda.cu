@@ -49,7 +49,7 @@ __global__ void init_tensor(int* buf,
   }
 }
 
-__global__ void check_tensor(const int* buf,
+__global__ void check_tensor(int const* buf,
                              Array<3> local_shape,
                              Array<3> halo,
                              index_t pitch,
@@ -90,8 +90,8 @@ __global__ void check_tensor(const int* buf,
 }
 
 template <typename TensorType>
-inline int test_data_access_mpi_cuda(const Shape& shape,
-                                     const Distribution& dist)
+inline int test_data_access_mpi_cuda(Shape const& shape,
+                                     Distribution const& dist)
 {
   using LocaleType = typename TensorType::locale_type;
   LocaleType loc = get_locale<LocaleType>();
@@ -138,7 +138,7 @@ inline int test_data_access_mpi_cuda(const Shape& shape,
 }
 
 template <typename TensorType>
-int test_view_raw_ptr(const Shape& shape, const Distribution& dist)
+int test_view_raw_ptr(Shape const& shape, Distribution const& dist)
 {
   auto loc = get_locale<typename TensorType::locale_type>();
   auto t = get_tensor<TensorType>(shape, loc, dist);
@@ -158,7 +158,7 @@ int test_view_raw_ptr(const Shape& shape, const Distribution& dist)
                                  typename TensorType::locale_type,
                                  typename TensorType::allocator_type>;
   auto const_tensor_view = get_tensor<ConstTensorType>(shape, loc, dist);
-  View(const_tensor_view, (const int*) buf);
+  View(const_tensor_view, (int const*) buf);
   assert_always(const_tensor_view.get_const_buffer() == buf);
   int error_counter = 0;
   int* error_counter_d;
@@ -177,15 +177,15 @@ int test_view_raw_ptr(const Shape& shape, const Distribution& dist)
 }
 
 template <int ND, typename DataType>
-__global__ void check_clear_halo(const DataType* buf,
+__global__ void check_clear_halo(DataType const* buf,
                                  Array<ND> local_shape,
                                  int dim,
                                  int halo,
                                  DataType default_value,
                                  int* error_counter)
 {
-  const int tid = threadIdx.x;
-  const int num_threads = blockDim.x;
+  int const tid = threadIdx.x;
+  int const num_threads = blockDim.x;
   Array<ND> idx;
   idx[1] = blockIdx.x;
   idx[2] = blockIdx.y;
@@ -217,14 +217,14 @@ __global__ void check_clear_halo(const DataType* buf,
 }
 
 template <int ND, typename TensorType>
-int test_clear_halo(const Shape& shape, const Distribution& dist)
+int test_clear_halo(Shape const& shape, Distribution const& dist)
 {
-  const int num_dims = shape.num_dims();
+  int const num_dims = shape.num_dims();
   using DataType = typename TensorType::data_type;
   using LocaleType = typename TensorType::locale_type;
   LocaleType loc = get_locale<LocaleType>();
   TensorType t = get_tensor<TensorType>(shape, loc, dist);
-  const auto local_real_shape = t.get_local_real_shape();
+  auto const local_real_shape = t.get_local_real_shape();
   util::MPIPrintStreamDebug()
     << "Shape: " << t.get_shape() << ", local real shape: " << local_real_shape
     << ", distribution: " << t.get_distribution();

@@ -10,7 +10,7 @@ namespace tensor
 namespace
 {
 template <typename DataType>
-__global__ void copy_kernel(const DataType* src, DataType* dst, size_t count)
+__global__ void copy_kernel(DataType const* src, DataType* dst, size_t count)
 {
   size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
   size_t num_threads = blockDim.x * gridDim.x;
@@ -21,7 +21,7 @@ __global__ void copy_kernel(const DataType* src, DataType* dst, size_t count)
 }
 
 template <typename DataType>
-__global__ void reduce_kernel(const DataType* src, DataType* dst, size_t count)
+__global__ void reduce_kernel(DataType const* src, DataType* dst, size_t count)
 {
   size_t tid = threadIdx.x + blockIdx.x * blockDim.x;
   size_t num_threads = blockDim.x * gridDim.x;
@@ -69,7 +69,7 @@ namespace allreduce_nvshmem
 
 template <typename DataType>
 __device__ __forceinline__ void
-copy_block(DataType* x, const DataType* y, size_t count)
+copy_block(DataType* x, DataType const* y, size_t count)
 {
   if (x == y)
     return;
@@ -82,7 +82,7 @@ copy_block(DataType* x, const DataType* y, size_t count)
 
 template <typename DataType>
 __device__ __forceinline__ void
-reduce_block(DataType* x, const DataType* y, size_t count)
+reduce_block(DataType* x, DataType const* y, size_t count)
 {
   size_t bsize = blockDim.x;
   for (size_t idx = threadIdx.x; idx < count; idx += bsize)
@@ -100,7 +100,7 @@ __device__ __forceinline__ void swap(DataType*& x, DataType*& y)
 }
 
 template <typename DataType>
-__global__ void recursive_doubling_kernel(const DataType* send_buf,
+__global__ void recursive_doubling_kernel(DataType const* send_buf,
                                           DataType* recv_buf,
                                           DataType* tmp_buf,
                                           size_t count,
@@ -110,7 +110,7 @@ __global__ void recursive_doubling_kernel(const DataType* send_buf,
                                           int num_steps,
                                           SyncArrayDevice sync)
 {
-  const int tid = threadIdx.x;
+  int const tid = threadIdx.x;
   int sync_idx = blockIdx.x * num_steps;
   send_buf += blockIdx.x * work_per_block;
   recv_buf += blockIdx.x * work_per_block;
@@ -151,7 +151,7 @@ __global__ void recursive_doubling_kernel(const DataType* send_buf,
 }  // namespace allreduce_nvshmem
 
 template <typename DataType>
-void AllreduceNVSHMEM<DataType>::recursive_doubling(const DataType* send_buf,
+void AllreduceNVSHMEM<DataType>::recursive_doubling(DataType const* send_buf,
                                                     DataType* recv_buf,
                                                     size_t count)
 {
@@ -165,7 +165,7 @@ void AllreduceNVSHMEM<DataType>::recursive_doubling(const DataType* send_buf,
 
   ensure_buffer(count * 2);
 
-  const int num_steps = log_np;
+  int const num_steps = log_np;
 
   // Need to have different sync objects for different thread blocks
   m_sync.ensure_size(num_steps * grid_size);
@@ -195,7 +195,7 @@ DEFINE_RECURSIVE_DOUBLING(long)
 namespace allreduce_nvshmem
 {
 template <typename DataType>
-__global__ void recursive_doubling_buffered(const DataType* send_buf,
+__global__ void recursive_doubling_buffered(DataType const* send_buf,
                                             DataType* recv_buf,
                                             DataType* tmp_buf,
                                             size_t count,
@@ -205,7 +205,7 @@ __global__ void recursive_doubling_buffered(const DataType* send_buf,
                                             int num_steps,
                                             SyncArrayDevice sync)
 {
-  const int tid = threadIdx.x;
+  int const tid = threadIdx.x;
   int sync_idx = blockIdx.x * num_steps;
   send_buf += blockIdx.x * work_per_block;
   recv_buf += blockIdx.x * work_per_block;
@@ -238,7 +238,7 @@ __global__ void recursive_doubling_buffered(const DataType* send_buf,
 
 template <typename DataType>
 void AllreduceNVSHMEM<DataType>::recursive_doubling_buffered(
-  const DataType* send_buf, DataType* recv_buf, size_t count)
+  DataType const* send_buf, DataType* recv_buf, size_t count)
 {
   size_t work_per_block;
   int block_size;
@@ -247,7 +247,7 @@ void AllreduceNVSHMEM<DataType>::recursive_doubling_buffered(
 
   auto log_np = std::log2((float) m_np);
   assert_always(std::ceil(log_np) == std::floor(log_np));
-  const int num_steps = log_np;
+  int const num_steps = log_np;
 
   ensure_buffer(count * (num_steps + 1));
 
@@ -281,12 +281,12 @@ namespace allreduce_nvshmem
 
 template <typename DataType>
 __global__ void
-recursive_doubling_block_global(const DataType* send_buf,
+recursive_doubling_block_global(DataType const* send_buf,
                                 DataType* recv_buf,
                                 size_t num_blocks_per_entry,
                                 AllreduceNVSHMEMDevice<DataType> ar)
 {
-  const int block_offset = blockIdx.x / num_blocks_per_entry;
+  int const block_offset = blockIdx.x / num_blocks_per_entry;
   DataType psum;
   if (threadIdx.x == 0)
     psum = send_buf[block_offset];
@@ -321,11 +321,11 @@ struct Vector2<long>
 
 template <typename DataType>
 void AllreduceNVSHMEM<DataType>::recursive_doubling_block(
-  const DataType* send_buf, DataType* recv_buf, size_t count)
+  DataType const* send_buf, DataType* recv_buf, size_t count)
 {
   // TODO: For now, use one block per entry
-  const int num_blocks_per_entry = 1;
-  const int block_size = 32;
+  int const num_blocks_per_entry = 1;
+  int const block_size = 32;
 
   recursive_doubling_block_setup(count, num_blocks_per_entry);
 
@@ -335,13 +335,13 @@ void AllreduceNVSHMEM<DataType>::recursive_doubling_block(
     count /= 2;
   }
 
-  const int grid_size = count * num_blocks_per_entry;
+  int const grid_size = count * num_blocks_per_entry;
 
   if (vec2)
   {
     using OpType = typename allreduce_nvshmem::Vector2<DataType>::type;
     allreduce_nvshmem::recursive_doubling_block_global<OpType>
-      <<<grid_size, block_size, 0, m_stream>>>((const OpType*) send_buf,
+      <<<grid_size, block_size, 0, m_stream>>>((OpType const*) send_buf,
                                                (OpType*) recv_buf,
                                                num_blocks_per_entry,
                                                get_for_device<OpType>());

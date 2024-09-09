@@ -116,18 +116,18 @@ public:
 
   template <typename Allocator>
   void setup(tensor::Tensor<DataType, LocaleMPI, Allocator>& input,
-             const tensor::Tensor<DataType, LocaleMPI, Allocator>& filter,
-             const tensor::Tensor<DataType, LocaleMPI, Allocator>& output,
-             const tensor::Tensor<DataType, LocaleMPI, Allocator>& d_input,
+             tensor::Tensor<DataType, LocaleMPI, Allocator> const& filter,
+             tensor::Tensor<DataType, LocaleMPI, Allocator> const& output,
+             tensor::Tensor<DataType, LocaleMPI, Allocator> const& d_input,
              tensor::Tensor<DataType, LocaleMPI, Allocator>& d_filter,
              tensor::Tensor<DataType, LocaleMPI, Allocator>& d_output,
-             const int_vector& pads,
-             const int_vector& strides,
-             const int_vector& dilations,
+             int_vector const& pads,
+             int_vector const& strides,
+             int_vector const& dilations,
              int num_groups,
-             const std::string& fwd_algo,
-             const std::string& bwd_data_algo,
-             const std::string& bwd_filter_algo,
+             std::string const& fwd_algo,
+             std::string const& bwd_data_algo,
+             std::string const& bwd_filter_algo,
              size_t ws_size,
              bool skip_bp_data = false,
              bool deconv = false)
@@ -284,7 +284,7 @@ public:
   // Setup of bias gradient should be done by a different function as
   // it is optional
   template <typename Allocator>
-  void setup_bias(const tensor::Tensor<DataType, LocaleMPI, Allocator>& bias)
+  void setup_bias(tensor::Tensor<DataType, LocaleMPI, Allocator> const& bias)
   {
     auto const dt = util::get_dnnlib_type<DataType>();
     auto shape = bias.get_local_shape();
@@ -299,7 +299,7 @@ public:
 
   template <typename Allocator>
   void setup_bias_gradient(
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& d_bias)
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& d_bias)
   {
     auto const dt = util::get_dnnlib_type<DataType>();
     auto shape = d_bias.get_local_shape();
@@ -330,7 +330,7 @@ public:
   template <typename Allocator>
   int forward(DataType alpha,
               tensor::Tensor<DataType, LocaleMPI, Allocator>& input,
-              const tensor::Tensor<DataType, LocaleMPI, Allocator>& filter,
+              tensor::Tensor<DataType, LocaleMPI, Allocator> const& filter,
               DataType beta,
               tensor::Tensor<DataType, LocaleMPI, Allocator>& output,
               bool skip_halo_exchange = false,
@@ -390,7 +390,7 @@ public:
       // Zero-clear the halo region of the input
       for (int dim = 0; dim < m_num_spatial_dims; ++dim)
       {
-        const auto& dist = input.get_distribution();
+        auto const& dist = input.get_distribution();
         if (dist.is_distributed(dim) && dist.get_locale_shape()[dim] > 1
             && dist.get_overlap(dim) > 0)
         {
@@ -401,7 +401,7 @@ public:
       forward_exchange_halo(input);
     }
 
-    const void* input_ptr =
+    void const* input_ptr =
       input.get_const_base_ptr()
       - input.get_local_offset(IndexVector(m_halo_bwd_recv), true);
 
@@ -523,7 +523,7 @@ public:
       // TODO: Support chanfilt.
       if (m_interior_req)
       {
-        const void* input_interior_ptr =
+        void const* input_interior_ptr =
           input.get_const_buffer() + m_input_interior_offset;
         void* output_interior_ptr =
           output.get_buffer() + m_output_interior_offset;
@@ -545,7 +545,7 @@ public:
       apply_to_spatial_sides(m_num_dims, [&](int i, Side side) {
         if (!m_boundary_req(i, side))
           return;
-        const void* boundary_input_ptr =
+        void const* boundary_input_ptr =
           input.get_const_buffer() + m_input_boundary_offsets(i, side);
         void* boundary_output_ptr =
           output.get_buffer() + m_output_boundary_offsets(i, side);
@@ -618,7 +618,7 @@ public:
 
   template <typename TensorType>
   int apply_bias(typename TensorType::data_type alpha,
-                 const TensorType& bias,
+                 TensorType const& bias,
                  typename TensorType::data_type beta,
                  TensorType& output)
   {
@@ -660,7 +660,7 @@ public:
   template <typename Allocator>
   int backward_data(
     DataType alpha,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& filter,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& filter,
     tensor::Tensor<DataType, LocaleMPI, Allocator>& d_output,
     DataType beta,
     tensor::Tensor<DataType, LocaleMPI, Allocator>& d_input,
@@ -853,7 +853,7 @@ public:
   template <typename Allocator>
   int backward_filter(
     DataType alpha,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& input,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& input,
     tensor::Tensor<DataType, LocaleMPI, Allocator>& d_output,
     DataType beta,
     tensor::Tensor<DataType, LocaleMPI, Allocator>& d_filter,
@@ -924,7 +924,7 @@ public:
       // Zero-clear the halo region of the d_output
       for (int dim = 0; dim < m_num_spatial_dims; ++dim)
       {
-        const auto& dist = d_output.get_distribution();
+        auto const& dist = d_output.get_distribution();
         if (dist.is_distributed(dim) && dist.get_locale_shape()[dim] > 1
             && dist.get_overlap(dim) > 0)
         {
@@ -932,7 +932,7 @@ public:
         }
       }
 
-      const void* input_ptr = input.get_const_base_ptr()
+      void const* input_ptr = input.get_const_base_ptr()
                               - input.get_local_offset(m_halo_bwd_recv, true);
       assert_always(input_ptr != nullptr);
       assert_always(d_output.get_const_buffer() != nullptr);
@@ -1076,7 +1076,7 @@ public:
   template <typename Allocator>
   int backward_bias(
     DataType alpha,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& d_output,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& d_output,
     DataType beta,
     tensor::Tensor<DataType, LocaleMPI, Allocator>& bias_gradient,
     bool reduce = true,
@@ -1168,8 +1168,8 @@ public:
 
 protected:
   BackendDNNLib& m_be;
-  const int m_num_dims;
-  const int m_num_spatial_dims;
+  int const m_num_dims;
+  int const m_num_spatial_dims;
   bool m_skip_bp_data;
   bool m_deconv;
   GPUDNNBackend::TensorDescriptor_t m_input_d;
@@ -1373,14 +1373,14 @@ protected:
 
   template <typename Allocator>
   void setup_tensor_descriptors(
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& input,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& filter,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& output,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& d_input,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& d_filter,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& d_output,
-    const int_vector& strides,
-    const int_vector& dilations)
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& input,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& filter,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& output,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& d_input,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& d_filter,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& d_output,
+    int_vector const& strides,
+    int_vector const& dilations)
   {
     GPUDNNBackend::setup_tensor_descriptor(
       m_input_d, input, m_halo_fwd_recv, m_halo_bwd_recv);
@@ -1452,11 +1452,11 @@ protected:
 
   template <typename Allocator>
   void setup_tensors_overlap(
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& input,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& filter,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& output,
-    const int_vector& strides,
-    const int_vector& dilations)
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& input,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& filter,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& output,
+    int_vector const& strides,
+    int_vector const& dilations)
   {
     auto input_shape = input.get_local_shape();
     auto output_shape = output.get_local_shape();
@@ -1537,12 +1537,12 @@ protected:
 
   template <typename Allocator>
   void setup_chanfilt_tensors(
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& input,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& filter,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& output,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& d_input,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& d_filter,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& d_output)
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& input,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& filter,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& output,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& d_input,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& d_filter,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& d_output)
   {
     if (m_chanfilt_algo == ChannelParallelismAlgorithm::X)
     {
@@ -1641,8 +1641,8 @@ protected:
     }
     else if (m_chanfilt_algo == ChannelParallelismAlgorithm::W)
     {
-      const auto filter_dim = filter.get_distribution().get_split_shape()[-1];
-      const auto channel_dim = filter.get_distribution().get_split_shape()[-2];
+      auto const filter_dim = filter.get_distribution().get_split_shape()[-1];
+      auto const channel_dim = filter.get_distribution().get_split_shape()[-2];
       {
         auto dist = tensor::Distribution::make_shared_distribution(
           input.get_distribution().get_locale_shape());
@@ -1737,8 +1737,8 @@ protected:
 
   template <typename Allocator>
   void setup_chanfilt_comms(
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& input,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& filter)
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& input,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& filter)
   {
     if (m_chanfilt_algo == ChannelParallelismAlgorithm::NONE)
     {
@@ -2434,17 +2434,17 @@ protected:
 
   template <typename TensorType>
   void setup_filter_descriptor(GPUDNNBackend::FilterDescriptor_t& desc,
-                               const TensorType& tensor)
+                               TensorType const& tensor)
   {
     GPUDNNBackend::setup_filter_descriptor(desc, tensor);
   }
 
   void setup_convolution_descriptor(
-    const IntVector& overlap,
-    const tensor::Shape& filter_shape,
-    const int_vector& pads,
-    const int_vector& strides,
-    const int_vector& dilations,
+    IntVector const& overlap,
+    tensor::Shape const& filter_shape,
+    int_vector const& pads,
+    int_vector const& strides,
+    int_vector const& dilations,
     int num_groups,
     GPUDNNBackend::ConvolutionDescriptor_t& desc,
     GPUDNNBackend::ConvolutionDescriptor_t& desc_bp_data,
@@ -2523,10 +2523,10 @@ protected:
       }
     }
 
-    const auto r_pads_fp = util::reverse(pads_fp);
-    const auto r_pads_bp = util::reverse(pads_bp);
-    const auto r_strides = util::reverse(strides);
-    const auto r_dilations = util::reverse(dilations);
+    auto const r_pads_fp = util::reverse(pads_fp);
+    auto const r_pads_bp = util::reverse(pads_bp);
+    auto const r_strides = util::reverse(strides);
+    auto const r_dilations = util::reverse(dilations);
 
     GPUDNNBackend::set_convolution_descriptor(desc,
                                               m_num_spatial_dims,
@@ -2628,8 +2628,8 @@ protected:
   void setup_boundary_offsets(
     int dim,
     Side side,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& input,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& output,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& input,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& output,
     int input_boundary_dim,
     int output_boundary_dim)
   {
@@ -2656,7 +2656,7 @@ protected:
     }
   }
 
-  void setup_boundary_streams(const IndexVector& split_idx)
+  void setup_boundary_streams(IndexVector const& split_idx)
   {
     apply_to_spatial_sides(m_num_dims, [this](int i, Side side) {
       int idx = get_boundary_stream_index(i, side);
@@ -2706,9 +2706,9 @@ protected:
 
   template <typename Allocator>
   void select_chanfilt_algorithm(
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& input,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& filter,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& output)
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& input,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& filter,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& output)
   {
     if (input.get_distribution().get_split_shape()[-2] == 1)
     {
@@ -2786,10 +2786,10 @@ protected:
    */
   template <typename Allocator>
   void ensure_tensors_conform(
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& channel_tensor,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& filter_tensor,
-    const tensor::Tensor<DataType, LocaleMPI, Allocator>& weights_tensor,
-    const std::string& context)
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& channel_tensor,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& filter_tensor,
+    tensor::Tensor<DataType, LocaleMPI, Allocator> const& weights_tensor,
+    std::string const& context)
   {
     auto c_shape = channel_tensor.get_local_shape();
     auto f_shape = filter_tensor.get_local_shape();
@@ -2807,10 +2807,10 @@ protected:
 
   /** Like ensure_tensors_conform but for descriptors. */
   void ensure_tensor_descriptors_conform(
-    const GPUDNNBackend::TensorDescriptor_t& channel_d,
-    const GPUDNNBackend::TensorDescriptor_t& filter_d,
-    const GPUDNNBackend::FilterDescriptor_t& weights_d,
-    const std::string& context)
+    GPUDNNBackend::TensorDescriptor_t const& channel_d,
+    GPUDNNBackend::TensorDescriptor_t const& filter_d,
+    GPUDNNBackend::FilterDescriptor_t const& weights_d,
+    std::string const& context)
   {
     if (m_num_dims == 4 || m_num_dims == 5)
     {
@@ -2837,7 +2837,7 @@ protected:
     }
   }
 
-  bool check_cache_and_restore_algos(const AlgoCache& cache)
+  bool check_cache_and_restore_algos(AlgoCache const& cache)
   {
     int num_samples = GPUDNNBackend::get_tensor_num_samples(m_input_d);
 

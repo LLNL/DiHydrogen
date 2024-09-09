@@ -166,14 +166,14 @@ struct VectorTypeForT<double, 4>
 };
 
 template <typename T>
-struct VectorTypeForT<const T, 2>
+struct VectorTypeForT<T const, 2>
 {
-  using type = const typename VectorTypeForT<T, 2>::type;
+  using type = typename VectorTypeForT<T, 2>::type const;
 };
 template <typename T>
-struct VectorTypeForT<const T, 4>
+struct VectorTypeForT<T const, 4>
 {
-  using type = const typename VectorTypeForT<T, 4>::type;
+  using type = typename VectorTypeForT<T, 4>::type const;
 };
 
 template <typename T, std::size_t vec_width>
@@ -260,9 +260,9 @@ struct LoadVectorTuple<i, vec_width, std::tuple<Ts...>>
  * @note Currently this only considers vector widths of 1, 2, or 4.
  */
 template <typename T>
-H2_GPU_HOST_DEVICE std::size_t max_vectorization_amount(const T* ptr)
+H2_GPU_HOST_DEVICE std::size_t max_vectorization_amount(T const* ptr)
 {
-  const std::uintptr_t addr = reinterpret_cast<std::uintptr_t>(ptr);
+  std::uintptr_t const addr = reinterpret_cast<std::uintptr_t>(ptr);
   if ((addr % std::alignment_of_v<VectorType_t<T, 4>>) == 0)
   {
     return 4;

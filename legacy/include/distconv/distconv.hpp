@@ -24,25 +24,25 @@ inline IntType get_dilated_filter_size(IntType filter_size, IntType dilation)
 // used at all
 template <typename DataType, typename Locale, typename Allocator>
 inline void
-get_halo_sizes(const tensor::Tensor<DataType, Locale, Allocator>& input,
-               const IntVector& filter_dims,
-               const IntVector& strides,
-               const IntVector& dilations,
+get_halo_sizes(tensor::Tensor<DataType, Locale, Allocator> const& input,
+               IntVector const& filter_dims,
+               IntVector const& strides,
+               IntVector const& dilations,
                IntVector& fwd_halo_send,
                IntVector& bwd_halo_send,
                IntVector& fwd_halo_recv,
                IntVector& bwd_halo_recv,
                bool with_padding)
 {
-  const int ND = input.get_num_dims();
-  const auto local_shape = input.get_local_shape();
+  int const ND = input.get_num_dims();
+  auto const local_shape = input.get_local_shape();
   fwd_halo_send = IntVector(ND, 0);
   bwd_halo_send = IntVector(ND, 0);
   fwd_halo_recv = IntVector(ND, 0);
   bwd_halo_recv = IntVector(ND, 0);
-  const auto& split_idx = input.get_split_index();
-  const auto& split_shape = input.get_distribution().get_split_shape();
-  const auto offset = input.get_global_index();
+  auto const& split_idx = input.get_split_index();
+  auto const& split_shape = input.get_distribution().get_split_shape();
+  auto const offset = input.get_global_index();
   // The spatial domains will shrink or expand based on the filter and
   // stride sizes
   for (int i = 0; i < input.get_num_spatial_dims(); ++i)
@@ -58,9 +58,9 @@ get_halo_sizes(const tensor::Tensor<DataType, Locale, Allocator>& input,
       assert_eq(strides[i], dilated_filter_dim);
       continue;
     }
-    const auto radius = (dilated_filter_dim - 1) / 2;
-    const auto s = strides[i];
-    const auto off = offset[i];
+    auto const radius = (dilated_filter_dim - 1) / 2;
+    auto const s = strides[i];
+    auto const off = offset[i];
     // Check the backward direction.
     if (split_idx[i] == 0)
     {
@@ -82,11 +82,11 @@ get_halo_sizes(const tensor::Tensor<DataType, Locale, Allocator>& input,
       // tensor. Otherwise, the first center is at offset radius, so
       // the offset from it is the offset of the first local element
       // minus radius.
-      const auto x = off - (with_padding ? 0 : radius);
-      const auto offset_from_next_stride = (s - (x % s)) % s;
+      auto const x = off - (with_padding ? 0 : radius);
+      auto const offset_from_next_stride = (s - (x % s)) % s;
       bwd_halo_recv[i] = radius - offset_from_next_stride;
-      const auto xm1 = x - 1;
-      const auto offset_from_prev_stride = xm1 % s;
+      auto const xm1 = x - 1;
+      auto const offset_from_prev_stride = xm1 % s;
       bwd_halo_send[i] = radius - offset_from_prev_stride;
     }
     // Check the forward direction.
@@ -97,11 +97,11 @@ get_halo_sizes(const tensor::Tensor<DataType, Locale, Allocator>& input,
     }
     else
     {
-      const auto y = off + local_shape[i] - 1 - (with_padding ? 0 : radius);
-      const auto offset_from_prev_stride = y % s;
+      auto const y = off + local_shape[i] - 1 - (with_padding ? 0 : radius);
+      auto const offset_from_prev_stride = y % s;
       fwd_halo_recv[i] = radius - offset_from_prev_stride;
-      const auto yp1 = y + 1;
-      const auto offset_from_next_stride = (s - (yp1 % s)) % s;
+      auto const yp1 = y + 1;
+      auto const offset_from_next_stride = (s - (yp1 % s)) % s;
       fwd_halo_send[i] = radius - offset_from_next_stride;
     }
 
@@ -136,7 +136,7 @@ inline tensor::Distribution make_sample_distribution(int num_dims,
 }
 
 inline tensor::Distribution make_strided_sample_distribution(
-  int num_dims, const index_t num_samples, int np)
+  int num_dims, index_t const num_samples, int np)
 {
   if (num_samples >= (index_t) np)
   {
@@ -154,14 +154,14 @@ inline tensor::Distribution make_strided_sample_distribution(
 
 template <typename DataType, typename Locale, typename Alloccator>
 inline tensor::Shape get_pooling_output_local_tensor_shape(
-  const tensor::Tensor<DataType, Locale, Alloccator>& input,
-  const int_vector& filter_dims,
-  const int_vector& strides,
+  tensor::Tensor<DataType, Locale, Alloccator> const& input,
+  int_vector const& filter_dims,
+  int_vector const& strides,
   bool with_padding,
-  const int_vector& dilations)
+  int_vector const& dilations)
 {
-  const int nsd = input.get_num_spatial_dims();
-  const auto input_local_shape = input.get_local_shape();
+  int const nsd = input.get_num_spatial_dims();
+  auto const input_local_shape = input.get_local_shape();
   auto output_local_shape = input.get_local_shape();
   IntVector fwd_halo_send, bwd_halo_send, fwd_halo_recv, bwd_halo_recv;
   internal::get_halo_sizes(input,
@@ -209,11 +209,11 @@ inline tensor::Shape get_pooling_output_local_tensor_shape(
 
 template <typename DataType, typename Locale, typename Allocator>
 tensor::Shape get_convolution_output_local_tensor_shape(
-  const tensor::Tensor<DataType, Locale, Allocator>& input,
-  const int_vector& filter_shape,
-  const int_vector& strides,
+  tensor::Tensor<DataType, Locale, Allocator> const& input,
+  int_vector const& filter_shape,
+  int_vector const& strides,
   bool with_padding,
-  const int_vector& dilations,
+  int_vector const& dilations,
   int num_groups)
 {
   auto output_local_shape = get_pooling_output_local_tensor_shape(
@@ -236,15 +236,15 @@ tensor::Shape get_convolution_output_local_tensor_shape(
 
 template <typename DataType, typename Locale, typename Allocator>
 tensor::Shape get_deconvolution_output_local_tensor_shape(
-  const tensor::Tensor<DataType, Locale, Allocator>& input,
-  const int_vector& filter_dims,
-  const int_vector& strides,
+  tensor::Tensor<DataType, Locale, Allocator> const& input,
+  int_vector const& filter_dims,
+  int_vector const& strides,
   bool with_padding,
-  const int_vector& dilations,
+  int_vector const& dilations,
   int num_groups)
 {
-  const int nsd = input.get_num_spatial_dims();
-  const auto input_local_shape = input.get_local_shape();
+  int const nsd = input.get_num_spatial_dims();
+  auto const input_local_shape = input.get_local_shape();
   auto output_local_shape = input.get_local_shape();
   IntVector fwd_halo_send, bwd_halo_send, fwd_halo_recv, bwd_halo_recv;
   internal::get_halo_sizes(input,
@@ -296,16 +296,16 @@ tensor::Shape get_deconvolution_output_local_tensor_shape(
 }
 
 template <typename Tensor>
-Tensor create_input_tensor(const int_vector& shape,
-                           const int_vector& locale_shape,
-                           const int_vector& filter_dims,
-                           const int_vector& strides,
-                           const int_vector& dilations,
+Tensor create_input_tensor(int_vector const& shape,
+                           int_vector const& locale_shape,
+                           int_vector const& filter_dims,
+                           int_vector const& strides,
+                           int_vector const& dilations,
                            bool deconv,
                            MPI_Comm comm)
 {
-  const int nd = shape.size();
-  const int nsd = nd - 2;
+  int const nd = shape.size();
+  int const nsd = nd - 2;
   IntVector overlap(nd, 0);
   if (!deconv)
   {
@@ -339,7 +339,7 @@ Tensor create_input_tensor(const int_vector& shape,
 }
 
 template <typename Tensor>
-Tensor create_d_input_tensor(const Tensor& input)
+Tensor create_d_input_tensor(Tensor const& input)
 {
   Tensor t = Tensor(input.get_shape(),
                     input.get_locale(),
@@ -351,9 +351,9 @@ Tensor create_d_input_tensor(const Tensor& input)
 }
 
 template <typename Tensor>
-Tensor create_filter_tensor(const int_vector& locale_shape,
-                            const int_vector& filter_dims,
-                            const Tensor& input,
+Tensor create_filter_tensor(int_vector const& locale_shape,
+                            int_vector const& filter_dims,
+                            Tensor const& input,
                             index_t num_channels,
                             index_t num_filters,
                             int num_groups,
@@ -361,8 +361,8 @@ Tensor create_filter_tensor(const int_vector& locale_shape,
                             ChannelParallelismAlgorithm chanfilt_algo,
                             int filter_dim = 0)
 {
-  const int nd = locale_shape.size();
-  const int nsd = nd - 2;
+  int const nd = locale_shape.size();
+  int const nsd = nd - 2;
   assert_eq(nsd, (int) filter_dims.size());
   tensor::Shape filter_shape(nd, 0);
   for (int i = 0; i < nsd; ++i)
@@ -417,7 +417,7 @@ Tensor create_filter_tensor(const int_vector& locale_shape,
 }
 
 template <typename Tensor>
-Tensor create_d_filter_tensor(const Tensor& filter)
+Tensor create_d_filter_tensor(Tensor const& filter)
 {
   Tensor t =
     Tensor(filter.get_shape(), filter.get_locale(), filter.get_distribution());
@@ -426,16 +426,16 @@ Tensor create_d_filter_tensor(const Tensor& filter)
 }
 
 template <typename Tensor>
-Tensor create_convolution_output_tensor(const Tensor& input,
-                                        const Tensor& filter,
-                                        const int_vector& strides,
-                                        const int_vector& pad,
-                                        const int_vector& dilations,
+Tensor create_convolution_output_tensor(Tensor const& input,
+                                        Tensor const& filter,
+                                        int_vector const& strides,
+                                        int_vector const& pad,
+                                        int_vector const& dilations,
                                         int num_groups)
 {
-  const int nd = input.get_num_dims();
-  const int nsd = input.get_num_spatial_dims();
-  const bool use_padding = pad[0] != 0;
+  int const nd = input.get_num_dims();
+  int const nsd = input.get_num_spatial_dims();
+  bool const use_padding = pad[0] != 0;
 
   tensor::Shape output_shape(nd, 0);
   for (int i = 0; i < nsd; ++i)
@@ -488,16 +488,16 @@ Tensor create_convolution_output_tensor(const Tensor& input,
 }
 
 template <typename Tensor>
-Tensor create_deconvolution_output_tensor(const Tensor& input,
-                                          const Tensor& filter,
-                                          const int_vector& strides,
-                                          const int_vector& pad,
-                                          const int_vector& dilations,
+Tensor create_deconvolution_output_tensor(Tensor const& input,
+                                          Tensor const& filter,
+                                          int_vector const& strides,
+                                          int_vector const& pad,
+                                          int_vector const& dilations,
                                           int num_groups)
 {
-  const int nd = input.get_num_dims();
-  const int nsd = input.get_num_spatial_dims();
-  const bool use_padding = pad[0] != 0;
+  int const nd = input.get_num_dims();
+  int const nsd = input.get_num_spatial_dims();
+  bool const use_padding = pad[0] != 0;
 
   // no padding is assumed
   assert_always(!use_padding);
@@ -534,12 +534,12 @@ Tensor create_deconvolution_output_tensor(const Tensor& input,
 }
 
 template <typename Tensor>
-Tensor create_convolution_d_output_tensor(const Tensor& output,
-                                          const Tensor& filter,
-                                          const int_vector& dilations)
+Tensor create_convolution_d_output_tensor(Tensor const& output,
+                                          Tensor const& filter,
+                                          int_vector const& dilations)
 {
-  const int nd = output.get_num_dims();
-  const int nsd = output.get_num_spatial_dims();
+  int const nd = output.get_num_dims();
+  int const nsd = output.get_num_spatial_dims();
   auto dist = output.get_distribution();
   IntVector overlap(nd, 0);
 
@@ -567,12 +567,12 @@ Tensor create_convolution_d_output_tensor(const Tensor& output,
 }
 
 template <typename Tensor>
-Tensor create_deconvolution_d_output_tensor(const Tensor& output,
-                                            const Tensor& filter,
-                                            const int_vector& dilations)
+Tensor create_deconvolution_d_output_tensor(Tensor const& output,
+                                            Tensor const& filter,
+                                            int_vector const& dilations)
 {
   // This only works for the U-Net case
-  const int nd = output.get_num_dims();
+  int const nd = output.get_num_dims();
   auto dist = output.get_distribution();
   IntVector overlap(nd, 0);
   tensor::Shape division_block(nd, 0);
@@ -586,7 +586,7 @@ Tensor create_deconvolution_d_output_tensor(const Tensor& output,
 }
 
 template <typename Tensor>
-Tensor create_bias_tensor(const Tensor& output)
+Tensor create_bias_tensor(Tensor const& output)
 {
   auto dist = tensor::Distribution::make_shared_distribution(
     output.get_distribution().get_locale_shape());
@@ -598,7 +598,7 @@ Tensor create_bias_tensor(const Tensor& output)
 }
 
 template <typename Tensor>
-Tensor create_d_bias_tensor(const Tensor& output)
+Tensor create_d_bias_tensor(Tensor const& output)
 {
   auto t = create_bias_tensor(output);
   util::MPIPrintStreamDebug() << "D_bias tensor: " << t;
@@ -606,13 +606,13 @@ Tensor create_d_bias_tensor(const Tensor& output)
 }
 
 template <typename Tensor>
-Tensor create_pooling_output_tensor(const Tensor& input,
-                                    const int_vector& window,
-                                    const int_vector& strides,
-                                    const int_vector& pad)
+Tensor create_pooling_output_tensor(Tensor const& input,
+                                    int_vector const& window,
+                                    int_vector const& strides,
+                                    int_vector const& pad)
 {
-  const int nd = input.get_num_dims();
-  const int nsd = input.get_num_spatial_dims();
+  int const nd = input.get_num_dims();
+  int const nsd = input.get_num_spatial_dims();
   bool use_padding = pad[0] != 0;
   auto output_shape = input.get_shape();
   for (int i = 0; i < nsd; ++i)
@@ -662,7 +662,7 @@ Tensor create_pooling_output_tensor(const Tensor& input,
 }
 
 template <typename Tensor>
-Tensor create_pooling_d_output_tensor(const Tensor& output)
+Tensor create_pooling_d_output_tensor(Tensor const& output)
 {
   Tensor t = Tensor(output.get_shape(),
                     output.get_locale(),
@@ -679,7 +679,7 @@ Tensor create_pooling_d_output_tensor(const Tensor& output)
 
 template <typename DataType, typename Alloccator>
 inline int dump_tensor(
-  const tensor::Tensor<DataType, tensor::LocaleMPI, Alloccator>& t_mpi,
+  tensor::Tensor<DataType, tensor::LocaleMPI, Alloccator> const& t_mpi,
   std::string file_path,
   bool binary = false)
 {
@@ -745,7 +745,7 @@ inline int dump_tensor(
 
 template <typename DataType, typename Alloccator>
 inline int dump_local_tensor(
-  const tensor::Tensor<DataType, tensor::LocaleMPI, Alloccator>& t_mpi,
+  tensor::Tensor<DataType, tensor::LocaleMPI, Alloccator> const& t_mpi,
   std::string file_path,
   bool binary = false)
 {

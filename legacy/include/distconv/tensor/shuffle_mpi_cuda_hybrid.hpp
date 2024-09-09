@@ -17,8 +17,8 @@ class TensorMPICUDAShufflerHybrid : public TensorMPICUDAShuffler<DataType>
   using TensorType = typename TensorMPICUDAShuffler<DataType>::TensorType;
 
 public:
-  TensorMPICUDAShufflerHybrid(const TensorType& src_tensor,
-                              const TensorType& dst_tensor,
+  TensorMPICUDAShufflerHybrid(TensorType const& src_tensor,
+                              TensorType const& dst_tensor,
                               p2p::P2P& p2p,
                               Al::NCCLBackend::comm_type& al_comm,
                               DataType* src_buf = nullptr,
@@ -189,7 +189,7 @@ protected:
                                              : this->m_src_buf);
   }
 
-  void transfer(const DataType* send_buf,
+  void transfer(DataType const* send_buf,
                 size_t send_buffer_size,
                 DataType* recv_buf,
                 size_t recv_buffer_size,

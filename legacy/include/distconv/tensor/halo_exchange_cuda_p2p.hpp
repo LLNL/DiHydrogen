@@ -24,13 +24,13 @@ public:
       m_halo_peer(nullptr)
   {}
 
-  HaloExchangeP2P(const HaloExchangeP2P& x)
+  HaloExchangeP2P(HaloExchangeP2P const& x)
     : HaloExchange<DataType, Allocator, AlBackend>(x.m_tensor),
       m_p2p(x.m_p2p),
       m_halo_peer(nullptr)
   {}
 
-  HaloExchangeP2P& operator=(const HaloExchangeP2P& x) = delete;
+  HaloExchangeP2P& operator=(HaloExchangeP2P const& x) = delete;
 
   virtual ~HaloExchangeP2P() { close_addrs(); }
 
@@ -65,9 +65,9 @@ public:
     {
       if (this->get_peer(dim, side) == MPI_PROC_NULL)
         continue;
-      const cudaStream_t stream =
+      cudaStream_t const stream =
         side == Side::RHS ? comm_rhs->get_stream() : comm_lhs->get_stream();
-      const int width_send =
+      int const width_send =
         side == Side::RHS ? width_rhs_send : width_lhs_send;
       auto send_buf = this->get_send_buffer(dim, side);
       if (width_send > 0)

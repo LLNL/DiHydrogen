@@ -18,19 +18,19 @@ namespace p2p
 class ConnectionMPI : public Connection
 {
 public:
-  ConnectionMPI(int peer, const internal::MPI& mpi, util::EventPool& ev_pool);
+  ConnectionMPI(int peer, internal::MPI const& mpi, util::EventPool& ev_pool);
   ~ConnectionMPI() override;
   Request connect_nb() override;
   Request register_addr_nb(void* self, void* peer) override;
-  int send(const void* buf, size_t size, cudaStream_t stream) override;
+  int send(void const* buf, size_t size, cudaStream_t stream) override;
   int recv(void* buf, size_t size, cudaStream_t stream) override;
-  int sendrecv(const void* send_buf,
+  int sendrecv(void const* send_buf,
                size_t send_size,
                void* recv_buf,
                size_t recv_size,
                cudaStream_t stream) override;
 
-  int put(const void* src,
+  int put(void const* src,
           void* dst,
           size_t size,
           cudaStream_t stream) override;
@@ -145,7 +145,7 @@ private:
 
   void run_worker();
   void process_requests(std::list<Req>& requests);
-  void process_sendrecv(const Req& r);
+  void process_sendrecv(Req const& r);
 
   int block_stream(cudaStream_t stream, cuuint32_t wait_val);
   int unblock_stream(cuuint32_t wait_val);

@@ -51,7 +51,7 @@ template <typename SizeT,
           typename FuncT,
           typename... Args>
 H2_GPU_GLOBAL void
-vectorized_elementwise_loop(const FuncT& func, SizeT size, Args... args)
+vectorized_elementwise_loop(FuncT const& func, SizeT size, Args... args)
 {
   using traits = FunctionTraits<FuncT>;
   constexpr bool has_return = !std::is_same_v<typename traits::RetT, void>;
@@ -66,10 +66,10 @@ vectorized_elementwise_loop(const FuncT& func, SizeT size, Args... args)
     "Cannot convert return value to output");
 
   constexpr SizeT ele_per_iter = vec_width * unroll_factor;
-  const unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  const unsigned int grid_stride = blockDim.x * gridDim.x;
-  const SizeT stride = grid_stride * ele_per_iter;
-  const SizeT num_iter = (size / ele_per_iter) * ele_per_iter;
+  unsigned int const tid = blockIdx.x * blockDim.x + threadIdx.x;
+  unsigned int const grid_stride = blockDim.x * gridDim.x;
+  SizeT const stride = grid_stride * ele_per_iter;
+  SizeT const num_iter = (size / ele_per_iter) * ele_per_iter;
 
   // Main vectorized/unrolled loop. Only run if this thread has a
   // complete iteration.
@@ -85,7 +85,7 @@ vectorized_elementwise_loop(const FuncT& func, SizeT size, Args... args)
 #pragma unroll
       for (int u = 0; u < unroll_factor; ++u)
       {
-        const SizeT idx = (i + u * vec_width) / vec_width;
+        SizeT const idx = (i + u * vec_width) / vec_width;
         // Vector load.
         const_for<arg_offset, sizeof...(args), std::size_t{1}>([&](auto arg_i) {
           std::get<arg_i.value - arg_offset>(loaded_args[u]) =
@@ -153,7 +153,7 @@ template <typename SizeT,
           typename FuncT,
           typename ImmediateT,
           typename... Args>
-H2_GPU_GLOBAL void vectorized_elementwise_loop_with_immediate(const FuncT& func,
+H2_GPU_GLOBAL void vectorized_elementwise_loop_with_immediate(FuncT const& func,
                                                               SizeT size,
                                                               ImmediateT imm,
                                                               Args... args)
@@ -176,10 +176,10 @@ H2_GPU_GLOBAL void vectorized_elementwise_loop_with_immediate(const FuncT& func,
     "Cannot convert return value to output");
 
   constexpr SizeT ele_per_iter = vec_width * unroll_factor;
-  const unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  const unsigned int grid_stride = blockDim.x * gridDim.x;
-  const SizeT stride = grid_stride * ele_per_iter;
-  const SizeT num_iter = (size / ele_per_iter) * ele_per_iter;
+  unsigned int const tid = blockIdx.x * blockDim.x + threadIdx.x;
+  unsigned int const grid_stride = blockDim.x * gridDim.x;
+  SizeT const stride = grid_stride * ele_per_iter;
+  SizeT const num_iter = (size / ele_per_iter) * ele_per_iter;
 
   // Main vectorized/unrolled loop. Only run if this thread has a
   // complete iteration.
@@ -196,7 +196,7 @@ H2_GPU_GLOBAL void vectorized_elementwise_loop_with_immediate(const FuncT& func,
 #pragma unroll
       for (int u = 0; u < unroll_factor; ++u)
       {
-        const SizeT idx = (i + u * vec_width) / vec_width;
+        SizeT const idx = (i + u * vec_width) / vec_width;
         // Vector load.
         const_for<arg_offset, sizeof...(args), std::size_t{1}>([&](auto arg_i) {
           std::get<arg_i.value - arg_offset>(loaded_args[u]) =
@@ -265,7 +265,7 @@ H2_GPU_GLOBAL void vectorized_elementwise_loop_with_immediate(const FuncT& func,
  */
 template <typename FuncT, typename... Args>
 H2_GPU_GLOBAL void
-elementwise_loop(const FuncT& func, std::size_t size, Args... args)
+elementwise_loop(FuncT const& func, std::size_t size, Args... args)
 {
   using traits = FunctionTraits<FuncT>;
   constexpr bool has_return = !std::is_same_v<typename traits::RetT, void>;
@@ -274,8 +274,8 @@ elementwise_loop(const FuncT& func, std::size_t size, Args... args)
                 "Argument number mismatch");
   // TODO: Check args is convertible to function args.
 
-  const unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  const unsigned int stride = blockDim.x * gridDim.x;
+  unsigned int const tid = blockIdx.x * blockDim.x + threadIdx.x;
+  unsigned int const stride = blockDim.x * gridDim.x;
 
   std::tuple<Args...> args_ptrs{args...};
   typename traits::ArgsTuple loaded_args;
@@ -329,8 +329,8 @@ H2_GPU_GLOBAL void elementwise_loop_with_immediate(FuncT f,
     "Cannot pass immediate to first argument");
   // TODO: Check args is convertible to function args.
 
-  const unsigned int tid = blockIdx.x * blockDim.x + threadIdx.x;
-  const unsigned int stride = blockDim.x * gridDim.x;
+  unsigned int const tid = blockIdx.x * blockDim.x + threadIdx.x;
+  unsigned int const stride = blockDim.x * gridDim.x;
 
   std::tuple<Args...> args_ptrs{args...};
   typename traits::ArgsTuple loaded_args;
@@ -366,13 +366,13 @@ H2_GPU_GLOBAL void elementwise_loop_with_immediate(FuncT f,
 }  // namespace kernels
 
 template <typename FuncT, typename... Args>
-void launch_elementwise_loop(const FuncT& func,
-                             const ComputeStream& stream,
+void launch_elementwise_loop(FuncT const& func,
+                             ComputeStream const& stream,
                              std::size_t size,
                              Args... args)
 {
-  const unsigned int block_size = gpu::num_threads_per_block;
-  const unsigned int num_blocks = (size + block_size - 1) / block_size;
+  unsigned int const block_size = gpu::num_threads_per_block;
+  unsigned int const num_blocks = (size + block_size - 1) / block_size;
 
   // Check if there is no work.
   if (size == 0)
@@ -396,7 +396,7 @@ void launch_elementwise_loop(const FuncT& func,
     args...)
 
   const std::size_t vec_width = std::min({max_vectorization_amount(args)...});
-  const bool needs_size_t = size > std::numeric_limits<unsigned int>::max();
+  bool const needs_size_t = size > std::numeric_limits<unsigned int>::max();
 
   if (needs_size_t)
   {
@@ -425,14 +425,14 @@ void launch_elementwise_loop(const FuncT& func,
 }
 
 template <typename FuncT, typename ImmediateT, typename... Args>
-void launch_elementwise_loop_with_immediate(const FuncT& func,
-                                            const ComputeStream& stream,
+void launch_elementwise_loop_with_immediate(FuncT const& func,
+                                            ComputeStream const& stream,
                                             std::size_t size,
                                             ImmediateT imm,
                                             Args... args)
 {
-  const unsigned int block_size = gpu::num_threads_per_block;
-  const unsigned int num_blocks = (size + block_size - 1) / block_size;
+  unsigned int const block_size = gpu::num_threads_per_block;
+  unsigned int const num_blocks = (size + block_size - 1) / block_size;
 
   // Check if there is no work.
   if (size == 0)
@@ -458,7 +458,7 @@ void launch_elementwise_loop_with_immediate(const FuncT& func,
     args...)
 
   const std::size_t vec_width = std::min({max_vectorization_amount(args)...});
-  const bool needs_size_t = size > std::numeric_limits<unsigned int>::max();
+  bool const needs_size_t = size > std::numeric_limits<unsigned int>::max();
 
   if (needs_size_t)
   {

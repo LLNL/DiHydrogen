@@ -73,18 +73,18 @@ int choose_gpu()
   return gpu;
 }
 
-std::ostream& operator<<(std::ostream& os, const cudaPitchedPtr& p)
+std::ostream& operator<<(std::ostream& os, cudaPitchedPtr const& p)
 {
   return os << "cudaPitchedPtr(" << p.ptr << ", " << p.pitch << ", " << p.xsize
             << ", " << p.ysize << ")";
 }
 
-std::ostream& operator<<(std::ostream& os, const cudaPos& p)
+std::ostream& operator<<(std::ostream& os, cudaPos const& p)
 {
   return os << "cudaPos(" << p.x << ", " << p.y << ", " << p.z << ")";
 }
 
-std::ostream& operator<<(std::ostream& os, const cudaMemcpy3DParms& p)
+std::ostream& operator<<(std::ostream& os, cudaMemcpy3DParms const& p)
 {
   os << "cudaMemcpy3DParms(srcPtr: " << p.srcPtr << ", dstPtr: " << p.dstPtr
      << ", srcPos: " << p.srcPos << ", dstPos: " << p.dstPos << ")";
@@ -92,7 +92,7 @@ std::ostream& operator<<(std::ostream& os, const cudaMemcpy3DParms& p)
 }
 
 cudaError_t
-cuda_malloc(void** ptr, size_t size, const char* file_name, int linum)
+cuda_malloc(void** ptr, size_t size, char const* file_name, int linum)
 {
   // Report only when file_name is given and the size is larger than
   // one Mib by default

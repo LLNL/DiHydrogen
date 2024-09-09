@@ -40,7 +40,7 @@ enum class Distribution
 };
 
 /** Support printing Distribution. */
-inline std::ostream& operator<<(std::ostream& os, const Distribution& dist)
+inline std::ostream& operator<<(std::ostream& os, Distribution const& dist)
 {
   switch (dist)
   {

@@ -53,29 +53,29 @@ template <typename T, h2::Device Dev>
 struct Accessor
 {
   static T
-  read_ele(const T* buf, std::size_t i, const h2::ComputeStream& stream);
+  read_ele(T const* buf, std::size_t i, h2::ComputeStream const& stream);
   static void write_ele(T* buf,
                         std::size_t i,
-                        const T& val,
-                        const h2::ComputeStream& stream);
+                        T const& val,
+                        h2::ComputeStream const& stream);
 };
 
 template <typename T>
 struct Accessor<T, h2::Device::CPU>
 {
-  static T read_ele(const T* buf, std::size_t i, const h2::ComputeStream&)
+  static T read_ele(T const* buf, std::size_t i, h2::ComputeStream const&)
   {
     return buf[i];
   }
   static void
-  write_ele(T* buf, std::size_t i, const T& val, const h2::ComputeStream&)
+  write_ele(T* buf, std::size_t i, T const& val, h2::ComputeStream const&)
   {
     buf[i] = val;
   }
   static void write_ele_nosync(T* buf,
                                std::size_t i,
-                               const T& val,
-                               const h2::ComputeStream&)
+                               T const& val,
+                               h2::ComputeStream const&)
   {
     buf[i] = val;
   }
@@ -88,7 +88,7 @@ template <typename T>
 struct Accessor<T, h2::Device::GPU>
 {
   static T
-  read_ele(const T* buf, std::size_t i, const h2::ComputeStream& stream)
+  read_ele(T const* buf, std::size_t i, h2::ComputeStream const& stream)
   {
     T val;
     ::h2::gpu::mem_copy(&val, buf + i, 1, stream.get_stream<h2::Device::GPU>());
@@ -97,16 +97,16 @@ struct Accessor<T, h2::Device::GPU>
   }
   static void write_ele(T* buf,
                         std::size_t i,
-                        const T& val,
-                        const h2::ComputeStream& stream)
+                        T const& val,
+                        h2::ComputeStream const& stream)
   {
     ::h2::gpu::mem_copy(buf + i, &val, 1, stream.get_stream<h2::Device::GPU>());
     stream.wait_for_this();
   }
   static void write_ele_nosync(T* buf,
                                std::size_t i,
-                               const T& val,
-                               const h2::ComputeStream& stream)
+                               T const& val,
+                               h2::ComputeStream const& stream)
   {
     ::h2::gpu::mem_copy(
       buf + i, &val, 1, stream.get_stream<::h2::Device::GPU>());
@@ -119,14 +119,14 @@ struct Accessor<T, h2::Device::GPU>
 // Helper to read a value from a buffer on a device.
 // Equivalent to buf[i].
 template <h2::Device Dev, typename T>
-inline T read_ele(const T* buf, std::size_t i, const h2::ComputeStream& stream)
+inline T read_ele(T const* buf, std::size_t i, h2::ComputeStream const& stream)
 {
   return internal::Accessor<T, Dev>::read_ele(buf, i, stream);
 }
 
 // Equivalent to buf[0].
 template <h2::Device Dev, typename T>
-inline T read_ele(const T* buf, const h2::ComputeStream& stream)
+inline T read_ele(T const* buf, h2::ComputeStream const& stream)
 {
   return read_ele<Dev>(buf, 0, stream);
 }
@@ -135,7 +135,7 @@ inline T read_ele(const T* buf, const h2::ComputeStream& stream)
 // Equivalent to buf[i] = val.
 template <h2::Device Dev, typename T>
 inline void
-write_ele(T* buf, std::size_t i, const T& val, const h2::ComputeStream& stream)
+write_ele(T* buf, std::size_t i, T const& val, h2::ComputeStream const& stream)
 {
   internal::Accessor<T, Dev>::write_ele(buf, i, val, stream);
 }
@@ -143,8 +143,8 @@ write_ele(T* buf, std::size_t i, const T& val, const h2::ComputeStream& stream)
 template <h2::Device Dev, typename T>
 inline void write_ele_nosync(T* buf,
                              std::size_t i,
-                             const T& val,
-                             const h2::ComputeStream& stream)
+                             T const& val,
+                             h2::ComputeStream const& stream)
 {
   internal::Accessor<T, Dev>::write_ele_nosync(buf, i, val, stream);
 }
@@ -172,7 +172,7 @@ struct DeviceBuf<T, h2::Device::CPU>
     }
   }
 
-  void fill(const T val)
+  void fill(T const val)
   {
     for (std::size_t i = 0; i < size; ++i)
     {
@@ -208,7 +208,7 @@ struct DeviceBuf<T, h2::Device::GPU>
       static_cast<void>(::h2::gpu::default_cub_allocator().DeviceFree(buf));
   }
 
-  void fill(const T val)
+  void fill(T const val)
   {
     for (std::size_t i = 0; i < size; ++i)
     {

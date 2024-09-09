@@ -41,7 +41,7 @@ edit_output_filename(std::string_view filename, int mpirank, int mpisize)
     return std::string{filename};
   }
 
-  const auto split = filename.find_last_of('.');
+  auto const split = filename.find_last_of('.');
   std::ostringstream oss;
   oss << filename.substr(0, split) << '.' << mpirank << '.' << mpisize;
   if (split != std::string_view::npos)
@@ -93,7 +93,7 @@ h2::Comm& get_comm_or_skip(int size)
   {
     return comm_manager->get_comm(size);
   }
-  catch (const internal::NotParticipatingException&)
+  catch (internal::NotParticipatingException const&)
   {
     SKIP();
     throw;
@@ -115,7 +115,7 @@ int main(int argc, char** argv)
 
   // Parse the command line. Also exit if the user asks for help.
   {
-    const int return_code = session.applyCommandLine(argc, argv);
+    int const return_code = session.applyCommandLine(argc, argv);
     if (return_code != 0 || session.configData().showHelp)
     {
       return return_code;
@@ -151,7 +151,7 @@ int main(int argc, char** argv)
   // Handle reporter-specific output files.
   for (auto& spec : session.configData().reporterSpecifications)
   {
-    const auto& outfile = spec.outputFile();
+    auto const& outfile = spec.outputFile();
     if (outfile.some())
     {
       spec = Catch::ReporterSpec(spec.name(),
@@ -162,7 +162,7 @@ int main(int argc, char** argv)
   }
 
   // Run the Catch tests, outputting to the given file.
-  const int num_failed = session.run();
+  int const num_failed = session.run();
 
   // Clean up.
   delete comm_manager;

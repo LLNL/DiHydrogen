@@ -33,10 +33,10 @@ public:
 
   int get_size() const { return m_num_devices; }
 
-  IndexVector get_rank_idx(const Distribution& dist) const
+  IndexVector get_rank_idx(Distribution const& dist) const
   {
     IndexVector rank_idx(dist.num_dims());
-    const auto& locale_shape = dist.get_locale_shape();
+    auto const& locale_shape = dist.get_locale_shape();
     int rank = m_rank;
     for (int i = 0; i < dist.num_dims(); ++i)
     {
@@ -69,13 +69,13 @@ public:
     }
   }
 
-  TensorImpl(const TensorImpl<TensorType>& x) : TensorImpl(x.m_tensor) {}
+  TensorImpl(TensorImpl<TensorType> const& x) : TensorImpl(x.m_tensor) {}
 
-  TensorImpl(TensorType* tensor, const TensorImpl<TensorType>& x)
+  TensorImpl(TensorType* tensor, TensorImpl<TensorType> const& x)
     : TensorImpl(tensor)
   {}
 
-  TensorImpl<TensorType>& operator=(const TensorImpl<TensorType>& x)
+  TensorImpl<TensorType>& operator=(TensorImpl<TensorType> const& x)
   {
     m_tensor = x.m_tensor;
     m_proc_idx = IndexVector();
@@ -105,8 +105,8 @@ public:
 
   int allocate()
   {
-    const auto& dist = m_tensor->get_distribution();
-    const auto& locale_shape = dist.get_locale_shape();
+    auto const& dist = m_tensor->get_distribution();
+    auto const& locale_shape = dist.get_locale_shape();
     // MPI num procs must be equal to the locale shape size
     util::PrintStreamDebug()
       << "locale size: " << m_tensor->get_locale().get_size()
@@ -132,7 +132,7 @@ public:
     return m_offset[dim] + local_idx;
   }
 
-  index_t get_local_offset(const IndexVector& idx, bool idx_include_halo) const
+  index_t get_local_offset(IndexVector const& idx, bool idx_include_halo) const
   {
     auto real_idx = idx;
     if (!idx_include_halo)
@@ -146,9 +146,9 @@ protected:
   // REFACTORING: duplicate with MPI TensorImpl
   void init_proc_idx()
   {
-    const int nd = m_tensor->get_num_dims();
-    const auto& dist = m_tensor->get_distribution();
-    const auto& locale_shape = dist.get_locale_shape();
+    int const nd = m_tensor->get_num_dims();
+    auto const& dist = m_tensor->get_distribution();
+    auto const& locale_shape = dist.get_locale_shape();
     index_t rank = m_tensor->get_locale().get_rank();
     m_proc_idx = IndexVector(nd);
     for (int i = 0; i < nd; ++i)
@@ -163,10 +163,10 @@ protected:
   // REFACTORING: duplicate with MPI TensorImpl
   void init_local_tensor()
   {
-    const int nd = m_tensor->get_num_dims();
-    const auto& tensor_shape = m_tensor->get_shape();
-    const auto& dist = m_tensor->get_distribution();
-    const auto& locale_shape = dist.get_locale_shape();
+    int const nd = m_tensor->get_num_dims();
+    auto const& tensor_shape = m_tensor->get_shape();
+    auto const& dist = m_tensor->get_distribution();
+    auto const& locale_shape = dist.get_locale_shape();
     m_local_shape = Shape(nd);
     m_local_real_shape = Shape(nd);
     m_offset = IndexVector(nd);

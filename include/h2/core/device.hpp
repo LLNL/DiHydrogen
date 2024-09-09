@@ -24,7 +24,7 @@ namespace hydrogen
 {
 
 /** Support printing Device. */
-inline std::ostream& operator<<(std::ostream& os, const Device& dev)
+inline std::ostream& operator<<(std::ostream& os, Device const& dev)
 {
   switch (dev)
   {

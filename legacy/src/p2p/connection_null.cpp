@@ -6,7 +6,7 @@ namespace p2p
 {
 
 ConnectionNULL::ConnectionNULL(int peer,
-                               const internal::MPI& mpi,
+                               internal::MPI const& mpi,
                                util::EventPool& ev_pool)
   : Connection(MPI_PROC_NULL, mpi, ev_pool)
 {
@@ -27,7 +27,7 @@ Request ConnectionNULL::register_addr_nb(void* self, void* peer)
   return Request();
 }
 
-int ConnectionNULL::send(const void* src, size_t size, cudaStream_t stream)
+int ConnectionNULL::send(void const* src, size_t size, cudaStream_t stream)
 {
   return 0;
 }
@@ -37,7 +37,7 @@ int ConnectionNULL::recv(void* dst, size_t size, cudaStream_t stream)
   return 0;
 }
 
-int ConnectionNULL::sendrecv(const void* send_src,
+int ConnectionNULL::sendrecv(void const* send_src,
                              size_t send_size,
                              void* recv_dst,
                              size_t recv_size,
@@ -46,7 +46,7 @@ int ConnectionNULL::sendrecv(const void* send_src,
   return 0;
 }
 
-int ConnectionNULL::put(const void* src,
+int ConnectionNULL::put(void const* src,
                         void* dst,
                         size_t size,
                         cudaStream_t stream)

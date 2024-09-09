@@ -15,7 +15,7 @@ Options::Options(bool overlap_halo_exchange_in,
                  bool enable_profiling_in,
                  float ws_capacity_factor_in,
                  bool jit_verbose_in,
-                 const std::string& jit_cache_path_in)
+                 std::string const& jit_cache_path_in)
   : overlap_halo_exchange{overlap_halo_exchange_in},
     m_deterministic{deterministic_in},
     enable_profiling{enable_profiling_in},

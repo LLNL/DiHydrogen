@@ -15,7 +15,7 @@ public:
   virtual ~Allreduce() = default;
 
   virtual void
-  allreduce(const DataType* sendbuf, DataType* recvbuf, size_t count) = 0;
+  allreduce(DataType const* sendbuf, DataType* recvbuf, size_t count) = 0;
   virtual void allreduce(DataType* buf, size_t count)
   {
     allreduce(buf, buf, count);

@@ -16,7 +16,7 @@ typename std::enable_if<std::is_same<Allocator, CUDAAllocator>::value,
                         int>::type
 TransformReduceSum(Tensor<DataType, Locale, Allocator>& src,
                    Tensor<DataType, Locale, Allocator>& dst,
-                   const UnaryFunction& op,
+                   UnaryFunction const& op,
                    h2::gpu::DeviceStream stream = 0)
 {
   using TensorType = Tensor<DataType, Locale, Allocator>;
@@ -32,9 +32,9 @@ template <int ND,
 typename std::enable_if<std::is_same<Allocator, CUDAAllocator>::value,
                         int>::type
 TransformReduceSum(Tensor<DataType, Locale, Allocator>& src,
-                   const Array<ND>& local_reduction_region,
+                   Array<ND> const& local_reduction_region,
                    Tensor<DataType, Locale, Allocator>& dst,
-                   const UnaryFunction& op,
+                   UnaryFunction const& op,
                    h2::gpu::DeviceStream stream = 0)
 {
   using TensorType = Tensor<DataType, Locale, Allocator>;
@@ -52,9 +52,9 @@ typename std::enable_if<std::is_same<Allocator, CUDAAllocator>::value,
                         int>::type
 TransformReduceSum(Tensor<DataType, Locale, Allocator>& src,
                    Tensor<DataType, Locale, Allocator>& dst1,
-                   const UnaryFunction1& op1,
+                   UnaryFunction1 const& op1,
                    Tensor<DataType, Locale, Allocator>& dst2,
-                   const UnaryFunction2& op2,
+                   UnaryFunction2 const& op2,
                    h2::gpu::DeviceStream stream = 0)
 {
   using TensorType = Tensor<DataType, Locale, Allocator>;
@@ -72,11 +72,11 @@ template <int ND,
 typename std::enable_if<std::is_same<Allocator, CUDAAllocator>::value,
                         int>::type
 TransformReduceSum(Tensor<DataType, Locale, Allocator>& src,
-                   const Array<ND>& local_reduction_region,
+                   Array<ND> const& local_reduction_region,
                    Tensor<DataType, Locale, Allocator>& dst1,
-                   const UnaryFunction1& op1,
+                   UnaryFunction1 const& op1,
                    Tensor<DataType, Locale, Allocator>& dst2,
-                   const UnaryFunction2& op2,
+                   UnaryFunction2 const& op2,
                    h2::gpu::DeviceStream stream = 0)
 {
   using TensorType = Tensor<DataType, Locale, Allocator>;

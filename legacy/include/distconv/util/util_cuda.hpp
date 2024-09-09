@@ -103,13 +103,13 @@ int get_local_size();
 
 int choose_gpu();
 
-std::ostream& operator<<(std::ostream& os, const cudaPitchedPtr& p);
-std::ostream& operator<<(std::ostream& os, const cudaPos& p);
-std::ostream& operator<<(std::ostream& os, const cudaMemcpy3DParms& p);
+std::ostream& operator<<(std::ostream& os, cudaPitchedPtr const& p);
+std::ostream& operator<<(std::ostream& os, cudaPos const& p);
+std::ostream& operator<<(std::ostream& os, cudaMemcpy3DParms const& p);
 
 cudaError_t cuda_malloc(void** ptr,
                         size_t size,
-                        const char* file_name = nullptr,
+                        char const* file_name = nullptr,
                         int linum = 0);
 
 void wait_stream(cudaStream_t master, cudaStream_t follower);
@@ -130,8 +130,8 @@ struct Clock
     DISTCONV_CHECK_CUDA(cudaEventCreate(&m_ev1));
     DISTCONV_CHECK_CUDA(cudaEventCreate(&m_ev2));
   }
-  Clock(const Clock& c) : Clock(c.m_s) {}
-  Clock& operator=(const Clock& c)
+  Clock(Clock const& c) : Clock(c.m_s) {}
+  Clock& operator=(Clock const& c)
   {
     m_s = c.m_s;
     return *this;
@@ -152,7 +152,7 @@ struct Clock
   }
 };
 
-inline void profile_push(const char* name)
+inline void profile_push(char const* name)
 {
   if (get_config().profiling)
   {

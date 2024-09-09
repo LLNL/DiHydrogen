@@ -55,8 +55,8 @@ TEST_CASE("H2 env vars work", "[utilities][environment_vars]")
   // Note: Due to caching, we have only one test case for this.
 
   // Ensure the variable we're testing isn't already set.
-  const std::string h2_env1 = "TEST_VAR1";
-  const std::string h2_env2 = "TEST_VAR2";
+  std::string const h2_env1 = "TEST_VAR1";
+  std::string const h2_env2 = "TEST_VAR2";
   if (env::raw::exists("H2_" + h2_env1) || env::raw::exists("H2_" + h2_env2))
   {
     throw std::runtime_error("Test variable already set in env");

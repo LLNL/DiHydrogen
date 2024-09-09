@@ -52,7 +52,7 @@ get_dim_local_size<Distribution::Block>(typename ShapeTuple::type dim_size,
                                         RankType grid_dim_rank,
                                         bool /*is_root*/)
 {
-  const typename ShapeTuple::type remainder = dim_size % grid_dim_size;
+  typename ShapeTuple::type const remainder = dim_size % grid_dim_size;
   return (dim_size / grid_dim_size)
          + (grid_dim_rank < remainder ? ShapeTuple::type{1}
                                       : ShapeTuple::type{0});
@@ -85,7 +85,7 @@ inline typename ShapeTuple::type get_dim_local_size<Distribution::Single>(
 inline typename ShapeTuple::type
 get_dim_local_size(typename ShapeTuple::type dim_size,
                    typename ShapeTuple::size_type dim,
-                   const ProcessorGrid& proc_grid,
+                   ProcessorGrid const& proc_grid,
                    Distribution dist,
                    RankType grid_rank)
 {
@@ -95,8 +95,8 @@ get_dim_local_size(typename ShapeTuple::type dim_size,
                   " (max grid rank ",
                   proc_grid.size(),
                   ")");
-  const ShapeTuple::type grid_dim_size = proc_grid.shape(dim);
-  const RankType grid_dim_rank = proc_grid.get_dimension_rank(dim, grid_rank);
+  ShapeTuple::type const grid_dim_size = proc_grid.shape(dim);
+  RankType const grid_dim_rank = proc_grid.get_dimension_rank(dim, grid_rank);
   switch (dist)
   {
   case Distribution::Block:
@@ -115,7 +115,7 @@ get_dim_local_size(typename ShapeTuple::type dim_size,
 inline typename ShapeTuple::type
 get_dim_local_size(typename ShapeTuple::type dim_size,
                    typename ShapeTuple::size_type dim,
-                   const ProcessorGrid& proc_grid,
+                   ProcessorGrid const& proc_grid,
                    Distribution dist)
 {
   return get_dim_local_size(dim_size, dim, proc_grid, dist, proc_grid.rank());
@@ -129,7 +129,7 @@ get_dim_local_size(typename ShapeTuple::type dim_size,
  * which their local data is entirely present in the view).
  */
 inline ShapeTuple get_local_shape(ShapeTuple shape,
-                                  const ProcessorGrid& proc_grid,
+                                  ProcessorGrid const& proc_grid,
                                   DistributionTypeTuple dist,
                                   RankType grid_rank)
 {
@@ -148,7 +148,7 @@ inline ShapeTuple get_local_shape(ShapeTuple shape,
 }
 
 inline ShapeTuple get_local_shape(ShapeTuple shape,
-                                  const ProcessorGrid& proc_grid,
+                                  ProcessorGrid const& proc_grid,
                                   DistributionTypeTuple dist)
 {
   return get_local_shape(shape, proc_grid, dist, proc_grid.rank());
@@ -173,9 +173,9 @@ inline IndexRange get_dim_global_indices<Distribution::Block>(
   RankType grid_dim_rank,
   bool /*is_root*/)
 {
-  const ShapeTuple::type remainder = dim_size % grid_dim_size;
-  const ShapeTuple::type block_size = dim_size / grid_dim_size;
-  const ShapeTuple::type start =
+  ShapeTuple::type const remainder = dim_size % grid_dim_size;
+  ShapeTuple::type const block_size = dim_size / grid_dim_size;
+  ShapeTuple::type const start =
     block_size * grid_dim_rank
     + std::min(remainder, static_cast<ShapeTuple::type>(grid_dim_rank));
   // Handle case where some ranks have no indices.
@@ -209,7 +209,7 @@ inline IndexRange get_dim_global_indices<Distribution::Single>(
 
 inline IndexRange get_dim_global_indices(typename ShapeTuple::type dim_size,
                                          typename ShapeTuple::size_type dim,
-                                         const ProcessorGrid& proc_grid,
+                                         ProcessorGrid const& proc_grid,
                                          Distribution dist,
                                          RankType grid_rank)
 {
@@ -219,8 +219,8 @@ inline IndexRange get_dim_global_indices(typename ShapeTuple::type dim_size,
                   " (max gird rank, ",
                   proc_grid.size(),
                   ")");
-  const ShapeTuple::type grid_dim_size = proc_grid.shape(dim);
-  const RankType grid_dim_rank = proc_grid.get_dimension_rank(dim, grid_rank);
+  ShapeTuple::type const grid_dim_size = proc_grid.shape(dim);
+  RankType const grid_dim_rank = proc_grid.get_dimension_rank(dim, grid_rank);
   switch (dist)
   {
   case Distribution::Block:
@@ -238,7 +238,7 @@ inline IndexRange get_dim_global_indices(typename ShapeTuple::type dim_size,
 
 inline IndexRange get_dim_global_indices(typename ShapeTuple::type dim_size,
                                          typename ShapeTuple::size_type dim,
-                                         const ProcessorGrid& proc_grid,
+                                         ProcessorGrid const& proc_grid,
                                          Distribution dist)
 {
   return get_dim_global_indices(
@@ -250,7 +250,7 @@ inline IndexRange get_dim_global_indices(typename ShapeTuple::type dim_size,
  * processor grid, and distributions.
  */
 inline IndexRangeTuple get_global_indices(ShapeTuple global_shape,
-                                          const ProcessorGrid& proc_grid,
+                                          ProcessorGrid const& proc_grid,
                                           DistributionTypeTuple dist,
                                           RankType grid_rank)
 {
@@ -269,7 +269,7 @@ inline IndexRangeTuple get_global_indices(ShapeTuple global_shape,
 }
 
 inline IndexRangeTuple get_global_indices(ShapeTuple global_shape,
-                                          const ProcessorGrid& proc_grid,
+                                          ProcessorGrid const& proc_grid,
                                           DistributionTypeTuple dist)
 {
   return get_global_indices(global_shape, proc_grid, dist, proc_grid.rank());
@@ -292,8 +292,8 @@ inline DimType dim_global2local_index<Distribution::Block>(
   typename ShapeTuple::type grid_dim_size,
   DimType global_index)
 {
-  const ShapeTuple::type remainder = dim_size % grid_dim_size;
-  const ShapeTuple::type block_size = dim_size / grid_dim_size;
+  ShapeTuple::type const remainder = dim_size % grid_dim_size;
+  ShapeTuple::type const block_size = dim_size / grid_dim_size;
   if (global_index < (block_size + 1) * remainder)
   {
     return global_index % (block_size + 1);
@@ -324,7 +324,7 @@ inline DimType dim_global2local_index<Distribution::Single>(
 
 inline DimType dim_global2local_index(typename ShapeTuple::type dim_size,
                                       typename ShapeTuple::size_type dim,
-                                      const ProcessorGrid& proc_grid,
+                                      ProcessorGrid const& proc_grid,
                                       Distribution dist,
                                       DimType global_index)
 {
@@ -334,7 +334,7 @@ inline DimType dim_global2local_index(typename ShapeTuple::type dim_size,
                   " (max dimension size ",
                   dim_size,
                   ")");
-  const ShapeTuple::type grid_dim_size = proc_grid.shape(dim);
+  ShapeTuple::type const grid_dim_size = proc_grid.shape(dim);
   switch (dist)
   {
   case Distribution::Block:
@@ -351,7 +351,7 @@ inline DimType dim_global2local_index(typename ShapeTuple::type dim_size,
 }
 
 inline ScalarIndexTuple global2local_index(ShapeTuple global_shape,
-                                           const ProcessorGrid& proc_grid,
+                                           ProcessorGrid const& proc_grid,
                                            DistributionTypeTuple dist,
                                            ScalarIndexTuple global_index)
 {
@@ -362,12 +362,12 @@ inline ScalarIndexTuple global2local_index(ShapeTuple global_shape,
 }
 
 inline IndexRangeTuple global2local_indices(ShapeTuple global_shape,
-                                            const ProcessorGrid& proc_grid,
+                                            ProcessorGrid const& proc_grid,
                                             DistributionTypeTuple dist,
                                             IndexRangeTuple global_indices)
 {
   H2_ASSERT_DEBUG(!any_of(global_indices,
-                          [](const typename IndexRangeTuple::type& c) {
+                          [](typename IndexRangeTuple::type const& c) {
                             return c.is_empty();
                           }),
                   "Empty index entries are not supported, got ",
@@ -413,8 +413,8 @@ dim_global2rank<Distribution::Block>(typename ShapeTuple::type dim_size,
                                      typename ShapeTuple::type grid_dim_size,
                                      DimType global_index)
 {
-  const ShapeTuple::type remainder = dim_size % grid_dim_size;
-  const ShapeTuple::type block_size = dim_size / grid_dim_size;
+  ShapeTuple::type const remainder = dim_size % grid_dim_size;
+  ShapeTuple::type const block_size = dim_size / grid_dim_size;
   if (global_index < (block_size + 1) * remainder)
   {
     return global_index / (block_size + 1);
@@ -446,7 +446,7 @@ inline RankType dim_global2rank<Distribution::Single>(
 
 inline RankType dim_global2rank(typename ShapeTuple::type dim_size,
                                 typename ShapeTuple::size_type dim,
-                                const ProcessorGrid& proc_grid,
+                                ProcessorGrid const& proc_grid,
                                 Distribution dist,
                                 DimType global_index)
 {
@@ -456,7 +456,7 @@ inline RankType dim_global2rank(typename ShapeTuple::type dim_size,
                   " (max dimension size ",
                   dim_size,
                   ")");
-  const ShapeTuple::type grid_dim_size = proc_grid.shape(dim);
+  ShapeTuple::type const grid_dim_size = proc_grid.shape(dim);
   switch (dist)
   {
   case Distribution::Block:
@@ -474,7 +474,7 @@ inline RankType dim_global2rank(typename ShapeTuple::type dim_size,
 }
 
 inline RankType global2rank(ShapeTuple global_shape,
-                            const ProcessorGrid& proc_grid,
+                            ProcessorGrid const& proc_grid,
                             DistributionTypeTuple dist,
                             ScalarIndexTuple global_index)
 {
@@ -503,8 +503,8 @@ inline DimType dim_local2global_index<Distribution::Block>(
   RankType grid_dim_rank,
   DimType local_index)
 {
-  const ShapeTuple::type remainder = dim_size % grid_dim_size;
-  const ShapeTuple::type block_size = dim_size / grid_dim_size;
+  ShapeTuple::type const remainder = dim_size % grid_dim_size;
+  ShapeTuple::type const block_size = dim_size / grid_dim_size;
   if (grid_dim_rank < remainder)
   {
     return (grid_dim_rank * (block_size + 1)) + local_index;
@@ -538,7 +538,7 @@ inline DimType dim_local2global_index<Distribution::Single>(
 
 inline DimType dim_local2global_index(typename ShapeTuple::type dim_size,
                                       typename ShapeTuple::size_type dim,
-                                      const ProcessorGrid& proc_grid,
+                                      ProcessorGrid const& proc_grid,
                                       Distribution dist,
                                       RankType grid_dim_rank,
                                       DimType local_index)
@@ -556,7 +556,7 @@ inline DimType dim_local2global_index(typename ShapeTuple::type dim_size,
                   " (max dimension size ",
                   dim_size,
                   ")");
-  const ShapeTuple::type grid_dim_size = proc_grid.shape(dim);
+  ShapeTuple::type const grid_dim_size = proc_grid.shape(dim);
   switch (dist)
   {
   case Distribution::Block:
@@ -573,7 +573,7 @@ inline DimType dim_local2global_index(typename ShapeTuple::type dim_size,
 }
 
 inline ScalarIndexTuple local2global_index(ShapeTuple global_shape,
-                                           const ProcessorGrid& proc_grid,
+                                           ProcessorGrid const& proc_grid,
                                            DistributionTypeTuple dist,
                                            RankType grid_rank,
                                            ScalarIndexTuple local_index)

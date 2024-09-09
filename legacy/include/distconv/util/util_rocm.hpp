@@ -88,13 +88,13 @@ int choose_gpu();
 /** @brief Get the number of GPUs available to this process. */
 int get_num_gpus();
 
-std::ostream& operator<<(std::ostream& os, const hipPitchedPtr& p);
-std::ostream& operator<<(std::ostream& os, const hipPos& p);
-std::ostream& operator<<(std::ostream& os, const hipMemcpy3DParms& p);
+std::ostream& operator<<(std::ostream& os, hipPitchedPtr const& p);
+std::ostream& operator<<(std::ostream& os, hipPos const& p);
+std::ostream& operator<<(std::ostream& os, hipMemcpy3DParms const& p);
 
 hipError_t hip_malloc(void** ptr,
                       size_t size,
-                      const char* file_name = nullptr,
+                      char const* file_name = nullptr,
                       int linum = 0);
 
 void wait_stream(hipStream_t master, hipStream_t follower);
@@ -111,8 +111,8 @@ struct Clock
   Clock(hipStream_t s)
     : m_s{s}, m_ev1{h2::gpu::make_event()}, m_ev2{h2::gpu::make_event()}
   {}
-  Clock(const Clock& c) : Clock(c.m_s) {}
-  Clock& operator=(const Clock& c)
+  Clock(Clock const& c) : Clock(c.m_s) {}
+  Clock& operator=(Clock const& c)
   {
     m_s = c.m_s;
     return *this;
@@ -133,7 +133,7 @@ struct Clock
   }
 };
 
-inline void profile_push(const char* name)
+inline void profile_push(char const* name)
 {
   if (get_config().profiling)
   {

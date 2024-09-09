@@ -55,19 +55,19 @@ template <typename T>
 struct FunctionTraits<T&> : public FunctionTraits<T>
 {};
 template <typename T>
-struct FunctionTraits<const T&> : public FunctionTraits<T>
+struct FunctionTraits<T const&> : public FunctionTraits<T>
 {};
 template <typename T>
 struct FunctionTraits<T&&> : public FunctionTraits<T>
 {};
 template <typename T>
-struct FunctionTraits<const T&&> : public FunctionTraits<T>
+struct FunctionTraits<T const&&> : public FunctionTraits<T>
 {};
 template <typename T>
 struct FunctionTraits<T*> : public FunctionTraits<T>
 {};
 template <typename T>
-struct FunctionTraits<const T*> : public FunctionTraits<T>
+struct FunctionTraits<T const*> : public FunctionTraits<T>
 {};
 
 template <typename Class, typename Ret, typename... Args>

@@ -18,9 +18,9 @@ inline LocaleMPI get_locale<LocaleMPI>()
 }
 
 template <typename TensorDest, typename TensorSrc>
-int test_view(const Shape& shape,
-              const Distribution& dist_src,
-              const Distribution& dist_dest)
+int test_view(Shape const& shape,
+              Distribution const& dist_src,
+              Distribution const& dist_dest)
 {
   util::MPIPrintStreamInfo() << "test_view";
 
@@ -54,7 +54,7 @@ int test_view(const Shape& shape,
   util::MPIRootPrintStreamDebug() << "const view created\n";
 
   local_shape = t_view.get_local_shape();
-  const auto* view_buf = t_view.get_buffer();
+  auto const* view_buf = t_view.get_buffer();
   assert_always(view_buf || local_shape.get_size() == 0);
   for (index_t i = 0; i < local_shape[2]; ++i)
   {
@@ -80,7 +80,7 @@ int test_view(const Shape& shape,
 }
 
 template <typename TensorType>
-int test_view_raw_ptr(const Shape& shape, const Distribution& dist)
+int test_view_raw_ptr(Shape const& shape, Distribution const& dist)
 {
   assert_eq(shape.num_dims(), 3);
   auto loc = get_locale<typename TensorType::locale_type>();
@@ -108,10 +108,10 @@ int test_view_raw_ptr(const Shape& shape, const Distribution& dist)
                                  typename TensorType::locale_type,
                                  typename TensorType::allocator_type>;
   auto const_tensor_view = get_tensor<ConstTensorType>(shape, loc, dist);
-  View(const_tensor_view, (const typename ConstTensorType::data_type*) buf);
+  View(const_tensor_view, (typename ConstTensorType::data_type const*) buf);
   assert_always(const_tensor_view.get_const_buffer() == buf);
 
-  const auto* view_buf = const_tensor_view.get_const_buffer();
+  auto const* view_buf = const_tensor_view.get_const_buffer();
   assert_always(view_buf || const_tensor_view.get_local_size() == 0);
   for (index_t i = 0; i < local_shape[2]; ++i)
   {
@@ -137,9 +137,9 @@ int test_view_raw_ptr(const Shape& shape, const Distribution& dist)
 }
 
 template <typename TensorDest, typename TensorSrc>
-int test_copy(const Shape& shape,
-              const Distribution& dist_src,
-              const Distribution& dist_dest,
+int test_copy(Shape const& shape,
+              Distribution const& dist_src,
+              Distribution const& dist_dest,
               int root)
 {
   assert_eq(shape.num_dims(), 3);
@@ -202,9 +202,9 @@ int test_copy(const Shape& shape,
 }
 
 template <typename TensorDest, typename TensorSrc>
-int test_copy_redist(const Shape& shape,
-                     const Distribution& dist_src,
-                     const Distribution& dist_dest)
+int test_copy_redist(Shape const& shape,
+                     Distribution const& dist_src,
+                     Distribution const& dist_dest)
 {
   assert_eq(shape.num_dims(), 3);
   std::cerr << "test_copy_redist\n";

@@ -46,9 +46,9 @@ bool is_nvshmem_method(const std::string& method)
 #endif
 }
 
-bool is_nvshmem_method_included(const std::vector<std::string>& methods)
+bool is_nvshmem_method_included(std::vector<std::string> const& methods)
 {
-  for (const auto& m : methods)
+  for (auto const& m : methods)
   {
     if (is_nvshmem_method(m))
     {
@@ -58,7 +58,7 @@ bool is_nvshmem_method_included(const std::vector<std::string>& methods)
   return false;
 }
 
-void alloc_buf(const std::string& method, DataType*& ptr, size_t count)
+void alloc_buf(std::string const& method, DataType*& ptr, size_t count)
 {
   if (is_nvshmem_method(method))
   {
@@ -75,7 +75,7 @@ void alloc_buf(const std::string& method, DataType*& ptr, size_t count)
   }
 }
 
-void free_buf(const std::string& method, void* ptr)
+void free_buf(std::string const& method, void* ptr)
 {
   if (is_nvshmem_method(method))
   {
@@ -104,7 +104,7 @@ std::vector<DataType> create_input(int count, int pid)
   return host;
 }
 
-void test_setup(const std::string& method,
+void test_setup(std::string const& method,
                 int count,
                 DataType*& input_buf,
                 DataType*& output_buf,
@@ -150,7 +150,7 @@ void test_verify(DataType* output_buf, int count, int pid, int np)
   }
 }
 
-void test_teardown(const std::string& method,
+void test_teardown(std::string const& method,
                    DataType* input_buf,
                    DataType* output_buf)
 {
@@ -160,7 +160,7 @@ void test_teardown(const std::string& method,
 }
 
 std::unique_ptr<tensor::Allreduce<DataType>>
-make_reducer(const std::string name, MPI_Comm comm, DeviceStream stream)
+make_reducer(std::string const name, MPI_Comm comm, DeviceStream stream)
 {
   if (name == "AllreduceMPICUDA")
   {
@@ -212,7 +212,7 @@ make_reducer(const std::string name, MPI_Comm comm, DeviceStream stream)
   }
 }
 
-void test(const std::string& method,
+void test(std::string const& method,
           int min_count,
           int max_count,
           MPI_Comm comm)
