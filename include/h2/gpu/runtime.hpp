@@ -111,7 +111,30 @@ struct is_convertible_t<meta::TL<T1, T2>>
 template <typename TL>
 using is_convertible = meta::Force<is_convertible_t<TL>>;
 
+template <typename T, typename = void>
+struct is_maybe_lambda_or_functor_t : std::false_type
+{};
+
+// Won't work if operator() is overloaded... :/
 template <typename T>
+struct is_maybe_lambda_or_functor_t<T, std::void_t<decltype(&T::operator())>>
+    : std::true_type
+{};
+
+template <typename T>
+constexpr static bool is_maybe_lambda_or_functor =
+  is_maybe_lambda_or_functor_t<T>::value;
+
+template <typename T,
+          typename = std::enable_if_t<is_maybe_lambda_or_functor<T>>>
+std::string convert_for_fmt(const T& v) noexcept
+{
+  return "<callable>";
+}
+
+template <typename T,
+          typename = std::enable_if_t<!is_maybe_lambda_or_functor<T>>,
+          typename = void>
 const T& convert_for_fmt(const T& v) noexcept
 {
   return v;
@@ -233,8 +256,8 @@ inline void launch_kernel(void (*kernel)(KernelArgs...),
                block_dim.y,
                block_dim.z,
                shared_mem,
-               (void*) stream);
-               //internal::convert_for_fmt(std::forward<Args>(args))...);
+               (void*) stream,
+               internal::convert_for_fmt(std::forward<Args>(args))...);
   launch_kernel_internal(kernel,
                          grid_dim,
                          block_dim,
