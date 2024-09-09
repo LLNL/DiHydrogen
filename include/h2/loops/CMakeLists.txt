@@ -5,9 +5,13 @@
 ## SPDX-License-Identifier: Apache-2.0
 ################################################################################
 
-target_sources(StaticTest
-  PRIVATE
-  static_test_cloneable.cpp
-  static_test_function_traits.cpp
-  static_test_tuple_utils.cpp
-  )
+# Append this directory to the current install prefix
+set(H2_CURRENT_INSTALL_PREFIX "${H2_CURRENT_INSTALL_PREFIX}/loops")
+
+# Setup this directory's files
+h2_add_sources_to_target_and_install(
+  TARGET H2Core COMPONENT CORE SCOPE INTERFACE
+  INSTALL_PREFIX "${H2_CURRENT_INSTALL_PREFIX}"
+  SOURCES
+  cpu_loops.hpp
+)

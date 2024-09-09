@@ -14,13 +14,16 @@ h2_add_sources_to_target_and_install(
   SOURCES
   As.hpp
   Cloneable.hpp
+  const_for.hpp
   Describable.hpp
   environment_vars.hpp
   Error.hpp
+  function_traits.hpp
   IntegerMath.hpp
   Logger.hpp
   passkey.hpp
   strings.hpp
+  tuple_utils.hpp
   typename.hpp
   unique_ptr_cast.hpp
   )

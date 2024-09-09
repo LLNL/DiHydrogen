@@ -218,9 +218,15 @@ def process_file(infile: str, outfile: str) -> None:
     get_device = None
     dispatch_on_args = None
     dispatch_args = {}
+    included_dispatch_h = False
+    generated_dispatch = False
     for line in source_lines:
         start = line.lstrip()
-        if start.startswith('// H2_DISPATCH_NAME'):
+        if (start.startswith('#include "h2/core/dispatch.hpp"')
+            or start.startswith('#include <h2/core/dispatch.hpp>')):
+            included_dispatch_h = True
+            out_lines.append(line)
+        elif start.startswith('// H2_DISPATCH_NAME'):
             name = parse_name_line(line)
         elif start.startswith('// H2_DISPATCH_NUM_TYPES'):
             num_types = parse_num_types_line(line)
@@ -245,6 +251,7 @@ def process_file(infile: str, outfile: str) -> None:
                               + dispatch_table
                               + '// END GENERATED DISPATCH TABLE\n')
             out_lines.append(dispatch_table)
+            generated_dispatch = True
         elif start.startswith('// H2_DISPATCH_GET_DEVICE'):
             get_device = parse_get_device_line(line)
         elif start.startswith('// H2_DISPATCH_ON'):
@@ -287,6 +294,7 @@ def process_file(infile: str, outfile: str) -> None:
                             + dispatch_str
                             + '// END GENERATED DISPATCH CALL\n')
             out_lines.append(dispatch_str)
+            generated_dispatch = True
             # Clear things out.
             name = None
             num_types = None
@@ -295,6 +303,9 @@ def process_file(infile: str, outfile: str) -> None:
             dispatch_args = {}
         else:
             out_lines.append(line)
+
+    if generated_dispatch and not included_dispatch_h:
+        raise RuntimeError('Missing #include "h2/dispatch/dispatch.hpp"')
 
     with open(outfile, 'w') as f:
         f.writelines(out_lines)

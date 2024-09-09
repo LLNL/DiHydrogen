@@ -127,9 +127,10 @@ void dyndist_test(GPUDev_t, Tensor<T1>& dst, const Tensor<T2>& src)
   }
 }
 
-void dyndist_cust_test(GPUDev_t,
-                       Tensor<dyndist_cust_type_t>& dst,
-                       const Tensor<dyndist_cust_type_t>& src)
+// This exists but is not used if we do not test with GPU support.
+[[maybe_unused]] void dyndist_cust_test(GPUDev_t,
+                                        Tensor<dyndist_cust_type_t>& dst,
+                                        const Tensor<dyndist_cust_type_t>& src)
 {
   for (DataIndexType i = 0; i < src.numel(); ++i)
   {

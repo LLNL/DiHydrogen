@@ -13,3 +13,5 @@ if (H2_HAS_GPU)
   target_sources(H2Core PRIVATE
     copy.cu)
 endif ()
+
+add_subdirectory(init)

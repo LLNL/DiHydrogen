@@ -21,6 +21,8 @@ add_subdirectory(core)
 
 add_subdirectory(gpu)
 
+add_subdirectory(loops)
+
 add_subdirectory(tensor)
 
 # Setup the metaprogramming component. The metaprogramming facilities

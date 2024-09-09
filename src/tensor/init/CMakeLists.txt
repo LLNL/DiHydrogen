@@ -5,9 +5,10 @@
 ## SPDX-License-Identifier: Apache-2.0
 ################################################################################
 
-target_sources(StaticTest
-  PRIVATE
-  static_test_cloneable.cpp
-  static_test_function_traits.cpp
-  static_test_tuple_utils.cpp
-  )
+target_sources(H2Core PRIVATE
+  fill.cpp)
+
+if (H2_HAS_GPU)
+  target_sources(H2Core PRIVATE
+    fill.cu)
+endif ()

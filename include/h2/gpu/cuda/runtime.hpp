@@ -48,6 +48,11 @@ constexpr unsigned int max_block_z = 64;
 constexpr unsigned int max_threads_per_block = 1024;
 constexpr unsigned int warp_size = 32;
 
+// Useful defaults for decomposing work:
+constexpr unsigned int num_threads_per_block = 128;
+constexpr unsigned int work_per_thread = 4;
+constexpr unsigned int work_per_block = work_per_thread * num_threads_per_block;
+
 inline bool ok(DeviceError status) noexcept
 {
     return (status == cudaSuccess);

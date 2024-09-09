@@ -111,7 +111,30 @@ struct is_convertible_t<meta::TL<T1, T2>>
 template <typename TL>
 using is_convertible = meta::Force<is_convertible_t<TL>>;
 
+template <typename T, typename = void>
+struct is_maybe_lambda_or_functor_t : std::false_type
+{};
+
+// Won't work if operator() is overloaded... :/
 template <typename T>
+struct is_maybe_lambda_or_functor_t<T, std::void_t<decltype(&T::operator())>>
+    : std::true_type
+{};
+
+template <typename T>
+constexpr static bool is_maybe_lambda_or_functor =
+  is_maybe_lambda_or_functor_t<T>::value;
+
+template <typename T,
+          typename = std::enable_if_t<is_maybe_lambda_or_functor<T>>>
+std::string convert_for_fmt(const T& v) noexcept
+{
+  return "<callable>";
+}
+
+template <typename T,
+          typename = std::enable_if_t<!is_maybe_lambda_or_functor<T>>,
+          typename = void>
 const T& convert_for_fmt(const T& v) noexcept
 {
   return v;
@@ -150,6 +173,75 @@ inline void launch_kernel(void (*kernel)(KernelArgs...),
                              meta::tlist::ZipTL<meta::TL<KernelArgs...>,
                                                 meta::TL<Args...>>>>::value,
       "Provided kernel arguments are not convertible to formal arguments");
+
+  // Check grid and block dimensions.
+  H2_ASSERT_DEBUG(grid_dim.x <= max_grid_x,
+                  "Grid dimension x (",
+                  grid_dim.x,
+                  ") exceeds maximum (",
+                  max_grid_x,
+                  ")");
+  H2_ASSERT_DEBUG(grid_dim.x > 0,
+                  "Grid dimension x (",
+                  grid_dim.x,
+                  ") must be > 0");
+  H2_ASSERT_DEBUG(grid_dim.y <= max_grid_y,
+                  "Grid dimension y (",
+                  grid_dim.y,
+                  ") exceeds maximum (",
+                  max_grid_y,
+                  ")");
+  H2_ASSERT_DEBUG(grid_dim.y > 0,
+                  "Grid dimension y (",
+                  grid_dim.y,
+                  ") must be > 0");
+  H2_ASSERT_DEBUG(grid_dim.z <= max_grid_z,
+                  "Grid dimension z (",
+                  grid_dim.z,
+                  ") exceeds maximum (",
+                  max_grid_z,
+                  ")");
+  H2_ASSERT_DEBUG(grid_dim.z > 0,
+                  "Grid dimension z (",
+                  grid_dim.z,
+                  ") must be > 0");
+  H2_ASSERT_DEBUG(block_dim.x <= max_block_x,
+                  "Block dimension x (",
+                  block_dim.x,
+                  ") exceeds maximum (",
+                  max_block_x,
+                  ")");
+  H2_ASSERT_DEBUG(block_dim.x > 0,
+                  "Block dimension x (",
+                  block_dim.x,
+                  ") must be > 0");
+  H2_ASSERT_DEBUG(block_dim.y <= max_block_y,
+                  "Block dimension y (",
+                  block_dim.y,
+                  ") exceeds maximum (",
+                  max_block_y,
+                  ")");
+  H2_ASSERT_DEBUG(block_dim.y > 0,
+                  "Block dimension y (",
+                  block_dim.y,
+                  ") must be > 0");
+  H2_ASSERT_DEBUG(block_dim.z <= max_block_z,
+                  "Block dimension z (",
+                  block_dim.z,
+                  ") exceeds maximum (",
+                  max_block_z,
+                  ")");
+  H2_ASSERT_DEBUG(block_dim.z > 0,
+                  "Block dimension z (",
+                  block_dim.z,
+                  ") must be > 0");
+  H2_ASSERT_DEBUG(block_dim.x * block_dim.y * block_dim.z
+                      <= max_threads_per_block,
+                  "Total threads in a block (",
+                  block_dim.x * block_dim.y * block_dim.z,
+                  ") exceeds maximum (",
+                  max_threads_per_block,
+                  ")");
 
   H2_GPU_TRACE("launch_kernel(kernel={} ("
                    + meta::tlist::print(meta::TL<KernelArgs...>{})
