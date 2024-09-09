@@ -40,7 +40,7 @@ TEMPLATE_LIST_TEST_CASE("CPU elementwise loop works",
     DeviceBuf<Type, Device::CPU> buf{32};
     buf.fill(static_cast<Type>(0));
     const Type val = static_cast<Type>(42);
-    cpu::elementwise_loop([&val]() { return val; }, buf.size, buf.buf);
+    cpu::elementwise_loop([&]() { return val; }, buf.size, buf.buf);
     for (std::size_t i = 0; i < buf.size; ++i)
     {
       REQUIRE(buf.buf[i] == static_cast<Type>(42));
