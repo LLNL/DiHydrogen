@@ -42,6 +42,9 @@ struct FunctionTraits<Ret(Args...)>
   /** Number of arguments the function takes. */
   static constexpr std::size_t arity = sizeof...(Args);
 
+  /** Whether the function returns a value (a non-void return type). */
+  static constexpr bool has_return = !std::is_same_v<RetT, void>;
+
   /** Access the ith argument type. */
   template <std::size_t i>
   using arg = meta::tlist::At<ArgsList, i>;
