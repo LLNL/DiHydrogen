@@ -26,7 +26,6 @@
 #include "h2/loops/gpu_vec_helpers.cuh"
 #include "h2/utils/const_for.hpp"
 #include "h2/utils/function_traits.hpp"
-#include "h2/utils/tuple_utils.hpp"
 
 #include <cstddef>
 #include <type_traits>
@@ -54,12 +53,11 @@ H2_GPU_GLOBAL void
 vectorized_elementwise_loop(FuncT const& func, SizeT size, Args... args)
 {
   using traits = FunctionTraits<FuncT>;
-  constexpr bool has_return = !std::is_same_v<typename traits::RetT, void>;
-  constexpr std::size_t arg_offset = has_return ? 1 : 0;
+  constexpr std::size_t arg_offset = traits::has_return ? 1 : 0;
   static_assert(traits::arity + arg_offset == sizeof...(args),
                 "Argument number mismatch");
   static_assert(
-    !has_return
+    !traits::has_return
       || std::is_convertible_v<
         typename traits::RetT,
         std::remove_pointer_t<std::tuple_element_t<0, std::tuple<Args...>>>>,
@@ -77,7 +75,7 @@ vectorized_elementwise_loop(FuncT const& func, SizeT size, Args... args)
   {
     std::tuple<VectorType_t<Args, vec_width>*...> args_ptrs{
       reinterpret_cast<VectorType_t<Args, vec_width>*>(args)...};
-    VectorTupleType_t<vec_width, typename traits::ArgsTuple>
+    VectorTupleType_t<vec_width, typename traits::ArgsList>
       loaded_args[unroll_factor];
 
     for (SizeT i = tid * ele_per_iter; i < num_iter; i += stride)
@@ -92,14 +90,14 @@ vectorized_elementwise_loop(FuncT const& func, SizeT size, Args... args)
             std::get<arg_i.value>(args_ptrs)[idx];
         });
         // Apply function to each vector element.
-        if constexpr (has_return)
+        if constexpr (traits::has_return)
         {
           VectorType_t<typename traits::RetT, vec_width> result;
           const_for<std::size_t{0}, vec_width, std::size_t{1}>([&](auto arg_i) {
             index_vector<arg_i, vec_width, typename traits::RetT>(result) =
               std::apply(
                 func,
-                LoadVectorTuple<arg_i, vec_width, typename traits::ArgsTuple>::
+                LoadVectorTuple<arg_i, vec_width, typename traits::ArgsList>::
                   load(loaded_args[u]));
           });
           // Vector store.
@@ -110,7 +108,7 @@ vectorized_elementwise_loop(FuncT const& func, SizeT size, Args... args)
           const_for<std::size_t{0}, vec_width, std::size_t{1}>([&](auto arg_i) {
             std::apply(
               func,
-              LoadVectorTuple<arg_i, vec_width, typename traits::ArgsTuple>::
+              LoadVectorTuple<arg_i, vec_width, typename traits::ArgsList>::
                 load(loaded_args[u]));
           });
         }
@@ -121,7 +119,7 @@ vectorized_elementwise_loop(FuncT const& func, SizeT size, Args... args)
   // Handle remainder.
   {
     std::tuple<Args...> args_ptrs{args...};
-    typename traits::ArgsTuple loaded_args;
+    meta::tlist::ToTuple<typename traits::ArgsList> loaded_args;
 
     for (SizeT i = num_iter + tid; i < size; i += grid_stride)
     {
@@ -129,7 +127,7 @@ vectorized_elementwise_loop(FuncT const& func, SizeT size, Args... args)
         std::get<arg_i.value - arg_offset>(loaded_args) =
           std::get<arg_i.value>(args_ptrs)[i];
       });
-      if constexpr (has_return)
+      if constexpr (traits::has_return)
       {
         std::get<0>(args_ptrs)[i] = std::apply(func, loaded_args);
       }
@@ -159,17 +157,15 @@ H2_GPU_GLOBAL void vectorized_elementwise_loop_with_immediate(FuncT const& func,
                                                               Args... args)
 {
   using traits = FunctionTraits<FuncT>;
-  using ArgsTupleWithoutImmediate =
-    TupleRemoveFirst_t<typename traits::ArgsTuple>;
-  constexpr bool has_return = !std::is_same_v<typename traits::RetT, void>;
-  constexpr std::size_t arg_offset = has_return ? 1 : 0;
+  using ArgsListWithoutImmediate = meta::tlist::Cdr<typename traits::ArgsList>;
+  constexpr std::size_t arg_offset = traits::has_return ? 1 : 0;
   static_assert(traits::arity + arg_offset == sizeof...(args) + 1,
                 "Argument number mismatch");
   static_assert(
     std::is_convertible_v<ImmediateT, typename traits::template arg<0>>,
     "Cannot pass immediate to first argument");
   static_assert(
-    !has_return
+    !traits::has_return
       || std::is_convertible_v<
         typename traits::RetT,
         std::remove_pointer_t<std::tuple_element_t<0, std::tuple<Args...>>>>,
@@ -188,7 +184,7 @@ H2_GPU_GLOBAL void vectorized_elementwise_loop_with_immediate(FuncT const& func,
     std::tuple<VectorType_t<Args, vec_width>*...> args_ptrs{
       reinterpret_cast<VectorType_t<Args, vec_width>*>(args)...};
     // The immediate is loaded in `load_with_immediate`.
-    VectorTupleType_t<vec_width, ArgsTupleWithoutImmediate>
+    VectorTupleType_t<vec_width, ArgsListWithoutImmediate>
       loaded_args[unroll_factor];
 
     for (SizeT i = tid * ele_per_iter; i < num_iter; i += stride)
@@ -203,14 +199,14 @@ H2_GPU_GLOBAL void vectorized_elementwise_loop_with_immediate(FuncT const& func,
             std::get<arg_i.value>(args_ptrs)[idx];
         });
         // Apply function to each vector element.
-        if constexpr (has_return)
+        if constexpr (traits::has_return)
         {
           VectorType_t<typename traits::RetT, vec_width> result;
           const_for<std::size_t{0}, vec_width, std::size_t{1}>([&](auto arg_i) {
             index_vector<arg_i, vec_width, typename traits::RetT>(result) =
               std::apply(
                 func,
-                LoadVectorTuple<arg_i, vec_width, ArgsTupleWithoutImmediate>::
+                LoadVectorTuple<arg_i, vec_width, ArgsListWithoutImmediate>::
                   load_with_immediate(imm, loaded_args[u]));
           });
           // Vector store.
@@ -221,7 +217,7 @@ H2_GPU_GLOBAL void vectorized_elementwise_loop_with_immediate(FuncT const& func,
           const_for<std::size_t{0}, vec_width, std::size_t{1}>([&](auto arg_i) {
             std::apply(
               func,
-              LoadVectorTuple<arg_i, vec_width, ArgsTupleWithoutImmediate>::
+              LoadVectorTuple<arg_i, vec_width, ArgsListWithoutImmediate>::
                 load_with_immediate(imm, loaded_args[u]));
           });
         }
@@ -232,7 +228,7 @@ H2_GPU_GLOBAL void vectorized_elementwise_loop_with_immediate(FuncT const& func,
   // Handle remainder.
   {
     std::tuple<Args...> args_ptrs{args...};
-    typename traits::ArgsTuple loaded_args;
+    meta::tlist::ToTuple<typename traits::ArgsList> loaded_args;
     std::get<0>(loaded_args) = imm;  // Store immediate in first arg.
 
     for (SizeT i = num_iter + tid; i < size; i += grid_stride)
@@ -241,7 +237,7 @@ H2_GPU_GLOBAL void vectorized_elementwise_loop_with_immediate(FuncT const& func,
         std::get<arg_i.value + 1 - arg_offset>(loaded_args) =
           std::get<arg_i.value>(args_ptrs)[i];
       });
-      if constexpr (has_return)
+      if constexpr (traits::has_return)
       {
         std::get<0>(args_ptrs)[i] = std::apply(func, loaded_args);
       }
@@ -268,8 +264,7 @@ H2_GPU_GLOBAL void
 elementwise_loop(FuncT const& func, std::size_t size, Args... args)
 {
   using traits = FunctionTraits<FuncT>;
-  constexpr bool has_return = !std::is_same_v<typename traits::RetT, void>;
-  constexpr std::size_t arg_offset = has_return ? 1 : 0;
+  constexpr std::size_t arg_offset = traits::has_return ? 1 : 0;
   static_assert(traits::arity + arg_offset == sizeof...(args),
                 "Argument number mismatch");
   // TODO: Check args is convertible to function args.
@@ -278,10 +273,10 @@ elementwise_loop(FuncT const& func, std::size_t size, Args... args)
   unsigned int const stride = blockDim.x * gridDim.x;
 
   std::tuple<Args...> args_ptrs{args...};
-  typename traits::ArgsTuple loaded_args;
+  meta::tlist::ToTuple<typename traits::ArgsList> loaded_args;
 
   static_assert(
-    !has_return
+    !traits::has_return
       || std::is_convertible_v<
         typename traits::RetT,
         std::remove_pointer_t<std::tuple_element_t<0, std::tuple<Args...>>>>,
@@ -294,7 +289,7 @@ elementwise_loop(FuncT const& func, std::size_t size, Args... args)
       std::get<arg_i.value - arg_offset>(loaded_args) =
         std::get<arg_i.value>(args_ptrs)[i];
     });
-    if constexpr (has_return)
+    if constexpr (traits::has_return)
     {
       std::get<0>(args_ptrs)[i] = std::apply(func, loaded_args);
     }
@@ -320,8 +315,7 @@ H2_GPU_GLOBAL void elementwise_loop_with_immediate(FuncT f,
                                                    Args... args)
 {
   using traits = FunctionTraits<FuncT>;
-  constexpr bool has_return = !std::is_same_v<typename traits::RetT, void>;
-  constexpr std::size_t arg_offset = has_return ? 1 : 0;
+  constexpr std::size_t arg_offset = traits::has_return ? 1 : 0;
   static_assert(traits::arity + arg_offset == sizeof...(args) + 1,
                 "Argument number mismatch");
   static_assert(
@@ -333,11 +327,11 @@ H2_GPU_GLOBAL void elementwise_loop_with_immediate(FuncT f,
   unsigned int const stride = blockDim.x * gridDim.x;
 
   std::tuple<Args...> args_ptrs{args...};
-  typename traits::ArgsTuple loaded_args;
+  meta::tlist::ToTuple<typename traits::ArgsList> loaded_args;
   std::get<0>(loaded_args) = imm;  // Store immediate in first arg.
 
   static_assert(
-    !has_return
+    !traits::has_return
       || std::is_convertible_v<
         typename traits::RetT,
         std::remove_pointer_t<std::tuple_element_t<0, std::tuple<Args...>>>>,
@@ -352,7 +346,7 @@ H2_GPU_GLOBAL void elementwise_loop_with_immediate(FuncT f,
       std::get<arg_i.value + 1 - arg_offset>(loaded_args) =
         std::get<arg_i.value>(args_ptrs)[i];
     });
-    if constexpr (has_return)
+    if constexpr (traits::has_return)
     {
       std::get<0>(args_ptrs)[i] = std::apply(f, loaded_args);
     }

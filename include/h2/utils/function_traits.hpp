@@ -15,9 +15,11 @@
 // This partially adapted from
 // https://stackoverflow.com/questions/7943525/is-it-possible-to-figure-out-the-parameter-type-and-return-type-of-a-lambda
 
-#include <cstddef>
+
+#include "h2/meta/TypeList.hpp"
+
 #include <functional>
-#include <tuple>
+#include <cstddef>
 
 namespace h2
 {
@@ -33,16 +35,19 @@ struct FunctionTraits
 template <typename Ret, typename... Args>
 struct FunctionTraits<Ret(Args...)>
 {
-  using ArgsTuple = std::tuple<Args...>;
+  using ArgsList = meta::TypeList<Args...>;
   using RetT = Ret;
   using FuncT = Ret(Args...);
 
   /** Number of arguments the function takes. */
   static constexpr std::size_t arity = sizeof...(Args);
 
+  /** Whether the function returns a value (a non-void return type). */
+  static constexpr bool has_return = !std::is_same_v<RetT, void>;
+
   /** Access the ith argument type. */
   template <std::size_t i>
-  using arg = std::tuple_element_t<i, ArgsTuple>;
+  using arg = meta::tlist::At<ArgsList, i>;
 };
 
 template <typename Ret, typename... Args>

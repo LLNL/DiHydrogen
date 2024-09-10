@@ -9,5 +9,4 @@ target_sources(StaticTest
   PRIVATE
   static_test_cloneable.cpp
   static_test_function_traits.cpp
-  static_test_tuple_utils.cpp
   )
