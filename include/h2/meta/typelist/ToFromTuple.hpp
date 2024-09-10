@@ -12,7 +12,6 @@
 
 #include <tuple>
 
-
 namespace h2
 {
 namespace meta
