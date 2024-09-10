@@ -10,6 +10,9 @@
 #include "TypeList.hpp"
 #include "h2/meta/core/Lazy.hpp"
 
+#include <tuple>
+
+
 namespace h2
 {
 namespace meta

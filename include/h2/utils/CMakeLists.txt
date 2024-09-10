@@ -23,7 +23,6 @@ h2_add_sources_to_target_and_install(
   Logger.hpp
   passkey.hpp
   strings.hpp
-  tuple_utils.hpp
   typename.hpp
   unique_ptr_cast.hpp
   )

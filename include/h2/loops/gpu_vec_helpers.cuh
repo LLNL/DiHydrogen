@@ -22,6 +22,7 @@
 #include "h2/gpu/macros.hpp"
 #include "h2/gpu/runtime.hpp"
 #include "h2/utils/const_for.hpp"
+#include "h2/meta/TypeList.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -36,6 +37,9 @@ namespace gpu
  * Identify a vector type for T with the given vector width.
  *
  * Falls back to T if none is available.
+ *
+ * @tparam T Type to identify a vector version for.
+ * @tparam vec_width Width of the desired vector type.
  */
 template <typename T, std::size_t vec_width>
 struct VectorTypeForT;
@@ -177,10 +181,18 @@ struct VectorTypeForT<T const, 4>
 };
 
 template <typename T, std::size_t vec_width>
-using VectorType_t =
-  typename VectorTypeForT<std::remove_pointer_t<std::remove_reference_t<T>>,
-                          vec_width>::type;
+using VectorType_t = meta::Force<
+  VectorTypeForT<std::remove_pointer_t<std::remove_reference_t<T>>, vec_width>>;
 
+/**
+ * Access the i'th index of a vector type.
+ *
+ * If T is not a vector type (width 1), this simply returns the input.
+ *
+ * @tparam i Index (0-based) of the vector type to return.
+ * @tparam vec_width Width of the vector type.
+ * @tparam T Underlying type for the vector.
+ */
 template <std::size_t i, std::size_t vec_width, typename T>
 H2_GPU_HOST_DEVICE T& index_vector(VectorType_t<T, vec_width>& vec)
 {
@@ -212,41 +224,63 @@ H2_GPU_HOST_DEVICE T& index_vector(VectorType_t<T, vec_width>& vec)
   }
 }
 
-template <std::size_t vec_width, typename Tuple>
+/**
+ * Obtain a tuple type that contains vector versions of each type in a
+ * given type list.
+ *
+ * @tparam vec_width Width of the desired vector types.
+ * @tparam List TypeList of types to be converted to vectors.
+ */
+template <std::size_t vec_width, typename List>
 struct VectorTupleTypeT;
 template <std::size_t vec_width, typename... Ts>
-struct VectorTupleTypeT<vec_width, std::tuple<Ts...>>
+struct VectorTupleTypeT<vec_width, meta::TypeList<Ts...>>
 {
   using type = std::tuple<VectorType_t<Ts, vec_width>...>;
 };
-template <std::size_t vec_width, typename Tuple>
-using VectorTupleType_t = typename VectorTupleTypeT<vec_width, Tuple>::type;
+template <std::size_t vec_width, typename List>
+using VectorTupleType_t = meta::Force<VectorTupleTypeT<vec_width, List>>;
 
-template <std::size_t i, std::size_t vec_width, typename VecTuple>
+/**
+ * Helper for loading arguments from a tuple of vectorized data into a
+ * non-vectorized tuple suitable for calling functions on.
+ *
+ * @tparam i Index (0-based) of the vector to load.
+ * @tparam vec_width Width of the vector type.
+ * @tparam List TypeList of the underlying types in the tuple.
+ */
+template <std::size_t i, std::size_t vec_width, typename List>
 struct LoadVectorTuple;
 template <std::size_t i, std::size_t vec_width, typename... Ts>
-struct LoadVectorTuple<i, vec_width, std::tuple<Ts...>>
+struct LoadVectorTuple<i, vec_width, meta::TypeList<Ts...>>
 {
+  /**
+   * Return a tuple of non-vectorized arguments from a vectorized
+   * tuple argument.
+   */
   static H2_GPU_HOST_DEVICE std::tuple<Ts...>
-  load(VectorTupleType_t<vec_width, std::tuple<Ts...>>& vec_tuple)
+  load(VectorTupleType_t<vec_width, meta::TypeList<Ts...>>& vec_tuple)
   {
     std::tuple<Ts...> ret;
     const_for<std::size_t{0}, sizeof...(Ts), std::size_t{1}>([&](auto arg_i) {
-      using T = std::tuple_element_t<arg_i, std::tuple<Ts...>>;
+      using T = meta::tlist::At<meta::TypeList<Ts...>, arg_i>;
       std::get<arg_i>(ret) =
         index_vector<i, vec_width, T>(std::get<arg_i>(vec_tuple));
     });
     return ret;
   }
 
+  /**
+   * Like `load`, but prepend an immediate argument.
+   */
   template <typename ImmediateT>
   static H2_GPU_HOST_DEVICE std::tuple<ImmediateT, Ts...> load_with_immediate(
-    ImmediateT& imm, VectorTupleType_t<vec_width, std::tuple<Ts...>>& vec_tuple)
+    ImmediateT& imm, VectorTupleType_t<vec_width, meta::TypeList<Ts...>>& vec_tuple)
   {
     std::tuple<ImmediateT, Ts...> ret;
     std::get<0>(ret) = imm;
     const_for<std::size_t{0}, sizeof...(Ts), std::size_t{1}>([&](auto arg_i) {
-      using T = std::tuple_element_t<arg_i, std::tuple<Ts...>>;
+      using T = meta::tlist::At<meta::TypeList<Ts...>, arg_i>;
       std::get<arg_i + 1>(ret) =
         index_vector<i, vec_width, T>(std::get<arg_i>(vec_tuple));
     });

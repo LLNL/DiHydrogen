@@ -45,7 +45,7 @@ void elementwise_loop(FuncT&& func, std::size_t size, Args... args)
   // TODO: Check args is convertible to function args.
 
   std::tuple<Args...> args_ptrs{args...};
-  typename traits::ArgsTuple loaded_args;
+  meta::tlist::ToTuple<typename traits::ArgsList> loaded_args;
 
   static_assert(
     !has_return
