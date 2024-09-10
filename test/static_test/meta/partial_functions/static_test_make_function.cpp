@@ -5,9 +5,8 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include "h2/meta/partial_functions/MakeFunction.hpp"
-
 #include "h2/meta/Core.hpp"
+#include "h2/meta/partial_functions/MakeFunction.hpp"
 
 using namespace h2::meta;
 using namespace h2::meta::pfunctions;
@@ -23,17 +22,15 @@ struct F2;
 template <typename T, typename T, typename T>
 struct F3;
 
-} // namespace <anon>
+}  // namespace
 
-static_assert(EqV<MakeNaryFunction<F1, 1>, F1<_1>>(),
-              "Make a unary function.");
+static_assert(EqV<MakeNaryFunction<F1, 1>, F1<_1>>(), "Make a unary function.");
 static_assert(EqV<MakeNaryFunction<F2, 2>, F2<_1, _2>>(),
               "Make a binary function.");
 static_assert(EqV<MakeNaryFunction<F3, 3>, F3<_1, _2, _3>>(),
               "Make a ternary function.");
 
-static_assert(EqV<MakeUnaryFunction<F1>, F1<_1>>(),
-              "Make a unary function.");
+static_assert(EqV<MakeUnaryFunction<F1>, F1<_1>>(), "Make a unary function.");
 static_assert(EqV<MakeBinaryFunction<F2>, F2<_1, _2>>(),
               "Make a binary function.");
 static_assert(EqV<MakeTernaryFunction<F3>, F3<_1, _2, _3>>(),
@@ -68,7 +65,7 @@ using F__Int = F3<T, U, int>;
 template <typename T, typename U>
 using FRev = F2<U, T>;
 
-} // namespace <anon>
+}  // namespace
 
 static_assert(EqV<MakeUnaryFunction<F_Int>, F2<_1, int>>(),
               "Make a unary function.");

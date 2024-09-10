@@ -60,8 +60,8 @@ struct PHReplaceT;
 template <typename CandidatePH, typename... Replacements>
 using PHReplace = Force<PHReplaceT<CandidatePH, Replacements...>>;
 
-} // namespace placeholders
-} // namespace pfunctions
+}  // namespace placeholders
+}  // namespace pfunctions
 
 /** @brief A placeholder wrapper for use in the meta namespace. */
 template <unsigned long Idx>
@@ -76,26 +76,26 @@ namespace placeholders
 template <typename PlainOldType, typename... Replacements>
 struct PHReplaceT
 {
-    using type = PlainOldType;
+  using type = PlainOldType;
 };
 
 // Short cut the first few placeholders
 template <typename Replacement, typename... Others>
 struct PHReplaceT<_1, Replacement, Others...>
 {
-    using type = Replacement;
+  using type = Replacement;
 };
 
 template <typename S, typename Replacement, typename... Others>
 struct PHReplaceT<_2, S, Replacement, Others...>
 {
-    using type = Replacement;
+  using type = Replacement;
 };
 
 template <typename R, typename S, typename Replacement, typename... Others>
 struct PHReplaceT<_3, R, S, Replacement, Others...>
 {
-    using type = Replacement;
+  using type = Replacement;
 };
 
 // General placeholder case
@@ -103,16 +103,16 @@ template <unsigned long Idx, typename... Replacements>
 struct PHReplaceT<Placeholder<Idx>, Replacements...>
 {
 private:
-    static constexpr unsigned long num_args_ = sizeof...(Replacements);
-    static constexpr bool do_arg_replace_ = (Idx < num_args_);
+  static constexpr unsigned long num_args_ = sizeof...(Replacements);
+  static constexpr bool do_arg_replace_ = (Idx < num_args_);
 
 public:
-    using type = IfThenElse<do_arg_replace_,
-                            tlist::At<TL<Replacements...>, Idx>,
-                            Placeholder<Idx - num_args_>>;
+  using type = IfThenElse<do_arg_replace_,
+                          tlist::At<TL<Replacements...>, Idx>,
+                          Placeholder<Idx - num_args_>>;
 };
 
-} // namespace placeholders
+}  // namespace placeholders
 
 // Inject these symbols into the pfunctions namespace
 using placeholders::_1;
@@ -125,7 +125,7 @@ using placeholders::_7;
 using placeholders::_8;
 using placeholders::_9;
 
-} // namespace pfunctions
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace meta
-} // namespace h2
+}  // namespace pfunctions
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace meta
+}  // namespace h2

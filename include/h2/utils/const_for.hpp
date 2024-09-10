@@ -12,11 +12,9 @@
  * For loops with compile-time constant indices and such.
  */
 
+#include <cstddef>
 #include <tuple>
 #include <type_traits>
-
-#include <cstddef>
-
 
 namespace h2
 {
@@ -45,7 +43,7 @@ constexpr void const_for_tuple(FuncT&& func, Tuple&& tuple)
 {
   constexpr std::size_t size = std::tuple_size_v<std::decay_t<Tuple>>;
   const_for<std::size_t{0}, size, std::size_t{1}>(
-      [&](auto i) { func(std::get<i.value>(tuple)); });
+    [&](auto i) { func(std::get<i.value>(tuple)); });
 }
 
 /**

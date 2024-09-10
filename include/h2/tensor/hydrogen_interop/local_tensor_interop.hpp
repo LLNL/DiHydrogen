@@ -7,8 +7,6 @@
 
 #pragma once
 
-#include "interop_utils.hpp"
-
 #include "h2/tensor/tensor.hpp"
 #include "h2/utils/As.hpp"
 
@@ -18,87 +16,86 @@
 #include <stdexcept>
 #include <type_traits>
 
+#include "interop_utils.hpp"
+
 namespace h2
 {
 namespace internal
 {
 
 template <Device D, typename BufferT, typename T>
-auto as_h_mat_impl(BufferT buf, Tensor<T> const& tensor)
-    -> El::Matrix<T, HydrogenDevice<D>>
+auto as_h_mat_impl(BufferT buf,
+                   Tensor<T> const& tensor) -> El::Matrix<T, HydrogenDevice<D>>
 {
-    // Enforce usage constraint
-    static_assert(
-        std::is_same_v<std::decay_t<std::remove_pointer_t<BufferT>>, T>,
-        "BufferT must be T* or T const*");
+  // Enforce usage constraint
+  static_assert(std::is_same_v<std::decay_t<std::remove_pointer_t<BufferT>>, T>,
+                "BufferT must be T* or T const*");
 
-    using MatrixType = El::Matrix<T, HydrogenDevice<D>>;
-    using h_size_type = typename MatrixType::size_type;
-    if (tensor.is_empty())
-        throw std::runtime_error("Cannot convert empty tensor to El::Matrix");
-    if (tensor.ndim() > 1 && !is_chw_packed(tensor))
-        throw std::runtime_error("No-copy conversion only supported for "
-                                 "fully-packed or chw-packed tensors");
-    if (tensor.ndim() == 1)
-    {
-        auto constexpr h_one = h_size_type{1};
-        auto const nelems = safe_as<h_size_type>(tensor.numel());
-        auto const elem_stride = safe_as<h_size_type>(tensor.stride(0));
-        if (elem_stride == h_one)
-            return MatrixType{nelems, h_one, buf, nelems};
-        else
-            return MatrixType{h_one, nelems, buf, elem_stride};
-    }
-    auto const& shape = tensor.shape();
-    auto const& strides = tensor.strides();
-    auto const width = safe_as<h_size_type>(shape.back());
-    auto const height =
-        safe_as<h_size_type>(product<std::uint64_t>(init(shape)));
-    auto const ldim = safe_as<h_size_type>(strides.back());
-    return MatrixType{height, width, buf, ldim};
+  using MatrixType = El::Matrix<T, HydrogenDevice<D>>;
+  using h_size_type = typename MatrixType::size_type;
+  if (tensor.is_empty())
+    throw std::runtime_error("Cannot convert empty tensor to El::Matrix");
+  if (tensor.ndim() > 1 && !is_chw_packed(tensor))
+    throw std::runtime_error("No-copy conversion only supported for "
+                             "fully-packed or chw-packed tensors");
+  if (tensor.ndim() == 1)
+  {
+    auto constexpr h_one = h_size_type{1};
+    auto const nelems = safe_as<h_size_type>(tensor.numel());
+    auto const elem_stride = safe_as<h_size_type>(tensor.stride(0));
+    if (elem_stride == h_one)
+      return MatrixType{nelems, h_one, buf, nelems};
+    else
+      return MatrixType{h_one, nelems, buf, elem_stride};
+  }
+  auto const& shape = tensor.shape();
+  auto const& strides = tensor.strides();
+  auto const width = safe_as<h_size_type>(shape.back());
+  auto const height = safe_as<h_size_type>(product<std::uint64_t>(init(shape)));
+  auto const ldim = safe_as<h_size_type>(strides.back());
+  return MatrixType{height, width, buf, ldim};
 }
 
 template <typename BufferT, typename T, hydrogen::Device D>
 auto as_h2_tensor_impl(BufferT buf, El::Matrix<T, D> const& matrix)
 {
-    // Enforce usage constraint
-    static_assert(
-        std::is_same_v<std::decay_t<std::remove_pointer_t<BufferT>>, T>,
-        "BufferT must be T* or T const*");
+  // Enforce usage constraint
+  static_assert(std::is_same_v<std::decay_t<std::remove_pointer_t<BufferT>>, T>,
+                "BufferT must be T* or T const*");
 
-    using TensorType = Tensor<T>;
-    if (matrix.IsEmpty())
-        throw std::runtime_error("Cannot convert empty matrix to Tensor");
+  using TensorType = Tensor<T>;
+  if (matrix.IsEmpty())
+    throw std::runtime_error("Cannot convert empty matrix to Tensor");
 
-    auto const m = safe_as<DimType>(matrix.Height());
-    auto const n = safe_as<DimType>(matrix.Width());
-    auto const ldim = safe_as<DataIndexType>(matrix.LDim());
-    if (n == DimType{1}) // Column vector
-    {
-        return TensorType{H2Device<D>,
-                          buf,
-                          {m},
-                          {DT::Any},
-                          {as<DataIndexType>(1)},
-                          ComputeStream(get_sync_info(matrix))};
-    }
-    else if (m == DimType{1}) // Row vector
-    {
-        return TensorType{H2Device<D>,
-                          buf,
-                          {n},
-                          {DT::Any},
-                          {ldim},
-                          ComputeStream(get_sync_info(matrix))};
-    }
+  auto const m = safe_as<DimType>(matrix.Height());
+  auto const n = safe_as<DimType>(matrix.Width());
+  auto const ldim = safe_as<DataIndexType>(matrix.LDim());
+  if (n == DimType{1})  // Column vector
+  {
     return TensorType{H2Device<D>,
                       buf,
-                      {m, n},
-                      {DT::Any, DT::Any},
-                      {as<DataIndexType>(1), ldim},
+                      {m},
+                      {DT::Any},
+                      {as<DataIndexType>(1)},
                       ComputeStream(get_sync_info(matrix))};
+  }
+  else if (m == DimType{1})  // Row vector
+  {
+    return TensorType{H2Device<D>,
+                      buf,
+                      {n},
+                      {DT::Any},
+                      {ldim},
+                      ComputeStream(get_sync_info(matrix))};
+  }
+  return TensorType{H2Device<D>,
+                    buf,
+                    {m, n},
+                    {DT::Any, DT::Any},
+                    {as<DataIndexType>(1), ldim},
+                    ComputeStream(get_sync_info(matrix))};
 }
-} // namespace internal
+}  // namespace internal
 
 /** @brief View an H2 Tensor as a Hydrogen matrix.
  *
@@ -215,7 +212,7 @@ auto as_h_mat(Tensor<T>& tensor) -> El::Matrix<T, HydrogenDevice<D>>
 template <typename T, hydrogen::Device D>
 auto as_h2_tensor(El::Matrix<T, D> const& matrix) -> Tensor<T>
 {
-    return internal::as_h2_tensor_impl(matrix.LockedBuffer(), matrix);
+  return internal::as_h2_tensor_impl(matrix.LockedBuffer(), matrix);
 }
 
 /** @brief View a Hydrogen matrix as an H2 Tensor
@@ -247,7 +244,7 @@ auto as_h2_tensor(El::Matrix<T, D> const& matrix) -> Tensor<T>
 template <typename T, hydrogen::Device D>
 auto as_h2_tensor(El::Matrix<T, D>& matrix) -> Tensor<T>
 {
-    return internal::as_h2_tensor_impl(matrix.Buffer(), matrix);
+  return internal::as_h2_tensor_impl(matrix.Buffer(), matrix);
 }
 
-} // namespace h2
+}  // namespace h2

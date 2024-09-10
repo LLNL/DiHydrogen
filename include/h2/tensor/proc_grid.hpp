@@ -12,16 +12,15 @@
  * Processor grids and associated types.
  */
 
-#include <memory>
-
-#include <El.hpp>
-
 #include "h2/tensor/dist_types.hpp"
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/utils/As.hpp"
 #include "h2/utils/Describable.hpp"
 #include "h2/utils/Error.hpp"
 
+#include <El.hpp>
+
+#include <memory>
 
 namespace h2
 {
@@ -41,20 +40,21 @@ namespace h2
  *
  * The underlying communicator will be duplicated.
  *
- * \note There is no attempt at "topology-aware" mapping here (e.g., `MPI_Cart_create`).
- *       Users should manually manage this on the input communicator if desired.
+ * \note There is no attempt at "topology-aware" mapping here (e.g.,
+ * `MPI_Cart_create`). Users should manually manage this on the input
+ * communicator if desired.
  */
 class ProcessorGrid final : public Describable
 {
 private:
   /** Strides on the grid. */
   using GridStrideTuple = NDimTuple<RankType>;
-public:
 
+public:
   /**
    * Construct a processor grid of the given shape over the communicator.
    */
-  ProcessorGrid(const Comm& comm_, ShapeTuple shape_)
+  ProcessorGrid(Comm const& comm_, ShapeTuple shape_)
   {
     H2_ASSERT_ALWAYS(comm_.Size() == product<RankType>(shape_),
                      "Grid size (",
@@ -69,22 +69,20 @@ public:
   }
 
   /** Construct a null processor grid. */
-  ProcessorGrid()
-  {
-    grid_comm = std::make_shared<Comm>();
-  }
+  ProcessorGrid() { grid_comm = std::make_shared<Comm>(); }
 
   /** Get a reference to the underlying communicator. */
   Comm& comm() H2_NOEXCEPT { return *grid_comm; }
 
   /** Get a constant reference to the underlying communicator. */
-  const Comm& comm() const H2_NOEXCEPT { return *grid_comm; }
+  Comm const& comm() const H2_NOEXCEPT { return *grid_comm; }
 
   /** Return the shape of the grid. */
   ShapeTuple shape() const H2_NOEXCEPT { return grid_shape; }
 
   /** Return the size of a particular grid dimension. */
-  typename ShapeTuple::type shape(typename ShapeTuple::size_type i) const H2_NOEXCEPT
+  typename ShapeTuple::type
+  shape(typename ShapeTuple::size_type i) const H2_NOEXCEPT
   {
     return grid_shape[i];
   }
@@ -106,10 +104,7 @@ public:
   RankType size() const H2_NOEXCEPT { return grid_comm->Size(); }
 
   /** Return the rank of the calling process in the grid. */
-  RankType rank() const H2_NOEXCEPT
-  {
-    return grid_comm->Rank();
-  }
+  RankType rank() const H2_NOEXCEPT { return grid_comm->Rank(); }
 
   /** Return the rank of the process at a given grid coordinate. */
   RankType rank(ScalarIndexTuple coord) const H2_NOEXCEPT
@@ -162,7 +157,7 @@ public:
    * world) is part of this grid.
    */
   bool participating(RankType rank,
-                     const Comm& comm = El::mpi::COMM_WORLD) const H2_NOEXCEPT
+                     Comm const& comm = El::mpi::COMM_WORLD) const H2_NOEXCEPT
   {
     MPI_Group this_group;
     MPI_Comm_group(grid_comm->GetMPIComm(), &this_group);
@@ -177,7 +172,7 @@ public:
   /**
    * Return true if rank in the provided grid is part of this grid.
    */
-  bool participating(RankType rank, const ProcessorGrid& grid) const H2_NOEXCEPT
+  bool participating(RankType rank, ProcessorGrid const& grid) const H2_NOEXCEPT
   {
     return participating(rank, *grid.grid_comm);
   }
@@ -188,7 +183,7 @@ public:
    * Two grids are identical if they have the same shape and use the
    * same underlying communicator.
    */
-  bool is_identical_to(const ProcessorGrid& other) const H2_NOEXCEPT
+  bool is_identical_to(ProcessorGrid const& other) const H2_NOEXCEPT
   {
     return (grid_shape == other.grid_shape)
            && (grid_comm->GetMPIComm() == other.grid_comm->GetMPIComm());
@@ -201,7 +196,7 @@ public:
    * underlying communicators consist of the same processes in the same
    * order (i.e., they are `MPI_CONGRUENT`).
    */
-  bool is_congruent_to(const ProcessorGrid& other) const H2_NOEXCEPT
+  bool is_congruent_to(ProcessorGrid const& other) const H2_NOEXCEPT
   {
     if (grid_shape != other.grid_shape)
     {
@@ -215,15 +210,15 @@ public:
     }
     int result;
     MPI_Comm_compare(
-        grid_comm->GetMPIComm(), other.grid_comm->GetMPIComm(), &result);
+      grid_comm->GetMPIComm(), other.grid_comm->GetMPIComm(), &result);
     return result == MPI_IDENT || result == MPI_CONGRUENT;
   }
 
 private:
   /** Underlying communicator for the grid. */
   std::shared_ptr<Comm> grid_comm;
-  ShapeTuple grid_shape;  /**< Shape of the grid. */
-  GridStrideTuple grid_strides;  /**< Strides for computing indices. */
+  ShapeTuple grid_shape;        /**< Shape of the grid. */
+  GridStrideTuple grid_strides; /**< Strides for computing indices. */
 };
 
 /**
@@ -232,13 +227,13 @@ private:
  * Two grids are equal when they have the same shape and the same
  * underlying communicator.
  */
-inline bool operator==(const ProcessorGrid& grid1, const ProcessorGrid& grid2)
+inline bool operator==(ProcessorGrid const& grid1, ProcessorGrid const& grid2)
 {
   return grid1.is_identical_to(grid2);
 }
 
 /** Inequality for processor grids. */
-inline bool operator!=(const ProcessorGrid& grid1, const ProcessorGrid& grid2)
+inline bool operator!=(ProcessorGrid const& grid1, ProcessorGrid const& grid2)
 {
   return !grid1.is_identical_to(grid2);
 }

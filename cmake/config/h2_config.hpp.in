@@ -6,14 +6,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #pragma once
-#ifndef H2_CONFIG_HPP_
-#define H2_CONFIG_HPP_
 
 // Version information
+// clang-format off
 #define H2_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
 #define H2_VERSION_MINOR @PROJECT_VERSION_MINOR@
 #define H2_VERSION_PATCH @PROJECT_VERSION_PATCH@
 #define H2_VERSION "@PROJECT_VERSION@"
+// clang-format on
 
 // Configuration information
 #cmakedefine01 H2_HAS_HALF
@@ -30,9 +30,11 @@
 
 #cmakedefine H2_DEBUG
 
+// clang-format off
 // Features detected at configure time
 #define H2_PRETTY_FUNCTION @H2_PRETTY_FUNCTION@
 #define H2_RESTRICT @H2_RESTRICT@
+// clang-format on
 
 // Disable noexcept when debugging, as debug asserts may throw.
 #ifdef H2_DEBUG
@@ -66,6 +68,4 @@
 #define H2_NODISCARD
 #endif
 
-#endif // defined(__cplusplus)
-
-#endif // H2_CONFIG_HPP_
+#endif  // defined(__cplusplus)

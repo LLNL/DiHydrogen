@@ -12,17 +12,17 @@
  * Manages a raw memory buffer.
  */
 
+#include "h2/core/allocator.hpp"
+#include "h2/core/device.hpp"
+#include "h2/core/sync.hpp"
+#include "h2/tensor/tensor_types.hpp"
+#include "h2/utils/typename.hpp"
+
 #include <algorithm>
+#include <cstddef>
 #include <memory>
 #include <ostream>
 #include <unordered_map>
-#include <cstddef>
-
-#include "h2/tensor/tensor_types.hpp"
-#include "h2/utils/typename.hpp"
-#include "h2/core/allocator.hpp"
-#include "h2/core/sync.hpp"
-#include "h2/core/device.hpp"
 
 #ifdef H2_HAS_GPU
 #include "h2/gpu/runtime.hpp"
@@ -35,22 +35,22 @@ namespace h2
  * Manage a raw buffer of data on a device.
  */
 template <typename T>
-class RawBuffer {
+class RawBuffer
+{
 public:
-
-  RawBuffer(Device dev, const ComputeStream& stream_)
+  RawBuffer(Device dev, ComputeStream const& stream_)
     : RawBuffer(dev, 0, false, stream_)
   {}
 
   RawBuffer(Device dev,
             std::size_t size,
             bool defer_alloc,
-            const ComputeStream& stream_)
-      : buffer(nullptr),
-        buffer_size(size),
-        unowned_buffer(false),
-        buffer_device(dev),
-        stream(stream_)
+            ComputeStream const& stream_)
+    : buffer(nullptr),
+      buffer_size(size),
+      unowned_buffer(false),
+      buffer_device(dev),
+      stream(stream_)
   {
     if (!defer_alloc)
     {
@@ -61,12 +61,12 @@ public:
   RawBuffer(Device dev,
             T* external_buffer,
             std::size_t size,
-            const ComputeStream& stream_)
-      : buffer(external_buffer),
-        buffer_size(size),
-        unowned_buffer(true),
-        buffer_device(dev),
-        stream(stream_)
+            ComputeStream const& stream_)
+    : buffer(external_buffer),
+      buffer_size(size),
+      unowned_buffer(true),
+      buffer_device(dev),
+      stream(stream_)
   {}
 
   ~RawBuffer() { H2_TERMINATE_ON_THROW_ALWAYS(release()); }
@@ -95,7 +95,7 @@ public:
     if (buffer)
     {
       // Wait for all pending operations.
-      for (const auto& [other_stream, event] : pending_streams)
+      for (auto const& [other_stream, event] : pending_streams)
       {
         stream.wait_for(event);
       }
@@ -111,9 +111,11 @@ public:
     }
     // Clear all sync registrations.
     pending_streams.clear();
-#else  // H2_HAS_GPU
-    if (buffer) {
-      if (!unowned_buffer) {
+#else   // H2_HAS_GPU
+    if (buffer)
+    {
+      if (!unowned_buffer)
+      {
         internal::Allocator<T, Device::CPU>::deallocate(buffer, stream);
       }
       buffer = nullptr;
@@ -126,22 +128,22 @@ public:
 
   T* data() H2_NOEXCEPT { return buffer; }
 
-  const T* data() const H2_NOEXCEPT { return buffer; }
+  T const* data() const H2_NOEXCEPT { return buffer; }
 
-  const T* const_data() const H2_NOEXCEPT { return buffer; }
+  T const* const_data() const H2_NOEXCEPT { return buffer; }
 
   std::size_t size() const H2_NOEXCEPT { return buffer_size; }
 
-  const ComputeStream& get_stream() const H2_NOEXCEPT { return stream; }
+  ComputeStream const& get_stream() const H2_NOEXCEPT { return stream; }
 
-  void set_stream(const ComputeStream& stream_) { stream = stream_; }
+  void set_stream(ComputeStream const& stream_) { stream = stream_; }
 
   /**
    * Inform the RawBuffer that a stream is no longer using the
    * RawBuffer, but may have pending operations, and therefore needs to
    * be sync'd with the RawBuffer's stream.
    */
-  void register_release([[maybe_unused]] const ComputeStream& other_stream)
+  void register_release([[maybe_unused]] ComputeStream const& other_stream)
   {
     // When we only have CPU devices, there is nothing to do.
 #ifdef H2_HAS_GPU
@@ -157,7 +159,7 @@ public:
       if (pending_streams.count(other_stream))
       {
         // Update the existing event.
-        const auto& event = pending_streams[other_stream];
+        auto const& event = pending_streams[other_stream];
         other_stream.add_sync_point<Device::GPU, Device::GPU>(event);
       }
       else
@@ -172,11 +174,11 @@ public:
   }
 
 private:
-  T* buffer;  /**< Internal buffer. */
-  std::size_t buffer_size;  /**< Number of elements in buffer. */
-  bool unowned_buffer;      /**< Whether buffer is externally managed. */
-  Device buffer_device;     /**< Device on which buffer was allocated. */
-  ComputeStream stream;     /**< Device stream for synchronization. */
+  T* buffer;               /**< Internal buffer. */
+  std::size_t buffer_size; /**< Number of elements in buffer. */
+  bool unowned_buffer;     /**< Whether buffer is externally managed. */
+  Device buffer_device;    /**< Device on which buffer was allocated. */
+  ComputeStream stream;    /**< Device stream for synchronization. */
 
 #ifdef H2_HAS_GPU
   /**
@@ -192,12 +194,11 @@ private:
 
 /** Support printing RawBuffer. */
 template <typename T>
-inline std::ostream& operator<<(std::ostream& os, const RawBuffer<T>& buf)
+inline std::ostream& operator<<(std::ostream& os, RawBuffer<T> const& buf)
 {
-  os << "RawBuffer<" << TypeName<T>()
-     << ", " << buf.get_device()
-     << ", " << buf.get_stream()
-     << ">(" << buf.const_data() << ", " << buf.size() << ")";
+  os << "RawBuffer<" << TypeName<T>() << ", " << buf.get_device() << ", "
+     << buf.get_stream() << ">(" << buf.const_data() << ", " << buf.size()
+     << ")";
   return os;
 }
 
@@ -207,9 +208,9 @@ namespace internal
 template <typename T, Device Dev>
 struct DeviceBufferPrinter
 {
-  static void print(const T* buf,
+  static void print(T const* buf,
                     std::size_t size,
-                    const ComputeStream& stream,
+                    ComputeStream const& stream,
                     std::ostream& os);
 };
 
@@ -217,7 +218,7 @@ template <typename T>
 struct DeviceBufferPrinter<T, Device::CPU>
 {
   static void
-  print(const T* buf, std::size_t size, const ComputeStream&, std::ostream& os)
+  print(T const* buf, std::size_t size, ComputeStream const&, std::ostream& os)
   {
     H2_ASSERT_DEBUG(size == 0 || buf != nullptr,
                     "Attempt to print null buffer");
@@ -237,9 +238,9 @@ struct DeviceBufferPrinter<T, Device::CPU>
 template <typename T>
 struct DeviceBufferPrinter<T, Device::GPU>
 {
-  static void print(const T* buf,
+  static void print(T const* buf,
                     std::size_t size,
-                    const ComputeStream& stream,
+                    ComputeStream const& stream,
                     std::ostream& os)
   {
     H2_ASSERT_DEBUG(size == 0 || buf != nullptr,
@@ -259,10 +260,10 @@ struct DeviceBufferPrinter<T, Device::GPU>
     {
       internal::ManagedBuffer<T> cpu_buf(size, Device::CPU);
       gpu::mem_copy(
-          cpu_buf.data(), buf, size, stream.get_stream<Device::GPU>());
+        cpu_buf.data(), buf, size, stream.get_stream<Device::GPU>());
       stream.wait_for_this();
       DeviceBufferPrinter<T, Device::CPU>::print(
-          cpu_buf.data(), size, stream, os);
+        cpu_buf.data(), size, stream, os);
     }
   }
 };
@@ -274,12 +275,12 @@ struct DeviceBufferPrinter<T, Device::GPU>
 /** Print the contents of a RawBuffer. */
 template <typename T>
 inline std::ostream& raw_buffer_contents(std::ostream& os,
-                                         const RawBuffer<T>& buf)
+                                         RawBuffer<T> const& buf)
 {
   H2_DEVICE_DISPATCH_SAME(
-      buf.get_device(),
-      (internal::DeviceBufferPrinter<T, Dev>::print(
-          buf.const_data(), buf.size(), buf.get_stream(), os)));
+    buf.get_device(),
+    (internal::DeviceBufferPrinter<T, Dev>::print(
+      buf.const_data(), buf.size(), buf.get_stream(), os)));
   return os;
 }
 

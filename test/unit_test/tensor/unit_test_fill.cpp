@@ -5,15 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_template_test_macros.hpp>
-
 #include "h2/tensor/init/fill.hpp"
 #include "utils.hpp"
 
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace h2;
-
 
 TEMPLATE_LIST_TEST_CASE("Zeroing buffers works",
                         "[tensor][fill]",
@@ -52,7 +50,7 @@ TEMPLATE_LIST_TEST_CASE("Zeroing contiguous tensors",
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
     write_ele<Dev>(
-        tensor.data(), i, static_cast<Type>(42), tensor.get_stream());
+      tensor.data(), i, static_cast<Type>(42), tensor.get_stream());
   }
 
   REQUIRE_NOTHROW(zero(tensor));
@@ -78,7 +76,7 @@ TEMPLATE_LIST_TEST_CASE("Zeroing contiguous tensors through BaseTensor",
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
     write_ele<Dev>(
-        tensor.data(), i, static_cast<Type>(42), tensor.get_stream());
+      tensor.data(), i, static_cast<Type>(42), tensor.get_stream());
   }
 
   REQUIRE_NOTHROW(zero(base_tensor));
@@ -103,8 +101,7 @@ TEMPLATE_LIST_TEST_CASE("Filling contiguous tensors",
 
   for (DataIndexType i = 0; i < tensor.numel(); ++i)
   {
-    write_ele<Dev>(
-        tensor.data(), i, static_cast<Type>(0), tensor.get_stream());
+    write_ele<Dev>(tensor.data(), i, static_cast<Type>(0), tensor.get_stream());
   }
 
   REQUIRE_NOTHROW(fill(tensor, fill_val));

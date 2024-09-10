@@ -5,15 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_template_test_macros.hpp>
-
 #include "h2/core/types.hpp"
 
 #include "../tensor/utils.hpp"
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace h2;
-
 
 TEMPLATE_LIST_TEST_CASE("Runtime type info for compute types works",
                         "[types]",
@@ -40,7 +38,10 @@ TEMPLATE_LIST_TEST_CASE("Runtime type info for compute types works",
   REQUIRE(tinfo != tinfo_diff);
 }
 
-struct TestStruct { int foo; };
+struct TestStruct
+{
+  int foo;
+};
 
 TEST_CASE("Runtime type info works for any type", "[types]")
 {

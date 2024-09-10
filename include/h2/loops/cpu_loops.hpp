@@ -16,12 +16,11 @@
 
 #include <h2_config.hpp>
 
-#include <cstddef>
-#include <type_traits>
-
 #include "h2/utils/const_for.hpp"
 #include "h2/utils/function_traits.hpp"
 
+#include <cstddef>
+#include <type_traits>
 
 namespace h2
 {
@@ -36,9 +35,7 @@ namespace cpu
  * to. (The return value may not be discarded.)
  */
 template <typename FuncT, typename... Args>
-void elementwise_loop(FuncT&& func,
-                      std::size_t size,
-                      Args... args)
+void elementwise_loop(FuncT&& func, std::size_t size, Args... args)
 {
   using traits = FunctionTraits<FuncT>;
   constexpr bool has_return = !std::is_same_v<typename traits::RetT, void>;
@@ -50,18 +47,18 @@ void elementwise_loop(FuncT&& func,
   std::tuple<Args...> args_ptrs{args...};
   typename traits::ArgsTuple loaded_args;
 
-  static_assert(!has_return
-                    || std::is_convertible_v<
-                        typename traits::RetT,
-                        std::remove_pointer_t<
-                            std::tuple_element_t<0, decltype(args_ptrs)>>>,
-                "Cannt convert return value to output");
+  static_assert(
+    !has_return
+      || std::is_convertible_v<
+        typename traits::RetT,
+        std::remove_pointer_t<std::tuple_element_t<0, decltype(args_ptrs)>>>,
+    "Cannt convert return value to output");
 
   for (std::size_t i = 0; i < size; ++i)
   {
     const_for<arg_offset, sizeof...(Args), std::size_t{1}>([&](auto arg_i) {
       std::get<arg_i.value - arg_offset>(loaded_args) =
-          std::get<arg_i.value>(args_ptrs)[i];
+        std::get<arg_i.value>(args_ptrs)[i];
     });
     if constexpr (has_return)
     {

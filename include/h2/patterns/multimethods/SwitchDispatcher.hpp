@@ -234,53 +234,52 @@ template <typename FunctorT,
           typename... ArgumentTs>
 class SwitchDispatcher<FunctorT, ReturnT, ThisBase, ThisList, ArgumentTs...>
 {
-    static_assert(sizeof...(ArgumentTs) % 2 == 0,
-                  "Must pass ArgumentTs as (Base, TL<DTypes>).");
+  static_assert(sizeof...(ArgumentTs) % 2 == 0,
+                "Must pass ArgumentTs as (Base, TL<DTypes>).");
 
 public:
-    template <typename... Args>
-    static ReturnT Exec(FunctorT F, ThisBase& arg, Args&&... others)
-    {
-        using Head = meta::tlist::Car<ThisList>;
-        using Tail = meta::tlist::Cdr<ThisList>;
+  template <typename... Args>
+  static ReturnT Exec(FunctorT F, ThisBase& arg, Args&&... others)
+  {
+    using Head = meta::tlist::Car<ThisList>;
+    using Tail = meta::tlist::Cdr<ThisList>;
 
-        if (auto* arg_dc = dynamic_cast<Head*>(&arg))
-            return SwitchDispatcher<FunctorT, ReturnT, ArgumentTs...>::Exec(
-                F, std::forward<Args>(others)..., *arg_dc);
-        else
-            return SwitchDispatcher<FunctorT,
-                                    ReturnT,
-                                    ThisBase,
-                                    Tail,
-                                    ArgumentTs...>::Exec(F,
-                                                         arg,
-                                                         std::forward<Args>(
-                                                             others)...);
-    }
+    if (auto* arg_dc = dynamic_cast<Head*>(&arg))
+      return SwitchDispatcher<FunctorT, ReturnT, ArgumentTs...>::Exec(
+        F, std::forward<Args>(others)..., *arg_dc);
+    else
+      return SwitchDispatcher<FunctorT,
+                              ReturnT,
+                              ThisBase,
+                              Tail,
+                              ArgumentTs...>::Exec(F,
+                                                   arg,
+                                                   std::forward<Args>(
+                                                     others)...);
+  }
 };
 
 // Base case
 template <typename FunctorT, typename ReturnT>
 class SwitchDispatcher<FunctorT, ReturnT>
 {
-    template <typename... Ts>
-    using Invocable = meta::IsInvocableVT<FunctorT, Ts...>;
+  template <typename... Ts>
+  using Invocable = meta::IsInvocableVT<FunctorT, Ts...>;
 
 public:
-    template <typename... Args, meta::EnableWhenV<Invocable<Args...>, int> = 0>
-    static ReturnT Exec(FunctorT F, Args&&... others)
-    {
-        return F(std::forward<Args>(others)...);
-    }
+  template <typename... Args, meta::EnableWhenV<Invocable<Args...>, int> = 0>
+  static ReturnT Exec(FunctorT F, Args&&... others)
+  {
+    return F(std::forward<Args>(others)...);
+  }
 
-    // All types were deduced, but there is no suitable dispatch for
-    // this case.
-    template <typename... Args,
-              meta::EnableUnlessV<Invocable<Args...>, int> = 0>
-    static ReturnT Exec(FunctorT F, Args&&... args)
-    {
-        return F.DispatchError(std::forward<Args>(args)...);
-    }
+  // All types were deduced, but there is no suitable dispatch for
+  // this case.
+  template <typename... Args, meta::EnableUnlessV<Invocable<Args...>, int> = 0>
+  static ReturnT Exec(FunctorT F, Args&&... args)
+  {
+    return F.DispatchError(std::forward<Args>(args)...);
+  }
 };
 
 // Deduction failure case
@@ -295,14 +294,14 @@ class SwitchDispatcher<FunctorT,
                        ArgumentTs...>
 {
 public:
-    template <typename... Args>
-    static ReturnT Exec(FunctorT F, Args&&... args)
-    {
-        return F.DeductionError(std::forward<Args>(args)...);
-    }
+  template <typename... Args>
+  static ReturnT Exec(FunctorT F, Args&&... args)
+  {
+    return F.DeductionError(std::forward<Args>(args)...);
+  }
 };
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
 
-} // namespace multimethods
-} // namespace h2
+}  // namespace multimethods
+}  // namespace h2

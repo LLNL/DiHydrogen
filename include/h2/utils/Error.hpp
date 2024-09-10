@@ -9,12 +9,12 @@
 
 #include <h2_config.hpp>
 
+#include "h2/utils/strings.hpp"
+
 #include <exception>
 #include <iostream>
 #include <memory>
 #include <string>
-
-#include "h2/utils/strings.hpp"
 
 /** @file Error.hpp
  *
@@ -31,20 +31,24 @@
  *  @param name The name of the new class.
  *  @param parent The name of the parent class.
  */
-#define H2_DEFINE_FORWARDING_EXCEPTION(name, parent)                         \
-  class name : public parent                                                 \
-  {                                                                          \
-  public:                                                                    \
-    /* @brief Constructor */                                                 \
-    template <typename... Ts>                                                \
-    name(Ts&&... args) : parent(h2::build_string(std::forward<Ts>(args)...)) \
-    {}                                                                       \
+#define H2_DEFINE_FORWARDING_EXCEPTION(name, parent)                           \
+  class name : public parent                                                   \
+  {                                                                            \
+  public:                                                                      \
+    /* @brief Constructor */                                                   \
+    template <typename... Ts>                                                  \
+    name(Ts&&... args) : parent(h2::build_string(std::forward<Ts>(args)...))   \
+    {}                                                                         \
   }
 
 /** Save a backtrace when constructing an exception. */
-static constexpr struct save_backtrace_t {} SaveBacktrace;
+static constexpr struct save_backtrace_t
+{
+} SaveBacktrace;
 /** No not save a backtrace when constructing an exception. */
-static constexpr struct no_save_backtrace_t {} NoSaveBacktrace;
+static constexpr struct no_save_backtrace_t
+{
+} NoSaveBacktrace;
 
 /**
  * Base class for H2 exceptions.
@@ -57,30 +61,27 @@ static constexpr struct no_save_backtrace_t {} NoSaveBacktrace;
 class H2ExceptionBase : public std::exception
 {
 public:
-  H2ExceptionBase(const std::string& what_arg)
+  H2ExceptionBase(std::string const& what_arg)
   {
     set_what_and_maybe_collect_backtrace(what_arg, should_save_backtrace());
   }
 
-  H2ExceptionBase(const char* what_arg)
-    : H2ExceptionBase(std::string(what_arg))
+  H2ExceptionBase(char const* what_arg) : H2ExceptionBase(std::string(what_arg))
   {}
 
-  H2ExceptionBase(const std::string& what_arg, save_backtrace_t)
+  H2ExceptionBase(std::string const& what_arg, save_backtrace_t)
   {
     set_what_and_maybe_collect_backtrace(what_arg, true);
   }
 
-  H2ExceptionBase(const std::string& what_arg, no_save_backtrace_t)
+  H2ExceptionBase(std::string const& what_arg, no_save_backtrace_t)
   {
     set_what_and_maybe_collect_backtrace(what_arg, false);
   }
 
-  H2ExceptionBase(const H2ExceptionBase& other) noexcept
-    : what_(other.what_)
-  {}
+  H2ExceptionBase(H2ExceptionBase const& other) noexcept : what_(other.what_) {}
 
-  H2ExceptionBase& operator=(const H2ExceptionBase& other) noexcept
+  H2ExceptionBase& operator=(H2ExceptionBase const& other) noexcept
   {
     what_ = other.what_;
     return *this;
@@ -88,7 +89,7 @@ public:
 
   virtual ~H2ExceptionBase() {}
 
-  virtual const char* what() const noexcept { return what_->c_str(); }
+  virtual char const* what() const noexcept { return what_->c_str(); }
 
 private:
   /**
@@ -103,7 +104,7 @@ private:
   static bool should_save_backtrace();
 
   /** Set up what_ and maybe collect a backtrace.. */
-  void set_what_and_maybe_collect_backtrace(const std::string& what_arg,
+  void set_what_and_maybe_collect_backtrace(std::string const& what_arg,
                                             bool collect_bt);
 };
 
@@ -141,13 +142,13 @@ H2_DEFINE_FORWARDING_EXCEPTION(H2Exception, H2FatalException);
  *  @param ... The arguments to pass to the exception.
  */
 #define H2_ASSERT(cond, excptn, ...)                                           \
-    do                                                                         \
+  do                                                                           \
+  {                                                                            \
+    if (!(cond))                                                               \
     {                                                                          \
-        if (!(cond))                                                           \
-        {                                                                      \
-            throw excptn(__VA_ARGS__);                                         \
-        }                                                                      \
-    } while (0)
+      throw excptn(__VA_ARGS__);                                               \
+    }                                                                          \
+  } while (0)
 
 #ifdef H2_DEBUG
 /** @def H2_ASSERT_DEBUG
@@ -157,7 +158,8 @@ H2_DEFINE_FORWARDING_EXCEPTION(H2Exception, H2FatalException);
  * @param cond Boolean condition to test.
  * @param ... Message to pass to the exception if the condition fails.
  */
-#define H2_ASSERT_DEBUG(cond, ...) H2_ASSERT(cond, H2FatalException, __VA_ARGS__)
+#define H2_ASSERT_DEBUG(cond, ...)                                             \
+  H2_ASSERT(cond, H2FatalException, __VA_ARGS__)
 #else
 #define H2_ASSERT_DEBUG(cond, ...)
 #endif
@@ -169,7 +171,8 @@ H2_DEFINE_FORWARDING_EXCEPTION(H2Exception, H2FatalException);
  * @param cond Boolean condition to test.
  * @param ... Message to pass to the exception if the condition fails.
  */
-#define H2_ASSERT_ALWAYS(cond, ...) H2_ASSERT(cond, H2FatalException, __VA_ARGS__)
+#define H2_ASSERT_ALWAYS(cond, ...)                                            \
+  H2_ASSERT(cond, H2FatalException, __VA_ARGS__)
 
 /**
  * Execute the given code block and terminate the application if an
@@ -195,8 +198,7 @@ H2_DEFINE_FORWARDING_EXCEPTION(H2Exception, H2FatalException);
                 << e.what() << std::endl;                                      \
       std::terminate();                                                        \
     }                                                                          \
-  }                                                                            \
- while (0)
+  } while (0)
 #ifdef H2_DEBUG
 /**
  * Behave exactly like H2_TERMINATE_ON_THROW_ALWAYS, except only check
@@ -208,8 +210,7 @@ H2_DEFINE_FORWARDING_EXCEPTION(H2Exception, H2FatalException);
   do                                                                           \
   {                                                                            \
     code;                                                                      \
-  }                                                                            \
-  while (0)
+  } while (0)
 #endif  // H2_DEBUG
 
 namespace h2
@@ -221,4 +222,4 @@ namespace h2
  */
 void break_on_me(std::string const& msg = "");
 
-} // namespace h2
+}  // namespace h2

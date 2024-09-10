@@ -21,7 +21,7 @@ struct EqVT;
 template <typename T, typename U>
 inline constexpr bool EqV()
 {
-    return EqVT<T, U>::value;
+  return EqVT<T, U>::value;
 }
 
 template <typename T, typename U>
@@ -37,7 +37,7 @@ template <typename T>
 struct EqVT<T, T> : TrueType
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
 
-} // namespace meta
-} // namespace h2
+}  // namespace meta
+}  // namespace h2

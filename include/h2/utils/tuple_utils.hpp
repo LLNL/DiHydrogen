@@ -14,7 +14,6 @@
 
 #include <tuple>
 
-
 namespace h2
 {
 
@@ -59,10 +58,10 @@ struct TupleCatT<std::tuple<T1s...>, std::tuple<T2s...>>
 
 template <typename Tuple, typename... OtherTuples>
 struct TupleCatT<Tuple, OtherTuples...>
-    : TupleCatT<Tuple, TupleCatT<OtherTuples...>>
+  : TupleCatT<Tuple, TupleCatT<OtherTuples...>>
 {};
 
 template <typename... Tuples>
 using TupleCat_t = typename TupleCatT<Tuples...>::type;
 
-}
+}  // namespace h2

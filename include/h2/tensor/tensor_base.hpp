@@ -43,16 +43,16 @@ namespace h2
  * Certain operations may implicitly call `ensure` (e.g., `data`).
  * This only happens when the tensor is not const.
  */
-class BaseTensor : public Describable {
+class BaseTensor : public Describable
+{
 public:
-
   /**
    * Construct a tensor with the given shape and dimension types.
    */
-  BaseTensor(const ShapeTuple& shape_, const DimensionTypeTuple& dim_types_) :
-    tensor_shape(shape_),
-    tensor_dim_types(dim_types_),
-    tensor_view_type(ViewType::None)
+  BaseTensor(ShapeTuple const& shape_, DimensionTypeTuple const& dim_types_)
+    : tensor_shape(shape_),
+      tensor_dim_types(dim_types_),
+      tensor_view_type(ViewType::None)
   {
     H2_ASSERT_DEBUG(tensor_shape.size() == tensor_dim_types.size(),
                     "Tensor shape (",
@@ -61,7 +61,8 @@ public:
                     tensor_dim_types,
                     ") must be the same size");
     H2_ASSERT_DEBUG(shape_.is_empty() || product<DataIndexType>(shape_) > 0,
-                    "Zero-length dimensions are not permitted, got ", shape_);
+                    "Zero-length dimensions are not permitted, got ",
+                    shape_);
   }
 
   /** Construct an empty tensor. */
@@ -73,22 +74,22 @@ public:
   virtual TypeInfo get_type_info() const H2_NOEXCEPT = 0;
 
   /** Return the shape of the tensor. */
-  ShapeTuple shape() const H2_NOEXCEPT {
-    return tensor_shape;
-  }
+  ShapeTuple shape() const H2_NOEXCEPT { return tensor_shape; }
 
   /** Return the size of a particular dimension. */
-  typename ShapeTuple::type shape(typename ShapeTuple::size_type i) const H2_NOEXCEPT {
+  typename ShapeTuple::type
+  shape(typename ShapeTuple::size_type i) const H2_NOEXCEPT
+  {
     return tensor_shape[i];
   }
 
   /** Return the types of each dimension of the tensor. */
-  DimensionTypeTuple dim_types() const H2_NOEXCEPT {
-    return tensor_dim_types;
-  }
+  DimensionTypeTuple dim_types() const H2_NOEXCEPT { return tensor_dim_types; }
 
   /** Return the type of a particular dimension. */
-  typename DimensionTypeTuple::type dim_type(typename DimensionTypeTuple::size_type i) const H2_NOEXCEPT {
+  typename DimensionTypeTuple::type
+  dim_type(typename DimensionTypeTuple::size_type i) const H2_NOEXCEPT
+  {
     return tensor_dim_types[i];
   }
 
@@ -96,16 +97,20 @@ public:
   virtual StrideTuple strides() const H2_NOEXCEPT = 0;
 
   /** Return the stride of a particular dimension. */
-  virtual typename StrideTuple::type stride(typename StrideTuple::size_type i) const H2_NOEXCEPT = 0;
+  virtual typename StrideTuple::type
+  stride(typename StrideTuple::size_type i) const H2_NOEXCEPT = 0;
 
   /** Return the number of dimensions (i.e., the rank) of the tensor. */
-  typename ShapeTuple::size_type ndim() const H2_NOEXCEPT {
+  typename ShapeTuple::size_type ndim() const H2_NOEXCEPT
+  {
     return tensor_shape.size();
   }
 
   /** Return the number of elements in the tensor. */
-  DataIndexType numel() const H2_NOEXCEPT {
-    if (tensor_shape.is_empty()) {
+  DataIndexType numel() const H2_NOEXCEPT
+  {
+    if (tensor_shape.is_empty())
+    {
       return 0;
     }
     return product<DataIndexType>(tensor_shape);
@@ -118,12 +123,14 @@ public:
   virtual bool is_contiguous() const H2_NOEXCEPT = 0;
 
   /** Return true if this tensor is a view (i.e., does not own its storage). */
-  bool is_view() const H2_NOEXCEPT {
+  bool is_view() const H2_NOEXCEPT
+  {
     return tensor_view_type != ViewType::None;
   }
 
   /** Return true if this tensor is a constant view. */
-  bool is_const_view() const H2_NOEXCEPT {
+  bool is_const_view() const H2_NOEXCEPT
+  {
     return tensor_view_type == ViewType::Const;
   }
 
@@ -137,7 +144,7 @@ public:
   virtual ComputeStream get_stream() const H2_NOEXCEPT = 0;
 
   /** Set the compute stream associated with this tensor. */
-  virtual void set_stream(const ComputeStream& stream) = 0;
+  virtual void set_stream(ComputeStream const& stream) = 0;
 
   /**
    * Return a raw, generic pointer (void*) to the underlying storage.
@@ -151,13 +158,13 @@ public:
    * Return a raw, generic constant pointer (const void*) to the
    * underlying storage.
    */
-  virtual const void* storage_data() const = 0;
+  virtual void const* storage_data() const = 0;
 
   /**
    * Return a raw, generic constant pointer (const void*) to the
    * underlying storage.
    */
-  virtual const void* const_storage_data() const = 0;
+  virtual void const* const_storage_data() const = 0;
 
   /**
    * Ensure memory is backing this tensor, allocating if necessary.
@@ -203,15 +210,15 @@ public:
    *
    * It is an error to call this on a view.
    */
-  virtual void resize(const ShapeTuple& new_shape) = 0;
+  virtual void resize(ShapeTuple const& new_shape) = 0;
 
   /**
    * Resize the tensor to a new shape, also changing dimension types.
    *
    * It is an error to call this on a view.
    */
-  virtual void resize(const ShapeTuple& new_shape,
-                      const DimensionTypeTuple& new_dim_types) = 0;
+  virtual void resize(ShapeTuple const& new_shape,
+                      DimensionTypeTuple const& new_dim_types) = 0;
 
   /**
    * Resize the tensor to a new shape, also changing dimension types
@@ -219,22 +226,23 @@ public:
    *
    * It is an error to call this on a view.
    */
-  virtual void resize(const ShapeTuple& new_shape,
-                      const DimensionTypeTuple& new_dim_types,
-                      const StrideTuple& new_strides) = 0;
+  virtual void resize(ShapeTuple const& new_shape,
+                      DimensionTypeTuple const& new_dim_types,
+                      StrideTuple const& new_strides) = 0;
 
 protected:
-  ShapeTuple tensor_shape;  /**< Shape of the tensor. */
-  DimensionTypeTuple tensor_dim_types;  /**< Type of each dimension. */
-  ViewType tensor_view_type;  /**< What type of view (if any) this tensor is. */
+  ShapeTuple tensor_shape;             /**< Shape of the tensor. */
+  DimensionTypeTuple tensor_dim_types; /**< Type of each dimension. */
+  ViewType tensor_view_type; /**< What type of view (if any) this tensor is. */
 
-  /** Construct a tensor with the given view type, shape, and dimension types. */
+  /** Construct a tensor with the given view type, shape, and dimension types.
+   */
   BaseTensor(ViewType view_type_,
-             const ShapeTuple& shape_,
-             const DimensionTypeTuple& dim_types_)
-      : tensor_shape(shape_),
-        tensor_dim_types(dim_types_),
-        tensor_view_type(view_type_)
+             ShapeTuple const& shape_,
+             DimensionTypeTuple const& dim_types_)
+    : tensor_shape(shape_),
+      tensor_dim_types(dim_types_),
+      tensor_view_type(view_type_)
   {
     H2_ASSERT_DEBUG(tensor_shape.size() == tensor_dim_types.size(),
                     "Tensor shape ",

@@ -5,16 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_template_test_macros.hpp>
-
-#include <unordered_map>
+#include "h2/core/sync.hpp"
 
 #include <El.hpp>
 
-#include "h2/core/sync.hpp"
+#include <unordered_map>
 
 #include "../tensor/utils.hpp"
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace h2;
 
@@ -68,15 +67,23 @@ TEMPLATE_LIST_TEST_CASE("Sync creation routines work", "[sync]", AllDevList)
   constexpr Device Dev = TestType::value;
 
   ComputeStream stream{Dev};
-  REQUIRE_NOTHROW([&]() { stream = create_new_compute_stream<Dev>(); }());
+  REQUIRE_NOTHROW([&]() {
+    stream = create_new_compute_stream<Dev>();
+  }());
   REQUIRE_NOTHROW(destroy_compute_stream<Dev>(stream));
-  REQUIRE_NOTHROW([&]() { stream = create_new_compute_stream(Dev); }());
+  REQUIRE_NOTHROW([&]() {
+    stream = create_new_compute_stream(Dev);
+  }());
   REQUIRE_NOTHROW(destroy_compute_stream(stream));
 
   SyncEvent event{Dev};
-  REQUIRE_NOTHROW([&]() { event = create_new_sync_event<Dev>(); }());
+  REQUIRE_NOTHROW([&]() {
+    event = create_new_sync_event<Dev>();
+  }());
   REQUIRE_NOTHROW(destroy_sync_event<Dev>(event));
-  REQUIRE_NOTHROW([&]() { event = create_new_sync_event(Dev); }());
+  REQUIRE_NOTHROW([&]() {
+    event = create_new_sync_event(Dev);
+  }());
   REQUIRE_NOTHROW(destroy_sync_event(event));
 }
 
@@ -155,9 +162,11 @@ TEST_CASE("CPU sync El::SyncInfo conversion works", "[sync]")
 {
   // Conversion from El:
   El::SyncInfo<El::Device::CPU> sync_info =
-      El::CreateNewSyncInfo<El::Device::CPU>();
+    El::CreateNewSyncInfo<El::Device::CPU>();
   ComputeStream stream{Device::CPU};
-  REQUIRE_NOTHROW([&]() { stream = ComputeStream(sync_info); }());
+  REQUIRE_NOTHROW([&]() {
+    stream = ComputeStream(sync_info);
+  }());
   El::DestroySyncInfo(sync_info);
 
   // Conversion to El:
@@ -212,9 +221,11 @@ TEST_CASE("GPU sync El::SyncInfo conversion works", "[sync]")
 {
   // Conversion from El:
   El::SyncInfo<El::Device::GPU> sync_info =
-      El::CreateNewSyncInfo<Device::GPU>();
+    El::CreateNewSyncInfo<Device::GPU>();
   ComputeStream stream{Device::GPU};
-  REQUIRE_NOTHROW([&]() { stream = ComputeStream(sync_info); }());
+  REQUIRE_NOTHROW([&]() {
+    stream = ComputeStream(sync_info);
+  }());
   REQUIRE(stream.get_stream<Device::GPU>() == sync_info.Stream());
   El::DestroySyncInfo(sync_info);
 

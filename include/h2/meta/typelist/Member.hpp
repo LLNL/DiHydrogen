@@ -24,7 +24,7 @@ struct MemberVT;
 template <typename T, typename List>
 constexpr bool MemberV()
 {
-    return MemberVT<T, List>::value;
+  return MemberVT<T, List>::value;
 }
 
 template <typename T, typename List>
@@ -47,7 +47,7 @@ template <typename T, typename Head, typename... Tail>
 struct MemberVT<T, TL<Head, Tail...>> : MemberVT<T, TL<Tail...>>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

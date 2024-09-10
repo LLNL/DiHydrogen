@@ -30,7 +30,7 @@ namespace h2
 template <typename Base>
 struct AsVirtual : virtual Base
 {
-    using Base::Base;
+  using Base::Base;
 };
 
 /** @brief Declare that @c T has unimplemented virtual functions.
@@ -62,41 +62,41 @@ template <typename T, typename... Base>
 class Cloneable : public Base...
 {
 public:
-    /** @brief Return an exception-safe, memory-safe copy of this object. */
-    std::unique_ptr<T> clone() const
-    {
-        return std::unique_ptr<T>{static_cast<T*>(this->do_clone_())};
-    }
+  /** @brief Return an exception-safe, memory-safe copy of this object. */
+  std::unique_ptr<T> clone() const
+  {
+    return std::unique_ptr<T>{static_cast<T*>(this->do_clone_())};
+  }
 
 protected:
-    using Base::Base...;
+  using Base::Base...;
 
 private:
-    /** @brief Implement the covariant raw-pointer-based clone operation. */
-    virtual Cloneable* do_clone_() const override
-    {
-        return new T{static_cast<T const&>(*this)};
-    }
-}; // class Cloneable
+  /** @brief Implement the covariant raw-pointer-based clone operation. */
+  virtual Cloneable* do_clone_() const override
+  {
+    return new T{static_cast<T const&>(*this)};
+  }
+};  // class Cloneable
 
 /** @brief Specialization of Cloneable to handle stand-alone classes. */
 template <typename T>
 class Cloneable<T>
 {
 public:
-    virtual ~Cloneable() = default;
+  virtual ~Cloneable() = default;
 
-    std::unique_ptr<T> clone() const
-    {
-        return std::unique_ptr<T>{static_cast<T*>(this->do_clone_())};
-    }
+  std::unique_ptr<T> clone() const
+  {
+    return std::unique_ptr<T>{static_cast<T*>(this->do_clone_())};
+  }
 
 private:
-    virtual Cloneable* do_clone_() const
-    {
-        return new T{static_cast<T const&>(*this)};
-    }
-}; // class Cloneable<T>
+  virtual Cloneable* do_clone_() const
+  {
+    return new T{static_cast<T const&>(*this)};
+  }
+};  // class Cloneable<T>
 
 /** @brief Specialization of Cloneable for intermediate classes.
  *
@@ -112,16 +112,16 @@ template <typename T, typename... Base>
 class Cloneable<Abstract<T>, Base...> : public Base...
 {
 public:
-    std::unique_ptr<T> clone() const
-    {
-        return std::unique_ptr<T>{static_cast<T*>(this->do_clone_())};
-    }
+  std::unique_ptr<T> clone() const
+  {
+    return std::unique_ptr<T>{static_cast<T*>(this->do_clone_())};
+  }
 
 protected:
-    using Base::Base...;
+  using Base::Base...;
 
 private:
-    virtual Cloneable* do_clone_() const = 0;
+  virtual Cloneable* do_clone_() const = 0;
 };
 
 /** @brief Specialization of Cloneable to handle the top of hierarchies. */
@@ -129,16 +129,16 @@ template <typename T>
 class Cloneable<Abstract<T>>
 {
 public:
-    virtual ~Cloneable() = default;
+  virtual ~Cloneable() = default;
 
-    std::unique_ptr<T> clone() const
-    {
-        return std::unique_ptr<T>{static_cast<T*>(this->do_clone_())};
-    }
+  std::unique_ptr<T> clone() const
+  {
+    return std::unique_ptr<T>{static_cast<T*>(this->do_clone_())};
+  }
 
 private:
-    virtual Cloneable* do_clone_() const = 0;
+  virtual Cloneable* do_clone_() const = 0;
 
-}; // class Cloneable<T>
+};  // class Cloneable<T>
 
-} // namespace h2
+}  // namespace h2

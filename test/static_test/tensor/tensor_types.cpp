@@ -6,6 +6,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #include "h2/tensor/tensor_types.hpp"
+
 #include "h2/tensor/tensor_utils.hpp"
 
 using namespace h2;
@@ -51,7 +52,8 @@ namespace get_index_range_shape_tests
 {
 constexpr ShapeTuple empty_shape;
 constexpr IndexRangeTuple empty_coord;
-constexpr auto empty_range_shape = get_index_range_shape(empty_coord, empty_shape);
+constexpr auto empty_range_shape =
+  get_index_range_shape(empty_coord, empty_shape);
 static_assert(empty_range_shape.size() == 0);
 
 constexpr ShapeTuple shape1(8, 8);
@@ -86,7 +88,7 @@ constexpr IndexRangeTuple coord6(IRng(0), IRng(2, 4));
 constexpr auto range_shape6 = get_index_range_shape(coord6, shape1);
 static_assert(range_shape6.size() == 1);
 static_assert(range_shape6[0] == 2);
-}  // get_index_range_shape_tests
+}  // namespace get_index_range_shape_tests
 
 namespace is_index_range_contained_tests
 {
@@ -122,8 +124,8 @@ static_assert(do_index_ranges_intersect(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
                                         IndexRangeTuple(IRng(0, 2),
                                                         IRng(0, 1))));
 static_assert(
-    !do_index_ranges_intersect(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
-                               IndexRangeTuple(IRng(1, 2), IRng(0, 2))));
+  !do_index_ranges_intersect(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
+                             IndexRangeTuple(IRng(1, 2), IRng(0, 2))));
 static_assert(do_index_ranges_intersect(IndexRangeTuple(IRng(0, 1), IRng(0, 2)),
                                         IndexRangeTuple(IRng(0, 1), ALL)));
 }  // namespace do_index_ranges_intersect_tests

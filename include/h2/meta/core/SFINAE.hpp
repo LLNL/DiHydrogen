@@ -55,14 +55,14 @@ struct SubstitutionFailure;
 template <typename T>
 struct SubstitutionSuccess
 {
-    static constexpr bool value = true;
+  static constexpr bool value = true;
 };
 
 /** @brief Substitution failure is not success. */
 template <>
 struct SubstitutionSuccess<SubstitutionFailure>
 {
-    static constexpr bool value = false;
+  static constexpr bool value = false;
 };
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
@@ -74,10 +74,10 @@ struct EnableIfT
 template <typename ResultT>
 struct EnableIfT<true, ResultT>
 {
-    using type = ResultT;
+  using type = ResultT;
 };
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
 
-} // namespace meta
-} // namespace h2
+}  // namespace meta
+}  // namespace h2

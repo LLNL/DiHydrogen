@@ -10,7 +10,6 @@
 #include <catch2/reporters/catch_reporter_event_listener.hpp>
 #include <catch2/reporters/catch_reporter_registrars.hpp>
 
-
 namespace internal
 {
 
@@ -31,7 +30,6 @@ void end_for_comms()
 
 }  // namespace internal
 
-
 /**
  * Gracefully handle test case failures when not all ranks may see
  * the failure. This is intended for use with the `for_comms` utility
@@ -42,7 +40,7 @@ class MPIEventListener final : public Catch::EventListenerBase
 public:
   using Catch::EventListenerBase::EventListenerBase;
 
-  void testCasePartialEnded(const Catch::TestCaseStats& test_case_stats,
+  void testCasePartialEnded(Catch::TestCaseStats const& test_case_stats,
                             uint64_t) final
   {
     if (!internal::in_for_comms)

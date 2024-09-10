@@ -15,56 +15,54 @@ class Base : public Cloneable<Abstract<Base>>
 // class Base : public Cloneable<Base>
 {
 public:
-    Base(int) {}
-    virtual ~Base() = default;
-}; // class Base
+  Base(int) {}
+  virtual ~Base() = default;
+};  // class Base
 
 class Middle : public Cloneable<Abstract<Middle>, Base>
 {
 protected:
-    using DirectBase = Cloneable<Abstract<Middle>, Base>;
-    using DirectBase::DirectBase;
+  using DirectBase = Cloneable<Abstract<Middle>, Base>;
+  using DirectBase::DirectBase;
 };
 
 class Derived1 : public Cloneable<Derived1, Middle>
 {
 public:
-    Derived1(int a, float) : DirectBase(a) {}
+  Derived1(int a, float) : DirectBase(a) {}
 
-    int derived1_only() { return 1; }
+  int derived1_only() { return 1; }
 
 protected:
-    using DirectBase = Cloneable<Derived1, Middle>;
-    using DirectBase::DirectBase;
+  using DirectBase = Cloneable<Derived1, Middle>;
+  using DirectBase::DirectBase;
 
-}; // class Derived1
+};  // class Derived1
 
 class Derived2 : public Cloneable<Derived2, Middle>
 {
 public:
-    Derived2() : DirectBase(0) {}
+  Derived2() : DirectBase(0) {}
 
-    int derived2_only() { return 2; }
+  int derived2_only() { return 2; }
 
 protected:
-    using DirectBase = Cloneable<Derived2, Middle>;
-    using DirectBase::DirectBase;
+  using DirectBase = Cloneable<Derived2, Middle>;
+  using DirectBase::DirectBase;
 
-}; // class Derived2
+};  // class Derived2
 
 template <typename PtrType>
 using PtdType = typename PtrType::element_type;
 
 static_assert(
-    std::is_same_v<PtdType<decltype(std::declval<Base>().clone())>, Base>, "");
+  std::is_same_v<PtdType<decltype(std::declval<Base>().clone())>, Base>, "");
 static_assert(
-    std::is_same_v<PtdType<decltype(std::declval<Middle>().clone())>, Middle>,
-    "");
+  std::is_same_v<PtdType<decltype(std::declval<Middle>().clone())>, Middle>,
+  "");
 static_assert(
-    std::is_same_v<PtdType<decltype(std::declval<Derived1>().clone())>,
-                   Derived1>,
-    "");
+  std::is_same_v<PtdType<decltype(std::declval<Derived1>().clone())>, Derived1>,
+  "");
 static_assert(
-    std::is_same_v<PtdType<decltype(std::declval<Derived2>().clone())>,
-                   Derived2>,
-    "");
+  std::is_same_v<PtdType<decltype(std::declval<Derived2>().clone())>, Derived2>,
+  "");

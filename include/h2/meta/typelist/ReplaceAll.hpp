@@ -35,13 +35,13 @@ using ReplaceAll = Force<ReplaceAllT<List, Old, New>>;
 template <typename Old, typename New>
 struct ReplaceAllT<Empty, Old, New>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
 // Ret case
 template <typename Old, typename New, typename... Ts>
 struct ReplaceAllT<TypeList<Old, Ts...>, Old, New>
-    : ConsT<New, ReplaceAll<TypeList<Ts...>, Old, New>>
+  : ConsT<New, ReplaceAll<TypeList<Ts...>, Old, New>>
 {};
 
 // Recursive case
@@ -49,7 +49,7 @@ template <typename List, typename Old, typename New>
 struct ReplaceAllT : ConsT<Car<List>, ReplaceAll<Cdr<List>, Old, New>>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

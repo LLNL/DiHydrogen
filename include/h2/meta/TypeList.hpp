@@ -6,8 +6,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "typelist/TypeList.hpp"
-
 #include "typelist/Append.hpp"
 #include "typelist/At.hpp"
 #include "typelist/CartProd.hpp"
@@ -19,7 +17,6 @@
 #include "typelist/LispAccessors.hpp"
 #include "typelist/Map.hpp"
 #include "typelist/Member.hpp"
-#include "typelist/print.hpp"
 #include "typelist/Reduce.hpp"
 #include "typelist/Remove.hpp"
 #include "typelist/RemoveAll.hpp"
@@ -32,5 +29,7 @@
 #include "typelist/Size.hpp"
 #include "typelist/Sort.hpp"
 #include "typelist/ToFromTuple.hpp"
+#include "typelist/TypeList.hpp"
 #include "typelist/Unique.hpp"
 #include "typelist/Zip.hpp"
+#include "typelist/print.hpp"

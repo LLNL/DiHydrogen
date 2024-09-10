@@ -57,16 +57,16 @@ struct MakeNaryFunctionT_Impl;
 template <template <typename...> class F, size_t... ArgIdxs>
 struct MakeNaryFunctionT_Impl<F, ValueList<size_t, ArgIdxs...>>
 {
-    using type = F<PH<ArgIdxs>...>;
+  using type = F<PH<ArgIdxs>...>;
 };
-} // namespace details
+}  // namespace details
 
 template <template <typename...> class F, size_t N>
 struct MakeNaryFunctionT
-    : details::MakeNaryFunctionT_Impl<F, valuelist::MakeSizeTList<N>>
+  : details::MakeNaryFunctionT_Impl<F, valuelist::MakeSizeTList<N>>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace pfunctions
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace pfunctions
+}  // namespace meta
+}  // namespace h2

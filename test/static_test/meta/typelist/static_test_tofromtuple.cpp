@@ -10,18 +10,16 @@
 
 using namespace h2::meta;
 
-static_assert(
-    Eq<tlist::ToTuple<tlist::Empty>, std::tuple<>>,
-    "Empty typelist gives empty tuple.");
+static_assert(Eq<tlist::ToTuple<tlist::Empty>, std::tuple<>>,
+              "Empty typelist gives empty tuple.");
+
+static_assert(Eq<tlist::FromTuple<std::tuple<>>, tlist::Empty>,
+              "Empty tuple gives empty typelist.");
 
 static_assert(
-    Eq<tlist::FromTuple<std::tuple<>>, tlist::Empty>,
-    "Empty tuple gives empty typelist.");
+  Eq<tlist::ToTuple<TL<char, short, int>>, std::tuple<char, short, int>>,
+  "Nontrivial typelist gives nontrivial tuple.");
 
 static_assert(
-    Eq<tlist::ToTuple<TL<char, short, int>>, std::tuple<char, short, int>>,
-    "Nontrivial typelist gives nontrivial tuple.");
-
-static_assert(
-    Eq<tlist::FromTuple<std::tuple<int, float, double>>, TL<int, float, double>>,
-    "Nontrivial tuple gives nontrivial typelist.");
+  Eq<tlist::FromTuple<std::tuple<int, float, double>>, TL<int, float, double>>,
+  "Nontrivial tuple gives nontrivial typelist.");

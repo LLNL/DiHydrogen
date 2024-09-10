@@ -7,42 +7,50 @@
 
 #pragma once
 
+#include "h2/utils/Error.hpp"
+
 #include <array>
 #include <iterator>
-#include <type_traits>
 #include <ostream>
-
-#include "h2/utils/Error.hpp"
+#include <type_traits>
 
 /** @file
  *
  * Defines fixed-size tuples.
  */
 
-namespace h2 {
+namespace h2
+{
 
 /** Helper struct for initializing a FixedSizeTuple with padding. */
 template <typename T, typename SizeType>
-struct FixedSizeTuplePadding {
-  SizeType size_;  /**< Number of valid elements. */
-  T pad_value_;  /**< Value to set unspecified valid elements to. */
+struct FixedSizeTuplePadding
+{
+  SizeType size_; /**< Number of valid elements. */
+  T pad_value_;   /**< Value to set unspecified valid elements to. */
 
-  constexpr FixedSizeTuplePadding(SizeType size, T pad_value) :
-    size_(size), pad_value_(pad_value) {}
+  constexpr FixedSizeTuplePadding(SizeType size, T pad_value)
+    : size_(size), pad_value_(pad_value)
+  {}
 };
 
 /** Helper for constructing tuple paddings. */
 template <typename TupleType>
-inline constexpr FixedSizeTuplePadding<typename TupleType::type, typename TupleType::size_type>
-TuplePad(typename TupleType::size_type size, typename TupleType::type pad_value = {}) {
-  return FixedSizeTuplePadding<typename TupleType::type, typename TupleType::size_type>(size, pad_value);
+inline constexpr FixedSizeTuplePadding<typename TupleType::type,
+                                       typename TupleType::size_type>
+TuplePad(typename TupleType::size_type size,
+         typename TupleType::type pad_value = {})
+{
+  return FixedSizeTuplePadding<typename TupleType::type,
+                               typename TupleType::size_type>(size, pad_value);
 }
 
 /** Represent a tuple with a constant maximum size. */
 template <typename T, typename SizeType, SizeType N>
-struct FixedSizeTuple {
-  std::array<T, N> data_;  /**< Fixed size data buffer. */
-  SizeType size_;          /**< Number of valid elements in the tuple. */
+struct FixedSizeTuple
+{
+  std::array<T, N> data_; /**< Fixed size data buffer. */
+  SizeType size_;         /**< Number of valid elements in the tuple. */
 
   using type = T;
   using size_type = SizeType;
@@ -51,22 +59,27 @@ struct FixedSizeTuple {
   using iterator = typename std::array<T, N>::iterator;
   using const_iterator = typename std::array<T, N>::const_iterator;
   using reverse_iterator = typename std::array<T, N>::reverse_iterator;
-  using const_reverse_iterator = typename std::array<T, N>::const_reverse_iterator;
+  using const_reverse_iterator =
+    typename std::array<T, N>::const_reverse_iterator;
 
   /**
    * Construct a tuple from the arguments and set the number of valid
    * elements based on the number of arguments.
    */
   template <typename... Args>
-  constexpr FixedSizeTuple(Args... args) : data_{args...}, size_(sizeof...(args)) {}
+  constexpr FixedSizeTuple(Args... args)
+    : data_{args...}, size_(sizeof...(args))
+  {}
 
   /**
    * Construct a tuple with a specified number of valid elements and
    * possibly some specified entries, padding the remainder.
    */
   template <typename... Args>
-  constexpr FixedSizeTuple(FixedSizeTuplePadding<T, SizeType> pad_arg, Args... args) :
-    data_{args...}, size_(pad_arg.size_) {
+  constexpr FixedSizeTuple(FixedSizeTuplePadding<T, SizeType> pad_arg,
+                           Args... args)
+    : data_{args...}, size_(pad_arg.size_)
+  {
     // Note: This does not check if sizeof...(args) > pad_arg.size_.
     // While that won't cause issues, it might indicate a correctness
     // problem in the caller's code.
@@ -77,9 +90,9 @@ struct FixedSizeTuple {
     }
   }
 
-  FixedSizeTuple(const FixedSizeTuple& other) = default;
+  FixedSizeTuple(FixedSizeTuple const& other) = default;
   FixedSizeTuple(FixedSizeTuple&& other) = default;
-  FixedSizeTuple& operator=(const FixedSizeTuple& other) = default;
+  FixedSizeTuple& operator=(FixedSizeTuple const& other) = default;
   FixedSizeTuple& operator=(FixedSizeTuple&& other) = default;
 
   /**
@@ -88,11 +101,11 @@ struct FixedSizeTuple {
    */
   template <typename U, typename OtherSizeType, OtherSizeType M>
   static constexpr FixedSizeTuple
-  convert_from(const FixedSizeTuple<U, OtherSizeType, M>& other)
+  convert_from(FixedSizeTuple<U, OtherSizeType, M> const& other)
   {
     static_assert(
-        std::is_convertible_v<U, T>,
-        "Cannot construct a tuple from another with unconvertible type");
+      std::is_convertible_v<U, T>,
+      "Cannot construct a tuple from another with unconvertible type");
     static_assert(N >= M,
                   "Cannot construct a tuple from another that may be larger");
     FixedSizeTuple new_tuple;
@@ -112,10 +125,10 @@ struct FixedSizeTuple {
   /** Return a raw pointer to the tuple. */
   T* data() H2_NOEXCEPT { return data_.data(); }
 
-  const T* data() const H2_NOEXCEPT { return data_.data(); }
+  T const* data() const H2_NOEXCEPT { return data_.data(); }
 
   /** Return a constant raw pointer to the tuple. */
-  const T* const_data() const H2_NOEXCEPT { return data_.data(); }
+  T const* const_data() const H2_NOEXCEPT { return data_.data(); }
 
   /** Return a reference to the first element in the tuple. */
   constexpr T& front() H2_NOEXCEPT
@@ -124,7 +137,7 @@ struct FixedSizeTuple {
     return data_[0];
   }
 
-  constexpr const T& front() const H2_NOEXCEPT
+  constexpr T const& front() const H2_NOEXCEPT
   {
     H2_ASSERT_DEBUG(size_ > 0, "Cannot access front in empty tuple");
     return data_[0];
@@ -137,7 +150,7 @@ struct FixedSizeTuple {
     return data_[size_ - 1];
   }
 
-  constexpr const T& back() const H2_NOEXCEPT
+  constexpr T const& back() const H2_NOEXCEPT
   {
     H2_ASSERT_DEBUG(size_ > 0, "Cannot access back in empty tuple");
     return data_[size_ - 1];
@@ -218,7 +231,8 @@ struct FixedSizeTuple {
   }
 
   /** Return the value of the tuple at the i'th index. */
-  constexpr T& operator[](SizeType i) H2_NOEXCEPT {
+  constexpr T& operator[](SizeType i) H2_NOEXCEPT
+  {
     H2_ASSERT_DEBUG(i < size_,
                     "Tuple index ",
                     i,
@@ -229,7 +243,8 @@ struct FixedSizeTuple {
   }
 
   /** Return the value of the tuple at the i'th index. */
-  constexpr const T& operator[](SizeType i) const H2_NOEXCEPT {
+  constexpr T const& operator[](SizeType i) const H2_NOEXCEPT
+  {
     H2_ASSERT_DEBUG(i < size_,
                     "Tuple index ",
                     i,
@@ -240,7 +255,8 @@ struct FixedSizeTuple {
   }
 
   /** Set the entry at the i'th index to v. */
-  constexpr void set(SizeType i, T v) H2_NOEXCEPT {
+  constexpr void set(SizeType i, T v) H2_NOEXCEPT
+  {
     H2_ASSERT_DEBUG(i < size_,
                     "Tuple index ",
                     i,
@@ -256,9 +272,10 @@ struct FixedSizeTuple {
    * If the new size is larger than the existing size, the value of
    * newly-valid entries is undefined until they are set.
    */
-  constexpr void set_size(SizeType new_size) H2_NOEXCEPT {
+  constexpr void set_size(SizeType new_size) H2_NOEXCEPT
+  {
     H2_ASSERT_DEBUG(
-        new_size <= N, "New size ", new_size, " exceeds max size ", N);
+      new_size <= N, "New size ", new_size, " exceeds max size ", N);
     size_ = new_size;
   }
 
@@ -284,12 +301,17 @@ struct FixedSizeTuple {
    * type; the types just need to be comparable.
    */
   template <typename U, typename OtherSizeType, OtherSizeType M>
-  constexpr bool operator==(const FixedSizeTuple<U, OtherSizeType, M>& other) const H2_NOEXCEPT {
-    if (size_ != other.size_) {
+  constexpr bool
+  operator==(FixedSizeTuple<U, OtherSizeType, M> const& other) const H2_NOEXCEPT
+  {
+    if (size_ != other.size_)
+    {
       return false;
     }
-    for (SizeType i = 0; i < size_; ++i) {
-      if (data_[i] != other.data_[i]) {
+    for (SizeType i = 0; i < size_; ++i)
+    {
+      if (data_[i] != other.data_[i])
+      {
         return false;
       }
     }
@@ -300,12 +322,17 @@ struct FixedSizeTuple {
    * Compare two tuples for inequality.
    */
   template <typename U, typename OtherSizeType, OtherSizeType M>
-  constexpr bool operator!=(const FixedSizeTuple<U, OtherSizeType, M>& other) const H2_NOEXCEPT {
-    if (size_ != other.size_) {
+  constexpr bool
+  operator!=(FixedSizeTuple<U, OtherSizeType, M> const& other) const H2_NOEXCEPT
+  {
+    if (size_ != other.size_)
+    {
       return true;
     }
-    for (SizeType i = 0; i < size_; ++i) {
-      if (data_[i] != other.data_[i]) {
+    for (SizeType i = 0; i < size_; ++i)
+    {
+      if (data_[i] != other.data_[i])
+      {
         return true;
       }
     }
@@ -316,16 +343,18 @@ struct FixedSizeTuple {
 /** Print a tuple with some support for customization. */
 template <typename T, typename SizeType, SizeType N>
 inline void print_tuple(std::ostream& os,
-                        const FixedSizeTuple<T, SizeType, N>& tuple,
-                        const std::string start_brace = "{",
-                        const std::string end_brace = "}",
-                        const std::string separator = ", ")
+                        FixedSizeTuple<T, SizeType, N> const& tuple,
+                        std::string const start_brace = "{",
+                        std::string const end_brace = "}",
+                        std::string const separator = ", ")
 {
   os << start_brace;
-  for (SizeType i = 0; i < tuple.size(); ++i) {
+  for (SizeType i = 0; i < tuple.size(); ++i)
+  {
     os << tuple[i];
     // Note: tuple.size() must be >= 1 for us to be here.
-    if (i < tuple.size() - 1) {
+    if (i < tuple.size() - 1)
+    {
       os << separator;
     }
   }
@@ -335,7 +364,7 @@ inline void print_tuple(std::ostream& os,
 /** Operator overload for printing tuples (when the type is printable). */
 template <typename T, typename SizeType, SizeType N>
 inline std::ostream& operator<<(std::ostream& os,
-                                const FixedSizeTuple<T, SizeType, N>& tuple)
+                                FixedSizeTuple<T, SizeType, N> const& tuple)
 {
   print_tuple(os, tuple);
   return os;
@@ -352,7 +381,7 @@ template <typename T, typename SizeType, SizeType N>
 struct hash<h2::FixedSizeTuple<T, SizeType, N>>
 {
   size_t
-  operator()(const h2::FixedSizeTuple<T, SizeType, N>& tuple) const noexcept
+  operator()(h2::FixedSizeTuple<T, SizeType, N> const& tuple) const noexcept
   {
     // Mixing adapted from Boost.
     // Hash both the size and elements.

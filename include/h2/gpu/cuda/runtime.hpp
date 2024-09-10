@@ -7,27 +7,26 @@
 
 #pragma once
 
-#include <cuda_runtime.h>
+#include "h2/meta/TypeList.hpp"
+#include "h2/utils/Error.hpp"
 
 #include <tuple>
 
-#include "h2/utils/Error.hpp"
-#include "h2/meta/TypeList.hpp"
+#include <cuda_runtime.h>
 
-
-#define H2_CHECK_CUDA(CMD)                                              \
-  do                                                                    \
-  {                                                                     \
-    const auto status_H2_CHECK_CUDA = (CMD);                            \
-    if (status_H2_CHECK_CUDA != cudaSuccess)                            \
-    {                                                                   \
-      throw H2FatalException("CUDA error ",                             \
-                             ::h2::gpu::error_name(status_H2_CHECK_CUDA), \
-                             " (",                                      \
-                             status_H2_CHECK_CUDA,                      \
-                             "): ",                                     \
-                             ::h2::gpu::error_string(status_H2_CHECK_CUDA)); \
-    }                                                                   \
+#define H2_CHECK_CUDA(CMD)                                                     \
+  do                                                                           \
+  {                                                                            \
+    const auto status_H2_CHECK_CUDA = (CMD);                                   \
+    if (status_H2_CHECK_CUDA != cudaSuccess)                                   \
+    {                                                                          \
+      throw H2FatalException("CUDA error ",                                    \
+                             ::h2::gpu::error_name(status_H2_CHECK_CUDA),      \
+                             " (",                                             \
+                             status_H2_CHECK_CUDA,                             \
+                             "): ",                                            \
+                             ::h2::gpu::error_string(status_H2_CHECK_CUDA));   \
+    }                                                                          \
   } while (0)
 
 namespace h2
@@ -55,17 +54,17 @@ constexpr unsigned int work_per_block = work_per_thread * num_threads_per_block;
 
 inline bool ok(DeviceError status) noexcept
 {
-    return (status == cudaSuccess);
+  return (status == cudaSuccess);
 }
 
 inline char const* error_name(DeviceError status) noexcept
 {
-    return cudaGetErrorName(status);
+  return cudaGetErrorName(status);
 }
 
 inline char const* error_string(DeviceError status) noexcept
 {
-    return cudaGetErrorString(status);
+  return cudaGetErrorString(status);
 }
 
 namespace internal
@@ -76,18 +75,18 @@ struct is_same_size_t;
 
 template <typename T1, typename T2>
 struct is_same_size_t<meta::TL<T1, T2>>
-    : std::bool_constant<sizeof(T1) == sizeof(T2)>
+  : std::bool_constant<sizeof(T1) == sizeof(T2)>
 {};
 
 template <typename TL>
 using is_same_size = meta::Force<is_same_size_t<TL>>;
 
-} // namespace internal
+}  // namespace internal
 
 template <typename... KernelArgs, typename... Args>
 void launch_kernel_internal(void (*kernel)(KernelArgs...),
-                            const dim3& grid_dim,
-                            const dim3& block_dim,
+                            dim3 const& grid_dim,
+                            dim3 const& block_dim,
                             std::size_t shared_mem,
                             DeviceStream stream,
                             Args&&... args)
@@ -97,15 +96,15 @@ void launch_kernel_internal(void (*kernel)(KernelArgs...),
   // type we can directly take pointers. Otherwise we need to do an
   // explicit conversion because sizes will be wrong.
   if constexpr (meta::tlist::FoldlTL<
-                    meta::And,
-                    std::bool_constant<true>,
-                    meta::tlist::MapTL<
-                        internal::is_same_size,
-                        meta::tlist::ZipTL<meta::TL<KernelArgs...>,
-                                           meta::TL<Args...>>>>::value)
+                  meta::And,
+                  std::bool_constant<true>,
+                  meta::tlist::MapTL<internal::is_same_size,
+                                     meta::tlist::ZipTL<meta::TL<KernelArgs...>,
+                                                        meta::TL<Args...>>>>::
+                  value)
   {
     void* kernel_args[] = {(void*) &args...};
-    H2_CHECK_CUDA(cudaLaunchKernel((const void*) kernel,
+    H2_CHECK_CUDA(cudaLaunchKernel((void const*) kernel,
                                    grid_dim,
                                    block_dim,
                                    kernel_args,
@@ -115,10 +114,10 @@ void launch_kernel_internal(void (*kernel)(KernelArgs...),
   else
   {
     auto converted_args =
-        std::tuple<KernelArgs...>{std::forward<Args>(args)...};
+      std::tuple<KernelArgs...>{std::forward<Args>(args)...};
     std::array<void*, sizeof...(Args)> kernel_args{
-        std::apply([](auto&&... args_) { return ((void*) &args_, ...); })};
-    H2_CHECK_CUDA(cudaLaunchKernel((const void*) kernel,
+      std::apply([](auto&&... args_) { return ((void*) &args_, ...); })};
+    H2_CHECK_CUDA(cudaLaunchKernel((void const*) kernel,
                                    grid_dim,
                                    block_dim,
                                    kernel_args.data(),
@@ -127,5 +126,5 @@ void launch_kernel_internal(void (*kernel)(KernelArgs...),
   }
 }
 
-} // namespace gpu
-} // namespace h2
+}  // namespace gpu
+}  // namespace h2

@@ -33,15 +33,15 @@ using Select = Force<SelectT<List, Predicate>>;
 template <template <typename> class Predicate>
 struct SelectT<Empty, Predicate>
 {
-    using type = Nil;
+  using type = Nil;
 };
 
 template <typename T, typename... Ts, template <typename> class Predicate>
 struct SelectT<TL<T, Ts...>, Predicate>
-    : IfThenElseT<Predicate<T>::value, T, Select<TL<Ts...>, Predicate>>
+  : IfThenElseT<Predicate<T>::value, T, Select<TL<Ts...>, Predicate>>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

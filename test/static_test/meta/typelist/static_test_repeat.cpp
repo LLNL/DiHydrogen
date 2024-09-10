@@ -10,10 +10,8 @@
 
 using namespace h2::meta;
 
-static_assert(
-    Eq<tlist::Repeat<int, 0>, tlist::Empty>,
-    "Repeating zero times gives an empty list.");
+static_assert(Eq<tlist::Repeat<int, 0>, tlist::Empty>,
+              "Repeating zero times gives an empty list.");
 
-static_assert(
-    Eq<tlist::Repeat<int, 3>, TL<int, int, int>>,
-    "Repeating a nonzero times gives the correct type list.");
+static_assert(Eq<tlist::Repeat<int, 3>, TL<int, int, int>>,
+              "Repeating a nonzero times gives the correct type list.");

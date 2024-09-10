@@ -7,12 +7,12 @@
 
 #include "h2/tensor/copy.hpp"
 
-#include <type_traits>
-
 #include "h2/core/dispatch.hpp"
+#include "h2/loops/cpu_loops.hpp"
 #include "h2/tensor/base_utils.hpp"
 #include "h2/utils/unique_ptr_cast.hpp"
-#include "h2/loops/cpu_loops.hpp"
+
+#include <type_traits>
 
 namespace h2
 {
@@ -20,7 +20,7 @@ namespace h2
 namespace internal
 {
 
-void copy_same_type(BaseTensor& dst, const BaseTensor& src)
+void copy_same_type(BaseTensor& dst, BaseTensor const& src)
 {
   dst.resize(src.shape(), src.dim_types(), src.strides());
   dst.ensure();
@@ -41,7 +41,7 @@ void copy_same_type(BaseTensor& dst, const BaseTensor& src)
                 src.const_storage_data(),
                 src.get_stream(),
                 get_extent_from_strides(src.shape(), src.strides())
-                    * src.get_type_info().get_size());
+                  * src.get_type_info().get_size());
   }
 }
 
@@ -77,7 +77,7 @@ std::unique_ptr<Tensor<DstT>> cast(BaseTensor& src)
   return dst;
 }
 
-#define PROTO(device, t1)                                       \
+#define PROTO(device, t1)                                                      \
   template std::unique_ptr<Tensor<t1>> cast<t1>(BaseTensor&)
 H2_INSTANTIATE_DEV_1(none)
 #undef PROTO
@@ -115,19 +115,19 @@ namespace impl
 {
 
 template <typename DstT, typename SrcT>
-void cast_impl(CPUDev_t, Tensor<DstT>& dst, const Tensor<SrcT>& src)
+void cast_impl(CPUDev_t, Tensor<DstT>& dst, Tensor<SrcT> const& src)
 {
   static_assert(std::is_convertible_v<SrcT, DstT>,
                 "Attempt to cast between inconvertible types");
-  const SrcT* __restrict__ src_buf = src.const_data();
+  SrcT const* __restrict__ src_buf = src.const_data();
   DstT* __restrict__ dst_buf = dst.data();
   if (src.is_contiguous())
   {
     h2::cpu::elementwise_loop(
-        [](const SrcT val) -> DstT { return static_cast<DstT>(val); },
-        dst.numel(),
-        dst_buf,
-        src_buf);
+      [](SrcT const val) -> DstT { return static_cast<DstT>(val); },
+      dst.numel(),
+      dst_buf,
+      src_buf);
   }
   else
   {

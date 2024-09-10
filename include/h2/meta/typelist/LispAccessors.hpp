@@ -140,43 +140,43 @@ using Cddddr = Cdr<Cdddr<List>>;
 template <typename T, typename... Ts>
 struct ConsT<T, TypeList<Ts...>>
 {
-    using type = TypeList<T, Ts...>;
+  using type = TypeList<T, Ts...>;
 };
 
 // ConsBack
 template <typename T, typename... Ts>
 struct ConsBackT<TypeList<Ts...>, T>
 {
-    using type = TypeList<Ts..., T>;
+  using type = TypeList<Ts..., T>;
 };
 
 // Car
 template <typename T, typename... Ts>
 struct CarT<TypeList<T, Ts...>>
 {
-    using type = T;
+  using type = T;
 };
 
 template <>
 struct CarT<Empty>
 {
-    using type = Nil;
+  using type = Nil;
 };
 
 // Cdr
 template <typename T, typename... Ts>
 struct CdrT<TypeList<T, Ts...>>
 {
-    using type = TypeList<Ts...>;
+  using type = TypeList<Ts...>;
 };
 
 template <>
 struct CdrT<Empty>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

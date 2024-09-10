@@ -17,19 +17,15 @@ struct X;
 using ResultTList1 = TL<X<char>>;
 using ResultTList2 = TL<X<char>, X<int>, X<float>>;
 
-static_assert(
-    EqV<tlist::Expand<X>, tlist::Nil>(), "Expand no typelist returns nil.");
-static_assert(
-    EqV<tlist::Expand<X, char>, ResultTList1>(), "Expand single type.");
-static_assert(
-    EqV<tlist::Expand<X, char, int, float>, ResultTList2>(),
-    "Expand over multiple types.");
+static_assert(EqV<tlist::Expand<X>, tlist::Nil>(),
+              "Expand no typelist returns nil.");
+static_assert(EqV<tlist::Expand<X, char>, ResultTList1>(),
+              "Expand single type.");
+static_assert(EqV<tlist::Expand<X, char, int, float>, ResultTList2>(),
+              "Expand over multiple types.");
 
 // "Map" alias
-static_assert(
-    EqV<tlist::Map<X>, tlist::Nil>(), "Map no typelist returns nil.");
-static_assert(
-    EqV<tlist::Map<X, char>, ResultTList1>(), "Map single type.");
-static_assert(
-    EqV<tlist::Map<X, char, int, float>, ResultTList2>(),
-    "Map over multiple types.");
+static_assert(EqV<tlist::Map<X>, tlist::Nil>(), "Map no typelist returns nil.");
+static_assert(EqV<tlist::Map<X, char>, ResultTList1>(), "Map single type.");
+static_assert(EqV<tlist::Map<X, char, int, float>, ResultTList2>(),
+              "Map over multiple types.");

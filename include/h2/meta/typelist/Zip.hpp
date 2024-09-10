@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include "TypeList.hpp"
 #include "Append.hpp"
+#include "TypeList.hpp"
 #include "h2/meta/core/Lazy.hpp"
 
 namespace h2
@@ -52,7 +52,7 @@ template <typename T1, typename... List1Ts, typename T2, typename... List2Ts>
 struct ZipTLT<TL<T1, List1Ts...>, TL<T2, List2Ts...>>
 {
   using type =
-      Append<TL<TL<T1, T2>>, Force<ZipTLT<TL<List1Ts...>, TL<List2Ts...>>>>;
+    Append<TL<TL<T1, T2>>, Force<ZipTLT<TL<List1Ts...>, TL<List2Ts...>>>>;
 };
 
 #endif  // DOXYGEN_SHOULD_SKIP_THIS

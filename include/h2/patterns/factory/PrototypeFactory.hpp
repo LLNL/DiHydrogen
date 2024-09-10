@@ -59,70 +59,70 @@ class PrototypeFactory : private CopyPolicy,
                          private ErrorPolicy<IdType, AbstractType>
 {
 public:
-    using abstract_type = AbstractType;
-    using id_type = IdType;
-    using abstract_ptr_type = std::unique_ptr<abstract_type>;
-    using map_type = std::unordered_map<id_type, abstract_ptr_type>;
-    using size_type = typename map_type::size_type;
+  using abstract_type = AbstractType;
+  using id_type = IdType;
+  using abstract_ptr_type = std::unique_ptr<abstract_type>;
+  using map_type = std::unordered_map<id_type, abstract_ptr_type>;
+  using size_type = typename map_type::size_type;
 
 public:
-    /** @brief Register a new prototype for things of type @c id. */
-    bool register_prototype(id_type const& id,
-                            std::unique_ptr<abstract_type>&& prototype)
-    {
-        return map_
-            .emplace(std::piecewise_construct,
-                     std::forward_as_tuple(id),
-                     std::forward_as_tuple(std::move(prototype)))
-            .second;
-    }
+  /** @brief Register a new prototype for things of type @c id. */
+  bool register_prototype(id_type const& id,
+                          std::unique_ptr<abstract_type>&& prototype)
+  {
+    return map_
+      .emplace(std::piecewise_construct,
+               std::forward_as_tuple(id),
+               std::forward_as_tuple(std::move(prototype)))
+      .second;
+  }
 
-    /** @brief Register a new prototype for things of type @c id. */
-    bool register_prototype(id_type&& id,
-                            std::unique_ptr<abstract_type>&& prototype)
-    {
-        return map_
-            .emplace(std::piecewise_construct,
-                     std::forward_as_tuple(std::move(id)),
-                     std::forward_as_tuple(std::move(prototype)))
-            .second;
-    }
+  /** @brief Register a new prototype for things of type @c id. */
+  bool register_prototype(id_type&& id,
+                          std::unique_ptr<abstract_type>&& prototype)
+  {
+    return map_
+      .emplace(std::piecewise_construct,
+               std::forward_as_tuple(std::move(id)),
+               std::forward_as_tuple(std::move(prototype)))
+      .second;
+  }
 
-    /** @brief Unregister the current prototype for things of type @c id.
-     *  @note This will free the underlying prototype instance.
-     */
-    bool unregister(id_type const& id) { return (map_.erase(id) == 1); }
+  /** @brief Unregister the current prototype for things of type @c id.
+   *  @note This will free the underlying prototype instance.
+   */
+  bool unregister(id_type const& id) { return (map_.erase(id) == 1); }
 
-    /** @brief Construct a new object forwarding extra arguments to
-     *  the copy policy.
-     */
-    template <typename... Ts>
-    std::unique_ptr<AbstractType> copy_prototype(IdType const& id,
-                                                 Ts&&... Args) const
-    {
-        auto it = map_.find(id);
-        if (it != map_.end())
-            return this->Copy(*(it->second), std::forward<Ts>(Args)...);
+  /** @brief Construct a new object forwarding extra arguments to
+   *  the copy policy.
+   */
+  template <typename... Ts>
+  std::unique_ptr<AbstractType> copy_prototype(IdType const& id,
+                                               Ts&&... Args) const
+  {
+    auto it = map_.find(id);
+    if (it != map_.end())
+      return this->Copy(*(it->second), std::forward<Ts>(Args)...);
 
-        return this->handle_unknown_id(id);
-    }
+    return this->handle_unknown_id(id);
+  }
 
-    /** @brief Get the names of all prototypes known to the factory. */
-    std::list<id_type> registered_ids() const
-    {
-        std::list<id_type> names;
-        for (auto const& x : map_)
-            names.push_back(x.first);
+  /** @brief Get the names of all prototypes known to the factory. */
+  std::list<id_type> registered_ids() const
+  {
+    std::list<id_type> names;
+    for (auto const& x : map_)
+      names.push_back(x.first);
 
-        return names;
-    }
+    return names;
+  }
 
-    /** @brief Get the number of builders known to the factory. */
-    size_type size() const noexcept { return map_.size(); }
+  /** @brief Get the number of builders known to the factory. */
+  size_type size() const noexcept { return map_.size(); }
 
 private:
-    map_type map_;
-}; // class PrototypeFactory
+  map_type map_;
+};  // class PrototypeFactory
 
-} // namespace factory
-} // namespace h2
+}  // namespace factory
+}  // namespace h2

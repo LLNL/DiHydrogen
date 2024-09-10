@@ -31,7 +31,7 @@ using RemoveAll = Force<RemoveAllT<List, T>>;
 template <typename T>
 struct RemoveAllT<Empty, T>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
 // Match case
@@ -42,10 +42,10 @@ struct RemoveAllT<TypeList<T, Ts...>, T> : RemoveAllT<TypeList<Ts...>, T>
 // Recursive call
 template <typename S, typename... Ts, typename T>
 struct RemoveAllT<TypeList<S, Ts...>, T>
-    : ConsT<S, RemoveAll<TypeList<Ts...>, T>>
+  : ConsT<S, RemoveAll<TypeList<Ts...>, T>>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

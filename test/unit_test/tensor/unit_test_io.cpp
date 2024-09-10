@@ -5,17 +5,16 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_template_test_macros.hpp>
+#include "h2/tensor/io.hpp"
+#include "h2/tensor/tensor.hpp"
+#include "utils.hpp"
 
 #include <sstream>
 
-#include "h2/tensor/tensor.hpp"
-#include "h2/tensor/io.hpp"
-#include "utils.hpp"
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace h2;
-
 
 TEMPLATE_LIST_TEST_CASE("Printing tensors works", "[tensor][io]", AllDevList)
 {
@@ -36,7 +35,7 @@ TEMPLATE_LIST_TEST_CASE("Printing tensors works", "[tensor][io]", AllDevList)
     for (DataIndexType i = 0; i < tensor.numel(); ++i)
     {
       write_ele<Dev>(
-          tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
+        tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
     }
     std::stringstream ss;
     print(ss, tensor);
@@ -49,11 +48,11 @@ TEMPLATE_LIST_TEST_CASE("Printing tensors works", "[tensor][io]", AllDevList)
     for (DataIndexType i = 0; i < tensor.numel(); ++i)
     {
       write_ele<Dev>(
-          tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
+        tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
     }
     std::stringstream ss;
     print(ss, tensor);
-    const char* expected = "[\n"
+    char const* expected = "[\n"
                            " [0, 2, 4, 6]\n"
                            " [1, 3, 5, 7]\n"
                            "]";
@@ -66,11 +65,11 @@ TEMPLATE_LIST_TEST_CASE("Printing tensors works", "[tensor][io]", AllDevList)
     for (DataIndexType i = 0; i < tensor.numel(); ++i)
     {
       write_ele<Dev>(
-          tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
+        tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
     }
     std::stringstream ss;
     print(ss, tensor);
-    const char* expected = "[\n"
+    char const* expected = "[\n"
                            " [\n"
                            "  [0, 4, 8, 12]\n"
                            "  [2, 6, 10, 14]\n"
@@ -85,20 +84,18 @@ TEMPLATE_LIST_TEST_CASE("Printing tensors works", "[tensor][io]", AllDevList)
 
   SECTION("Printing single-element tensors works")
   {
-    const char* expected[] = {
-      "[1]",
-      "[\n [1]\n]",
-      "[\n [\n  [1]\n ]\n]",
-      "[\n [\n  [\n   [1]\n  ]\n ]\n]",
-      "[\n [\n  [\n   [\n    [1]\n   ]\n  ] \n]\n]"
-    };
+    char const* expected[] = {"[1]",
+                              "[\n [1]\n]",
+                              "[\n [\n  [1]\n ]\n]",
+                              "[\n [\n  [\n   [1]\n  ]\n ]\n]",
+                              "[\n [\n  [\n   [\n    [1]\n   ]\n  ] \n]\n]"};
     for (typename ShapeTuple::type ndims = 1; ndims <= 3; ++ndims)
     {
       TensorType tensor{Dev,
                         ShapeTuple{TuplePad<ShapeTuple>(ndims, 1)},
                         DTTuple{TuplePad<DTTuple>(ndims, DT::Any)}};
       write_ele<Dev>(
-          tensor.data(), 0, static_cast<DataType>(1), tensor.get_stream());
+        tensor.data(), 0, static_cast<DataType>(1), tensor.get_stream());
       std::stringstream ss;
       print(ss, tensor);
       REQUIRE(ss.str() == expected[ndims - 1]);
@@ -111,12 +108,12 @@ TEMPLATE_LIST_TEST_CASE("Printing tensors works", "[tensor][io]", AllDevList)
     for (DataIndexType i = 0; i < tensor.numel(); ++i)
     {
       write_ele<Dev>(
-          tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
+        tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
     }
     auto view = tensor.view();
     std::stringstream ss;
     print(ss, *view);
-    const char* expected = "[\n"
+    char const* expected = "[\n"
                            " [\n"
                            "  [0, 4, 8, 12]\n"
                            "  [2, 6, 10, 14]\n"
@@ -135,12 +132,12 @@ TEMPLATE_LIST_TEST_CASE("Printing tensors works", "[tensor][io]", AllDevList)
     for (DataIndexType i = 0; i < tensor.numel(); ++i)
     {
       write_ele<Dev>(
-          tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
+        tensor.data(), i, static_cast<DataType>(i), tensor.get_stream());
     }
     auto view = tensor.view({ALL, IRng(1, 3)});
     std::stringstream ss;
     print(ss, *view);
-    const char* expected = "[\n"
+    char const* expected = "[\n"
                            " [2, 4]\n"
                            " [3, 5]\n"
                            "]";

@@ -9,6 +9,9 @@
 #include <catch2/internal/catch_clara.hpp>
 using Catch::Clara::Opt;
 
+#include <h2_config.hpp>
+
+#include <El.hpp>
 #include <unistd.h>
 
 #include <iostream>
@@ -16,15 +19,11 @@ using Catch::Clara::Opt;
 #include <string>
 #include <string_view>
 
-#include <El.hpp>
-#include <h2_config.hpp>
-
 #ifdef H2_HAS_GPU
 #include <h2/gpu/runtime.hpp>
 #endif
 
 #include "mpi_utils.hpp"
-
 
 /**
  * Replace a filename with a modified per-MPI rank version.
@@ -34,21 +33,20 @@ using Catch::Clara::Opt;
  * considered to be the extension. If mpisize is 1 or filename is
  * empty, the original string is returned.
  */
-std::string edit_output_filename(std::string_view filename,
-                                 int mpirank,
-                                 int mpisize)
+std::string
+edit_output_filename(std::string_view filename, int mpirank, int mpisize)
 {
   if (mpisize == 0 || filename.size() == 1UL)
   {
     return std::string{filename};
   }
 
-  const auto split = filename.find_last_of('.');
+  auto const split = filename.find_last_of('.');
   std::ostringstream oss;
   oss << filename.substr(0, split) << '.' << mpirank << '.' << mpisize;
   if (split != std::string_view::npos)
   {
-    oss << '.' << filename.substr(split+1, std::string_view::npos);
+    oss << '.' << filename.substr(split + 1, std::string_view::npos);
   }
   return oss.str();
 }
@@ -95,7 +93,7 @@ h2::Comm& get_comm_or_skip(int size)
   {
     return comm_manager->get_comm(size);
   }
-  catch (const internal::NotParticipatingException&)
+  catch (internal::NotParticipatingException const&)
   {
     SKIP();
     throw;
@@ -110,14 +108,14 @@ int main(int argc, char** argv)
   Catch::Session session;
 
   int hang_rank = -1;
-  auto cli =
-    session.cli() | Opt(hang_rank, "Rank to hang")["--hang-rank"](
-                      "Hang this rank to attach a debugger.");
+  auto cli = session.cli()
+             | Opt(hang_rank, "Rank to hang")["--hang-rank"](
+               "Hang this rank to attach a debugger.");
   session.cli(cli);
 
   // Parse the command line. Also exit if the user asks for help.
   {
-    const int return_code = session.applyCommandLine(argc, argv);
+    int const return_code = session.applyCommandLine(argc, argv);
     if (return_code != 0 || session.configData().showHelp)
     {
       return return_code;
@@ -153,7 +151,7 @@ int main(int argc, char** argv)
   // Handle reporter-specific output files.
   for (auto& spec : session.configData().reporterSpecifications)
   {
-    const auto& outfile = spec.outputFile();
+    auto const& outfile = spec.outputFile();
     if (outfile.some())
     {
       spec = Catch::ReporterSpec(spec.name(),
@@ -164,7 +162,7 @@ int main(int argc, char** argv)
   }
 
   // Run the Catch tests, outputting to the given file.
-  const int num_failed = session.run();
+  int const num_failed = session.run();
 
   // Clean up.
   delete comm_manager;

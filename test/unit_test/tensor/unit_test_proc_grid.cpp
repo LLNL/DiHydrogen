@@ -5,12 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_template_test_macros.hpp>
-
 #include "h2/tensor/proc_grid.hpp"
 #include "utils.hpp"
+
 #include "../mpi_utils.hpp"
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace h2;
 
@@ -55,11 +55,13 @@ TEST_CASE("all_grid_shapes works", "[dist-tensor][misc]")
 TEST_CASE("Processor grids can be created", "[dist-tensor][proc-grid]")
 {
   for_comms([&](Comm& comm) {
-    for_grid_shapes([&](ShapeTuple shape) {
-      REQUIRE_NOTHROW([&] {
-        ProcessorGrid grid = ProcessorGrid(comm, {comm.Size()});
-      }());
-    }, comm);
+    for_grid_shapes(
+      [&](ShapeTuple shape) {
+        REQUIRE_NOTHROW([&] {
+          ProcessorGrid grid = ProcessorGrid(comm, {comm.Size()});
+        }());
+      },
+      comm);
   });
 }
 
@@ -184,13 +186,15 @@ TEST_CASE("Processor grid congruence works", "[dist-tensor][proc-grid]")
 TEST_CASE("Processor grids are printable", "[dist-tensor][proc-grid]")
 {
   for_comms([&](Comm& comm) {
-    for_grid_shapes([&](ShapeTuple shape) {
-      ProcessorGrid grid = ProcessorGrid(comm, shape);
-      std::stringstream ss;
-      std::stringstream shape_ss;
-      print_tuple(shape_ss, shape, "(", ")", " x ");
-      ss << grid;
-      REQUIRE(ss.str() == std::string("Grid") + shape_ss.str());
-    }, comm);
+    for_grid_shapes(
+      [&](ShapeTuple shape) {
+        ProcessorGrid grid = ProcessorGrid(comm, shape);
+        std::stringstream ss;
+        std::stringstream shape_ss;
+        print_tuple(shape_ss, shape, "(", ")", " x ");
+        ss << grid;
+        REQUIRE(ss.str() == std::string("Grid") + shape_ss.str());
+      },
+      comm);
   });
 }

@@ -7,8 +7,8 @@
 
 #pragma once
 
-#include "TypeList.hpp"
 #include "Append.hpp"
+#include "TypeList.hpp"
 #include "h2/meta/core/Lazy.hpp"
 
 namespace h2

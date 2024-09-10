@@ -7,10 +7,10 @@
 
 #include "h2/utils/typename.hpp"
 
+#include "h2/utils/Error.hpp"
+
 #include <memory>
 #include <unordered_map>
-
-#include "h2/utils/Error.hpp"
 
 #if __has_include(<cxxabi.h>)
 #include <cxxabi.h>
@@ -20,16 +20,15 @@
 #ifdef H2_HAS_CXXABI_H
 
 // Demangle mangled, ensuring no memory leaks.
-std::string safe_demangle(const char* mangled)
+std::string safe_demangle(char const* mangled)
 {
   H2_ASSERT_ALWAYS(mangled != nullptr, "Attempt to demangle a null pointer");
 
   using c_str_ptr = std::unique_ptr<char, void (*)(void*)>;
-  static const std::unordered_map<int, const char*> demangle_errors = {
+  static std::unordered_map<int, char const*> const demangle_errors = {
     {-1, "Memory allocation failure"},
     {-2, "Mangled name is invalid"},
-    {-3, "Invalid arguments"}
-  };
+    {-3, "Invalid arguments"}};
 
   int status;
   c_str_ptr demangled{abi::__cxa_demangle(mangled, nullptr, nullptr, &status),
@@ -59,14 +58,14 @@ namespace h2
 
 namespace internal
 {
-std::string get_type_name(const std::type_info& tinfo)
+std::string get_type_name(std::type_info const& tinfo)
 {
 #ifdef H2_HAS_CXXABI_H
   try
   {
     return safe_demangle(tinfo.name());
   }
-  catch (const H2NonfatalException&)
+  catch (H2NonfatalException const&)
   {
     return tinfo.name();  // Getting a type name should not kill us.
   }

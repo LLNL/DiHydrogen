@@ -35,14 +35,14 @@ using Replace = Force<ReplaceT<List, Old, New>>;
 template <typename Old, typename New>
 struct ReplaceT<Empty, Old, New>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
 // Replacement case
 template <typename Old, typename New, typename... Ts>
 struct ReplaceT<TypeList<Old, Ts...>, Old, New>
 {
-    using type = TypeList<New, Ts...>;
+  using type = TypeList<New, Ts...>;
 };
 
 // Recursive case
@@ -50,7 +50,7 @@ template <typename List, typename Old, typename New>
 struct ReplaceT : ConsT<Car<List>, Replace<Cdr<List>, Old, New>>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

@@ -5,13 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_test_macros.hpp>
-
 #include "h2/utils/typename.hpp"
 
+#include <catch2/catch_test_macros.hpp>
 
 using namespace h2;
-
 
 TEST_CASE("TypeName works for built-in types", "[utilities][typename]")
 {
@@ -24,13 +22,16 @@ TEST_CASE("TypeName works for built-in types", "[utilities][typename]")
   REQUIRE(TypeName<long double>() == "long double");
 }
 
-struct TestStruct {};
-template <typename T> struct TestTemplateStruct {};
+struct TestStruct
+{};
+template <typename T>
+struct TestTemplateStruct
+{};
 
 TEST_CASE("TypeName works for complicated types", "[utilities][typename]")
 {
   REQUIRE(TypeName<TestStruct>() == "TestStruct");
   REQUIRE(TypeName<TestTemplateStruct<int>>() == "TestTemplateStruct<int>");
-  REQUIRE(TypeName <TestTemplateStruct<TestStruct>>()
+  REQUIRE(TypeName<TestTemplateStruct<TestStruct>>()
           == "TestTemplateStruct<TestStruct>");
 }

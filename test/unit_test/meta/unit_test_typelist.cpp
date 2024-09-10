@@ -5,14 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/catch_template_test_macros.hpp>
-
 #include "h2/meta/typelist/print.hpp"
 
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 using namespace h2;
-
 
 TEST_CASE("Printing empty typelists works", "[typelist]")
 {

@@ -7,6 +7,13 @@
 
 #pragma once
 
+#include "h2/core/device.hpp"
+#include "h2/core/sync.hpp"
+#include "h2/tensor/fixed_size_tuple.hpp"
+#include "h2/tensor/tuple_utils.hpp"
+
+#include <El.hpp>
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -14,19 +21,13 @@
 #include <ostream>
 #include <type_traits>
 
-#include <El.hpp>
-
-#include "h2/tensor/fixed_size_tuple.hpp"
-#include "h2/tensor/tuple_utils.hpp"
-#include "h2/core/device.hpp"
-#include "h2/core/sync.hpp"
-
 /** @file
  *
  * Various types and helpers for defining tensors.
  */
 
-namespace h2 {
+namespace h2
+{
 
 /**
  * Indicates the type of a tensor dimension.
@@ -52,34 +53,18 @@ enum class DimensionType
 using DT = DimensionType;  // Alias to save you some typing.
 
 /** Support printing DimensionType. */
-inline std::ostream& operator<<(std::ostream& os, const DimensionType& dim_type)
+inline std::ostream& operator<<(std::ostream& os, DimensionType const& dim_type)
 {
   switch (dim_type)
   {
-  case DT::Any:
-    os << "Any";
-    break;
-  case DT::Scalar:
-    os << "Scalar";
-    break;
-  case DT::Sample:
-    os << "Sample";
-    break;
-  case DT::Channel:
-    os << "Channel";
-    break;
-  case DT::Filter:
-    os << "Filter";
-    break;
-  case DT::Spatial:
-    os << "Spatial";
-    break;
-  case DT::Sequence:
-    os << "Sequence";
-    break;
-  default:
-    os << "Unknown";
-    break;
+  case DT::Any: os << "Any"; break;
+  case DT::Scalar: os << "Scalar"; break;
+  case DT::Sample: os << "Sample"; break;
+  case DT::Channel: os << "Channel"; break;
+  case DT::Filter: os << "Filter"; break;
+  case DT::Spatial: os << "Spatial"; break;
+  case DT::Sequence: os << "Sequence"; break;
+  default: os << "Unknown"; break;
   }
   return os;
 }
@@ -148,8 +133,7 @@ struct IndexRange
   constexpr IndexRange(DimType i) : index_start(i), index_end(i) {}
   /** Construct a half-open IndexRange. */
   constexpr IndexRange(DimType start_, DimType end_)
-      : index_start(start_),
-        index_end(end_)
+    : index_start(start_), index_end(end_)
   {
     H2_ASSERT_DEBUG(start_ < end_,
                     "IndexRange with end <= start not supported, you probably "
@@ -174,20 +158,18 @@ private:
   static_assert(std::is_signed_v<DimType>,
                 "Underlying dimension type for IndexRange must be signed");
 
-  DimType index_start;  /**< Start of a range. */
-  DimType index_end;    /**< End of a range. */
+  DimType index_start; /**< Start of a range. */
+  DimType index_end;   /**< End of a range. */
 };
 
 /** Equality for ranges. */
-inline constexpr bool operator==(const IndexRange& ir1,
-                                 const IndexRange& ir2)
+inline constexpr bool operator==(IndexRange const& ir1, IndexRange const& ir2)
 {
   return ir1.start() == ir2.start() && ir1.end() == ir2.end();
 }
 
 /** Inequality for ranges. */
-inline constexpr bool operator!=(const IndexRange& ir1,
-                                 const IndexRange& ir2)
+inline constexpr bool operator!=(IndexRange const& ir1, IndexRange const& ir2)
 {
   return ir1.start() != ir2.start() || ir1.end() != ir2.end();
 }
@@ -198,7 +180,7 @@ using IRng = IndexRange;  // Alias to save you some typing.
 static constexpr IndexRange ALL(0, std::numeric_limits<DimType>::max());
 
 /** Support printing IndexRange. */
-inline std::ostream& operator<<(std::ostream& os, const IndexRange& ir)
+inline std::ostream& operator<<(std::ostream& os, IndexRange const& ir)
 {
   if (ir == ALL)
   {
@@ -240,36 +222,33 @@ enum class ViewType
 };
 
 /** Support printing ViewType. */
-inline std::ostream& operator<<(std::ostream& os, const ViewType& vt)
+inline std::ostream& operator<<(std::ostream& os, ViewType const& vt)
 {
   switch (vt)
   {
-  case ViewType::None:
-    os << "None";
-    break;
-  case ViewType::Mutable:
-    os << "View";
-    break;
-  case ViewType::Const:
-    os << "Const View";
-    break;
-  default:
-    os << "Unknown";
+  case ViewType::None: os << "None"; break;
+  case ViewType::Mutable: os << "View"; break;
+  case ViewType::Const: os << "Const View"; break;
+  default: os << "Unknown";
   }
   return os;
 }
 
 // These are used by local and distributed tensors for memory recovery.
 /** Do not attempt recovery in `BaseTensor::ensure`. */
-static constexpr struct tensor_no_recovery_t {} TensorNoRecovery;
+static constexpr struct tensor_no_recovery_t
+{
+} TensorNoRecovery;
 /** Attempt recovery in `BaseTensor::ensure`. */
-static constexpr struct tensor_attempt_recovery_t {} TensorAttemptRecovery;
+static constexpr struct tensor_attempt_recovery_t
+{
+} TensorAttemptRecovery;
 
 /** Control whether tensors allocate data lazily or not. */
 enum TensorAllocationStrategy
 {
   LazyAlloc,  /**< Tensor data should be allocated lazily. */
-  StrictAlloc  /**< Tensor data should not be allocated lazily. */
+  StrictAlloc /**< Tensor data should not be allocated lazily. */
 };
 
 }  // namespace h2

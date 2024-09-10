@@ -38,52 +38,48 @@ namespace details
 {
 template <typename T,
           typename SortedList,
-          template <typename, typename>
-          class Compare>
+          template <typename, typename> class Compare>
 struct InsertIntoSortedT;
 
 template <typename T,
           typename SortedList,
-          template <typename, typename>
-          class Compare>
+          template <typename, typename> class Compare>
 using InsertIntoSorted = Force<InsertIntoSortedT<T, SortedList, Compare>>;
 
 template <typename T, template <typename, typename> class Compare>
 struct InsertIntoSortedT<T, Empty, Compare>
 {
-    using type = TL<T>;
+  using type = TL<T>;
 };
 
 template <typename T,
           typename Head,
           typename... Tail,
-          template <typename, typename>
-          class Compare>
+          template <typename, typename> class Compare>
 struct InsertIntoSortedT<T, TL<Head, Tail...>, Compare>
-    : IfThenElseT<Compare<T, Head>::value,
-                  TL<T, Head, Tail...>,
-                  Cons<Head, InsertIntoSorted<T, TL<Tail...>, Compare>>>
+  : IfThenElseT<Compare<T, Head>::value,
+                TL<T, Head, Tail...>,
+                Cons<Head, InsertIntoSorted<T, TL<Tail...>, Compare>>>
 {};
 
-} // namespace details
+}  // namespace details
 
 template <template <typename, typename> class Compare>
 struct SortT<Empty, Compare>
 {
-    using type = Empty;
+  using type = Empty;
 };
 
 // Insertion sort -- it works and is straightforward to implement. If
 // lists grow large, we can reevaluate this choice.
 template <typename Head,
           typename... Tail,
-          template <typename, typename>
-          class Compare>
+          template <typename, typename> class Compare>
 struct SortT<TL<Head, Tail...>, Compare>
-    : details::InsertIntoSortedT<Head, Sort<TL<Tail...>, Compare>, Compare>
+  : details::InsertIntoSortedT<Head, Sort<TL<Tail...>, Compare>, Compare>
 {};
 
-#endif // DOXYGEN_SHOULD_SKIP_THIS
-} // namespace tlist
-} // namespace meta
-} // namespace h2
+#endif  // DOXYGEN_SHOULD_SKIP_THIS
+}  // namespace tlist
+}  // namespace meta
+}  // namespace h2

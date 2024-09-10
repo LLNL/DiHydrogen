@@ -12,14 +12,14 @@
  * Utilities for working with strings.
  */
 
+#include "h2/utils/As.hpp"
+
 #include <algorithm>
 #include <cctype>
 #include <limits>
+#include <sstream>
 #include <stdexcept>
 #include <string>
-#include <sstream>
-
-#include "h2/utils/As.hpp"
 
 namespace h2
 {
@@ -49,12 +49,12 @@ inline std::string build_string(Args&&... args) noexcept(sizeof...(Args) == 0)
   }
 }
 
-inline std::string build_string(const char* s)
+inline std::string build_string(char const* s)
 {
   return std::string(s);
 }
 
-inline std::string build_string(const std::string& s)
+inline std::string build_string(std::string const& s)
 {
   return std::string(s);
 }
@@ -81,10 +81,10 @@ inline std::string str_tolower(std::string str)
  * Convert an input string to type T.
  */
 template <typename T>
-inline T from_string(const std::string& str);
+inline T from_string(std::string const& str);
 
 template <>
-inline unsigned int from_string<unsigned int>(const std::string&);
+inline unsigned int from_string<unsigned int>(std::string const&);
 
 inline std::string from_string(std::string&& str)
 {
@@ -92,31 +92,31 @@ inline std::string from_string(std::string&& str)
 }
 
 template <>
-inline std::string from_string<std::string>(const std::string& str)
+inline std::string from_string<std::string>(std::string const& str)
 {
   return str;
 }
 
 template <>
-inline int from_string<int>(const std::string& str)
+inline int from_string<int>(std::string const& str)
 {
   return std::stoi(str);
 }
 
 template <>
-inline long from_string<long>(const std::string& str)
+inline long from_string<long>(std::string const& str)
 {
   return std::stol(str);
 }
 
 template <>
-inline long long from_string<long long>(const std::string& str)
+inline long long from_string<long long>(std::string const& str)
 {
   return std::stoll(str);
 }
 
 template <>
-inline char from_string<char>(const std::string& str)
+inline char from_string<char>(std::string const& str)
 {
   if constexpr (std::numeric_limits<char>::is_signed)
   {
@@ -143,7 +143,7 @@ inline char from_string<char>(const std::string& str)
 }
 
 template <>
-inline signed char from_string<signed char>(const std::string& str)
+inline signed char from_string<signed char>(std::string const& str)
 {
   int tmp = from_string<int>(str);
   if (tmp > std::numeric_limits<signed char>::max())
@@ -158,7 +158,7 @@ inline signed char from_string<signed char>(const std::string& str)
 }
 
 template <>
-inline short from_string<short>(const std::string& str)
+inline short from_string<short>(std::string const& str)
 {
   int tmp = from_string<int>(str);
   if (tmp > std::numeric_limits<short>::max())
@@ -173,13 +173,14 @@ inline short from_string<short>(const std::string& str)
 }
 
 template <>
-inline unsigned long from_string<unsigned long>(const std::string& str)
+inline unsigned long from_string<unsigned long>(std::string const& str)
 {
   return std::stoul(str);
 }
 
 template <>
-inline unsigned long long from_string<unsigned long long>(const std::string& str)
+inline unsigned long long
+from_string<unsigned long long>(std::string const& str)
 {
   return std::stoull(str);
 }
@@ -188,7 +189,7 @@ inline unsigned long long from_string<unsigned long long>(const std::string& str
 // work correctly.
 
 template <>
-inline unsigned char from_string<unsigned char>(const std::string& str)
+inline unsigned char from_string<unsigned char>(std::string const& str)
 {
   unsigned long tmp = from_string<unsigned long>(str);
   if (tmp > std::numeric_limits<unsigned char>::max())
@@ -199,7 +200,7 @@ inline unsigned char from_string<unsigned char>(const std::string& str)
 }
 
 template <>
-inline unsigned short from_string<unsigned short>(const std::string& str)
+inline unsigned short from_string<unsigned short>(std::string const& str)
 {
   unsigned long tmp = from_string<unsigned long>(str);
   if (tmp > std::numeric_limits<unsigned short>::max())
@@ -210,7 +211,7 @@ inline unsigned short from_string<unsigned short>(const std::string& str)
 }
 
 template <>
-inline unsigned int from_string<unsigned int>(const std::string& str)
+inline unsigned int from_string<unsigned int>(std::string const& str)
 {
   unsigned long tmp = from_string<unsigned long>(str);
   if (tmp > std::numeric_limits<unsigned int>::max())
@@ -221,19 +222,19 @@ inline unsigned int from_string<unsigned int>(const std::string& str)
 }
 
 template <>
-inline float from_string<float>(const std::string& str)
+inline float from_string<float>(std::string const& str)
 {
   return std::stof(str);
 }
 
 template <>
-inline double from_string<double>(const std::string& str)
+inline double from_string<double>(std::string const& str)
 {
   return std::stod(str);
 }
 
 template <>
-inline long double from_string<long double>(const std::string& str)
+inline long double from_string<long double>(std::string const& str)
 {
   return std::stold(str);
 }
@@ -250,7 +251,7 @@ inline long double from_string<long double>(const std::string& str)
  * An empty string will throw. Other strings will throw.
  */
 template <>
-inline bool from_string<bool>(const std::string& str)
+inline bool from_string<bool>(std::string const& str)
 {
   std::string upstr = str_toupper(str);
   if (upstr == "TRUE")

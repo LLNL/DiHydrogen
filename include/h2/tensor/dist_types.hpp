@@ -13,8 +13,8 @@
  */
 
 #include <El.hpp>
-#include "tensor_types.hpp"
 
+#include "tensor_types.hpp"
 
 namespace h2
 {
@@ -40,25 +40,15 @@ enum class Distribution
 };
 
 /** Support printing Distribution. */
-inline std::ostream& operator<<(std::ostream& os, const Distribution& dist)
+inline std::ostream& operator<<(std::ostream& os, Distribution const& dist)
 {
   switch (dist)
   {
-  case Distribution::Undefined:
-    os << "Undefined";
-    break;
-  case Distribution::Block:
-    os << "Block";
-    break;
-  case Distribution::Replicated:
-    os << "Replicated";
-    break;
-  case Distribution::Single:
-    os << "Single";
-    break;
-  default:
-    os << "Unknown";
-    break;
+  case Distribution::Undefined: os << "Undefined"; break;
+  case Distribution::Block: os << "Block"; break;
+  case Distribution::Replicated: os << "Replicated"; break;
+  case Distribution::Single: os << "Single"; break;
+  default: os << "Unknown"; break;
   }
   return os;
 }

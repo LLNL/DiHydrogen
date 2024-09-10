@@ -12,9 +12,9 @@
  * Utilities to interface with environment variables.
  */
 
-#include <string>
-
 #include "h2/utils/strings.hpp"
+
+#include <string>
 
 namespace h2
 {
@@ -52,7 +52,7 @@ namespace env
  * @note If the variable is not set, it will still have its default
  * value.
  */
-bool exists(const std::string& name);
+bool exists(std::string const& name);
 
 /**
  * Return the raw value (i.e., the exact string value of the variable)
@@ -60,14 +60,14 @@ bool exists(const std::string& name);
  *
  * @note This may be the default value.
  */
-std::string get_raw(const std::string& name);
+std::string get_raw(std::string const& name);
 
 /**
  * Return the value of the H2 environment variable name coerced to the
  * given type T via `from_string`.
  */
 template <typename T>
-inline T get(const std::string& name)
+inline T get(std::string const& name)
 {
   return from_string<T>(get_raw(name));
 }
@@ -79,17 +79,17 @@ namespace raw
  * Return true if the environment variable name is set in the
  * environment.
  */
-bool exists(const std::string& name);
+bool exists(std::string const& name);
 
 /** Return the raw value of the environment variable name. */
-std::string get_raw(const std::string& name);
+std::string get_raw(std::string const& name);
 
 /**
  * Return the environment variable name coerced to the given type T
  * via `from_string`.
  */
 template <typename T>
-inline T get(const std::string& name)
+inline T get(std::string const& name)
 {
   return from_string<T>(get_raw(name));
 }

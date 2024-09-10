@@ -11,5 +11,5 @@
 
 int main(int, char*[])
 {
-    std::cout << h2::Version() << std::endl;
+  std::cout << h2::Version() << std::endl;
 }
