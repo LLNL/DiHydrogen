@@ -13,5 +13,6 @@ h2_add_sources_to_target_and_install(
   TARGET H2Patterns COMPONENT PATTERNS SCOPE INTERFACE
   INSTALL_PREFIX "${H2_CURRENT_INSTALL_PREFIX}"
   SOURCES
+  MapDispatcher.hpp
   SwitchDispatcher.hpp
   )
