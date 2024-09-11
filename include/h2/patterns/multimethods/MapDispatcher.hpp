@@ -189,7 +189,7 @@ public:
  *         raw function pointer.
  */
 #define H2_MDISP_ADD_FP(dispatcher, fn, ...)                                   \
-  dispatcher.template add<decltype(fn), fn, __VA_ARGS__>()
+  dispatcher.template add<decltype(&fn), &fn, __VA_ARGS__>()
 
 }  // namespace multimethods
 }  // namespace h2
