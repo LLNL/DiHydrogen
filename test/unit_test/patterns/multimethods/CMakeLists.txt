@@ -6,5 +6,6 @@
 ################################################################################
 
 target_sources(SeqCatchTests PRIVATE
+  unit_test_map_dispatcher.cpp
   unit_test_switch_dispatcher.cpp
   )
