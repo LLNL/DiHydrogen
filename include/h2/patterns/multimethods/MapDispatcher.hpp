@@ -7,6 +7,7 @@
 #include <map>
 #include <stdexcept>
 #include <typeindex>
+#include <type_traits>
 
 namespace h2
 {
