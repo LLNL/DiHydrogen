@@ -1,5 +1,12 @@
 #!/bin/bash
 
+################################################################################
+## Copyright 2019-2024 Lawrence Livermore National Security, LLC and other
+## DiHydrogen Project Developers. See the top-level LICENSE file for details.
+##
+## SPDX-License-Identifier: Apache-2.0
+################################################################################
+
 # This script looks for a known rank variable that is set and writes
 # its value to stdout. If none are found, nothing is printed and 1 is
 # returned.
