@@ -5,6 +5,13 @@ else
     lapack_opt=""
 fi
 
+if [[ -n "${gpu_arch}" ]]
+then
+    with_nccl=ON
+else
+    with_nccl=OFF
+fi
+
 cmake \
     -G Ninja \
     -S ${lbann_sb_dir} \
@@ -47,7 +54,7 @@ cmake \
     -D LBANN_SB_BUILD_spdlog=ON  \
     \
     -D LBANN_SB_BUILD_Aluminum=ON \
-    -D LBANN_SB_FWD_Aluminum_ALUMINUM_ENABLE_NCCL=ON \
+    -D LBANN_SB_FWD_Aluminum_ALUMINUM_ENABLE_NCCL=${with_nccl} \
     -D LBANN_SB_FWD_Aluminum_ALUMINUM_ENABLE_HWLOC=OFF \
     -D LBANN_SB_FWD_Aluminum_ALUMINUM_ENABLE_TESTS=OFF \
     -D LBANN_SB_FWD_Aluminum_ALUMINUM_ENABLE_BENCHMARKS=OFF \

@@ -289,6 +289,11 @@ GCOV_PREFIX=\$\{_prefix\} GCOV_PREFIX_STRIP=${_build_dir_len} $@
         endif ()
       endif ()
 
+      set(_seq_progs "$<TARGET_FILE:SeqCatchTests>")
+      if (TARGET GPUCatchTests)
+        list(APPEND _seq_progs "$<TARGET_FILE:GPUCatchTests>")
+      endif ()
+
       add_custom_target(
         ${_tltgt}-gen-lcov
         COMMAND
@@ -300,7 +305,7 @@ GCOV_PREFIX=\$\{_prefix\} GCOV_PREFIX_STRIP=${_build_dir_len} $@
         -D MPI_LAUNCH_PATTERN="${_mpi_pattern}"
         -D LCOV_PROGRAM=${LCOV_PROGRAM}
         -D GCOV_PROGRAM=${GCOV_PROGRAM}
-        -D SEQ_COVERAGE_PROGRAMS=$<TARGET_FILE:SeqCatchTests>;$<TARGET_FILE:GPUCatchTests>
+        -D SEQ_COVERAGE_PROGRAMS=${_seq_progs}
         -D MPI_COVERAGE_PROGRAMS="${CMAKE_BINARY_DIR}/bin/MPICatchTests -r mpicumulative"
         -P "${CMAKE_SOURCE_DIR}/cmake/modules/H2RunCoverage.cmake"
         COMMENT "Generating coverage data for coverage target \"${_tltgt}\""
