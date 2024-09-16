@@ -22,28 +22,29 @@ include:
 # Note: There are issues with /usr/tce/bin/python3 (the default) and
 # build systems (in particular, it's not clear that all the
 # includes/libs are setup properly under the "/usr/tce" prefix). So I
-# load a module to get a real prefix. This only matters when
-# "+ci+coverage".
-
+# load a module to get a real prefix.
 rocm-6-0-2-corona:
   variables:
     COMPILER_FAMILY: amdclang
-    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/6.0.2 python"
+    MODULES: "gcc/10.3.1-magic mvapich2/2.3.7 rocm/6.0.2 python"
   extends: [.build-and-test-on-corona, .build-and-test]
 
-rocm-6-0-2-distconv-corona:
+gcc-12-1-1-cpu-corona:
   variables:
-    COMPILER_FAMILY: amdclang
-    MODULES: "gcc/10.3.1-magic openmpi/4.1.2 rocm/6.0.2 python"
-    WITH_DISTCONV: "1"
+    COMPILER_FAMILY: gnu
+    MODULES: "gcc/12.1.1-magic mvapich2/2.3.7 python"
   extends: [.build-and-test-on-corona, .build-and-test]
-  rules:
-    - if: $TEST_DISTCONV_BUILD == "1"
 
-rocm-6-0-2-coverage-corona:
+clang-14-0-6-cpu-corona:
   variables:
-    COMPILER_FAMILY: amdclang
-    MODULES: "gcc/10.3.1-magic mvapich2 rocm/6.0.2 python"
+    COMPILER_FAMILY: clang
+    MODULES: "clang/14.0.6-magic mvapich2/2.3.7 python"
+  extends: [.build-and-test-on-corona, .build-and-test]
+
+gcc-11-2-1-coverage-cpu-corona:
+  variables:
+    COMPILER_FAMILY: gnu
+    MODULES: "gcc/11.2.1-magic mvapich2/2.3.7 python"
     WITH_COVERAGE: "1"
   extends: [.build-and-test-on-corona, .build-and-test-coverage]
 

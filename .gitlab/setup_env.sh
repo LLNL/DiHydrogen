@@ -72,9 +72,13 @@ case "${cluster}" in
         launcher=flux
         ;;
     corona)
-        extra_rpaths="${ROCM_PATH}/lib:${extra_rpaths}"
-        rocm_platform=ON
-	gpu_arch=gfx906
+        # Only turn on GPU stuff if ROCm module has been loaded, which
+        # is checked by testing for ROCM_PATH.
+        extra_rpaths=${ROCM_PATH:+${ROCM_PATH}/lib:${extra_rpaths}}
+	gpu_arch=${ROCM_PATH:+gfx906}
+        if [[ -n "${gpu_arch}" ]]; then
+            rocm_platform=ON
+        fi
         launcher=flux
         ;;
     *)
