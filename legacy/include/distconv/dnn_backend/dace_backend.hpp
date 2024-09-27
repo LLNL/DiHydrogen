@@ -234,6 +234,39 @@ public:
         FilterDescriptor_t const& dw_desc,
         ConvBwdFilterAlgo_t const& algo) const override;
 
+    auto get_fwd_algorithm(std::string const& name,
+                           TensorDescriptor_t const& input_desc,
+                           void const* input,
+                           FilterDescriptor_t const& filter_desc,
+                           void const* filter,
+                           ConvolutionDescriptor_t const& conv_desc,
+                           TensorDescriptor_t const& output_desc,
+                           void* output,
+                           size_t ws_size) const -> ConvFwdAlgo_t override;
+
+    auto get_bwd_data_algorithm(std::string const& name,
+                                FilterDescriptor_t const& filter_desc,
+                                void const* filter,
+                                TensorDescriptor_t const& d_output_desc,
+                                void const* d_output,
+                                ConvolutionDescriptor_t const& conv_desc,
+                                TensorDescriptor_t const& d_input_desc,
+                                void* d_input,
+                                size_t ws_size) const
+        -> ConvBwdDataAlgo_t override;
+    
+
+    auto get_bwd_filter_algorithm(std::string const& name,
+                                  TensorDescriptor_t const& input_desc,
+                                  void const* input,
+                                  TensorDescriptor_t const& d_output_desc,
+                                  void const* d_output,
+                                  ConvolutionDescriptor_t const& conv_desc,
+                                  FilterDescriptor_t const& d_filter_desc,
+                                  void* d_filter,
+                                  size_t ws_size) const
+        -> ConvBwdFilterAlgo_t override;
+
 protected:
     // JIT-compiled libraries
     mutable std::map<ConvDescriptor, dace_state> m_dace_libraries;

@@ -403,6 +403,120 @@ size_t DaCeDNNBackend<VendorBackendT>::get_conv_bwd_filter_workspace_size(
         in_desc, dy_desc, conv_desc, dw_desc, algo);
 }
 
+template <typename VendorBackendT>
+auto DaCeDNNBackend<VendorBackendT>::get_fwd_algorithm(
+    std::string const& name,
+    TensorDescriptor_t const& input_desc,
+    void const* input,
+    FilterDescriptor_t const& filter_desc,
+    void const* filter,
+    ConvolutionDescriptor_t const& conv_desc,
+    TensorDescriptor_t const& output_desc,
+    void* output,
+    size_t ws_size) const -> ConvFwdAlgo_t
+{
+    ConvDescriptor desc;
+    desc.type = FORWARD;
+    if (descriptor_from_tensors(
+            input_desc, filter_desc, conv_desc, output_desc, desc))
+    {
+        // Check if using a DaCe compiled kernel
+        dace_state library;
+        bool jit_compiled = load_library_or_fallback(desc, library);
+        if (jit_compiled)  // Library found
+        {
+            return ConvFwdAlgo_t{};
+        }
+    }
+
+    // Any other case - fallback to vendor backend
+    return DNNBackend<VendorBackendT>::get_fwd_algorithm(name,
+                                                         input_desc,
+                                                         input,
+                                                         filter_desc,
+                                                         filter,
+                                                         conv_desc,
+                                                         output_desc,
+                                                         output,
+                                                         ws_size);
+}
+
+template <typename VendorBackendT>
+auto DaCeDNNBackend<VendorBackendT>::get_bwd_data_algorithm(
+    std::string const& name,
+    FilterDescriptor_t const& filter_desc,
+    void const* filter,
+    TensorDescriptor_t const& d_output_desc,
+    void const* d_output,
+    ConvolutionDescriptor_t const& conv_desc,
+    TensorDescriptor_t const& d_input_desc,
+    void* d_input,
+    size_t ws_size) const -> ConvBwdDataAlgo_t
+{
+    ConvDescriptor desc;
+    desc.type = BACKWARD_DATA;
+    if (descriptor_from_tensors(
+            d_input_desc, filter_desc, conv_desc, d_output_desc, desc))
+    {
+        // Check if using a DaCe compiled kernel
+        dace_state library;
+        bool jit_compiled = load_library_or_fallback(desc, library);
+        if (jit_compiled)  // Library found
+        {
+            return ConvBwdDataAlgo_t{};
+        }
+    }
+
+    // Any other case - fallback to vendor backend
+    return DNNBackend<VendorBackendT>::get_bwd_data_algorithm(name,
+                                                              filter_desc,
+                                                              filter,
+                                                              d_output_desc,
+                                                              d_output,
+                                                              conv_desc,
+                                                              d_input_desc,
+                                                              d_input,
+                                                              ws_size);
+}
+
+template <typename VendorBackendT>
+auto DaCeDNNBackend<VendorBackendT>::get_bwd_filter_algorithm(
+    std::string const& name,
+    TensorDescriptor_t const& input_desc,
+    void const* input,
+    TensorDescriptor_t const& d_output_desc,
+    void const* d_output,
+    ConvolutionDescriptor_t const& conv_desc,
+    FilterDescriptor_t const& d_filter_desc,
+    void* d_filter,
+    size_t ws_size) const -> ConvBwdFilterAlgo_t
+{
+    ConvDescriptor desc;
+    desc.type = BACKWARD_FILTER;
+    if (descriptor_from_tensors(
+            input_desc, d_filter_desc, conv_desc, d_output_desc, desc))
+    {
+        // Check if using a DaCe compiled kernel
+        dace_state library;
+        bool jit_compiled = load_library_or_fallback(desc, library);
+        if (jit_compiled)  // Library found
+        {
+            return ConvBwdFilterAlgo_t{};
+        }
+    }
+
+    // Any other case - fallback to vendor backend
+    return DNNBackend<VendorBackendT>::get_bwd_filter_algorithm(name,
+                                                                input_desc,
+                                                                input,
+                                                                d_output_desc,
+                                                                d_output,
+                                                                conv_desc,
+                                                                d_filter_desc,
+                                                                d_filter,
+                                                                ws_size);
+}
+
 // Internal methods
 
 template <typename VendorBackendT>
