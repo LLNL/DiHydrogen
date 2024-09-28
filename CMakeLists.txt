@@ -367,6 +367,19 @@ if (MPI_FOUND AND H2_HAS_ROCM)
   endif ()
 endif ()
 
+# Cleanup the hip targets
+set(_hip_libs hip::host hip::device hip-lang::host hip-lang::device)
+foreach (lib IN LISTS _hip_libs)
+  if (TARGET ${lib})
+    get_target_property(_lib_link_libs ${lib} INTERFACE_LINK_LIBRARIES)
+    list(FILTER _lib_link_libs EXCLUDE REGEX "clang_rt\.builtins")
+    set_target_properties(
+      ${lib}
+      PROPERTIES
+      INTERFACE_LINK_LIBRARIES "${_lib_link_libs}")
+  endif ()
+endforeach ()
+
 if (MPI_CXX_FOUND)
   message(STATUS "H2 HAS MPI_CXX")
   set(H2_HAS_MPI TRUE)
