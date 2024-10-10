@@ -674,6 +674,11 @@ DaCeDNNBackend<VendorBackendT>::try_load(const std::string& hash,
             result.dynbatch_func = (dynbatch_daceprogram_t) func;
         else
             result.func = (daceprogram_t) func;
+
+        if (this->m_opts.jit_verbose) {
+            util::MPIPrintStreamInfo()
+                << "Found JIT-compiled convolution: " << hash;
+        }
     }
     return result;
 }
