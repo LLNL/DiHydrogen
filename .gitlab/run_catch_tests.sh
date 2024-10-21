@@ -41,19 +41,6 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 if [[ -z "${run_coverage}" ]]
 then
     case "${cluster}" in
-        pascal)
-            export OMPI_MCA_mpi_warn_on_fork=0
-            timeout -k 1m 2m \
-                    srun -N1 -n2 --ntasks-per-node=2 --mpibind=off \
-                    ${build_dir}/build-h2/bin/MPICatchTests \
-                    -r mpicumulative \
-                    -r JUnit::out=${project_dir}/mpi-tests_junit.xml || {
-                failed_tests=$((${failed_tests=} + $?))
-                echo "******************************"
-                echo " >>> MPICatchTests FAILED"
-                echo "******************************"
-            }
-            ;;
         lassen)
             timeout -k 1m 2m \
                     jsrun -n1 -r1 -a4 -c40 -g4 -d packed -b packed:10 \
