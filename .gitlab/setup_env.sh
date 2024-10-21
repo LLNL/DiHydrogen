@@ -45,13 +45,6 @@ common_linker_flags="-Wl,--disable-new-dtags"
 extra_rpaths=${extra_rpaths:-""}
 
 case "${cluster}" in
-    pascal)
-        CUDACXX=${CUDACXX:-$(command -v nvcc)}
-        CUDAHOSTCXX=${CUDAHOSTCXX:-${CXX}}
-        cuda_platform=ON
-        gpu_arch=60
-        launcher=slurm
-        ;;
     lassen)
         CUDACXX=${CUDACXX:-$(command -v nvcc)}
         CUDAHOSTCXX=${CUDAHOSTCXX:-${CXX}}

@@ -23,9 +23,6 @@ function get_num_gpus_per_node() {
         lassen|ray|sierra)
             echo 4
             ;;
-        pascal)
-            echo 2
-            ;;
         *)
             echo "Unknown system"
             exit 1

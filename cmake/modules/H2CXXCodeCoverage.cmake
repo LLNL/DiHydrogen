@@ -277,8 +277,6 @@ GCOV_PREFIX=\$\{_prefix\} GCOV_PREFIX_STRIP=${_build_dir_len} $@
         site_name(_hostname)
         if (_hostname MATCHES "^corona.*" OR _hostname MATCHES "^tioga.*")
           set(_mpi_pattern "flux run -N1 -n8 --exclusive --env=H2_SELECT_DEVICE_0=1 ${_OUT_DIR}/run-mpi.sh <EXE>")
-        elseif (_hostname MATCHES "^pascal")
-          set(_mpi_pattern "srun -N1 -n2 --ntasks-per-node=2 --mpibind=off ${_OUT_DIR}/run-mpi.sh <EXE>")
         elseif (_hostname MATCHES "^lassen")
           set(_mpi_pattern "jsrun -n1 -r1 -a4 -c40 -g4 -d packed -b packed:10 ${_OUT_DIR}/run-mpi.sh <EXE>")
         else ()
