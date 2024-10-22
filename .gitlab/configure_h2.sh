@@ -1,10 +1,3 @@
-if [[ "$cluster" == "lassen" ]]
-then
-    lapack_opt="-D BLA_VENDOR=Generic"
-else
-    lapack_opt=""
-fi
-
 cmake -G Ninja \
       -S ${project_dir} \
       -B ${build_dir}/build-h2 \
@@ -23,7 +16,10 @@ cmake -G Ninja \
       -D AMDGPU_TARGETS=${gpu_arch} \
       -D GPU_TARGETS=${gpu_arch} \
       \
-      ${lapack_opt} \
+      -D H2_USE_EXTERNAL_ALUMINUM=ON \
+      -D H2_USE_EXTERNAL_CATCH2=ON \
+      -D H2_USE_EXTERNAL_SPDLOG=ON \
+      \
       -D H2_CI_BUILD=${run_coverage:-OFF} \
       -D H2_DEVELOPER_BUILD=ON \
       -D H2_ENABLE_CODE_COVERAGE=${run_coverage:-OFF} \
