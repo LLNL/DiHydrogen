@@ -12,20 +12,78 @@
  * Types for distributed tensors.
  */
 
-#include <El.hpp>
+#include <Al.hpp>
 
 #include "tensor_types.hpp"
 
 namespace h2
 {
 
-#ifndef HYDROGEN_HAVE_ALUMINUM
-#error "DiHydrogen distributed tensors require Aluminum support in Hydrogen"
-#endif
-/**
- * Wrapper around communicators for various Aluminum backends.
+/** @class Comm
+ *  @brief Facade over Aluminum communicators
+ *
+ *  We need to abstract away the Aluminum backend. This is also a
+ *  shift from the old Hydrogen communicators as we will just manage
+ *  the compute stream here, rather than in the communication API.
  */
-using Comm = El::mpi::Comm;  // Use Hydrogen's communicator wrappers for now.
+class Comm
+{
+  mutable std::unique_ptr<typename Al::MPIBackend::comm_type> m_al_comm;
+
+public:
+  Comm() : Comm{MPI_COMM_NULL} {}
+  Comm(MPI_Comm comm)
+  {
+    if (comm != MPI_COMM_NULL)
+    {
+      m_al_comm = std::make_unique<typename Al::MPIBackend::comm_type>(comm);
+    }
+  }
+
+  Comm(Comm&&) = default;
+  Comm& operator=(Comm&&) = default;
+
+  // Copy semantics are hard.
+  Comm(Comm const&) = delete;
+  Comm& operator=(Comm const&) = delete;
+
+  /* Get the rank in the comm */
+  int rank() const
+  {
+    if (!m_al_comm)
+      throw H2Exception("Comm is NULL");
+    return m_al_comm->rank();
+  }
+
+  /* Get the size of the comm */
+  int size() const
+  {
+    if (!m_al_comm)
+      throw H2Exception("Comm is NULL");
+    return m_al_comm->size();
+  }
+
+  MPI_Comm get_mpi_handle() const noexcept
+  {
+    if (m_al_comm)
+      return m_al_comm->get_comm();
+    else
+      return MPI_COMM_NULL;
+  }
+
+  typename Al::MPIBackend::comm_type& get_al_comm() const
+  {
+    if (!m_al_comm)
+      throw H2Exception("Comm is NULL");
+    return *m_al_comm;
+  }
+};
+
+inline Comm const& get_comm_world()
+{
+  static Comm comm{MPI_COMM_WORLD};
+  return comm;
+}
 
 /**
  * Defines how a dimension of a tensor is distributed on a processor

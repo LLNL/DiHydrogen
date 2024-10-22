@@ -13,7 +13,6 @@ target_sources(SeqCatchTests PRIVATE
   unit_test_raw_buffer.cpp
   unit_test_strided_memory.cpp
   unit_test_tensor.cpp
-  unit_test_hydrogen_interop.cpp
 )
 
 if (H2_HAS_GPU)
@@ -24,13 +23,11 @@ if (H2_HAS_GPU)
     unit_test_raw_buffer.cpp
     unit_test_strided_memory.cpp
     unit_test_tensor.cpp
-    unit_test_hydrogen_interop.cpp
   )
 endif ()
 
 target_sources(MPICatchTests PRIVATE
   unit_test_dist_copy.cpp
   unit_test_dist_tensor.cpp
-  unit_test_hydrogen_interop_distmat.cpp
   unit_test_proc_grid.cpp
 )

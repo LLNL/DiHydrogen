@@ -7,6 +7,8 @@
 
 #include "h2/tensor/dist_types.hpp"
 
+// allreduce, for now
+#include "mpi_utils.hpp"
 #include <catch2/reporters/catch_reporter_event_listener.hpp>
 #include <catch2/reporters/catch_reporter_registrars.hpp>
 
@@ -55,11 +57,11 @@ public:
     if (!test_case_stats.totals.assertions.allOk())
     {
       int test_result = 0;
-      El::mpi::AllReduce(&test_result,
-                         1,
-                         El::mpi::MIN,
-                         El::mpi::COMM_WORLD,
-                         El::SyncInfo<El::Device::CPU>{});
+      h2_tmp::allreduce(&test_result,
+                        1,
+                        Al::ReductionOperator::land,
+                        h2::get_comm_world(),
+                        h2::ComputeStream{h2::Device::CPU});
       // Indicate we are done with the for_comms.
       internal::end_for_comms();
     }

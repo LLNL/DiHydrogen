@@ -8,8 +8,6 @@
 
 #include "h2_config.hpp"
 
-#include <hydrogen/device/gpu/CUB.hpp>
-
 #if H2_HAS_CUDA
 #include <cub/util_allocator.cuh>
 #include <cuda_runtime.h>
@@ -101,34 +99,8 @@ h2::gpu::RawCUBAllocType h2::gpu::make_allocator(unsigned int const gf,
                                   /*debug=*/debug};
 }
 
-static bool use_internal_pool() noexcept
-{
-  char const* env = std::getenv("H2_INTERNAL_CUB_POOL");
-  return (env && std::strlen(env) && env[0] != '0');
-}
-
-static h2::gpu::RawCUBAllocType& borrow_hydrogen_cub_allocator()
-{
-  auto& alloc = hydrogen::cub::MemoryPool();
-  H2_GPU_TRACE("H2 using Hydrogen CUB allocator"
-               "(gf={}, min={}, max={}, max_cached={}, debug={})",
-               alloc.bin_growth,
-               alloc.min_bin,
-               alloc.max_bin,
-               alloc.max_cached_bytes,
-               alloc.debug);
-  return alloc;
-}
-
-static h2::gpu::RawCUBAllocType& get_internal_cub_allocator()
-{
-  static auto alloc = h2::gpu::make_allocator();
-  return alloc;
-}
-
 h2::gpu::RawCUBAllocType& h2::gpu::default_cub_allocator()
 {
-  static auto& alloc = (use_internal_pool() ? get_internal_cub_allocator()
-                                            : borrow_hydrogen_cub_allocator());
+  static auto alloc = h2::gpu::make_allocator();
   return alloc;
 }

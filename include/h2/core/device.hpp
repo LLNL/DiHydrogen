@@ -16,12 +16,22 @@
 
 #include "h2/meta/TypeList.hpp"
 
-#include <El.hpp>
-
+#include <ostream>
 #include <type_traits>
 
-namespace hydrogen
+namespace h2
 {
+
+/**
+ * Define the underlying compute device type.
+ */
+enum class Device
+{
+  CPU,
+#ifdef H2_HAS_GPU
+  GPU,
+#endif
+};
 
 /** Support printing Device. */
 inline std::ostream& operator<<(std::ostream& os, Device const& dev)
@@ -36,15 +46,6 @@ inline std::ostream& operator<<(std::ostream& os, Device const& dev)
   }
   return os;
 }
-}  // namespace hydrogen
-
-namespace h2
-{
-
-/**
- * Define the underlying compute device type.
- */
-using Device = El::Device;  // Leverage Hydrogen's device typing.
 
 /**
  * Helper to support tagged dispatch based on the device.
@@ -91,14 +92,14 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
 #define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)                         \
   do                                                                           \
   {                                                                            \
-    if ((device) == Device::CPU)                                               \
+    if ((device) == ::h2::Device::CPU)                                         \
     {                                                                          \
-      [[maybe_unused]] constexpr Device Dev = Device::CPU;                     \
+      [[maybe_unused]] constexpr ::h2::Device Dev = ::h2::Device::CPU;         \
       cpu_code;                                                                \
     }                                                                          \
     else if ((device) == Device::GPU)                                          \
     {                                                                          \
-      [[maybe_unused]] constexpr Device Dev = Device::GPU;                     \
+      [[maybe_unused]] constexpr ::h2::Device Dev = ::h2::Device::GPU;         \
       gpu_code;                                                                \
     }                                                                          \
     else                                                                       \
@@ -110,14 +111,14 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
 #define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)                         \
   do                                                                           \
   {                                                                            \
-    if ((device) == Device::CPU)                                               \
+    if ((device) == ::h2::Device::CPU)                                         \
     {                                                                          \
-      [[maybe_unused]] constexpr Device Dev = Device::CPU;                     \
+      [[maybe_unused]] constexpr ::h2::Device Dev = ::h2::Device::CPU;         \
       cpu_code;                                                                \
     }                                                                          \
     else                                                                       \
     {                                                                          \
-      [[maybe_unused]] constexpr Device Dev = Device::GPU;                     \
+      [[maybe_unused]] constexpr ::h2::Device Dev = ::h2::Device::GPU;         \
       gpu_code;                                                                \
     }                                                                          \
   } while (0);
@@ -127,9 +128,9 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
 #define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)                         \
   do                                                                           \
   {                                                                            \
-    if ((device) == Device::CPU)                                               \
+    if ((device) == ::h2::Device::CPU)                                         \
     {                                                                          \
-      [[maybe_unused]] constexpr Device Dev = Device::CPU;                     \
+      [[maybe_unused]] constexpr ::h2::Device Dev = ::h2::Device::CPU;         \
       cpu_code;                                                                \
     }                                                                          \
     else                                                                       \
@@ -141,7 +142,7 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
 #define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)                         \
   do                                                                           \
   {                                                                            \
-    [[maybe_unused]] constexpr Device Dev = Device::CPU;                       \
+    [[maybe_unused]] constexpr ::h2::Device Dev = ::h2::Device::CPU;           \
     cpu_code;                                                                  \
   } while (0);
 #endif  // H2_DEBUG
@@ -162,11 +163,11 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
 #define H2_DEVICE_DISPATCH_CONST(device, cpu_code, gpu_code)                   \
   do                                                                           \
   {                                                                            \
-    if constexpr ((device) == Device::CPU)                                     \
+    if constexpr ((device) == ::h2::Device::CPU)                               \
     {                                                                          \
       cpu_code;                                                                \
     }                                                                          \
-    else if constexpr ((device) == Device::GPU)                                \
+    else if constexpr ((device) == ::h2::Device::GPU)                          \
     {                                                                          \
       gpu_code;                                                                \
     }                                                                          \
@@ -179,7 +180,7 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
 #define H2_DEVICE_DISPATCH_CONST(device, cpu_code, gpu_code)                   \
   do                                                                           \
   {                                                                            \
-    if constexpr ((device) == Device::CPU)                                     \
+    if constexpr ((device) == ::h2::Device::CPU)                               \
     {                                                                          \
       cpu_code;                                                                \
     }                                                                          \

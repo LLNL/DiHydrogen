@@ -47,42 +47,21 @@
 
 #include "runtime.hpp"
 
-namespace h2
-{
-namespace gpu
-{
-
-struct MemInfo
-{
-  size_t free;
-  size_t total;
-};
-
-}  // namespace gpu
-}  // namespace h2
-
 #if H2_HAS_CUDA
 #include "cuda/memory_utils.hpp"
 #elif H2_HAS_ROCM
 #include "rocm/memory_utils.hpp"
 #endif
 
-// Forward-declare the {cub,hipcub}::CachingDeviceAllocator class.
-namespace H2_CUB_NAMESPACE
-{
-class CachingDeviceAllocator;
-}
-
 namespace h2
 {
 namespace gpu
 {
 
-/** @brief The default CUB allocator used in H2.
+/** @brief The default CUB(-like) allocator used in H2.
  *
- *  If H2_INTERNAL_CUB_POOL=1, then this constructs a new CUB
- *  allocator for H2 use. Otherwise, this borrows the CUB allocator
- *  used in Hydrogen.
+ *  This is essentially a {cub,hipcub}::CachingDeviceAllocator that
+ *  has been modified to allow non-integer growth factors.
  */
 RawCUBAllocType& default_cub_allocator();
 
@@ -121,10 +100,11 @@ size_t cub_max_cached_size() noexcept;
  */
 bool cub_debug() noexcept;
 
-/** @brief Create a new CUB allocator.
+/** @brief Create a new caching allocator.
  *
- *  At this time, users are recommended to just use the default CUB
- *  allocator. This helps with consistency and debugging.
+ *  @todo Expand the argument list to match the underlying ctor. This
+ *        will facilitate downstream integrations and/or better
+ *        environment variable configuration.
  */
 RawCUBAllocType make_allocator(unsigned int const gf = cub_growth_factor(),
                                unsigned int const min = cub_min_bin(),

@@ -21,7 +21,6 @@ h2_add_sources_to_target_and_install(
   dist_types.hpp
   dist_utils.hpp
   fixed_size_tuple.hpp
-  hydrogen_interop.hpp
   proc_grid.hpp
   raw_buffer.hpp
   strided_memory.hpp
@@ -31,5 +30,3 @@ h2_add_sources_to_target_and_install(
   tensor.hpp
   tuple_utils.hpp
 )
-
-add_subdirectory(hydrogen_interop)

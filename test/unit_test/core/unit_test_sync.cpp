@@ -7,8 +7,6 @@
 
 #include "h2/core/sync.hpp"
 
-#include <El.hpp>
-
 #include <unordered_map>
 
 #include "../tensor/utils.hpp"
@@ -46,9 +44,11 @@ TEMPLATE_LIST_TEST_CASE("ComputeStream works", "[sync]", AllDevList)
   if constexpr (Dev == Device::GPU)
   {
 #if H2_HAS_CUDA
-    REQUIRE(stream.get_stream<Device::GPU>() == El::cuda::GetDefaultStream());
+    REQUIRE(stream.get_stream<Device::GPU>()
+            == h2::internal::get_default_compute_stream<Device::GPU>());
 #elif H2_HAS_ROCM
-    REQUIRE(stream.get_stream<Device::GPU>() == El::rocm::GetDefaultStream());
+    REQUIRE(stream.get_stream<Device::GPU>()
+            == h2::internal::get_default_compute_stream<Device::GPU>());
 #endif
   }
 #endif
@@ -158,23 +158,6 @@ TEST_CASE("CPU event equality works", "[sync]")
   REQUIRE(map.count(event2) > 0);
 }
 
-TEST_CASE("CPU sync El::SyncInfo conversion works", "[sync]")
-{
-  // Conversion from El:
-  El::SyncInfo<El::Device::CPU> sync_info =
-    El::CreateNewSyncInfo<El::Device::CPU>();
-  ComputeStream stream{Device::CPU};
-  REQUIRE_NOTHROW([&]() {
-    stream = ComputeStream(sync_info);
-  }());
-  El::DestroySyncInfo(sync_info);
-
-  // Conversion to El:
-  REQUIRE_NOTHROW([&]() {
-    sync_info = static_cast<El::SyncInfo<El::Device::CPU>>(stream);
-  }());
-}
-
 #ifdef H2_TEST_WITH_GPU
 
 TEST_CASE("GPU stream equality works", "[sync]")
@@ -215,25 +198,6 @@ TEST_CASE("GPU event equality works", "[sync]")
   REQUIRE(map[event1] == 1);
   REQUIRE(map[event3] == 1);
   REQUIRE(map[event2] == 2);
-}
-
-TEST_CASE("GPU sync El::SyncInfo conversion works", "[sync]")
-{
-  // Conversion from El:
-  El::SyncInfo<El::Device::GPU> sync_info =
-    El::CreateNewSyncInfo<Device::GPU>();
-  ComputeStream stream{Device::GPU};
-  REQUIRE_NOTHROW([&]() {
-    stream = ComputeStream(sync_info);
-  }());
-  REQUIRE(stream.get_stream<Device::GPU>() == sync_info.Stream());
-  El::DestroySyncInfo(sync_info);
-
-  // Conversion to El:
-  REQUIRE_NOTHROW([&]() {
-    sync_info = static_cast<El::SyncInfo<El::Device::GPU>>(stream);
-  }());
-  REQUIRE(sync_info.Stream() == stream.get_stream<Device::GPU>());
 }
 
 TEST_CASE("GPU and CPU syncs interoperate", "[sync]")

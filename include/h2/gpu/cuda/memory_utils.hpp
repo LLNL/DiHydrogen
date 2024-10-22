@@ -15,15 +15,23 @@
 #include "h2_config.hpp"
 
 #include "h2/gpu/logger.hpp"
+#include "h2/gpu/pool_allocator.hpp"
 #include "h2/gpu/runtime.hpp"
 
 #include <cuda_runtime.h>
-#include <hydrogen/PoolAllocator.hpp>
 
 namespace h2
 {
 namespace gpu
 {
+
+using RawCUBAllocType = h2::PooledDeviceAllocator;
+
+struct MemInfo
+{
+  size_t free;
+  size_t total;
+};
 
 inline MemInfo mem_info()
 {
@@ -31,8 +39,6 @@ inline MemInfo mem_info()
   H2_CHECK_CUDA(cudaMemGetInfo(&info.free, &info.total));
   return info;
 }
-
-using RawCUBAllocType = hydrogen::PooledDeviceAllocator;
 
 inline void mem_copy(void* dst, void const* src, size_t bytes)
 {

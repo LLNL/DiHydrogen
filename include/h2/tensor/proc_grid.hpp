@@ -18,8 +18,6 @@
 #include "h2/utils/Describable.hpp"
 #include "h2/utils/Error.hpp"
 
-#include <El.hpp>
-
 #include <memory>
 
 namespace h2
@@ -56,13 +54,13 @@ public:
    */
   ProcessorGrid(Comm const& comm_, ShapeTuple shape_)
   {
-    H2_ASSERT_ALWAYS(comm_.Size() == product<RankType>(shape_),
+    H2_ASSERT_ALWAYS(comm_.size() == product<RankType>(shape_),
                      "Grid size (",
                      shape_,
                      ") must match communicator size (",
-                     comm_.Size(),
+                     comm_.size(),
                      ")");
-    grid_comm = std::make_shared<Comm>(comm_.GetMPIComm());
+    grid_comm = std::make_shared<Comm>(comm_.get_mpi_handle());
     grid_shape = shape_;
     // Currently fix a column-major ordering.
     grid_strides = prefix_product<typename GridStrideTuple::type>(shape_);
@@ -101,10 +99,10 @@ public:
   }
 
   /** Return the number of processors in the grid. */
-  RankType size() const H2_NOEXCEPT { return grid_comm->Size(); }
+  RankType size() const H2_NOEXCEPT { return grid_comm->size(); }
 
   /** Return the rank of the calling process in the grid. */
-  RankType rank() const H2_NOEXCEPT { return grid_comm->Rank(); }
+  RankType rank() const H2_NOEXCEPT { return grid_comm->rank(); }
 
   /** Return the rank of the process at a given grid coordinate. */
   RankType rank(ScalarIndexTuple coord) const H2_NOEXCEPT
@@ -157,12 +155,12 @@ public:
    * world) is part of this grid.
    */
   bool participating(RankType rank,
-                     Comm const& comm = El::mpi::COMM_WORLD) const H2_NOEXCEPT
+                     Comm const& comm = get_comm_world()) const H2_NOEXCEPT
   {
     MPI_Group this_group;
-    MPI_Comm_group(grid_comm->GetMPIComm(), &this_group);
+    MPI_Comm_group(grid_comm->get_mpi_handle(), &this_group);
     MPI_Group other_group;
-    MPI_Comm_group(comm.GetMPIComm(), &other_group);
+    MPI_Comm_group(comm.get_mpi_handle(), &other_group);
     int in_rank = safe_as<int>(rank);
     int out_rank;
     MPI_Group_translate_ranks(other_group, 1, &in_rank, this_group, &out_rank);
@@ -186,7 +184,8 @@ public:
   bool is_identical_to(ProcessorGrid const& other) const H2_NOEXCEPT
   {
     return (grid_shape == other.grid_shape)
-           && (grid_comm->GetMPIComm() == other.grid_comm->GetMPIComm());
+           && (grid_comm->get_mpi_handle()
+               == other.grid_comm->get_mpi_handle());
   }
 
   /**
@@ -203,14 +202,14 @@ public:
       return false;
     }
     // MPI_Comm_compare does not handle MPI_COMM_NULL.
-    if (grid_comm->GetMPIComm() == MPI_COMM_NULL
-        && other.grid_comm->GetMPIComm() == MPI_COMM_NULL)
+    if (grid_comm->get_mpi_handle() == MPI_COMM_NULL
+        && other.grid_comm->get_mpi_handle() == MPI_COMM_NULL)
     {
       return true;
     }
     int result;
     MPI_Comm_compare(
-      grid_comm->GetMPIComm(), other.grid_comm->GetMPIComm(), &result);
+      grid_comm->get_mpi_handle(), other.grid_comm->get_mpi_handle(), &result);
     return result == MPI_IDENT || result == MPI_CONGRUENT;
   }
 

@@ -12,8 +12,6 @@
 #include "h2/tensor/fixed_size_tuple.hpp"
 #include "h2/tensor/tuple_utils.hpp"
 
-#include <El.hpp>
-
 #include <algorithm>
 #include <array>
 #include <cstdint>

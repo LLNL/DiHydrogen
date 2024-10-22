@@ -17,8 +17,6 @@
 #include "h2/core/device.hpp"
 #include "h2/utils/Error.hpp"
 
-#include <El.hpp>
-
 #include <tuple>
 #include <utility>
 
@@ -26,9 +24,6 @@
 #include "h2/gpu/runtime.hpp"
 
 // We use Aluminum's internal event pool for GPU events.
-#ifndef HYDROGEN_HAVE_ALUMINUM
-#error "Aluminum support is required"
-#endif
 #include <Al.hpp>
 
 #endif
@@ -175,11 +170,8 @@ inline typename RawSyncEvent<Device::CPU>::type get_default_event<Device::CPU>()
 template <>
 inline typename RawSyncEvent<Device::GPU>::type get_default_event<Device::GPU>()
 {
-#if H2_HAS_CUDA
-  return El::cuda::GetDefaultEvent();
-#elif H2_HAS_ROCM
-  return El::rocm::GetDefaultEvent();
-#endif
+  static gpu::DeviceEvent event = gpu::make_event_notiming();
+  return event;
 }
 #endif
 
@@ -199,11 +191,8 @@ template <>
 inline typename RawComputeStream<Device::GPU>::type
 get_default_compute_stream<Device::GPU>()
 {
-#if H2_HAS_CUDA
-  return El::cuda::GetDefaultStream();
-#elif H2_HAS_ROCM
-  return El::rocm::GetDefaultStream();
-#endif
+  static gpu::DeviceStream stream = gpu::make_stream_nonblocking();
+  return stream;
 }
 #endif
 
@@ -457,27 +446,6 @@ public:
     : device(Device::GPU), gpu_stream(raw_stream)
   {}
 #endif
-
-  /** Support conversion from an existing El::SyncInfo. */
-  template <Device Dev>
-  explicit ComputeStream(El::SyncInfo<Dev> const& sync_info) : device(Dev)
-  {
-    H2_DEVICE_DISPATCH_CONST(Dev,
-                             cpu_stream =
-                               internal::get_default_compute_stream<Dev>(),
-                             gpu_stream = sync_info.Stream());
-  }
-
-  /** Support conversion to El::SyncInfo. */
-  template <Device Dev>
-  explicit operator El::SyncInfo<Dev>() const H2_NOEXCEPT
-  {
-    H2_DEVICE_DISPATCH_CONST(
-      Dev,
-      return El::SyncInfo<Dev>{},
-      return El::SyncInfo<Dev>(get_stream<Dev>(),
-                               internal::get_default_event<Dev>()));
-  }
 
   ComputeStream(ComputeStream const&) = default;
   ComputeStream& operator=(ComputeStream const&) = default;
