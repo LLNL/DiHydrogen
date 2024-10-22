@@ -36,13 +36,13 @@
 
 #pragma once
 
+#include <h2_config.hpp>
+
 #include <cmath>
 #include <iostream>
 #include <map>
 #include <mutex>
 #include <set>
-
-#include <h2_config.hpp>
 
 // Set up functions
 #if H2_HAS_CUDA
@@ -114,41 +114,57 @@
 #error "This file must be included with a GPU (CUDA/ROCm) environment"
 #endif
 
-namespace gpudebug {
+namespace gpudebug
+{
 /* Minimal copy of CubDebug */
 __host__ __device__ __forceinline__ gpuError_t Debug(gpuError_t error,
-                                                     const char *filename,
-                                                     int line) {
-  if (error) {
+                                                     char const* filename,
+                                                     int line)
+{
+  if (error)
+  {
 #if (GPU_PTX_ARCH == 0)
-    fprintf(stderr, "GPU error %d [%s, %d]: %s\n", error, filename, line,
+    fprintf(stderr,
+            "GPU error %d [%s, %d]: %s\n",
+            error,
+            filename,
+            line,
             gpuGetErrorString(error));
     fflush(stderr);
 #else
     printf("GPU error %d [block (%d,%d,%d) thread (%d,%d,%d), %s, %d]\n",
-           error, blockIdx.z, blockIdx.y, blockIdx.x, threadIdx.z, threadIdx.y,
-           threadIdx.x, filename, line);
+           error,
+           blockIdx.z,
+           blockIdx.y,
+           blockIdx.x,
+           threadIdx.z,
+           threadIdx.y,
+           threadIdx.x,
+           filename,
+           line);
 #endif
   }
   return error;
 }
-} // namespace gpudebug
+}  // namespace gpudebug
 
 /**
  * \brief Debug macro
  */
 #ifndef gpuDebug
-#define gpuDebug(e) gpudebug::Debug((gpuError_t)(e), __FILE__, __LINE__)
+#define gpuDebug(e) gpudebug::Debug((gpuError_t) (e), __FILE__, __LINE__)
 #endif
 
 /**
  * Prints human-readable size (for reporting)
  */
-static inline void HumanReadableSize(size_t bytes, std::ostream &os) {
-  const std::string sizes[] = {"B", "KiB", "MiB", "GiB", "TiB"};
+static inline void HumanReadableSize(size_t bytes, std::ostream& os)
+{
+  std::string const sizes[] = {"B", "KiB", "MiB", "GiB", "TiB"};
   int unit = 0;
   float size = bytes;
-  while (size > 1024) {
+  while (size > 1024)
+  {
     size /= 1024;
     ++unit;
   }
@@ -159,7 +175,8 @@ static inline void HumanReadableSize(size_t bytes, std::ostream &os) {
   os.setf(oldf);
 }
 
-namespace h2 {
+namespace h2
+{
 
 /******************************************************************************
  * PooledDeviceAllocator
@@ -184,8 +201,8 @@ namespace h2 {
  * - (EXTENDED) Bin limits have a combined geometric/linear progression; or can
  *   be given as a set of sizes. It behaves as follows:
  *     - If a set of sizes is given in \p bin_sizes, they are used to construct
- *       the allocation bins. If an allocation is larger than the largest bin, the
- *       behavior matches the rest of the algorithm. Allocations in [0, bin_min]
+ *       the allocation bins. If an allocation is larger than the largest bin,
+ * the behavior matches the rest of the algorithm. Allocations in [0, bin_min]
  *       will allocate ``bin_min`` bytes.
  *     - Bin limits progress geometrically in accordance with the (integer)
  *       growth factor \p bin_growth provided during construction. Unused device
@@ -197,27 +214,28 @@ namespace h2 {
  *       \p bin_mult is given, a linear binning scheme is created where bins
  *       follow \p bin_growth ^ some_bin + \p bin_mult * n
  *     - Allocations above min( \p bin_growth ^ \p max_bin , \p
- *       max_bin_alloc_size ) are not rounded up to the nearest bin and are simply
- *       freed when they are deallocated instead of being returned to a bin-cache.
+ *       max_bin_alloc_size ) are not rounded up to the nearest bin and are
+ * simply freed when they are deallocated instead of being returned to a
+ * bin-cache.
  * - If the total storage of cached allocations on a given device will exceed
  *   \p max_cached_bytes, allocations for that device are simply freed when they
  *   are deallocated instead of being returned to their bin-cache.
  *
  */
-struct PooledDeviceAllocator {
-
+struct PooledDeviceAllocator
+{
   //---------------------------------------------------------------------
   // Constants
   //---------------------------------------------------------------------
 
   /// Out-of-bounds bin
-  static const unsigned int INVALID_BIN = (unsigned int)-1;
+  static unsigned int const INVALID_BIN = (unsigned int) -1;
 
   /// Invalid size
-  static const size_t INVALID_SIZE = (size_t)-1;
+  static size_t const INVALID_SIZE = (size_t) -1;
 
   /// Invalid device ordinal
-  static const int INVALID_DEVICE_ORDINAL = -1;
+  static int const INVALID_DEVICE_ORDINAL = -1;
 
   //---------------------------------------------------------------------
   // Type definitions and helper types
@@ -226,30 +244,44 @@ struct PooledDeviceAllocator {
   /**
    * Descriptor for device memory allocations
    */
-  struct BlockDescriptor {
-    void *d_ptr;                   // Device pointer
-    size_t bytes;                  // Size of allocation in bytes
-    size_t requested_bytes;        // Size of true allocation in bytes
-    bool binned;                   // Whether the block is part of the pool bins
-    int device;                    // device ordinal
-    gpuStream_t associated_stream; // Associated associated_stream
-    gpuEvent_t ready_event; // Signal when associated stream has run to the
-                            // point at which this block was freed
+  struct BlockDescriptor
+  {
+    void* d_ptr;             // Device pointer
+    size_t bytes;            // Size of allocation in bytes
+    size_t requested_bytes;  // Size of true allocation in bytes
+    bool binned;             // Whether the block is part of the pool bins
+    int device;              // device ordinal
+    gpuStream_t associated_stream;  // Associated associated_stream
+    gpuEvent_t ready_event;  // Signal when associated stream has run to the
+                             // point at which this block was freed
 
     // Constructor (suitable for searching maps for a specific block, given its
     // pointer and device)
-    BlockDescriptor(void *d_ptr, int device)
-        : d_ptr(d_ptr), bytes(0), requested_bytes(0), binned(false),
-          device(device), associated_stream(0), ready_event(0) {}
+    BlockDescriptor(void* d_ptr, int device)
+      : d_ptr(d_ptr),
+        bytes(0),
+        requested_bytes(0),
+        binned(false),
+        device(device),
+        associated_stream(0),
+        ready_event(0)
+    {}
 
     // Constructor (suitable for searching maps for a range of suitable blocks,
     // given a device)
     BlockDescriptor(int device)
-        : d_ptr(NULL), bytes(0), requested_bytes(0), binned(false),
-          device(device), associated_stream(0), ready_event(0) {}
+      : d_ptr(NULL),
+        bytes(0),
+        requested_bytes(0),
+        binned(false),
+        device(device),
+        associated_stream(0),
+        ready_event(0)
+    {}
 
     // Comparison functor for comparing device pointers
-    static bool PtrCompare(const BlockDescriptor &a, const BlockDescriptor &b) {
+    static bool PtrCompare(BlockDescriptor const& a, BlockDescriptor const& b)
+    {
       if (a.device == b.device)
         return (a.d_ptr < b.d_ptr);
       else
@@ -257,8 +289,8 @@ struct PooledDeviceAllocator {
     }
 
     // Comparison functor for comparing allocation sizes
-    static bool SizeCompare(const BlockDescriptor &a,
-                            const BlockDescriptor &b) {
+    static bool SizeCompare(BlockDescriptor const& a, BlockDescriptor const& b)
+    {
       if (a.device == b.device)
         return (a.bytes < b.bytes);
       else
@@ -267,9 +299,10 @@ struct PooledDeviceAllocator {
   };
 
   /// BlockDescriptor comparator function interface
-  typedef bool (*Compare)(const BlockDescriptor &, const BlockDescriptor &);
+  typedef bool (*Compare)(BlockDescriptor const&, BlockDescriptor const&);
 
-  class TotalBytes {
+  class TotalBytes
+  {
   public:
     size_t free;
     size_t live;
@@ -293,14 +326,17 @@ struct PooledDeviceAllocator {
   /**
    * Integer pow function for unsigned base and exponent
    */
-  static unsigned int IntPow(unsigned int base, unsigned int exp) {
+  static unsigned int IntPow(unsigned int base, unsigned int exp)
+  {
     unsigned int retval = 1;
-    while (exp > 0) {
-      if (exp & 1) {
-        retval = retval * base; // multiply the result by the current base
+    while (exp > 0)
+    {
+      if (exp & 1)
+      {
+        retval = retval * base;  // multiply the result by the current base
       }
-      base = base * base; // square the base
-      exp = exp >> 1;     // divide the exponent in half
+      base = base * base;  // square the base
+      exp = exp >> 1;      // divide the exponent in half
     }
     return retval;
   }
@@ -308,47 +344,57 @@ struct PooledDeviceAllocator {
   /**
    * Round up to the nearest power-of
    */
-  void NearestPowerOf(unsigned int &power, size_t &rounded_bytes,
-                      unsigned int base, size_t value) {
+  void NearestPowerOf(unsigned int& power,
+                      size_t& rounded_bytes,
+                      unsigned int base,
+                      size_t value)
+  {
     power = 0;
     rounded_bytes = 1;
 
-    if (value * base < value) {
+    if (value * base < value)
+    {
       // Overflow
       power = sizeof(size_t) * 8;
       rounded_bytes = size_t(0) - 1;
       return;
     }
 
-    while (rounded_bytes < value) {
+    while (rounded_bytes < value)
+    {
       rounded_bytes *= base;
       power++;
     }
   }
 
-  size_t NearestMultOf(unsigned int mult, size_t value) {
+  size_t NearestMultOf(unsigned int mult, size_t value)
+  {
     // Ceiling division followed by multiplication
     return ((value + mult - 1) / mult) * mult;
   }
 
   static unsigned int ComputeLinearBinIndex(unsigned int bin_growth,
-                                            unsigned int bin_mult_threshold) {
-    if (bin_mult_threshold == INVALID_BIN || bin_growth == 0 ||
-        bin_mult_threshold == 0)
+                                            unsigned int bin_mult_threshold)
+  {
+    if (bin_mult_threshold == INVALID_BIN || bin_growth == 0
+        || bin_mult_threshold == 0)
       return INVALID_BIN;
 
-    return static_cast<unsigned int>(std::log(bin_mult_threshold) /
-                                     std::log(bin_growth));
+    return static_cast<unsigned int>(std::log(bin_mult_threshold)
+                                     / std::log(bin_growth));
   }
 
   static size_t ComputeMaxBinBytes(unsigned int bin_growth,
                                    unsigned int max_bin,
-                                   size_t max_bin_alloc_size) {
+                                   size_t max_bin_alloc_size)
+  {
     size_t result = INVALID_SIZE;
-    if (max_bin != INVALID_BIN) {
+    if (max_bin != INVALID_BIN)
+    {
       result = IntPow(bin_growth, max_bin);
     }
-    if (max_bin_alloc_size != INVALID_SIZE) {
+    if (max_bin_alloc_size != INVALID_SIZE)
+    {
       result = std::min(result, max_bin_alloc_size);
     }
     return result;
@@ -358,38 +404,38 @@ struct PooledDeviceAllocator {
   // Fields
   //---------------------------------------------------------------------
 
-  std::mutex mutex; /// Mutex for thread-safety
+  std::mutex mutex;  /// Mutex for thread-safety
 
-  unsigned int bin_growth; /// Geometric growth factor for bin-sizes
-  unsigned int min_bin;    /// Minimum bin enumeration
-  unsigned int max_bin;    /// Maximum bin enumeration
+  unsigned int bin_growth;  /// Geometric growth factor for bin-sizes
+  unsigned int min_bin;     /// Minimum bin enumeration
+  unsigned int max_bin;     /// Maximum bin enumeration
 
   // Extensions
-  unsigned int bin_mult_threshold; /// Threshold to switch between geometric and
-                                   /// linear growth
-  unsigned int bin_mult;           /// Linear bin scaling size
-  size_t max_bin_alloc_size;       /// Maximal binned allocation size
-  std::set<size_t> bin_sizes;      /// Explicit control over bin sizes
+  unsigned int bin_mult_threshold;  /// Threshold to switch between geometric
+                                    /// and linear growth
+  unsigned int bin_mult;       /// Linear bin scaling size
+  size_t max_bin_alloc_size;   /// Maximal binned allocation size
+  std::set<size_t> bin_sizes;  /// Explicit control over bin sizes
 
-  unsigned int linear_bin_index; /// Geometric bin to consider linear binning
-                                 /// from (computed)
-  size_t min_bin_bytes;          /// Minimum bin size
-  size_t max_bin_bytes;          /// Maximum bin size
-  size_t max_cached_bytes;       /// Maximum aggregate cached bytes per device
+  unsigned int linear_bin_index;  /// Geometric bin to consider linear binning
+                                  /// from (computed)
+  size_t min_bin_bytes;           /// Minimum bin size
+  size_t max_bin_bytes;           /// Maximum bin size
+  size_t max_cached_bytes;        /// Maximum aggregate cached bytes per device
 
-  const bool
-      skip_cleanup;  /// Whether or not to skip a call to FreeAllCached() when
-                     /// destructor is called.  (The runtime may have already
-                     /// shut down for statically declared allocators)
-  bool debug;        /// Whether or not to print (de)allocation events to stdout
-  bool malloc_async; /// Use {cuda,hip}MallocAsync
+  bool const
+    skip_cleanup;  /// Whether or not to skip a call to FreeAllCached() when
+                   /// destructor is called.  (The runtime may have already
+                   /// shut down for statically declared allocators)
+  bool debug;      /// Whether or not to print (de)allocation events to stdout
+  bool malloc_async;  /// Use {cuda,hip}MallocAsync
 
-  std::set<size_t> actual_bin_sizes; /// Bin sizes used by the allocator
-  GpuCachedBytes cached_bytes; /// Map of device ordinal to aggregate cached
-                               /// bytes on that device
+  std::set<size_t> actual_bin_sizes;  /// Bin sizes used by the allocator
+  GpuCachedBytes cached_bytes;  /// Map of device ordinal to aggregate cached
+                                /// bytes on that device
   CachedBlocks
-      cached_blocks; /// Set of cached device allocations available for reuse
-  BusyBlocks live_blocks; /// Set of live device allocations currently in use
+    cached_blocks;  /// Set of cached device allocations available for reuse
+  BusyBlocks live_blocks;  /// Set of live device allocations currently in use
 
   //---------------------------------------------------------------------
   // Methods
@@ -399,37 +445,43 @@ struct PooledDeviceAllocator {
    * \brief Constructor.
    */
   PooledDeviceAllocator(
-      unsigned int bin_growth,  ///< Geometric growth factor for bin-sizes
-      unsigned int min_bin = 1, ///< Minimum bin (default is bin_growth ^ 1)
-      unsigned int max_bin =
-          INVALID_BIN, ///< Maximum bin (default is no max bin)
-      size_t max_cached_bytes =
-          INVALID_SIZE, ///< Maximum aggregate cached bytes per device (default
-                        ///< is no limit)
-      bool skip_cleanup =
-          false, ///< Whether or not to skip a call to \p FreeAllCached() when
-                 ///< the destructor is called (default is to deallocate)
-      bool debug = false, ///< Whether or not to print (de)allocation events to
-                          ///< stdout (default is no stderr output)
-      unsigned int bin_mult_threshold =
-          INVALID_BIN, ///< Threshold to switch between geometric and linear
-                       ///< growth
-      unsigned int bin_mult = INVALID_BIN, ///< Linear bin scaling size
-      size_t max_bin_alloc_size =
-          INVALID_SIZE,                ///< Maximal binned allocation size
-      std::set<size_t> bin_sizes = {}, ///< Explicit control over bin size
-      bool use_malloc_async = false)   ///< Use asynchronous malloc/free calls
-      : bin_growth(bin_growth), min_bin(min_bin), max_bin(max_bin),
-        bin_mult_threshold(bin_mult_threshold), bin_mult(bin_mult),
-        bin_sizes(bin_sizes),
-        linear_bin_index(ComputeLinearBinIndex(bin_growth, bin_mult_threshold)),
-        min_bin_bytes(IntPow(bin_growth, min_bin)),
-        max_bin_bytes(
-            ComputeMaxBinBytes(bin_growth, max_bin, max_bin_alloc_size)),
-        max_cached_bytes(max_cached_bytes), skip_cleanup(skip_cleanup),
-        debug(debug), malloc_async(use_malloc_async),
-        cached_blocks(BlockDescriptor::SizeCompare),
-        live_blocks(BlockDescriptor::PtrCompare) {}
+    unsigned int bin_growth,   ///< Geometric growth factor for bin-sizes
+    unsigned int min_bin = 1,  ///< Minimum bin (default is bin_growth ^ 1)
+    unsigned int max_bin =
+      INVALID_BIN,  ///< Maximum bin (default is no max bin)
+    size_t max_cached_bytes =
+      INVALID_SIZE,  ///< Maximum aggregate cached bytes per device (default
+                     ///< is no limit)
+    bool skip_cleanup =
+      false,  ///< Whether or not to skip a call to \p FreeAllCached() when
+              ///< the destructor is called (default is to deallocate)
+    bool debug = false,  ///< Whether or not to print (de)allocation events to
+                         ///< stdout (default is no stderr output)
+    unsigned int bin_mult_threshold =
+      INVALID_BIN,  ///< Threshold to switch between geometric and linear
+                    ///< growth
+    unsigned int bin_mult = INVALID_BIN,  ///< Linear bin scaling size
+    size_t max_bin_alloc_size =
+      INVALID_SIZE,                   ///< Maximal binned allocation size
+    std::set<size_t> bin_sizes = {},  ///< Explicit control over bin size
+    bool use_malloc_async = false)    ///< Use asynchronous malloc/free calls
+    : bin_growth(bin_growth),
+      min_bin(min_bin),
+      max_bin(max_bin),
+      bin_mult_threshold(bin_mult_threshold),
+      bin_mult(bin_mult),
+      bin_sizes(bin_sizes),
+      linear_bin_index(ComputeLinearBinIndex(bin_growth, bin_mult_threshold)),
+      min_bin_bytes(IntPow(bin_growth, min_bin)),
+      max_bin_bytes(
+        ComputeMaxBinBytes(bin_growth, max_bin, max_bin_alloc_size)),
+      max_cached_bytes(max_cached_bytes),
+      skip_cleanup(skip_cleanup),
+      debug(debug),
+      malloc_async(use_malloc_async),
+      cached_blocks(BlockDescriptor::SizeCompare),
+      live_blocks(BlockDescriptor::PtrCompare)
+  {}
 
   /**
    * \brief Default constructor.
@@ -446,14 +498,22 @@ struct PooledDeviceAllocator {
    * sets a maximum of 6,291,455 cached bytes per device
    */
   PooledDeviceAllocator(bool skip_cleanup = false, bool debug = false)
-      : bin_growth(8), min_bin(3), max_bin(7), bin_mult_threshold(INVALID_BIN),
-        bin_mult(INVALID_BIN), bin_sizes{}, linear_bin_index(INVALID_BIN),
-        min_bin_bytes(IntPow(bin_growth, min_bin)),
-        max_bin_bytes(IntPow(bin_growth, max_bin)),
-        max_cached_bytes((max_bin_bytes * 3) - 1), skip_cleanup(skip_cleanup),
-        debug(debug), malloc_async(false),
-        cached_blocks(BlockDescriptor::SizeCompare),
-        live_blocks(BlockDescriptor::PtrCompare) {}
+    : bin_growth(8),
+      min_bin(3),
+      max_bin(7),
+      bin_mult_threshold(INVALID_BIN),
+      bin_mult(INVALID_BIN),
+      bin_sizes{},
+      linear_bin_index(INVALID_BIN),
+      min_bin_bytes(IntPow(bin_growth, min_bin)),
+      max_bin_bytes(IntPow(bin_growth, max_bin)),
+      max_cached_bytes((max_bin_bytes * 3) - 1),
+      skip_cleanup(skip_cleanup),
+      debug(debug),
+      malloc_async(false),
+      cached_blocks(BlockDescriptor::SizeCompare),
+      live_blocks(BlockDescriptor::PtrCompare)
+  {}
 
   /**
    * \brief Sets the limit on the number bytes this allocator is allowed to
@@ -462,13 +522,15 @@ struct PooledDeviceAllocator {
    * Changing the ceiling of cached bytes does not cause any allocations (in-use
    * or cached-in-reserve) to be freed.  See \p FreeAllCached().
    */
-  gpuError_t SetMaxCachedBytes(size_t max_cached_bytes_) {
+  gpuError_t SetMaxCachedBytes(size_t max_cached_bytes_)
+  {
     // Lock
     mutex.lock();
 
     if (debug)
       printf("Changing max_cached_bytes (%lld -> %lld)\n",
-             (long long)this->max_cached_bytes, (long long)max_cached_bytes_);
+             (long long) this->max_cached_bytes,
+             (long long) max_cached_bytes_);
 
     this->max_cached_bytes = max_cached_bytes_;
 
@@ -482,11 +544,13 @@ struct PooledDeviceAllocator {
    * \brief Implements the bin-finding algorithm described in the class
    * documentation. Returns true if a bin was found, or false otherwise.
    */
-  bool FindBin(BlockDescriptor &search_key) {
+  bool FindBin(BlockDescriptor& search_key)
+  {
     size_t bytes = search_key.requested_bytes;
     search_key.bytes = bytes;
 
-    if (bytes > max_bin_bytes) {
+    if (bytes > max_bin_bytes)
+    {
       // Size is greater than our preconfigured maximum: allocate the request
       // exactly and give out-of-bounds bin.  It will not be cached
       // for reuse when returned.
@@ -495,7 +559,8 @@ struct PooledDeviceAllocator {
 
     // If a custom bin histogram is given, use that
     auto it = bin_sizes.lower_bound(bytes);
-    if (it != bin_sizes.end()) {
+    if (it != bin_sizes.end())
+    {
       search_key.bytes = *it;
       return true;
     }
@@ -504,20 +569,23 @@ struct PooledDeviceAllocator {
     unsigned int geobin;
     NearestPowerOf(geobin, search_key.bytes, bin_growth, bytes);
     // Minimum bin
-    if (geobin < min_bin) {
+    if (geobin < min_bin)
+    {
       // Bin is less than minimum bin: round up
       search_key.bytes = min_bin_bytes;
       return true;
     }
 
     // Test for linear binning; if so, find linear bin
-    if (linear_bin_index != INVALID_BIN && geobin >= linear_bin_index) {
+    if (linear_bin_index != INVALID_BIN && geobin >= linear_bin_index)
+    {
       search_key.bytes = NearestMultOf(bin_mult, bytes);
       return true;
     }
 
     // Otherwise, use geometric bin
-    if (geobin > max_bin) {
+    if (geobin > max_bin)
+    {
       // Bin is greater than our maximum bin: allocate the request
       // exactly and give out-of-bounds bin.  It will not be cached
       // for reuse when returned.
@@ -538,17 +606,18 @@ struct PooledDeviceAllocator {
    * submitted to \p active_stream has completed.
    */
   gpuError_t DeviceAllocate(
-      int device,   ///< [in] Device on which to place the allocation
-      void **d_ptr, ///< [out] Reference to pointer to the allocation
-      size_t bytes, ///< [in] Minimum number of bytes for the allocation
-      gpuStream_t active_stream =
-          0) ///< [in] The stream to be associated with this allocation
+    int device,    ///< [in] Device on which to place the allocation
+    void** d_ptr,  ///< [out] Reference to pointer to the allocation
+    size_t bytes,  ///< [in] Minimum number of bytes for the allocation
+    gpuStream_t active_stream =
+      0)  ///< [in] The stream to be associated with this allocation
   {
     *d_ptr = NULL;
     int entrypoint_device = INVALID_DEVICE_ORDINAL;
     gpuError_t error = gpuSuccess;
 
-    if (device == INVALID_DEVICE_ORDINAL) {
+    if (device == INVALID_DEVICE_ORDINAL)
+    {
       if (gpuDebug(error = gpuGetDevice(&entrypoint_device)))
         return error;
       device = entrypoint_device;
@@ -562,7 +631,8 @@ struct PooledDeviceAllocator {
     bool binned = FindBin(search_key);
     search_key.binned = binned;
 
-    if (binned) {
+    if (binned)
+    {
       // Search for a suitable cached allocation: lock
       mutex.lock();
 
@@ -572,24 +642,29 @@ struct PooledDeviceAllocator {
       // Iterate through the range of cached blocks on the same device in the
       // same bin
       CachedBlocks::iterator block_itr = cached_blocks.lower_bound(search_key);
-      while ((block_itr != cached_blocks.end()) &&
-             (block_itr->device == device) &&
-             (block_itr->bytes == search_key.bytes)) {
+      while ((block_itr != cached_blocks.end()) && (block_itr->device == device)
+             && (block_itr->bytes == search_key.bytes))
+      {
         // To prevent races with reusing blocks returned by the host but still
         // in use by the device, only consider cached blocks that are
         // either (from the active stream) or (from an idle stream)
         bool is_reusable = false;
-        if (active_stream == block_itr->associated_stream) {
+        if (active_stream == block_itr->associated_stream)
+        {
           is_reusable = true;
-        } else {
-          const gpuError_t event_status = gpuEventQuery(block_itr->ready_event);
-          if (event_status != gpuErrorNotReady) {
+        }
+        else
+        {
+          gpuError_t const event_status = gpuEventQuery(block_itr->ready_event);
+          if (event_status != gpuErrorNotReady)
+          {
             static_cast<void>(gpuDebug(event_status));
             is_reusable = true;
           }
         }
 
-        if (is_reusable) {
+        if (is_reusable)
+        {
           // Reuse existing cache block.  Insert into live blocks.
           found = true;
           search_key = *block_itr;
@@ -604,9 +679,11 @@ struct PooledDeviceAllocator {
           if (debug)
             printf("\tDevice %d reused cached block at %p (%lld bytes) for "
                    "stream %lld (previously associated with stream %lld).\n",
-                   device, search_key.d_ptr, (long long)search_key.bytes,
-                   (long long)search_key.associated_stream,
-                   (long long)block_itr->associated_stream);
+                   device,
+                   search_key.d_ptr,
+                   (long long) search_key.bytes,
+                   (long long) search_key.associated_stream,
+                   (long long) block_itr->associated_stream);
 
           cached_blocks.erase(block_itr);
 
@@ -620,10 +697,12 @@ struct PooledDeviceAllocator {
     }
 
     // Allocate the block if necessary
-    if (!found) {
+    if (!found)
+    {
       // Set runtime's current device to specified device (entrypoint may not be
       // set)
-      if (device != entrypoint_device) {
+      if (device != entrypoint_device)
+      {
         if (gpuDebug(error = gpuGetDevice(&entrypoint_device)))
           return error;
         if (gpuDebug(error = gpuSetDevice(device)))
@@ -631,18 +710,20 @@ struct PooledDeviceAllocator {
       }
 
       // Attempt to allocate
-      if (gpuDebug(error = MallocInternal(&search_key.d_ptr, search_key.bytes,
-                                          active_stream)) ==
-          gpuErrorMemoryAllocation) {
+      if (gpuDebug(error = MallocInternal(
+                     &search_key.d_ptr, search_key.bytes, active_stream))
+          == gpuErrorMemoryAllocation)
+      {
         // The allocation attempt failed: free all cached blocks on device and
         // retry
         if (debug)
           printf("\tDevice %d failed to allocate %lld bytes for stream %lld, "
                  "retrying after freeing cached allocations",
-                 device, (long long)search_key.bytes,
-                 (long long)search_key.associated_stream);
+                 device,
+                 (long long) search_key.bytes,
+                 (long long) search_key.associated_stream);
 
-        error = gpuSuccess; // Reset the error we will return
+        error = gpuSuccess;                    // Reset the error we will return
         static_cast<void>(gpuGetLastError());  // Reset error
 
         // Lock
@@ -652,8 +733,9 @@ struct PooledDeviceAllocator {
         BlockDescriptor free_key(device);
         CachedBlocks::iterator block_itr = cached_blocks.lower_bound(free_key);
 
-        while ((block_itr != cached_blocks.end()) &&
-               (block_itr->device == device)) {
+        while ((block_itr != cached_blocks.end())
+               && (block_itr->device == device))
+        {
           // No need to worry about synchronization with the device: gpuFree is
           // blocking and will synchronize across all kernels executing
           // on the current device
@@ -672,11 +754,12 @@ struct PooledDeviceAllocator {
             printf("\tDevice %d freed %lld bytes.\n\t\t  %lld available blocks "
                    "cached (%lld bytes), %lld live blocks (%lld bytes) "
                    "outstanding.\n",
-                   device, (long long)block_itr->bytes,
-                   (long long)cached_blocks.size(),
-                   (long long)cached_bytes[device].free,
-                   (long long)live_blocks.size(),
-                   (long long)cached_bytes[device].live);
+                   device,
+                   (long long) block_itr->bytes,
+                   (long long) cached_blocks.size(),
+                   (long long) cached_bytes[device].free,
+                   (long long) live_blocks.size(),
+                   (long long) cached_bytes[device].live);
 
           block_itr = cached_blocks.erase(block_itr);
         }
@@ -689,8 +772,8 @@ struct PooledDeviceAllocator {
           return error;
 
         // Try to allocate again
-        if (gpuDebug(error = MallocInternal(&search_key.d_ptr, search_key.bytes,
-                                            active_stream)))
+        if (gpuDebug(error = MallocInternal(
+                       &search_key.d_ptr, search_key.bytes, active_stream)))
           return error;
       }
 
@@ -710,12 +793,15 @@ struct PooledDeviceAllocator {
       if (debug)
         printf("\tDevice %d allocated new device block at %p (%lld bytes "
                "associated with stream %lld).\n",
-               device, search_key.d_ptr, (long long)search_key.bytes,
-               (long long)search_key.associated_stream);
+               device,
+               search_key.d_ptr,
+               (long long) search_key.bytes,
+               (long long) search_key.associated_stream);
 
       // Attempt to revert back to previous device if necessary
-      if ((entrypoint_device != INVALID_DEVICE_ORDINAL) &&
-          (entrypoint_device != device)) {
+      if ((entrypoint_device != INVALID_DEVICE_ORDINAL)
+          && (entrypoint_device != device))
+      {
         if (gpuDebug(error = gpuSetDevice(entrypoint_device)))
           return error;
       }
@@ -725,11 +811,12 @@ struct PooledDeviceAllocator {
     *d_ptr = search_key.d_ptr;
 
     if (debug)
-      printf(
-          "\t\t%lld available blocks cached (%lld bytes), %lld live blocks "
-          "outstanding(%lld bytes).\n",
-          (long long)cached_blocks.size(), (long long)cached_bytes[device].free,
-          (long long)live_blocks.size(), (long long)cached_bytes[device].live);
+      printf("\t\t%lld available blocks cached (%lld bytes), %lld live blocks "
+             "outstanding(%lld bytes).\n",
+             (long long) cached_blocks.size(),
+             (long long) cached_bytes[device].free,
+             (long long) live_blocks.size(),
+             (long long) cached_bytes[device].live);
 
     return error;
   }
@@ -744,10 +831,10 @@ struct PooledDeviceAllocator {
    * submitted to \p active_stream has completed.
    */
   gpuError_t DeviceAllocate(
-      void **d_ptr, ///< [out] Reference to pointer to the allocation
-      size_t bytes, ///< [in] Minimum number of bytes for the allocation
-      gpuStream_t active_stream =
-          0) ///< [in] The stream to be associated with this allocation
+    void** d_ptr,  ///< [out] Reference to pointer to the allocation
+    size_t bytes,  ///< [in] Minimum number of bytes for the allocation
+    gpuStream_t active_stream =
+      0)  ///< [in] The stream to be associated with this allocation
   {
     return DeviceAllocate(INVALID_DEVICE_ORDINAL, d_ptr, bytes, active_stream);
   }
@@ -761,11 +848,13 @@ struct PooledDeviceAllocator {
    * and it becomes available for reuse within other streams when all prior work
    * submitted to \p active_stream has completed.
    */
-  gpuError_t DeviceFree(int device, void *d_ptr) {
+  gpuError_t DeviceFree(int device, void* d_ptr)
+  {
     int entrypoint_device = INVALID_DEVICE_ORDINAL;
     gpuError_t error = gpuSuccess;
 
-    if (device == INVALID_DEVICE_ORDINAL) {
+    if (device == INVALID_DEVICE_ORDINAL)
+    {
       if (gpuDebug(error = gpuGetDevice(&entrypoint_device)))
         return error;
       device = entrypoint_device;
@@ -778,7 +867,8 @@ struct PooledDeviceAllocator {
     bool recached = false;
     BlockDescriptor search_key(d_ptr, device);
     BusyBlocks::iterator block_itr = live_blocks.find(search_key);
-    if (block_itr != live_blocks.end()) {
+    if (block_itr != live_blocks.end())
+    {
       // Remove from live blocks
       search_key = *block_itr;
       live_blocks.erase(block_itr);
@@ -786,8 +876,9 @@ struct PooledDeviceAllocator {
 
       // Keep the returned allocation if bin is valid and we won't exceed the
       // max cached threshold
-      if (search_key.binned &&
-          (cached_bytes[device].free + search_key.bytes <= max_cached_bytes)) {
+      if (search_key.binned
+          && (cached_bytes[device].free + search_key.bytes <= max_cached_bytes))
+      {
         // Insert returned allocation into free blocks
         recached = true;
         cached_blocks.insert(search_key);
@@ -797,12 +888,13 @@ struct PooledDeviceAllocator {
           printf("\tDevice %d returned %lld bytes from associated stream "
                  "%lld.\n\t\t %lld available blocks cached (%lld bytes), %lld "
                  "live blocks outstanding. (%lld bytes)\n",
-                 device, (long long)search_key.bytes,
-                 (long long)search_key.associated_stream,
-                 (long long)cached_blocks.size(),
-                 (long long)cached_bytes[device].free,
-                 (long long)live_blocks.size(),
-                 (long long)cached_bytes[device].live);
+                 device,
+                 (long long) search_key.bytes,
+                 (long long) search_key.associated_stream,
+                 (long long) cached_blocks.size(),
+                 (long long) cached_bytes[device].free,
+                 (long long) live_blocks.size(),
+                 (long long) cached_bytes[device].live);
       }
     }
 
@@ -810,14 +902,16 @@ struct PooledDeviceAllocator {
     mutex.unlock();
 
     // First set to specified device (entrypoint may not be set)
-    if (device != entrypoint_device) {
+    if (device != entrypoint_device)
+    {
       if (gpuDebug(error = gpuGetDevice(&entrypoint_device)))
         return error;
       if (gpuDebug(error = gpuSetDevice(device)))
         return error;
     }
 
-    if (recached) {
+    if (recached)
+    {
       // Insert the ready event in the associated stream (must have current
       // device set properly)
       if (gpuDebug(error = gpuEventRecord(search_key.ready_event,
@@ -825,7 +919,8 @@ struct PooledDeviceAllocator {
         return error;
     }
 
-    if (!recached) {
+    if (!recached)
+    {
       // Free the allocation from the runtime and cleanup the event.
       if (gpuDebug(error = FreeInternal(d_ptr, search_key.associated_stream)))
         return error;
@@ -836,17 +931,19 @@ struct PooledDeviceAllocator {
         printf("\tDevice %d freed %lld bytes from associated stream "
                "%lld.\n\t\t  %lld available blocks cached (%lld bytes), %lld "
                "live blocks (%lld bytes) outstanding.\n",
-               device, (long long)search_key.bytes,
-               (long long)search_key.associated_stream,
-               (long long)cached_blocks.size(),
-               (long long)cached_bytes[device].free,
-               (long long)live_blocks.size(),
-               (long long)cached_bytes[device].live);
+               device,
+               (long long) search_key.bytes,
+               (long long) search_key.associated_stream,
+               (long long) cached_blocks.size(),
+               (long long) cached_bytes[device].free,
+               (long long) live_blocks.size(),
+               (long long) cached_bytes[device].live);
     }
 
     // Reset device
-    if ((entrypoint_device != INVALID_DEVICE_ORDINAL) &&
-        (entrypoint_device != device)) {
+    if ((entrypoint_device != INVALID_DEVICE_ORDINAL)
+        && (entrypoint_device != device))
+    {
       if (gpuDebug(error = gpuSetDevice(entrypoint_device)))
         return error;
     }
@@ -863,32 +960,37 @@ struct PooledDeviceAllocator {
    * and it becomes available for reuse within other streams when all prior work
    * submitted to \p active_stream has completed.
    */
-  gpuError_t DeviceFree(void *d_ptr) {
+  gpuError_t DeviceFree(void* d_ptr)
+  {
     return DeviceFree(INVALID_DEVICE_ORDINAL, d_ptr);
   }
 
   /**
    * \brief Frees all cached device allocations on all devices
    */
-  gpuError_t FreeAllCached() {
+  gpuError_t FreeAllCached()
+  {
     gpuError_t error = gpuSuccess;
     int entrypoint_device = INVALID_DEVICE_ORDINAL;
     int current_device = INVALID_DEVICE_ORDINAL;
 
     mutex.lock();
 
-    while (!cached_blocks.empty()) {
+    while (!cached_blocks.empty())
+    {
       // Get first block
       CachedBlocks::iterator begin = cached_blocks.begin();
 
       // Get entry-point device ordinal if necessary
-      if (entrypoint_device == INVALID_DEVICE_ORDINAL) {
+      if (entrypoint_device == INVALID_DEVICE_ORDINAL)
+      {
         if (gpuDebug(error = gpuGetDevice(&entrypoint_device)))
           break;
       }
 
       // Set current device ordinal if necessary
-      if (begin->device != current_device) {
+      if (begin->device != current_device)
+      {
         if (gpuDebug(error = gpuSetDevice(begin->device)))
           break;
         current_device = begin->device;
@@ -896,31 +998,33 @@ struct PooledDeviceAllocator {
 
       // Free device memory
       if (gpuDebug(error =
-                       FreeInternal(begin->d_ptr, begin->associated_stream)))
+                     FreeInternal(begin->d_ptr, begin->associated_stream)))
         break;
       if (gpuDebug(error = gpuEventDestroy(begin->ready_event)))
         break;
 
       // Reduce balance and erase entry
-      const size_t block_bytes = begin->bytes;
+      size_t const block_bytes = begin->bytes;
       cached_bytes[current_device].free -= block_bytes;
       cached_blocks.erase(begin);
 
       if (debug)
         printf(
-            "\tDevice %d freed %lld bytes.\n\t\t  %lld available blocks cached "
-            "(%lld bytes), %lld live blocks (%lld bytes) outstanding.\n",
-            current_device, (long long)block_bytes,
-            (long long)cached_blocks.size(),
-            (long long)cached_bytes[current_device].free,
-            (long long)live_blocks.size(),
-            (long long)cached_bytes[current_device].live);
+          "\tDevice %d freed %lld bytes.\n\t\t  %lld available blocks cached "
+          "(%lld bytes), %lld live blocks (%lld bytes) outstanding.\n",
+          current_device,
+          (long long) block_bytes,
+          (long long) cached_blocks.size(),
+          (long long) cached_bytes[current_device].free,
+          (long long) live_blocks.size(),
+          (long long) cached_bytes[current_device].live);
     }
 
     mutex.unlock();
 
     // Attempt to revert back to entry-point device if necessary
-    if (entrypoint_device != INVALID_DEVICE_ORDINAL) {
+    if (entrypoint_device != INVALID_DEVICE_ORDINAL)
+    {
       if (gpuDebug(error = gpuSetDevice(entrypoint_device)))
         return error;
     }
@@ -931,16 +1035,19 @@ struct PooledDeviceAllocator {
   /**
    * \brief Destructor
    */
-  virtual ~PooledDeviceAllocator() {
+  virtual ~PooledDeviceAllocator()
+  {
     if (!skip_cleanup)
       static_cast<void>(FreeAllCached());
   }
 
   /* Inspection and reporting methods */
 
-  size_t TotalAllocatedMemory(int device = INVALID_DEVICE_ORDINAL) const {
+  size_t TotalAllocatedMemory(int device = INVALID_DEVICE_ORDINAL) const
+  {
     size_t result = 0;
-    for (auto const &[dev, totals] : cached_bytes) {
+    for (auto const& [dev, totals] : cached_bytes)
+    {
       if (device != INVALID_DEVICE_ORDINAL && device != dev)
         continue;
       result += totals.live + totals.free;
@@ -948,9 +1055,11 @@ struct PooledDeviceAllocator {
     return result;
   }
 
-  size_t FreeMemory(int device = INVALID_DEVICE_ORDINAL) const {
+  size_t FreeMemory(int device = INVALID_DEVICE_ORDINAL) const
+  {
     size_t result = 0;
-    for (auto const &[dev, totals] : cached_bytes) {
+    for (auto const& [dev, totals] : cached_bytes)
+    {
       if (device != INVALID_DEVICE_ORDINAL && device != dev)
         continue;
       result += totals.free;
@@ -959,9 +1068,11 @@ struct PooledDeviceAllocator {
   }
 
   size_t GetBinFreeMemory(int device = INVALID_DEVICE_ORDINAL,
-                          size_t bin_size = INVALID_SIZE) const {
+                          size_t bin_size = INVALID_SIZE) const
+  {
     size_t result = 0;
-    for (BlockDescriptor const &desc : cached_blocks) {
+    for (BlockDescriptor const& desc : cached_blocks)
+    {
       if (device != INVALID_DEVICE_ORDINAL && desc.device != device)
         continue;
       if (desc.bytes == bin_size)
@@ -970,9 +1081,11 @@ struct PooledDeviceAllocator {
     return result;
   }
 
-  size_t LiveMemory(int device = INVALID_DEVICE_ORDINAL) const {
+  size_t LiveMemory(int device = INVALID_DEVICE_ORDINAL) const
+  {
     size_t result = 0;
-    for (auto const &[dev, totals] : cached_bytes) {
+    for (auto const& [dev, totals] : cached_bytes)
+    {
       if (device != INVALID_DEVICE_ORDINAL && device != dev)
         continue;
       result += totals.live;
@@ -981,9 +1094,11 @@ struct PooledDeviceAllocator {
   }
 
   size_t GetBinLiveMemory(int device = INVALID_DEVICE_ORDINAL,
-                          size_t bin_size = INVALID_SIZE) const {
+                          size_t bin_size = INVALID_SIZE) const
+  {
     size_t result = 0;
-    for (BlockDescriptor const &desc : live_blocks) {
+    for (BlockDescriptor const& desc : live_blocks)
+    {
       if (device != INVALID_DEVICE_ORDINAL && desc.device != device)
         continue;
       if (desc.bytes == bin_size)
@@ -992,9 +1107,11 @@ struct PooledDeviceAllocator {
     return result;
   }
 
-  size_t NonbinnedMemory(int device = INVALID_DEVICE_ORDINAL) const {
+  size_t NonbinnedMemory(int device = INVALID_DEVICE_ORDINAL) const
+  {
     size_t result = 0;
-    for (BlockDescriptor const &desc : live_blocks) {
+    for (BlockDescriptor const& desc : live_blocks)
+    {
       if (device != INVALID_DEVICE_ORDINAL && desc.device != device)
         continue;
       if (!desc.binned)
@@ -1004,9 +1121,11 @@ struct PooledDeviceAllocator {
   }
 
   size_t ExcessMemory(int device = INVALID_DEVICE_ORDINAL,
-                      size_t bin_size = INVALID_SIZE) const {
+                      size_t bin_size = INVALID_SIZE) const
+  {
     size_t result = 0;
-    for (BlockDescriptor const &desc : live_blocks) {
+    for (BlockDescriptor const& desc : live_blocks)
+    {
       if (device != INVALID_DEVICE_ORDINAL && desc.device != device)
         continue;
       if (bin_size != INVALID_SIZE && desc.bytes != bin_size)
@@ -1016,18 +1135,24 @@ struct PooledDeviceAllocator {
     return result;
   }
 
-  size_t GetNumBuffers(int device = INVALID_DEVICE_ORDINAL, bool cached = true,
-                       bool live = true) const {
+  size_t GetNumBuffers(int device = INVALID_DEVICE_ORDINAL,
+                       bool cached = true,
+                       bool live = true) const
+  {
     size_t result = 0;
-    if (cached) {
-      for (BlockDescriptor const &desc : cached_blocks) {
+    if (cached)
+    {
+      for (BlockDescriptor const& desc : cached_blocks)
+      {
         if (device != INVALID_DEVICE_ORDINAL && desc.device != device)
           continue;
         ++result;
       }
     }
-    if (live) {
-      for (BlockDescriptor const &desc : live_blocks) {
+    if (live)
+    {
+      for (BlockDescriptor const& desc : live_blocks)
+      {
         if (device != INVALID_DEVICE_ORDINAL && desc.device != device)
           continue;
         ++result;
@@ -1036,25 +1161,33 @@ struct PooledDeviceAllocator {
     return result;
   }
 
-  void Report(std::ostream &os, bool report_bins = true) const {
+  void Report(std::ostream& os, bool report_bins = true) const
+  {
     os << "Memory pool configuration:" << std::endl;
     os << "  Geometric bins - " << bin_growth << " ^ (" << min_bin << "-"
-       << ((max_bin == INVALID_BIN) ? "inf" : std::to_string(max_bin))
-       << ")" << std::endl;
-    if (bin_mult_threshold == INVALID_BIN) {
+       << ((max_bin == INVALID_BIN) ? "inf" : std::to_string(max_bin)) << ")"
+       << std::endl;
+    if (bin_mult_threshold == INVALID_BIN)
+    {
       os << "  Linear bins - DISABLED" << std::endl;
-    } else {
+    }
+    else
+    {
       os << "  Linear bins - when geometric bin difference > "
          << bin_mult_threshold << ", allocate in multiples of " << bin_mult
          << std::endl;
     }
 
-    if (bin_sizes.size() == 0) {
+    if (bin_sizes.size() == 0)
+    {
       os << "  Custom bins - NONE" << std::endl;
-    } else {
+    }
+    else
+    {
       os << "  Custom bins - ";
       bool first = true;
-      for (auto const &bin : bin_sizes) {
+      for (auto const& bin : bin_sizes)
+      {
         if (!first)
           os << ", ";
         HumanReadableSize(bin, os);
@@ -1066,7 +1199,8 @@ struct PooledDeviceAllocator {
        << ", debug: " << (debug ? "enabled" : "disabled")
        << ", skip cleanup: " << (skip_cleanup ? "yes" : "no") << std::endl;
 
-    for (auto const &[dev, totals] : cached_bytes) {
+    for (auto const& [dev, totals] : cached_bytes)
+    {
       os << "Memory pool allocation report (Device " << dev
          << "):" << std::endl;
       os << "  Allocated memory: ";
@@ -1080,9 +1214,11 @@ struct PooledDeviceAllocator {
       HumanReadableSize(ExcessMemory(dev), os);
       os << std::endl;
 
-      if (report_bins) {
+      if (report_bins)
+      {
         os << "  Detailed bin report:" << std::endl;
-        for (auto const &bin : actual_bin_sizes) {
+        for (auto const& bin : actual_bin_sizes)
+        {
           os << "    ";
           HumanReadableSize(bin, os);
           os << ": Live = ";
@@ -1101,25 +1237,32 @@ struct PooledDeviceAllocator {
   }
 
 private:
-  gpuError_t MallocInternal(void **ptr, size_t size,
-                            gpuStream_t active_stream) {
-    if (malloc_async) {
+  gpuError_t MallocInternal(void** ptr, size_t size, gpuStream_t active_stream)
+  {
+    if (malloc_async)
+    {
       return gpuMallocAsync(ptr, size, active_stream);
-    } else {
+    }
+    else
+    {
       return gpuMalloc(ptr, size);
     }
   }
 
-  gpuError_t FreeInternal(void *ptr, gpuStream_t active_stream) {
-    if (malloc_async) {
+  gpuError_t FreeInternal(void* ptr, gpuStream_t active_stream)
+  {
+    if (malloc_async)
+    {
       return gpuFreeAsync(ptr, active_stream);
-    } else {
+    }
+    else
+    {
       return gpuFree(ptr);
     }
   }
 };
 
-} // namespace h2
+}  // namespace h2
 
 #undef gpuMallocAsync
 #undef gpuMalloc
