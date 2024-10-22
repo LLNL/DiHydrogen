@@ -20,18 +20,19 @@ namespace h2
 {
 
 /** @class Comm
- *  @brief Facade over Aluminum communicators
- *
- *  We need to abstract away the Aluminum backend. This is also a
- *  shift from the old Hydrogen communicators as we will just manage
- *  the compute stream here, rather than in the communication API.
+ *  @brief Minimal interface around Aluminum's communicator
+ *  @todo Flesh this out once the communication requirements and
+ *        semantics of H2 become clearer.
  */
 class Comm
 {
-  mutable std::unique_ptr<typename Al::MPIBackend::comm_type> m_al_comm;
+  std::unique_ptr<typename Al::MPIBackend::comm_type> m_al_comm;
 
 public:
+  /** Construct a null communicator */
   Comm() : Comm{MPI_COMM_NULL} {}
+
+  /** Construct from an MPI communicator */
   Comm(MPI_Comm comm)
   {
     if (comm != MPI_COMM_NULL)
@@ -47,7 +48,7 @@ public:
   Comm(Comm const&) = delete;
   Comm& operator=(Comm const&) = delete;
 
-  /* Get the rank in the comm */
+  /** Get the rank in the comm */
   int rank() const
   {
     if (!m_al_comm)
@@ -55,7 +56,7 @@ public:
     return m_al_comm->rank();
   }
 
-  /* Get the size of the comm */
+  /** Get the size of the comm */
   int size() const
   {
     if (!m_al_comm)
@@ -63,6 +64,7 @@ public:
     return m_al_comm->size();
   }
 
+  /** Get the underlying MPI_Comm handle */
   MPI_Comm get_mpi_handle() const noexcept
   {
     if (m_al_comm)
@@ -71,6 +73,14 @@ public:
       return MPI_COMM_NULL;
   }
 
+  /**
+   * Get the underlying Aluminum communicator.
+   *
+   * Note that Aluminum takes communicators by non-const reference,
+   * hence the (very intentional) return type here. However, 'this'
+   * does not logically mutate because of this operation, so the
+   * function itself is marked 'const'.
+   **/
   typename Al::MPIBackend::comm_type& get_al_comm() const
   {
     if (!m_al_comm)
@@ -79,6 +89,7 @@ public:
   }
 };
 
+/** @brief Get the (global) communicator for MPI_COMM_WORLD */
 inline Comm const& get_comm_world()
 {
   static Comm comm{MPI_COMM_WORLD};
