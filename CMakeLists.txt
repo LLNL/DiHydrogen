@@ -69,12 +69,6 @@ if (H2_ENABLE_DISTCONV_LEGACY)
     message(FATAL_ERROR "Must enable one of CUDA and ROCm with DistConv.")
   endif ()
 
-  # These might become full-fledged options later, but I hope
-  # not. Aluminum should just be the communication interface that H2
-  # uses across the board.
-  set(H2_ENABLE_ALUMINUM ${H2_ENABLE_DISTCONV_LEGACY}
-    CACHE BOOL "Use the Aluminum library for communications.")
-
   set(H2_ENABLE_OPENMP ${H2_ENABLE_DISTCONV_LEGACY}
     CACHE BOOL "Enable CPU acceleration with OpenMP threads.")
 endif ()
@@ -302,33 +296,6 @@ if (H2_ENABLE_DISTCONV_LEGACY)
       INTERFACE_COMPILE_OPTIONS
       $<$<COMPILE_LANGUAGE:CXX>:${__mpi_compile_options}>)
     unset(__mpi_compile_options)
-  endif ()
-endif ()
-
-if (H2_ENABLE_ALUMINUM)
-  find_package(Aluminum 1.0.0 CONFIG QUIET)
-  if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
-    message(STATUS
-      "A candidate Aluminum > v1.0.0 was found, but was not selected:")
-    message(STATUS
-      "  ${Aluminum_NOT_FOUND_MESSAGE}")
-  endif ()
-  # Try again, since we're technically ok with >v0.7.0
-  if (NOT Aluminum_FOUND)
-    find_package(Aluminum 0.7.0 CONFIG QUIET)
-    if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
-      message(STATUS
-        "A candidate Aluminum > v0.7.0 was found, but was not selected:")
-      message(STATUS
-        "  ${Aluminum_NOT_FOUND_MESSAGE}")
-    endif ()
-  endif ()
-  if (NOT Aluminum_FOUND)
-    message(FATAL_ERROR "Aluminum support required but not found.")
-  endif ()
-  if (H2_ENABLE_DISTCONV_LEGACY AND NOT AL_HAS_NCCL)
-    message(FATAL_ERROR
-      "DistConv requires Aluminum with at least the NCCLBackend enabled.")
   endif ()
 endif ()
 
