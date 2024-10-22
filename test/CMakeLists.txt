@@ -7,7 +7,12 @@
 
 if (H2_ENABLE_TESTS)
   # Setup the Catch2 stuff.
-  find_package(Catch2 3.0.0 CONFIG REQUIRED)
+  if (H2_USE_EXTERNAL_CATCH2
+      OR NOT IS_DIRECTORY "${CMAKE_SOURCE_DIR}/third_party/catch2")
+    find_package(Catch2 3.0.0 CONFIG REQUIRED)
+  else ()
+    add_subdirectory(../third_party/catch2 catch2)
+  endif ()
 
   message(STATUS "Found Catch2: ${Catch2_DIR}")
   message(STATUS "Catch2 Version: ${Catch2_VERSION}")

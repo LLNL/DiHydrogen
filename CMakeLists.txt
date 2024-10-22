@@ -94,6 +94,22 @@ option(H2_ENABLE_WERROR
   "Enable the \"-Werror\" flag. Requires compiler support."
   OFF)
 
+# Dependency management
+option(H2_USE_EXTERNAL_ALUMINUM
+  "Search for and link to an externally built Aluminum"
+  OFF)
+
+option(H2_USE_EXTERNAL_SPDLOG
+  "Search for and link to an externally built spdlog"
+  OFF)
+
+cmake_dependent_option(
+  H2_USE_EXTERNAL_CATCH2
+  "Search for and link to an externally built catch2"
+  OFF
+  "H2_ENABLE_TESTS"
+  OFF)
+
 # Hack
 set(MPI_ASSUME_NO_BUILTIN_MPI ON
   CACHE BOOL
@@ -188,9 +204,17 @@ endif ()
 
 # Required dependencies
 
-# Do we strictly need 1.0.0 for anything? No. Is it worthwhile to
-# backport to 0.7? Stronger no.
-find_package(Aluminum 1.0.0 CONFIG REQUIRED)
+if (H2_USE_EXTERNAL_ALUMINUM
+    OR NOT IS_DIRECTORY "${CMAKE_SOURCE_DIR}/third_party/aluminum")
+  # Do we strictly need 1.0.0 for anything? No. Is it worthwhile to
+  # backport to 0.7? Stronger no.
+  find_package(Aluminum 1.0.0 CONFIG REQUIRED)
+else ()
+  add_subdirectory(third_party/aluminum)
+  if (NOT TARGET AL::Al)
+    add_library(AL::Al ALIAS Al)
+  endif ()
+endif ()
 
 if (H2_ENABLE_CUDA)
 
@@ -212,10 +236,6 @@ if (H2_ENABLE_CUDA)
   set(CMAKE_CUDA_FLAGS "--expt-relaxed-constexpr ${CMAKE_CUDA_FLAGS}")
 endif (H2_ENABLE_CUDA)
 
-find_package(spdlog CONFIG REQUIRED)
-set(H2_HAS_SPDLOG TRUE)
-
-# This is a placeholder.
 if (H2_ENABLE_ROCM)
 
   # Our ROCm installs generally have a common prefix. It's not clear
@@ -275,6 +295,15 @@ endif ()
 if (H2_HAS_CUDA OR H2_HAS_ROCM)
   set(H2_HAS_GPU TRUE)
 endif ()
+
+if (H2_USE_EXTERNAL_SPDLOG
+    OR NOT IS_DIRECTORY "${CMAKE_SOURCE_DIR}/third_party/spdlog")
+  find_package(spdlog CONFIG REQUIRED)
+else ()
+  set(SPDLOG_INSTALL ON CACHE BOOL "Install spdlog" FORCE)
+  add_subdirectory(third_party/spdlog)
+endif ()
+set(H2_HAS_SPDLOG TRUE)
 
 if (H2_ENABLE_DACE)
   set(H2_HAS_DACE TRUE)
@@ -344,7 +373,6 @@ foreach (lib IN LISTS _hip_libs)
 endforeach ()
 
 if (MPI_CXX_FOUND)
-  message(STATUS "H2 HAS MPI_CXX")
   set(H2_HAS_MPI TRUE)
 else ()
   set(H2_HAS_MPI FALSE)

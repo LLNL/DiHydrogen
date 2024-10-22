@@ -1,0 +1,9 @@
+[submodule "third_party/aluminum"]
+	path = third_party/aluminum
+	url = https://github.com/llnl/aluminum
+[submodule "third_party/catch2"]
+	path = third_party/catch2
+	url = https://github.com/catchorg/catch2
+[submodule "third_party/spdlog"]
+	path = third_party/spdlog
+	url = https://github.com/gabime/spdlog
