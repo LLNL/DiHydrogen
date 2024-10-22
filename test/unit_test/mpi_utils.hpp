@@ -7,12 +7,13 @@
 
 #pragma once
 
+#include "h2/core/device.hpp"
+#include "h2/core/sync.hpp"
 #include "h2/tensor/dist_types.hpp"
 #include "h2/tensor/tensor_types.hpp"
 #include "h2/utils/Error.hpp"
 
 #include <algorithm>
-#include <memory>
 #include <stack>
 #include <unordered_map>
 #include <unordered_set>
@@ -33,6 +34,31 @@ void end_for_comms();
 
 }  // namespace internal
 
+namespace h2_tmp
+{
+/**
+ * Allreduces stuff (in place)
+ *
+ * We will flesh out a better communication interface but at this
+ * precise moment in time, this is all we need, and we only need it
+ * here.
+ *
+ * While we flesh out the aforementioned communication interface, we
+ * should also generalize device support.
+ */
+template <typename T>
+void allreduce(T* buf,
+               size_t n,
+               Al::ReductionOperator op,
+               h2::Comm const& comm,
+               h2::ComputeStream const& stream)
+{
+  if (stream.get_device() != h2::Device::CPU)
+    throw H2Exception("Allreduce only supported on CPU");
+  Al::Allreduce<Al::MPIBackend>(buf, n, op, comm.get_al_comm());
+}
+}  // namespace h2_tmp
+
 /**
  * Manages instances of communicators for testing.
  *
@@ -40,12 +66,20 @@ void end_for_comms();
  */
 class CommManager
 {
+private:
+  static h2::Comm split_comm(h2::Comm const& c, int color, int key)
+  {
+    MPI_Comm new_comm;
+    MPI_Comm_split(c.get_mpi_handle(), color, key, &new_comm);
+    return h2::Comm{new_comm};
+  }
+
 public:
-  CommManager() { world_size = El::mpi::COMM_WORLD.Size(); }
+  CommManager() { world_size = h2::get_comm_world().size(); }
 
   ~CommManager() { clear(); }
 
-  El::mpi::Comm& get_comm(int size = -1)
+  h2::Comm& get_comm(int size = -1)
   {
     H2_ASSERT_ALWAYS(size <= world_size,
                      "Requested communicator size exceeds world size");
@@ -58,19 +92,12 @@ public:
     // All ranks in the world have to participate in the split, but
     // only the ones in that should be in the returned communicator
     // actually return.
-    int world_rank = El::mpi::COMM_WORLD.Rank();
+    int const world_rank = h2::get_comm_world().rank();
 
     if (!comms.count(size))
     {
-      h2::Comm comm;
-      El::mpi::Split(El::mpi::COMM_WORLD, world_rank < size, world_rank, comm);
-      if (world_rank >= size)
-      {
-        // Need to add an entry to prevent trying to split in future
-        // calls. This essentially adds MPI_COMM_NULL.
-        comm.Reset();
-      }
-      comms.emplace(size, std::move(comm));
+      comms.emplace(
+        size, split_comm(h2::get_comm_world(), world_rank < size, world_rank));
     }
 
     if (world_rank >= size)
@@ -133,7 +160,7 @@ void for_comms(Test t, int min_size = 1, int max_size = -1)
   H2_ASSERT_ALWAYS(max_size < 0 || min_size <= max_size,
                    "Cannot have min_size greater than max_size");
 
-  int world_size = El::mpi::COMM_WORLD.Size();
+  int world_size = h2::get_comm_world().size();
   if (max_size < 0 || max_size > world_size)
   {
     max_size = world_size;
@@ -162,16 +189,15 @@ void for_comms(Test t, int min_size = 1, int max_size = -1)
     // the test case succeeded. In the case of failure, the allreduce
     // will be joined within a Catch2 event handler.
     int test_result = 1;
-    El::mpi::AllReduce(&test_result,
-                       1,
-                       // Because Elemental does not support LOGICAL_AND. :(
-                       El::mpi::MIN,
-                       El::mpi::COMM_WORLD,
-                       El::SyncInfo<El::Device::CPU>{});
+    h2_tmp::allreduce(&test_result,
+                      1,
+                      Al::ReductionOperator::land,
+                      h2::get_comm_world(),
+                      h2::ComputeStream(h2::Device::CPU));
     if (test_result == 0)
     {
       internal::end_for_comms();  // Indicate we are done.
-      FAIL(std::to_string(El::mpi::Rank())
+      FAIL(std::to_string(h2::get_comm_world().rank())
            + ": Failure detected on another rank");
     }
   }
@@ -311,7 +337,7 @@ void for_grid_shapes(
                    "Requested maximum grid dimensions are too large");
   H2_ASSERT_ALWAYS(max_size >= 1, "Must have at least one grid dimension");
 
-  auto shapes = internal::all_grid_shapes(comm.Size(), min_size, max_size);
+  auto shapes = internal::all_grid_shapes(comm.size(), min_size, max_size);
 
   for (auto const& shape : shapes)
   {

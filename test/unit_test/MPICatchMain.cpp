@@ -11,7 +11,7 @@ using Catch::Clara::Opt;
 
 #include <h2_config.hpp>
 
-#include <El.hpp>
+#include <Al.hpp>
 #include <unistd.h>
 
 #include <iostream>
@@ -59,18 +59,16 @@ struct TestEnvironment
   TestEnvironment(int& argc, char**& argv)
   {
 #ifdef H2_HAS_GPU
-    El::gpu::Initialize();
     h2::gpu::init_runtime();
 #endif
-    El::mpi::InitializeThread(argc, argv, El::mpi::THREAD_MULTIPLE);
+    Al::Initialize(argc, argv);
   }
 
   ~TestEnvironment()
   {
-    El::mpi::Finalize();
+    Al::Finalize();
 #ifdef H2_HAS_GPU
     h2::gpu::finalize_runtime();
-    El::gpu::Finalize();
 #endif
   }
 };
@@ -126,8 +124,8 @@ int main(int argc, char** argv)
   TestEnvironment env(argc, argv);
   comm_manager = new CommManager();
 
-  int rank = El::mpi::COMM_WORLD.Rank();
-  int size = El::mpi::COMM_WORLD.Size();
+  int rank = h2::get_comm_world().rank();
+  int size = h2::get_comm_world().size();
 
   // Handle a debugger hang.
   if (rank == hang_rank)

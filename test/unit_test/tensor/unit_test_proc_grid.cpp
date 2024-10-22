@@ -58,7 +58,7 @@ TEST_CASE("Processor grids can be created", "[dist-tensor][proc-grid]")
     for_grid_shapes(
       [&](ShapeTuple shape) {
         REQUIRE_NOTHROW([&] {
-          ProcessorGrid grid = ProcessorGrid(comm, {comm.Size()});
+          ProcessorGrid grid = ProcessorGrid(comm, {comm.size()});
         }());
       },
       comm);
@@ -78,8 +78,8 @@ TEST_CASE("Processor grids are sane", "[dist-tensor][proc-grid]")
         ProcessorGrid grid = ProcessorGrid(comm, shape);
         REQUIRE(grid.shape() == shape);
         REQUIRE(grid.ndim() == shape.size());
-        REQUIRE(grid.size() == comm.Size());
-        REQUIRE(grid.rank() == comm.Rank());
+        REQUIRE(grid.size() == comm.size());
+        REQUIRE(grid.rank() == comm.rank());
       },
       comm);
   });
@@ -92,7 +92,7 @@ TEST_CASE("Processor grid coordinates and ranks are sane",
     for_grid_shapes(
       [&](ShapeTuple shape) {
         ProcessorGrid grid = ProcessorGrid(comm, shape);
-        for (RankType rank = 0; rank < comm.Size(); ++rank)
+        for (RankType rank = 0; rank < comm.size(); ++rank)
         {
           auto coord = grid.coords(rank);
           REQUIRE(grid.rank(coord) == rank);

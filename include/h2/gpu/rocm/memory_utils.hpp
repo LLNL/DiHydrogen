@@ -15,17 +15,23 @@
 #include "h2_config.hpp"
 
 #include "h2/gpu/logger.hpp"
+#include "h2/gpu/pool_allocator.hpp"
 #include "h2/gpu/runtime.hpp"
 
 #include <hip/hip_runtime.h>
-#include <hydrogen/PoolAllocator.hpp>
 
 namespace h2
 {
 namespace gpu
 {
 
-using RawCUBAllocType = hydrogen::PooledDeviceAllocator;
+using RawCUBAllocType = h2::PooledDeviceAllocator;
+
+struct MemInfo
+{
+  size_t free;
+  size_t total;
+};
 
 inline MemInfo mem_info()
 {

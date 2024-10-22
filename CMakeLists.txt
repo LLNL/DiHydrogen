@@ -194,12 +194,11 @@ endif ()
 
 # Required dependencies
 
-find_package(Hydrogen 1.5.0 CONFIG REQUIRED)
+# Do we strictly need 1.0.0 for anything? No. Is it worthwhile to
+# backport to 0.7? Stronger no.
+find_package(Aluminum 1.0.0 CONFIG REQUIRED)
 
 if (H2_ENABLE_CUDA)
-  if (NOT _HYDROGEN_HAVE_CUDA)
-    message(FATAL_ERROR "Hydrogen does not have CUDA support.")
-  endif ()
 
   enable_language(CUDA)
   include(SetupCUDAToolkit)
@@ -224,9 +223,6 @@ set(H2_HAS_SPDLOG TRUE)
 
 # This is a placeholder.
 if (H2_ENABLE_ROCM)
-  if (NOT _HYDROGEN_HAVE_ROCM)
-    message(FATAL_ERROR "Hydrogen does not have ROCm support.")
-  endif ()
 
   # Our ROCm installs generally have a common prefix. It's not clear
   # that this is a global truth, but it's global enough for me.
@@ -387,6 +383,13 @@ else ()
   set(H2_HAS_MPI FALSE)
 endif ()
 
+if (NOT APPLE)
+  # dladdr is used in the backtrace functionality
+  find_library(DL_LIBRARY dl REQUIRED)
+else ()
+  set(DL_LIBRARY)
+endif ()
+
 # Python is needed during the build process to preprocess files.
 find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
 message(STATUS "Using ${Python3_EXECUTABLE} for preprocessing")
@@ -511,10 +514,12 @@ target_link_libraries(H2Core PRIVATE
   $<BUILD_INTERFACE:$<TARGET_NAME_IF_EXISTS:h2_coverage_flags>>)
 target_link_libraries(H2Core PUBLIC
   spdlog::spdlog
-  ${HYDROGEN_LIBRARIES}
+  AL::Al
   ${H2_CUDA_LIBS}
   ${H2_ROCM_LIBS}
-  $<$<BOOL:${H2_HAS_MPI}>:MPI::MPI_CXX>)
+  $<$<BOOL:${H2_HAS_MPI}>:MPI::MPI_CXX>
+  ${DL_LIBRARY}
+)
 
 install(TARGETS H2Core
   EXPORT DiHydrogenTargets

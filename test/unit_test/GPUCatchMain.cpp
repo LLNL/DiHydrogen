@@ -7,7 +7,7 @@
 
 #include <h2/gpu/runtime.hpp>
 
-#include <El.hpp>
+#include <Al.hpp>
 
 #include <catch2/catch_session.hpp>
 
@@ -15,7 +15,6 @@ struct GPUEnvironment
 {
   GPUEnvironment(int argc, char** argv)
   {
-    El::gpu::Initialize();
     h2::gpu::init_runtime();
     Al::Initialize(argc, argv);
   }
@@ -24,7 +23,6 @@ struct GPUEnvironment
   {
     Al::Finalize();
     h2::gpu::finalize_runtime();
-    El::gpu::Finalize();
   }
 };
 

@@ -12,20 +12,89 @@
  * Types for distributed tensors.
  */
 
-#include <El.hpp>
+#include <Al.hpp>
 
 #include "tensor_types.hpp"
 
 namespace h2
 {
 
-#ifndef HYDROGEN_HAVE_ALUMINUM
-#error "DiHydrogen distributed tensors require Aluminum support in Hydrogen"
-#endif
-/**
- * Wrapper around communicators for various Aluminum backends.
+/** @class Comm
+ *  @brief Minimal interface around Aluminum's communicator
+ *  @todo Flesh this out once the communication requirements and
+ *        semantics of H2 become clearer.
  */
-using Comm = El::mpi::Comm;  // Use Hydrogen's communicator wrappers for now.
+class Comm
+{
+  std::unique_ptr<typename Al::MPIBackend::comm_type> m_al_comm;
+
+public:
+  /** Construct a null communicator */
+  Comm() : Comm{MPI_COMM_NULL} {}
+
+  /** Construct from an MPI communicator */
+  Comm(MPI_Comm comm)
+  {
+    if (comm != MPI_COMM_NULL)
+    {
+      m_al_comm = std::make_unique<typename Al::MPIBackend::comm_type>(comm);
+    }
+  }
+
+  Comm(Comm&&) = default;
+  Comm& operator=(Comm&&) = default;
+
+  // Copy semantics are hard.
+  Comm(Comm const&) = delete;
+  Comm& operator=(Comm const&) = delete;
+
+  /** Get the rank in the comm */
+  int rank() const
+  {
+    if (!m_al_comm)
+      throw H2Exception("Comm is NULL");
+    return m_al_comm->rank();
+  }
+
+  /** Get the size of the comm */
+  int size() const
+  {
+    if (!m_al_comm)
+      throw H2Exception("Comm is NULL");
+    return m_al_comm->size();
+  }
+
+  /** Get the underlying MPI_Comm handle */
+  MPI_Comm get_mpi_handle() const noexcept
+  {
+    if (m_al_comm)
+      return m_al_comm->get_comm();
+    else
+      return MPI_COMM_NULL;
+  }
+
+  /**
+   * Get the underlying Aluminum communicator.
+   *
+   * Note that Aluminum takes communicators by non-const reference,
+   * hence the (very intentional) return type here. However, 'this'
+   * does not logically mutate because of this operation, so the
+   * function itself is marked 'const'.
+   **/
+  typename Al::MPIBackend::comm_type& get_al_comm() const
+  {
+    if (!m_al_comm)
+      throw H2Exception("Comm is NULL");
+    return *m_al_comm;
+  }
+};
+
+/** @brief Get the (global) communicator for MPI_COMM_WORLD */
+inline Comm const& get_comm_world()
+{
+  static Comm comm{MPI_COMM_WORLD};
+  return comm;
+}
 
 /**
  * Defines how a dimension of a tensor is distributed on a processor

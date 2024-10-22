@@ -99,23 +99,10 @@ then
         al_prebuilt=$(cat ${prefix}/al-prebuilt-hash.txt)
     fi
 
-    h_head=$(fetch-sha elemental hydrogen)
-    h_prebuilt="<not found>"
-    if [[ -f "${prefix}/h-prebuilt-hash.txt" ]]
-    then
-        h_prebuilt=$(cat ${prefix}/h-prebuilt-hash.txt)
-    fi
-
     if [[ "${al_head}" != "${al_prebuilt}" ]]
     then
         echo "Prebuilt Aluminum hash does not match latest head; rebuilding."
         echo "  (prebuilt: ${al_prebuilt}; head: ${al_head})"
-        rebuild_deps=1
-    fi
-    if [[ "${h_head}" != "${h_prebuilt}" ]]
-    then
-        echo "Prebuilt Hydrogen hash does not match latest head; rebuilding."
-        echo "  (prebuilt: ${h_prebuilt}; head: ${h_head})"
         rebuild_deps=1
     fi
 fi
@@ -150,7 +137,6 @@ then
 
     # Stamp these commits
     cd ${build_dir}/build-deps/aluminum/src && git rev-parse HEAD > ${prefix}/al-prebuilt-hash.txt
-    cd ${build_dir}/build-deps/hydrogen/src && git rev-parse HEAD > ${prefix}/h-prebuilt-hash.txt
 
     echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
     echo "~~~~~ Dependencies Built"
