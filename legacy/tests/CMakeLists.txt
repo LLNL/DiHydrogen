@@ -1,7 +1,7 @@
 add_executable(compare_binary_files compare_binary_files.cpp)
 target_include_directories(compare_binary_files PUBLIC
   $<BUILD_INTERFACE:${CMAKE_GENERATED_INCLUDE_DIRECTORY}>
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/legacy/include>)
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/legacy/include>)
 set_target_properties(compare_binary_files
   PROPERTIES
   CXX_STANDARD 17

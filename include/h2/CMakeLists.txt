@@ -40,7 +40,7 @@ add_subdirectory(meta)
 # All DiHydrogen linkage is package/component-scoped, e.g.,
 # <h2/meta/TypeList.hpp>.
 target_include_directories(H2Meta INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
 
@@ -59,7 +59,7 @@ add_library(H2Patterns INTERFACE)
 add_subdirectory(patterns)
 
 target_include_directories(H2Patterns INTERFACE
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
 

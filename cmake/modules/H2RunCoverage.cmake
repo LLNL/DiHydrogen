@@ -11,9 +11,9 @@
 # Project info:
 #   COVERAGE_TGT: The name of the coverage target being built
 #   SOURCE_DIR: The path to the toplevel project source code (probably
-#               CMAKE_SOURCE_DIR)
+#               PROJECT_SOURCE_DIR)
 #   BUILD_DIR: The path to the toplevel project build directory
-#              (probably CMAKE_BINARY_DIR)
+#              (probably PROJECT_BINARY_DIR)
 #   OUTPUT_DIR: The path to which output should be written
 #   MPI_LAUNCH_PATTERN: The pattern to use when launching MPI. The
 #                       string "<EXE>" will be replaced with the
