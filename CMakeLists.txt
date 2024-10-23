@@ -5,8 +5,8 @@
 ## SPDX-License-Identifier: Apache-2.0
 ################################################################################
 
-cmake_minimum_required(VERSION 3.21.0)
-cmake_policy(VERSION 3.21.0)
+cmake_minimum_required(VERSION 3.25.0)
+cmake_policy(VERSION 3.25.0)
 
 project(DiHydrogen
   VERSION 0.4.0
@@ -187,13 +187,42 @@ if (H2_ENABLE_CODE_COVERAGE)
 endif ()
 
 # Required dependencies
+include(FetchContent)
 
-# Do we strictly need 1.0.0 for anything? No. Is it worthwhile to
-# backport to 0.7? Stronger no.
-find_package(Aluminum 1.0.0 CONFIG REQUIRED)
+macro(report_dep PKG)
+  if (${PKG}_FOUND)
+    message(STATUS "Found ${PKG}: ${${PKG}_DIR}")
+    message(STATUS "${PKG} version: ${${PKG}_VERSION}")
+  else ()
+    message(STATUS "Building ${PKG} with FetchContent")
+  endif ()
+endmacro()
+
+FetchContent_Declare(
+  Aluminum
+  GIT_REPOSITORY https://github.com/LLNL/Aluminum.git
+  GIT_TAG 672bbb782dccf41e3db99d58ddbd2ad0de7e266a # 'master' at 23 Oct 2024
+  FIND_PACKAGE_ARGS 1.0.0 CONFIG
+)
+FetchContent_Declare(
+  spdlog
+  GIT_REPOSITORY https://github.com/gabime/spdlog.git
+  GIT_TAG 27cb4c76708608465c413f6d0e6b8d99a4d84302 # v1.14.1
+  FIND_PACKAGE_ARGS CONFIG
+)
+
+set(SPDLOG_INSTALL ON CACHE BOOL "Install spdlog" FORCE)
+
+# Make sure the fetchable dependencies are available.
+FetchContent_MakeAvailable(Aluminum spdlog)
+report_dep(Aluminum)
+report_dep(spdlog)
+
+# FIXME: spdlog is now required and thus this is always true. We
+#        should remove the clutter.
+set(H2_HAS_SPDLOG TRUE)
 
 if (H2_ENABLE_CUDA)
-
   enable_language(CUDA)
   include(SetupCUDAToolkit)
   if (CMAKE_CUDA_COMPILER)
@@ -211,9 +240,6 @@ if (H2_ENABLE_CUDA)
 
   set(CMAKE_CUDA_FLAGS "--expt-relaxed-constexpr ${CMAKE_CUDA_FLAGS}")
 endif (H2_ENABLE_CUDA)
-
-find_package(spdlog CONFIG REQUIRED)
-set(H2_HAS_SPDLOG TRUE)
 
 # This is a placeholder.
 if (H2_ENABLE_ROCM)
