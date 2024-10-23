@@ -71,7 +71,7 @@ echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 prefix="${project_dir}/install-deps-${CI_JOB_NAME_SLUG:-${job_unique_id}}"
 
 # Just for good measure...
-export CMAKE_PREFIX_PATH=${prefix}/aluminum:${prefix}/catch2:${prefix}/hwloc:${prefix}/hydrogen:${prefix}/nccl:${prefix}/spdlog:${CMAKE_PREFIX_PATH}
+export CMAKE_PREFIX_PATH=${prefix}/hwloc:${prefix}/nccl:${CMAKE_PREFIX_PATH}
 
 # Allow a user to force this
 rebuild_deps=${REBUILD_DEPS:-""}
@@ -82,29 +82,9 @@ then
     rebuild_deps=1
 fi
 
-# Rebuild if latest hashes don't match
-if [[ -z "${rebuild_deps}" ]]
+if [[ -z "${gpu_arch}" ]]
 then
-    function fetch-sha {
-        # $1 is the LLNL package name (e.g., 'aluminum')
-        # $2 is the branch name (e.g., 'master')
-        curl -s -H "Accept: application/vnd.github.VERSION.sha" \
-             "https://api.github.com/repos/llnl/$1/commits/$2"
-    }
-
-    al_head=$(fetch-sha aluminum master)
-    al_prebuilt="<not found>"
-    if [[ -f "${prefix}/al-prebuilt-hash.txt" ]]
-    then
-        al_prebuilt=$(cat ${prefix}/al-prebuilt-hash.txt)
-    fi
-
-    if [[ "${al_head}" != "${al_prebuilt}" ]]
-    then
-        echo "Prebuilt Aluminum hash does not match latest head; rebuilding."
-        echo "  (prebuilt: ${al_prebuilt}; head: ${al_head})"
-        rebuild_deps=1
-    fi
+    rebuild_deps=""
 fi
 
 if [[ -n "${rebuild_deps}" ]]

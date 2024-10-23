@@ -1,8 +1,7 @@
-if [[ "$cluster" == "lassen" ]]
+with_nccl=OFF
+if [[ -n "${gpu_arch}" ]]
 then
-    lapack_opt="-D BLA_VENDOR=Generic"
-else
-    lapack_opt=""
+    with_nccl=ON
 fi
 
 cmake -G Ninja \
@@ -23,8 +22,13 @@ cmake -G Ninja \
       -D AMDGPU_TARGETS=${gpu_arch} \
       -D GPU_TARGETS=${gpu_arch} \
       \
-      ${lapack_opt} \
       -D H2_CI_BUILD=${run_coverage:-OFF} \
       -D H2_DEVELOPER_BUILD=ON \
       -D H2_ENABLE_CODE_COVERAGE=${run_coverage:-OFF} \
-      -D H2_ENABLE_DISTCONV_LEGACY=${build_distconv:-OFF}
+      -D H2_ENABLE_DISTCONV_LEGACY=${build_distconv:-OFF} \
+      \
+      -D ALUMINUM_ENABLE_NCCL=${with_nccl} \
+      -D ALUMINUM_ENABLE_HWLOC=OFF \
+      -D ALUMINUM_ENABLE_TESTS=OFF \
+      -D ALUMINUM_ENABLE_BENCHMARKS=OFF \
+      -D ALUMINUM_ENABLE_THREAD_MULTIPLE=OFF

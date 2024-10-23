@@ -204,6 +204,7 @@ FetchContent_Declare(
   GIT_TAG 672bbb782dccf41e3db99d58ddbd2ad0de7e266a # 'master' at 23 Oct 2024
   FIND_PACKAGE_ARGS 1.0.0 CONFIG
 )
+
 FetchContent_Declare(
   spdlog
   GIT_REPOSITORY https://github.com/gabime/spdlog.git
@@ -211,16 +212,21 @@ FetchContent_Declare(
   FIND_PACKAGE_ARGS CONFIG
 )
 
-set(SPDLOG_INSTALL ON CACHE BOOL "Install spdlog" FORCE)
+# Forward CUDA/ROCm-ness upstream. Users are still responsible for
+# explicitly enabling backends/other configuration options. Note that
+# the relevant CMAKE_* variables should all be inherited "for free".
+set(ALUMINUM_ENABLE_CUDA "${H2_ENABLE_CUDA}"
+  CACHE INTERNAL "Enable CUDA support in Aluminum")
+set(ALUMINUM_ENABLE_ROCM "${H2_ENABLE_ROCM}"
+  CACHE INTERNAL "Enable ROCm support in Aluminum")
+
+# Ensure the "spdlog" target gets exported.
+set(SPDLOG_INSTALL ON CACHE INTERNAL "Install spdlog")
 
 # Make sure the fetchable dependencies are available.
 FetchContent_MakeAvailable(Aluminum spdlog)
 report_dep(Aluminum)
 report_dep(spdlog)
-
-# FIXME: spdlog is now required and thus this is always true. We
-#        should remove the clutter.
-set(H2_HAS_SPDLOG TRUE)
 
 if (H2_ENABLE_CUDA)
   enable_language(CUDA)

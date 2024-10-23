@@ -1,15 +1,7 @@
-if [[ "$cluster" == "lassen" ]]
-then
-    lapack_opt="-D LBANN_SB_FWD_Hydrogen_BLA_VENDOR=Generic"
-else
-    lapack_opt=""
-fi
-
+with_nccl=OFF
 if [[ -n "${gpu_arch}" ]]
 then
     with_nccl=ON
-else
-    with_nccl=OFF
 fi
 
 cmake \
@@ -46,16 +38,5 @@ cmake \
     -D LBANN_SB_DEFAULT_CUDA_OPTS=${cuda_platform} \
     -D LBANN_SB_DEFAULT_ROCM_OPTS=${rocm_platform} \
     \
-    -D LBANN_SB_BUILD_Catch2=ON \
-    -D LBANN_SB_Catch2_TAG="devel" \
-    \
     -D LBANN_SB_BUILD_hwloc=${rocm_platform} \
-    -D LBANN_SB_BUILD_NCCL=${cuda_platform} \
-    -D LBANN_SB_BUILD_spdlog=ON  \
-    \
-    -D LBANN_SB_BUILD_Aluminum=ON \
-    -D LBANN_SB_FWD_Aluminum_ALUMINUM_ENABLE_NCCL=${with_nccl} \
-    -D LBANN_SB_FWD_Aluminum_ALUMINUM_ENABLE_HWLOC=OFF \
-    -D LBANN_SB_FWD_Aluminum_ALUMINUM_ENABLE_TESTS=OFF \
-    -D LBANN_SB_FWD_Aluminum_ALUMINUM_ENABLE_BENCHMARKS=OFF \
-    -D LBANN_SB_FWD_Aluminum_ALUMINUM_ENABLE_THREAD_MULTIPLE=OFF
+    -D LBANN_SB_BUILD_NCCL=${cuda_platform}
