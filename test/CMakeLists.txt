@@ -11,6 +11,7 @@ if (H2_ENABLE_TESTS)
     Catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
     GIT_TAG fa43b77429ba76c462b1898d6cd2f2d7a9416b14 # v3.7.1
+    GIT_SHALLOW 1
     FIND_PACKAGE_ARGS 3.0.0 CONFIG
   )
   FetchContent_MakeAvailable(Catch2)
