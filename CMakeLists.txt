@@ -249,9 +249,7 @@ if (H2_ENABLE_CUDA)
   set(CMAKE_CUDA_FLAGS "--expt-relaxed-constexpr ${CMAKE_CUDA_FLAGS}")
 endif (H2_ENABLE_CUDA)
 
-# This is a placeholder.
 if (H2_ENABLE_ROCM)
-
   # Our ROCm installs generally have a common prefix. It's not clear
   # that this is a global truth, but it's global enough for me.
   if (NOT H2_ROCM_PATH)
@@ -318,7 +316,6 @@ endif ()
 # DiHydrogen will use MPI-3 features extensively. Until proven
 # otherwise, assume that the CMake module version checking is
 # accurate.
-#
 set(MPI_ASSUME_NO_BUILTIN_MPI ON)
 if (H2_ENABLE_DISTCONV_LEGACY)
   find_package(MPI 3.0.0 COMPONENTS CXX REQUIRED)
