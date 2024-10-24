@@ -155,10 +155,6 @@ else ()
 
 endif ()
 
-if (H2_ENABLE_DISTCONV_LEGACY)
-  include(SetupMPI)
-endif ()
-
 # C++ features
 
 # TODO: h2_cxx_set_cxx_standard(H2_CXX_STANDARD)
