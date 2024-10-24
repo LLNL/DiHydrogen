@@ -31,7 +31,7 @@
 # TODO: Input checking
 
 # Match H2's minimum required
-cmake_minimum_required(VERSION 3.21.0)
+cmake_minimum_required(VERSION 3.25.0)
 
 message("----------------------------------------")
 message("COVERAGE SCRIPT VARIABLES")
