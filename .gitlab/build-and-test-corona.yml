@@ -26,25 +26,25 @@ include:
 rocm-6-0-2-corona:
   variables:
     COMPILER_FAMILY: amdclang
-    MODULES: "gcc/10.3.1-magic mvapich2/2.3.7 rocm/6.0.2 python"
+    MODULES: "gcc/10.3.1-magic mvapich2/2.3.7 rocm/6.0.2 cmake/3.26.3 python"
   extends: [.build-and-test-on-corona, .build-and-test]
 
 gcc-12-1-1-cpu-corona:
   variables:
     COMPILER_FAMILY: gnu
-    MODULES: "gcc/12.1.1-magic mvapich2/2.3.7 python"
+    MODULES: "gcc/12.1.1-magic mvapich2/2.3.7 cmake/3.26.3 python"
   extends: [.build-and-test-on-corona, .build-and-test]
 
 clang-14-0-6-cpu-corona:
   variables:
     COMPILER_FAMILY: clang
-    MODULES: "clang/14.0.6-magic mvapich2/2.3.7 python"
+    MODULES: "clang/14.0.6-magic mvapich2/2.3.7 cmake/3.26.3 python"
   extends: [.build-and-test-on-corona, .build-and-test]
 
 gcc-11-2-1-coverage-cpu-corona:
   variables:
     COMPILER_FAMILY: gnu
-    MODULES: "gcc/11.2.1-magic mvapich2/2.3.7 python"
+    MODULES: "gcc/11.2.1-magic mvapich2/2.3.7 cmake/3.26.3 python"
     WITH_COVERAGE: "1"
   extends: [.build-and-test-on-corona, .build-and-test-coverage]
 

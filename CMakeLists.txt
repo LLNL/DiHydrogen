@@ -5,8 +5,8 @@
 ## SPDX-License-Identifier: Apache-2.0
 ################################################################################
 
-cmake_minimum_required(VERSION 3.21.0)
-cmake_policy(VERSION 3.21.0)
+cmake_minimum_required(VERSION 3.25.0)
+cmake_policy(VERSION 3.25.0)
 
 project(DiHydrogen
   VERSION 0.4.0
@@ -68,12 +68,6 @@ if (H2_ENABLE_DISTCONV_LEGACY)
   if (NOT (H2_ENABLE_CUDA OR H2_ENABLE_ROCM))
     message(FATAL_ERROR "Must enable one of CUDA and ROCm with DistConv.")
   endif ()
-
-  # These might become full-fledged options later, but I hope
-  # not. Aluminum should just be the communication interface that H2
-  # uses across the board.
-  set(H2_ENABLE_ALUMINUM ${H2_ENABLE_DISTCONV_LEGACY}
-    CACHE BOOL "Use the Aluminum library for communications.")
 
   set(H2_ENABLE_OPENMP ${H2_ENABLE_DISTCONV_LEGACY}
     CACHE BOOL "Enable CPU acceleration with OpenMP threads.")
@@ -193,13 +187,50 @@ if (H2_ENABLE_CODE_COVERAGE)
 endif ()
 
 # Required dependencies
+include(FetchContent)
 
-# Do we strictly need 1.0.0 for anything? No. Is it worthwhile to
-# backport to 0.7? Stronger no.
-find_package(Aluminum 1.0.0 CONFIG REQUIRED)
+macro(report_dep PKG)
+  if (${PKG}_FOUND)
+    message(STATUS "Found ${PKG}: ${${PKG}_DIR}")
+    message(STATUS "${PKG} version: ${${PKG}_VERSION}")
+  else ()
+    message(STATUS "Building ${PKG} with FetchContent")
+  endif ()
+endmacro()
+
+FetchContent_Declare(
+  Aluminum
+  GIT_REPOSITORY https://github.com/LLNL/Aluminum.git
+  GIT_TAG 672bbb782dccf41e3db99d58ddbd2ad0de7e266a # 'master' at 23 Oct 2024
+  GIT_SHALLOW 1
+  FIND_PACKAGE_ARGS 1.0.0 CONFIG
+)
+
+FetchContent_Declare(
+  spdlog
+  GIT_REPOSITORY https://github.com/gabime/spdlog.git
+  GIT_TAG 27cb4c76708608465c413f6d0e6b8d99a4d84302 # v1.14.1
+  GIT_SHALLOW 1
+  FIND_PACKAGE_ARGS CONFIG
+)
+
+# Forward CUDA/ROCm-ness upstream. Users are still responsible for
+# explicitly enabling backends/other configuration options. Note that
+# the relevant CMAKE_* variables should all be inherited "for free".
+set(ALUMINUM_ENABLE_CUDA "${H2_ENABLE_CUDA}"
+  CACHE INTERNAL "Enable CUDA support in Aluminum")
+set(ALUMINUM_ENABLE_ROCM "${H2_ENABLE_ROCM}"
+  CACHE INTERNAL "Enable ROCm support in Aluminum")
+
+# Ensure the "spdlog" target gets exported.
+set(SPDLOG_INSTALL ON CACHE INTERNAL "Install spdlog")
+
+# Make sure the fetchable dependencies are available.
+FetchContent_MakeAvailable(Aluminum spdlog)
+report_dep(Aluminum)
+report_dep(spdlog)
 
 if (H2_ENABLE_CUDA)
-
   enable_language(CUDA)
   include(SetupCUDAToolkit)
   if (CMAKE_CUDA_COMPILER)
@@ -217,9 +248,6 @@ if (H2_ENABLE_CUDA)
 
   set(CMAKE_CUDA_FLAGS "--expt-relaxed-constexpr ${CMAKE_CUDA_FLAGS}")
 endif (H2_ENABLE_CUDA)
-
-find_package(spdlog CONFIG REQUIRED)
-set(H2_HAS_SPDLOG TRUE)
 
 # This is a placeholder.
 if (H2_ENABLE_ROCM)
@@ -302,33 +330,6 @@ if (H2_ENABLE_DISTCONV_LEGACY)
       INTERFACE_COMPILE_OPTIONS
       $<$<COMPILE_LANGUAGE:CXX>:${__mpi_compile_options}>)
     unset(__mpi_compile_options)
-  endif ()
-endif ()
-
-if (H2_ENABLE_ALUMINUM)
-  find_package(Aluminum 1.0.0 CONFIG QUIET)
-  if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
-    message(STATUS
-      "A candidate Aluminum > v1.0.0 was found, but was not selected:")
-    message(STATUS
-      "  ${Aluminum_NOT_FOUND_MESSAGE}")
-  endif ()
-  # Try again, since we're technically ok with >v0.7.0
-  if (NOT Aluminum_FOUND)
-    find_package(Aluminum 0.7.0 CONFIG QUIET)
-    if (NOT Aluminum_FOUND AND Aluminum_NOT_FOUND_MESSAGE)
-      message(STATUS
-        "A candidate Aluminum > v0.7.0 was found, but was not selected:")
-      message(STATUS
-        "  ${Aluminum_NOT_FOUND_MESSAGE}")
-    endif ()
-  endif ()
-  if (NOT Aluminum_FOUND)
-    message(FATAL_ERROR "Aluminum support required but not found.")
-  endif ()
-  if (H2_ENABLE_DISTCONV_LEGACY AND NOT AL_HAS_NCCL)
-    message(FATAL_ERROR
-      "DistConv requires Aluminum with at least the NCCLBackend enabled.")
   endif ()
 endif ()
 
