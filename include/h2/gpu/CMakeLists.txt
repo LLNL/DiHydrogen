@@ -17,6 +17,7 @@ h2_add_sources_to_target_and_install(
   logger.hpp
   macros.hpp
   memory_utils.hpp
+  pool_allocator.hpp
   runtime.hpp
   )
 
