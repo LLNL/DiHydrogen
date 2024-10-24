@@ -47,10 +47,10 @@ if (H2_HAS_HALF)
   find_dependency(Half)
 endif ()
 
-find_dependency(Hydrogen)
+find_dependency(Aluminum)
 
 if (H2_HAS_CUDA)
-  include(SetupCUDAToolkit)
+  include(H2SetupCUDAToolkit)
   if (H2_DISTCONV_HAS_P2P)
     find_dependency(P2P)
   endif ()
