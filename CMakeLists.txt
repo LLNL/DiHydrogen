@@ -108,7 +108,14 @@ include(GNUInstallDirs)
 include(H2CMakeUtils)
 include(H2CXXFeatureDetection)
 
-include(SetupCXX) # This just sets RPATH settings
+# RPATH settings
+set(CMAKE_MACOSX_RPATH ON)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+if(APPLE)
+  list(PREPEND CMAKE_INSTALL_RPATH "@loader_path")
+else()
+  list(PREPEND CMAKE_INSTALL_RPATH "\$ORIGIN")
+endif()
 
 # There are a variety of ways to inject flags into C++ compilers, and
 # some behavioral variations across compilers. I don't want to care
