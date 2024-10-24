@@ -15,8 +15,8 @@ project(DiHydrogen
   LANGUAGES CXX)
 
 # Add CMake modules
-set(CMAKE_MODULE_DIR "${CMAKE_SOURCE_DIR}/cmake/modules")
-set(CONFIG_FILE_DIR "${CMAKE_SOURCE_DIR}/cmake/config")
+set(CMAKE_MODULE_DIR "${PROJECT_SOURCE_DIR}/cmake/modules")
+set(CONFIG_FILE_DIR "${PROJECT_SOURCE_DIR}/cmake/config")
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_MODULE_DIR})
 
 if (NOT CMAKE_BUILD_TYPE)
@@ -108,7 +108,14 @@ include(GNUInstallDirs)
 include(H2CMakeUtils)
 include(H2CXXFeatureDetection)
 
-include(SetupCXX) # This just sets RPATH settings
+# RPATH settings
+set(CMAKE_MACOSX_RPATH ON)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+if(APPLE)
+  list(PREPEND CMAKE_INSTALL_RPATH "@loader_path")
+else()
+  list(PREPEND CMAKE_INSTALL_RPATH "\$ORIGIN")
+endif()
 
 # There are a variety of ways to inject flags into C++ compilers, and
 # some behavioral variations across compilers. I don't want to care
@@ -153,10 +160,6 @@ else ()
     "cxx_std_17 compiler feature. If your compiler does not support "
     "this feature, another warning will appear later.")
 
-endif ()
-
-if (H2_ENABLE_DISTCONV_LEGACY)
-  include(SetupMPI)
 endif ()
 
 # C++ features
@@ -232,7 +235,7 @@ report_dep(spdlog)
 
 if (H2_ENABLE_CUDA)
   enable_language(CUDA)
-  include(SetupCUDAToolkit)
+  include(H2SetupCUDAToolkit)
   if (CMAKE_CUDA_COMPILER)
     set(H2_HAS_CUDA TRUE)
   endif ()
@@ -249,9 +252,7 @@ if (H2_ENABLE_CUDA)
   set(CMAKE_CUDA_FLAGS "--expt-relaxed-constexpr ${CMAKE_CUDA_FLAGS}")
 endif (H2_ENABLE_CUDA)
 
-# This is a placeholder.
 if (H2_ENABLE_ROCM)
-
   # Our ROCm installs generally have a common prefix. It's not clear
   # that this is a global truth, but it's global enough for me.
   if (NOT H2_ROCM_PATH)
@@ -318,7 +319,6 @@ endif ()
 # DiHydrogen will use MPI-3 features extensively. Until proven
 # otherwise, assume that the CMake module version checking is
 # accurate.
-#
 set(MPI_ASSUME_NO_BUILTIN_MPI ON)
 if (H2_ENABLE_DISTCONV_LEGACY)
   find_package(MPI 3.0.0 COMPONENTS CXX REQUIRED)
@@ -396,15 +396,15 @@ find_package(Python3 3.9 REQUIRED COMPONENTS Interpreter)
 message(STATUS "Using ${Python3_EXECUTABLE} for preprocessing")
 
 # Decide where to put preprocessed files.
-set(H2_PREPROCESSED_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/preprocessed")
+set(H2_PREPROCESSED_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/preprocessed")
 
 # Decide where to put generated include files.
 set(CMAKE_GENERATED_INCLUDE_DIRECTORY
-  "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
+  "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_INCLUDEDIR}")
 
 # Decide where to put built executable files.
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY
-  "${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
+  "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_BINDIR}")
 
 # Build the library
 configure_file(
@@ -425,7 +425,7 @@ add_subdirectory(include/h2)
 add_subdirectory(src)
 
 # Preprocess all source files for dynamic dispatch.
-set(H2_DISPATCH_GEN_SCRIPT "${CMAKE_SOURCE_DIR}/scripts/dispatch_gen.py")
+set(H2_DISPATCH_GEN_SCRIPT "${PROJECT_SOURCE_DIR}/scripts/dispatch_gen.py")
 if (NOT EXISTS "${H2_DISPATCH_GEN_SCRIPT}")
   message(FATAL_ERROR
     "Could not find dispatch generation script ${H2_DISPATCH_GEN_SCRIPT}")
@@ -439,7 +439,7 @@ foreach (SOURCE_FILE ${SOURCES_TO_PREPROCESS})
     continue()
   endif ()
 
-  cmake_path(RELATIVE_PATH SOURCE_FILE BASE_DIRECTORY ${CMAKE_SOURCE_DIR} OUTPUT_VARIABLE SOURCE_FILE_REL)
+  cmake_path(RELATIVE_PATH SOURCE_FILE BASE_DIRECTORY ${PROJECT_SOURCE_DIR} OUTPUT_VARIABLE SOURCE_FILE_REL)
   set(PREPROCESSED_SOURCE_FILE
     "${H2_PREPROCESSED_OUTPUT_DIRECTORY}/${SOURCE_FILE_REL}")
   #message(STATUS "Preprocessing: ${SOURCE_FILE_REL} -> ${PREPROCESSED_SOURCE_FILE}")
@@ -475,7 +475,7 @@ endif ()
 target_include_directories(
   H2Core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_GENERATED_INCLUDE_DIRECTORY}>
-  $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+  $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 if (NOT CMAKE_CXX_STANDARD)
@@ -549,12 +549,17 @@ if (H2_ENABLE_CODE_COVERAGE)
   finalize_code_coverage()
 endif ()
 
+# Make downstream's life easier.
+foreach (lib ${H2_LIBRARIES})
+  add_library(H2::${lib} ALIAS ${lib})
+endforeach ()
+
 # Install target stuff
 include (CMakePackageConfigHelpers)
 
 # The version file is the same for install and build directories.
 write_basic_package_version_file(
-  "${CMAKE_BINARY_DIR}/DiHydrogenConfigVersion.cmake"
+  "${PROJECT_BINARY_DIR}/DiHydrogenConfigVersion.cmake"
   COMPATIBILITY SameMinorVersion)
 
 # Build tree export
@@ -564,15 +569,15 @@ export(EXPORT DiHydrogenTargets
 
 # Write the configure file for the build tree
 set(INCLUDE_INSTALL_DIRS
-  "${CMAKE_SOURCE_DIR}/include/h2"
-  "${CMAKE_BINARY_DIR}" # h2_config.hpp lives here.
-  "${CMAKE_BINARY_DIR}/include/h2")
-set(LIB_INSTALL_DIR "${CMAKE_BINARY_DIR}")
+  "${PROJECT_SOURCE_DIR}/include/h2"
+  "${PROJECT_BINARY_DIR}" # h2_config.hpp lives here.
+  "${PROJECT_BINARY_DIR}/include/h2")
+set(LIB_INSTALL_DIR "${PROJECT_BINARY_DIR}")
 set(EXTRA_CMAKE_MODULE_DIR "${CMAKE_MODULE_DIR}")
 configure_package_config_file(
   "${CONFIG_FILE_DIR}/DiHydrogenConfig.cmake.in"
-  "${CMAKE_BINARY_DIR}/DiHydrogenConfig.cmake"
-  INSTALL_DESTINATION "${CMAKE_BINARY_DIR}"
+  "${PROJECT_BINARY_DIR}/DiHydrogenConfig.cmake"
+  INSTALL_DESTINATION "${PROJECT_BINARY_DIR}"
   PATH_VARS INCLUDE_INSTALL_DIRS LIB_INSTALL_DIR)
 
 # Now the install tree...
@@ -589,7 +594,7 @@ install(EXPORT DiHydrogenTargets
 # Write the configure file for the install tree
 configure_package_config_file(
   "${CONFIG_FILE_DIR}/DiHydrogenConfig.cmake.in"
-  "${CMAKE_BINARY_DIR}/DiHydrogenConfig.install.cmake"
+  "${PROJECT_BINARY_DIR}/DiHydrogenConfig.install.cmake"
   INSTALL_DESTINATION ${CMAKE_INSTALL_DIR}
   PATH_VARS INCLUDE_INSTALL_DIRS LIB_INSTALL_DIR)
 

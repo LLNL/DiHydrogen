@@ -128,14 +128,14 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang")
   if (H2_CI_BUILD)
 
     # NOTE: We need a single exe to pass to lcov. So we make one.
-    file(WRITE "${CMAKE_BINARY_DIR}/coverage/tmp/llvm-gcov.sh"
+    file(WRITE "${PROJECT_BINARY_DIR}/coverage/tmp/llvm-gcov.sh"
       "#! /bin/bash
 ${LLVM_COV_PROGRAM} gcov -m $@")
-    file(COPY "${CMAKE_BINARY_DIR}/coverage/tmp/llvm-gcov.sh"
-      DESTINATION "${CMAKE_BINARY_DIR}"
+    file(COPY "${PROJECT_BINARY_DIR}/coverage/tmp/llvm-gcov.sh"
+      DESTINATION "${PROJECT_BINARY_DIR}"
       FILE_PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE)
-    file(REMOVE_RECURSE "${CMAKE_BINARY_DIR}/coverage/tmp")
-    set(GCOV_PROGRAM "${CMAKE_BINARY_DIR}/llvm-gcov.sh")
+    file(REMOVE_RECURSE "${PROJECT_BINARY_DIR}/coverage/tmp")
+    set(GCOV_PROGRAM "${PROJECT_BINARY_DIR}/llvm-gcov.sh")
 
   endif (H2_CI_BUILD)
 endif ()
@@ -247,17 +247,17 @@ if (H2_HAVE_GCOV_COVERAGE_TOOLS)
 
     # Build out each toplevel target
     foreach (_tltgt IN LISTS _all_toplevel_tgts)
-      set(_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${_tltgt}")
+      set(_OUT_DIR "${PROJECT_BINARY_DIR}/coverage/${_tltgt}")
       set(_TMP_OUT_DIR "${_OUT_DIR}/tmp")
       set(_INFO_OUT_DIR "${_OUT_DIR}/info")
       set(_HTML_OUT_DIR "${_OUT_DIR}/html")
 
       # Write a quick script to run an MPI process with rank-specific output.
-      string(REPLACE "/" ";" _build_dir_list "${CMAKE_BINARY_DIR}")
+      string(REPLACE "/" ";" _build_dir_list "${PROJECT_BINARY_DIR}")
       list(REMOVE_ITEM _build_dir_list "")
       list(LENGTH _build_dir_list _build_dir_len)
       set(_run_mpi_src "#!/bin/bash
-_mpi_rank=$(${CMAKE_SOURCE_DIR}/cmake/modules/print-rank.sh)
+_mpi_rank=$(${PROJECT_SOURCE_DIR}/cmake/modules/print-rank.sh)
 _prefix=${_TMP_OUT_DIR}/gcov-\$\{_mpi_rank\}
 mkdir -p \$\{_prefix\}
 GCOV_PREFIX=\$\{_prefix\} GCOV_PREFIX_STRIP=${_build_dir_len} $@
@@ -297,15 +297,15 @@ GCOV_PREFIX=\$\{_prefix\} GCOV_PREFIX_STRIP=${_build_dir_len} $@
         COMMAND
         ${CMAKE_COMMAND}
         -D COVERAGE_TGT=${_tltgt}
-        -D SOURCE_DIR=${CMAKE_SOURCE_DIR}
-        -D BUILD_DIR=${CMAKE_BINARY_DIR}
+        -D SOURCE_DIR=${PROJECT_SOURCE_DIR}
+        -D BUILD_DIR=${PROJECT_BINARY_DIR}
         -D OUTPUT_DIR=${_OUT_DIR}
         -D MPI_LAUNCH_PATTERN="${_mpi_pattern}"
         -D LCOV_PROGRAM=${LCOV_PROGRAM}
         -D GCOV_PROGRAM=${GCOV_PROGRAM}
         -D SEQ_COVERAGE_PROGRAMS=${_seq_progs}
-        -D MPI_COVERAGE_PROGRAMS="${CMAKE_BINARY_DIR}/bin/MPICatchTests -r mpicumulative"
-        -P "${CMAKE_SOURCE_DIR}/cmake/modules/H2RunCoverage.cmake"
+        -D MPI_COVERAGE_PROGRAMS="${PROJECT_BINARY_DIR}/bin/MPICatchTests -r mpicumulative"
+        -P "${PROJECT_SOURCE_DIR}/cmake/modules/H2RunCoverage.cmake"
         COMMENT "Generating coverage data for coverage target \"${_tltgt}\""
         BYPRODUCTS "${_INFO_OUT_DIR}/${_tltgt}.final.info"
         VERBATIM)
@@ -364,11 +364,11 @@ GCOV_PREFIX=\$\{_prefix\} GCOV_PREFIX_STRIP=${_build_dir_len} $@
       #     --cobertura-pretty
       #     --exclude-unreachable-branches
       #     --print-summary
-      #     -o ${CMAKE_BINARY_DIR}/${_tltgt}-gcovr.xml
-      #     --gcov-executable "${GCOV_PROGRAM} -b -c -f -r -s ${CMAKE_SOURCE_DIR}"
+      #     -o ${PROJECT_BINARY_DIR}/${_tltgt}-gcovr.xml
+      #     --gcov-executable "${GCOV_PROGRAM} -b -c -f -r -s ${PROJECT_SOURCE_DIR}"
       #
       #     COMMENT "Generating Cobertura report for \"${_tltgt}\" with gcovr."
-      #     BYPRODUCTS ${CMAKE_BINARY_DIR}/${_tltgt}-gcovr.xml
+      #     BYPRODUCTS ${PROJECT_BINARY_DIR}/${_tltgt}-gcovr.xml
       #     VERBATIM)
       #   # This comes *after* gen-coverage-html
       #   add_dependencies(${_tltgt}-gcovr ${_tltgt}-gen-coverage-html)
@@ -386,8 +386,8 @@ GCOV_PREFIX=\$\{_prefix\} GCOV_PREFIX_STRIP=${_build_dir_len} $@
 elseif (H2_HAVE_LLVM_COVERAGE_TOOLS)
 
   macro(add_code_coverage EXE_TARGET TOPLEVEL_TARGET)
-    set(_PROF_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${EXE_TARGET}/prof")
-    set(_HTML_OUT_DIR "${CMAKE_BINARY_DIR}/coverage/${EXE_TARGET}/html")
+    set(_PROF_OUT_DIR "${PROJECT_BINARY_DIR}/coverage/${EXE_TARGET}/prof")
+    set(_HTML_OUT_DIR "${PROJECT_BINARY_DIR}/coverage/${EXE_TARGET}/html")
 
     add_custom_target(
       ${EXE_TARGET}-gen-profdata
@@ -439,6 +439,6 @@ target_compile_options(h2_coverage_flags INTERFACE
 target_link_options(h2_coverage_flags INTERFACE ${H2_COVERAGE_FLAGS})
 
 add_custom_target(clean-coverage
-  COMMAND ${CMAKE_COMMAND} -E remove_directory ${CMAKE_BINARY_DIR}/coverage
+  COMMAND ${CMAKE_COMMAND} -E remove_directory ${PROJECT_BINARY_DIR}/coverage
   COMMENT "Cleaning up coverage data."
   VERBATIM)

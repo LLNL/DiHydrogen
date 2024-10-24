@@ -38,7 +38,7 @@ if (CLANG_FORMAT_PROGRAM)
     CLANG_FORMAT_VERSION
     "${CLANG_FORMAT_VERSION_STRING}")
 
-  if (CLANG_FORMAT_VERSION VERSION_GREATER_EQUAL "9.0.0")
+  if (CLANG_FORMAT_VERSION VERSION_GREATER_EQUAL "15.0.0")
     set(CLANG_FORMAT_VERSION_OK TRUE)
   else ()
     set(CLANG_FORMAT_VERSION_OK FALSE)
@@ -50,7 +50,7 @@ if (CLANG_FORMAT_PROGRAM AND CLANG_FORMAT_VERSION_OK)
     clang-format
     COMMAND ${CLANG_FORMAT_PROGRAM} -i
     $<TARGET_PROPERTY:clang-format,FORMAT_SOURCES>
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
     COMMENT "Applying clang-format."
     COMMAND_EXPAND_LISTS
     VERBATIM)
@@ -137,7 +137,7 @@ if (CLANG_FORMAT_PROGRAM AND CLANG_FORMAT_VERSION_OK)
   endfunction ()
 
   function (add_clang_format_to_all_targets)
-    add_cf_to_tgts_in_dir("${CMAKE_SOURCE_DIR}")
+    add_cf_to_tgts_in_dir("${PROJECT_SOURCE_DIR}")
   endfunction ()
 
   message(STATUS "Found clang-format: ${CLANG_FORMAT_PROGRAM} "

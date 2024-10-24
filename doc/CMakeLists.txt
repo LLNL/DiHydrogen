@@ -19,8 +19,8 @@ endif ()
 
 if (DOXYGEN_FOUND)
   set(H2_VERSION_STRING "DiHydrogen Version ${H2_VERSION}")
-  set(H2_SOURCE_ROOT "${CMAKE_SOURCE_DIR}")
-  set(H2_GENERATED_INCLUDE_DIR "${CMAKE_BINARY_DIR}/include")
+  set(H2_SOURCE_ROOT "${PROJECT_SOURCE_DIR}")
+  set(H2_GENERATED_INCLUDE_DIR "${PROJECT_BINARY_DIR}/include")
 
   macro(h2_make_yes_or_no VAR DEFAULT_VAL)
     if (NOT DEFINED ${VAR})
@@ -46,7 +46,7 @@ if (DOXYGEN_FOUND)
 
   set(DOXYGEN_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in
-    ${CMAKE_SOURCE_DIR}/README.md
+    ${PROJECT_SOURCE_DIR}/README.md
     )
 
   # Setup Dot support
@@ -74,7 +74,7 @@ if (DOXYGEN_FOUND)
   add_custom_target(doxygen-generate-html
     COMMAND Doxygen::doxygen "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile"
     BYPRODUCTS "${DOXYGEN_OUTPUT_DIR}/html/index.html"
-    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}"
+    WORKING_DIRECTORY "${PROJECT_BINARY_DIR}"
     SOURCES "${DOXYGEN_SOURCES}"  "${CMAKE_CURRENT_BINARY_DIR}/Doxyfile"
     DEPENDS doxygen-make-dir
     COMMENT

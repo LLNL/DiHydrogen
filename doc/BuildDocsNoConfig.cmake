@@ -61,7 +61,7 @@ find_program(GIT_PROGRAM git)
 if (GIT_PROGRAM)
   execute_process(
     COMMAND ${GIT_PROGRAM} rev-parse --is-inside-work-tree
-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     OUTPUT_VARIABLE BUILDING_FROM_GIT_SOURCES
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 
@@ -69,7 +69,7 @@ if (GIT_PROGRAM)
     # Get the git version so that we can embed it into the executable
     execute_process(
       COMMAND ${GIT_PROGRAM} rev-parse --show-toplevel
-      WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+      WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
       OUTPUT_VARIABLE GIT_TOPLEVEL_DIR
       OUTPUT_STRIP_TRAILING_WHITESPACE)
     execute_process(
