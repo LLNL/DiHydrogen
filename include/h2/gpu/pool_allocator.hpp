@@ -114,6 +114,10 @@
 #error "This file must be included with a GPU (CUDA/ROCm) environment"
 #endif
 
+
+namespace h2
+{
+
 namespace gpudebug
 {
 /* Minimal copy of CubDebug */
@@ -174,9 +178,6 @@ static inline void HumanReadableSize(size_t bytes, std::ostream& os)
   os.precision(oldprec);
   os.setf(oldf);
 }
-
-namespace h2
-{
 
 /******************************************************************************
  * PooledDeviceAllocator
