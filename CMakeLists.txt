@@ -235,7 +235,7 @@ report_dep(spdlog)
 
 if (H2_ENABLE_CUDA)
   enable_language(CUDA)
-  include(SetupCUDAToolkit)
+  include(H2SetupCUDAToolkit)
   if (CMAKE_CUDA_COMPILER)
     set(H2_HAS_CUDA TRUE)
   endif ()
