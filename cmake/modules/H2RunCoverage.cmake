@@ -146,5 +146,5 @@ h2_run_process(
   ${LCOV_PROGRAM}
   --gcov-tool ${GCOV_PROGRAM}
   -r ${OUTPUT_INFO_DIR}/${COVERAGE_TGT}.info
-  "${SOURCE_DIR}/install-deps*" "${SOURCE_DIR}/test/*"
+  "${BUILD_DIR}/_deps*" "${SOURCE_DIR}/install-deps*" "${SOURCE_DIR}/test/*"
   -o ${OUTPUT_INFO_DIR}/${COVERAGE_TGT}.final.info)
