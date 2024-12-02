@@ -484,7 +484,7 @@ public:
   }
 
   template <Device ThisDev, Device EventDev>
-  void add_sync_point(SyncEvent const& event) const
+  void add_sync_point([[maybe_unused]] SyncEvent const& event) const
   {
     H2_ASSERT_DEBUG(ThisDev == device,
                     "Incorrect device ",
@@ -534,7 +534,7 @@ public:
   }
 
   template <Device ThisDev, Device EventDev>
-  void wait_for(SyncEvent const& event) const
+  void wait_for([[maybe_unused]] SyncEvent const& event) const
   {
     H2_ASSERT_DEBUG(ThisDev == device,
                     "Incorrect device ",
@@ -589,7 +589,7 @@ public:
   }
 
   template <Device ThisDev, Device StreamDev>
-  void wait_for(ComputeStream const& other_stream) const
+  void wait_for([[maybe_unused]] ComputeStream const& other_stream) const
   {
     H2_ASSERT_DEBUG(ThisDev == device,
                     "Incorrect device ",

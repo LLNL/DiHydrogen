@@ -142,6 +142,7 @@ using AllDevicesList = h2::meta::TL<CPUDev_t>;
 #define H2_DEVICE_DISPATCH(device, cpu_code, gpu_code)                         \
   do                                                                           \
   {                                                                            \
+    (void) (device);                                                           \
     [[maybe_unused]] constexpr ::h2::Device Dev = ::h2::Device::CPU;           \
     cpu_code;                                                                  \
   } while (0);
