@@ -204,7 +204,7 @@ endmacro()
 FetchContent_Declare(
   Aluminum
   GIT_REPOSITORY https://github.com/LLNL/Aluminum.git
-  GIT_TAG 672bbb782dccf41e3db99d58ddbd2ad0de7e266a # 'master' at 23 Oct 2024
+  GIT_TAG b4e1fc307bf1df8f73e455591d70aac667052e7b # master on 9 Jan 2025
   GIT_SHALLOW 1
   FIND_PACKAGE_ARGS 1.0.0 CONFIG
 )

@@ -36,6 +36,11 @@ build_distconv=${WITH_DISTCONV:-""}
 job_unique_id=${CI_JOB_ID:-""}
 prefix=""
 
+if [[ "${cluster}" = "corona" ]]
+then
+    module use $HOME/.modulefiles/corona
+fi
+
 # Setup the module environment
 if [[ -n "${modules}" ]]
 then
