@@ -86,7 +86,7 @@ void dispatch_test_impl(CPUDev_t, T* v)
 
 #ifdef H2_HAS_GPU
 template <typename T>
-void dispatch_test_impl(GPUDev_t, T* v)
+void dispatch_test_impl(GPUDev_t, T*)
 {}
 #endif
 

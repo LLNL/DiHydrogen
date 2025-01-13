@@ -127,7 +127,7 @@ constexpr static bool is_maybe_lambda_or_functor =
 
 template <typename T,
           typename = std::enable_if_t<is_maybe_lambda_or_functor<T>>>
-std::string convert_for_fmt(T const& v) noexcept
+std::string convert_for_fmt(T const&) noexcept
 {
   return "<callable>";
 }

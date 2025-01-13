@@ -204,7 +204,7 @@ endmacro()
 FetchContent_Declare(
   Aluminum
   GIT_REPOSITORY https://github.com/LLNL/Aluminum.git
-  GIT_TAG 672bbb782dccf41e3db99d58ddbd2ad0de7e266a # 'master' at 23 Oct 2024
+  GIT_TAG b4e1fc307bf1df8f73e455591d70aac667052e7b # master on 9 Jan 2025
   GIT_SHALLOW 1
   FIND_PACKAGE_ARGS 1.0.0 CONFIG
 )
@@ -496,12 +496,6 @@ if (H2_HAS_CUDA)
 endif ()
 
 if (H2_HAS_ROCM)
-  if (CMAKE_HIP_COMPILER_VERSION VERSION_GREATER_EQUAL "5.5.0")
-    target_compile_features(H2Core PUBLIC hip_std_17)
-  else ()
-    target_compile_options(H2Core PUBLIC
-      $<$<COMPILE_LANGUAGE:HIP>:-std=c++17>)
-  endif ()
   set_target_properties(H2Core
     PROPERTIES
     HIP_STANDARD 17
