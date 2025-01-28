@@ -17,16 +17,13 @@
 // Note: This file should be safe to include when not building with GPU
 // support.
 
-#if defined H2_HAS_GPU
-
-#if (defined __CUDA_ARCH__ && __CUDA_ARCH__)                                   \
-  || (defined __HIP_DEVICE_COMPILE__ && __HIP_DEVICE_COMPILE__)
+#if defined H2_HAS_GPU                                                         \
+  && ((defined __CUDA_ARCH__ && __CUDA_ARCH__)                                 \
+      || (defined __HIP_DEVICE_COMPILE__ && __HIP_DEVICE_COMPILE__))
 #define H2_GPU_DEVICE_COMPILING 1
 #else
 #define H2_GPU_DEVICE_COMPILING 0
 #endif
-
-#endif  // H2_HAS_GPU
 
 #if defined(__CUDACC__) || defined(__HIPCC__)
 
