@@ -231,11 +231,11 @@ inline void launch_kernel(void (*kernel)(KernelArgs...),
                   max_threads_per_block,
                   ")");
 
-  H2_GPU_TRACE("launch_kernel(kernel={} ("
-                 + meta::tlist::print(meta::TL<KernelArgs...>{})
-                 + "), grid_dim=({}, {}, {}), block_dim=({}, "
-                   "{}, {}), shared_mem={}, stream={}, args=( "
-                 + (((void) args, std::string("{} ")) + ...) + "))",
+  H2_GPU_TRACE(fmt::runtime("launch_kernel(kernel={} ("
+                            + meta::tlist::print(meta::TL<KernelArgs...>{})
+                            + "), grid_dim=({}, {}, {}), block_dim=({}, "
+                            "{}, {}), shared_mem={}, stream={}, args=( "
+                            + (((void) args, std::string("{} ")) + ...) + "))"),
                (void*) kernel,
                grid_dim.x,
                grid_dim.y,
