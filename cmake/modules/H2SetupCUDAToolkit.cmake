@@ -33,7 +33,7 @@ endif ()
 target_link_libraries(
   h2::cuda_toolkit
   INTERFACE
-  $<TARGET_NAME_IF_EXISTS:CUDA::nvToolsExt>
+  $<TARGET_NAME_IF_EXISTS:CUDA::nvToolsExt> # Disappears in CUDA 12.9
   CUDA::nvml
   CUDA::cuda_driver
   CUDA::cudart)

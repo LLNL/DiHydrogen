@@ -109,11 +109,11 @@ then
 
     # Sparse checkout of the SuperBuild
     git init
-    git remote add origin https://github.com/llnl/lbann
-    git fetch --depth=1 origin develop
+    git remote add origin https://github.com/lbann/lbann
+    git fetch --depth=1 origin v1.x-develop
     git config core.sparseCheckout true
     echo "scripts/superbuild" >> .git/info/sparse-checkout
-    git pull --ff-only origin develop
+    git pull --ff-only origin v1.x-develop
 
     cd ${build_dir}
     # Uses "${cluster}", "${prefix}", and "${lbann_sb_dir}"

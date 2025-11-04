@@ -23,6 +23,14 @@ workflow:
         TEST_DISTCONV_BUILD: "1"
     - when: always
 
+matrix testing:
+  stage: run-all-clusters
+  trigger:
+    strategy: depend
+    include: '.gitlab/build-and-test-matrix.yml'
+    forward:
+      pipeline_variables: true
+
 corona testing:
   stage: run-all-clusters
   trigger:
@@ -31,18 +39,18 @@ corona testing:
     forward:
       pipeline_variables: true
 
-lassen testing:
-  stage: run-all-clusters
-  trigger:
-    strategy: depend
-    include: '.gitlab/build-and-test-lassen.yml'
-    forward:
-      pipeline_variables: true
-
 tioga testing:
   stage: run-all-clusters
   trigger:
     strategy: depend
     include: '.gitlab/build-and-test-tioga.yml'
+    forward:
+      pipeline_variables: true
+
+tuo testing:
+  stage: run-all-clusters
+  trigger:
+    strategy: depend
+    include: '.gitlab/build-and-test-tuo.yml'
     forward:
       pipeline_variables: true
