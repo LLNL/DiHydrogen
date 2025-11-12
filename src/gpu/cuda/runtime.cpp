@@ -210,14 +210,21 @@ void h2::gpu::set_gpu(int id)
   H2_CHECK_CUDA(cudaSetDevice(id));
 }
 
-void h2::gpu::init_runtime()
+void h2::gpu::init_runtime(int const device_id)
 {
   if (initialized_)
     return;
 
   H2_GPU_TRACE("initializing gpu runtime");
   H2_GPU_TRACE("found {} devices", num_gpus());
-  set_reasonable_default_gpu();
+
+  if (device_id == -1)
+      set_reasonable_default_gpu();
+  else
+  {
+      H2_ASSERT_ALWAYS(device_id >= 0 && device_id < num_gpus);
+      set_device(device_id);
+  }
   initialized_ = true;
 }
 
