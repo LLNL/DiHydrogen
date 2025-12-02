@@ -20,7 +20,7 @@
  *  int current_gpu();
  *  void set_gpu(int id);
  *
- *  void init_runtime();
+ *  void init_runtime(int device_id);
  *  void finalize_runtime();
  *  bool runtime_is_initialized();
  *  bool runtime_is_finalized();
@@ -74,7 +74,13 @@ int num_gpus();
 int current_gpu();
 void set_gpu(int id);
 
-void init_runtime();
+/** @brief Ensure the GPU runtime is initialized.
+ *  @param device_id[in] The initial device ID to select. If -1, this
+ *                       will attempt to select something reasonable
+ *                       using environment variables and, possibly,
+ *                       MPI, if available.
+ */
+void init_runtime(int device_id = -1);
 void finalize_runtime();
 bool runtime_is_initialized();
 bool runtime_is_finalized();

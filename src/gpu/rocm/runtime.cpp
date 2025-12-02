@@ -345,16 +345,23 @@ void h2::gpu::set_gpu(int id)
   H2_CHECK_HIP(hipSetDevice(id));
 }
 
-void h2::gpu::init_runtime()
+void h2::gpu::init_runtime(int const dev_id)
 {
   if (!initialized_)
   {
-    H2_GPU_TRACE("initializing gpu runtime");
-    H2_CHECK_HIP(hipInit(0));
+    H2_GPU_TRACE("initializing h2 gpu runtime");
     H2_GPU_TRACE("found {} devices", num_gpus());
-    set_reasonable_default_gpu();
+    if (dev_id == -1)
+        set_reasonable_default_gpu();
+    else
+    {
+        H2_ASSERT_ALWAYS(dev_id >= 0 && dev_id < num_gpus());
+        set_gpu(dev_id);
+    }
     initialized_ = true;
 
+    // FIXME (trb): This assumes that the current GPU is
+    // representative of all GPUs we expect to see.
     hipDeviceProp_t props;
     H2_CHECK_HIP(hipGetDeviceProperties(&props, current_gpu()));
     is_integrated_ = props.integrated;
