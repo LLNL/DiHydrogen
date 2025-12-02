@@ -222,8 +222,8 @@ void h2::gpu::init_runtime(int const device_id)
       set_reasonable_default_gpu();
   else
   {
-      H2_ASSERT_ALWAYS(device_id >= 0 && device_id < num_gpus);
-      set_device(device_id);
+      H2_ASSERT_ALWAYS(device_id >= 0 && device_id < num_gpus());
+      set_gpu(device_id);
   }
   initialized_ = true;
 }
