@@ -23,10 +23,10 @@ include:
 # build systems (in particular, it's not clear that all the
 # includes/libs are setup properly under the "/usr/tce" prefix). So I
 # load a module to get a real prefix.
-rocm-6-3-1-corona:
+rocm-6-4-2-corona:
   variables:
     COMPILER_FAMILY: amdclang
-    MODULES: "gcc/13.3.1-magic mvapich2/2.3.7 rocm/6.3.1 cmake/3.30.5 python"
+    MODULES: "gcc/13.3.1-magic mvapich2/2.3.7 rocm/6.4.2 cmake/3.30.5 python"
   extends: [.build-and-test-on-corona, .build-and-test]
 
 gcc-13-3-1-cpu-corona:
