@@ -50,5 +50,5 @@ rocm-7-0-1-distconv-tuo:
   stage: build
   tags: [tuolumne, batch]
   variables:
-    LLNL_FLUX_SCHEDULER_PARAMETERS: "-N1 -t 20"
+    LLNL_FLUX_SCHEDULER_PARAMETERS: "-N1 -t 20 -q pci"
   extends: .build-and-test
