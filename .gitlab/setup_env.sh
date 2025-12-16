@@ -61,8 +61,12 @@ case "${cluster}" in
             extra_rpaths="${ROCM_PATH}/lib:${extra_rpaths}"
         fi
         rocm_platform=ON
-	gpu_arch=gfx90a
         launcher=flux
+        gpu_arch=gfx942
+        if [[ ${cluster} = "tioga" ]];
+        then
+	    gpu_arch=gfx90a
+        fi
         ;;
     corona)
         # Only turn on GPU stuff if ROCm module has been loaded, which
