@@ -16,24 +16,39 @@ stages:
 include:
   local: "/.gitlab/build-and-test-common.yml"
 
-rocm-6-4-2-tioga:
+rocm-6-4-2-tuo:
   variables:
     COMPILER_FAMILY: amdclang
     MODULES: "PrgEnv-cray rocm/6.4.2 cmake/3.29.2 cray-mpich cray-libsci"
-  extends: .build-and-test-on-tioga
+  extends: .build-and-test-on-tuo
 
-rocm-6-4-2-distconv-tioga:
+rocm-7-0-1-tuo:
+  variables:
+    COMPILER_FAMILY: amdclang
+    MODULES: "PrgEnv-cray rocm/7.0.1 cmake/3.29.2 cray-mpich cray-libsci"
+  extends: .build-and-test-on-tuo
+
+rocm-6-4-2-distconv-tuo:
   variables:
     COMPILER_FAMILY: amdclang
     MODULES: "PrgEnv-cray rocm/6.4.2 cmake/3.29.2 cray-mpich cray-libsci"
     WITH_DISTCONV: "1"
-  extends: .build-and-test-on-tioga
+  extends: .build-and-test-on-tuo
   rules:
     - if: $TEST_DISTCONV_BUILD == "1"
 
-.build-and-test-on-tioga:
+rocm-7-0-1-distconv-tuo:
+  variables:
+    COMPILER_FAMILY: amdclang
+    MODULES: "PrgEnv-cray rocm/7.0.1 cmake/3.29.2 cray-mpich cray-libsci"
+    WITH_DISTCONV: "1"
+  extends: .build-and-test-on-tuo
+  rules:
+    - if: $TEST_DISTCONV_BUILD == "1"
+
+.build-and-test-on-tuo:
   stage: build
-  tags: [tioga, batch]
+  tags: [tuolumne, batch]
   variables:
     LLNL_FLUX_SCHEDULER_PARAMETERS: "-N1 -t 20 -q pci"
   extends: .build-and-test

@@ -39,4 +39,5 @@ cmake \
     -D LBANN_SB_DEFAULT_ROCM_OPTS=${rocm_platform} \
     \
     -D LBANN_SB_BUILD_hwloc=${rocm_platform} \
-    -D LBANN_SB_BUILD_NCCL=${cuda_platform}
+    -D LBANN_SB_BUILD_NCCL=${cuda_platform} \
+    -D LBANN_SB_NCCL_TAG=v2.27.7-1

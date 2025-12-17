@@ -45,14 +45,14 @@ common_linker_flags="-Wl,--disable-new-dtags"
 extra_rpaths=${extra_rpaths:-""}
 
 case "${cluster}" in
-    lassen)
+    matrix)
         CUDACXX=${CUDACXX:-$(command -v nvcc)}
         CUDAHOSTCXX=${CUDAHOSTCXX:-${CXX}}
         cuda_platform=ON
-        gpu_arch=70
-        launcher=lsf
+        gpu_arch=90
+        launcher=slurm
         ;;
-    tioga)
+    tioga|tuolumne)
         cray_libs_dir=${CRAYLIBS_X86_64:-""}
         if [[ -n "${cray_libs_dir}" ]]
         then
@@ -61,8 +61,12 @@ case "${cluster}" in
             extra_rpaths="${ROCM_PATH}/lib:${extra_rpaths}"
         fi
         rocm_platform=ON
-	gpu_arch=gfx90a
         launcher=flux
+        gpu_arch=gfx942
+        if [[ ${cluster} = "tioga" ]];
+        then
+	    gpu_arch=gfx90a
+        fi
         ;;
     corona)
         # Only turn on GPU stuff if ROCm module has been loaded, which
