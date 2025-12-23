@@ -170,13 +170,12 @@ public:
             }
         }
 
-        auto p = pads[0];
+        bool use_padding = false;
         for (int i = 0; i < m_num_spatial_dims; ++i)
         {
-            assert_eq(pads[i], p);
+            use_padding = use_padding || (pads[i] != 0);
             assert_always(pads[i] == stencil_dims[i] || pads[i] == 0);
         }
-        bool use_padding = p != 0;
 
         internal::get_halo_sizes(input,
                                  IntVector(filter.get_shape()),
