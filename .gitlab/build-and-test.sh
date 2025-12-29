@@ -31,7 +31,6 @@ fi
 # no explicit action is taken by this script.
 modules=${MODULES:-""}
 run_coverage=${WITH_COVERAGE:-""}
-build_distconv=${WITH_DISTCONV:-""}
 
 job_unique_id=${CI_JOB_ID:-""}
 prefix=""

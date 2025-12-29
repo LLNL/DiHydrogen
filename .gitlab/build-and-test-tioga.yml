@@ -22,15 +22,6 @@ rocm-6-4-2-tioga:
     MODULES: "PrgEnv-cray rocm/6.4.2 cmake/3.29.2 cray-mpich cray-libsci"
   extends: .build-and-test-on-tioga
 
-rocm-6-4-2-distconv-tioga:
-  variables:
-    COMPILER_FAMILY: amdclang
-    MODULES: "PrgEnv-cray rocm/6.4.2 cmake/3.29.2 cray-mpich cray-libsci"
-    WITH_DISTCONV: "1"
-  extends: .build-and-test-on-tioga
-  rules:
-    - if: $TEST_DISTCONV_BUILD == "1"
-
 .build-and-test-on-tioga:
   stage: build
   tags: [tioga, batch]

@@ -19,11 +19,6 @@
 #include <spdlog/pattern_formatter.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 
-#if H2_HAS_MPI
-#define H2_LOGGER_HAS_MPI
-#include <mpi.h>
-#endif
-
 #if __has_include(<unistd.h>)
 #define H2_LOGGER_HAS_UNISTD_H
 #include <unistd.h>
@@ -67,16 +62,6 @@ public:
 
   static int get_rank_mpi()
   {
-#ifdef H2_LOGGER_HAS_MPI
-    int is_init = 0;
-    MPI_Initialized(&is_init);
-    if (is_init)
-    {
-      int rank = 0;
-      MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-      return rank;
-    }
-#endif  // H2_LOGGER_HAS_MPI
     return -1;
   }
 
@@ -118,16 +103,6 @@ public:
 
   static int get_size_mpi()
   {
-#ifdef H2_LOGGER_HAS_MPI
-    int is_init = 0;
-    MPI_Initialized(&is_init);
-    if (is_init)
-    {
-      int size = 0;
-      MPI_Comm_size(MPI_COMM_WORLD, &size);
-      return size;
-    }
-#endif  // H2_LOGGER_HAS_MPI
     return -1;
   }
 
