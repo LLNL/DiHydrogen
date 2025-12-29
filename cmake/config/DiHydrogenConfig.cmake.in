@@ -17,20 +17,13 @@ set(H2_VERSION ${PACKAGE_VERSION})
 # Verify the dependencies of H2
 include(CMakeFindDependencyMacro)
 
-set(H2_HAS_DISTCONV @H2_ENABLE_DISTCONV_LEGACY@)
 set(H2_HAS_ALUMINUM @H2_HAS_ALUMINUM@)
 set(H2_HAS_OPENMP @H2_HAS_OPENMP@)
 set(H2_HAS_HALF @H2_HAS_HALF@)
 set(H2_HAS_CUDA @H2_HAS_CUDA@)
 set(H2_HAS_ROCM @H2_HAS_ROCM@)
-set(H2_DISTCONV_HAS_P2P @P2P_FOUND@)
-set(H2_DISTCONV_HAS_NVSHMEM @NVSHMEM_FOUND@)
 
 find_dependency(spdlog)
-
-if (H2_HAS_DISTCONV)
-  find_dependency(MPI)
-endif ()
 
 if (H2_HAS_ALUMINUM)
   set(_BUILD_AL_DIR "@Aluminum_DIR@")
@@ -51,12 +44,6 @@ find_dependency(Aluminum)
 
 if (H2_HAS_CUDA)
   include(H2SetupCUDAToolkit)
-  if (H2_DISTCONV_HAS_P2P)
-    find_dependency(P2P)
-  endif ()
-  if (H2_DISTCONV_HAS_NVSHMEM)
-    find_dependency(NVSHMEM)
-  endif ()
 endif ()
 
 if (H2_HAS_ROCM)

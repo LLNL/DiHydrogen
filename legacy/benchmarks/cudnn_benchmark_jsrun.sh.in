@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-
-unset LD_PRELOAD
-exec @CMAKE_BINARY_DIR@/bin/cudnn_benchmark $*

@@ -1,3 +1,0 @@
-*.d
-benchmarks/cudnn_benchmark
-benchmarks/distconv_benchmark

@@ -25,9 +25,6 @@
 #define H2_HAS_GPU
 #endif
 
-#cmakedefine01 H2_HAS_MPI
-#cmakedefine01 H2_HAS_DACE
-
 #cmakedefine H2_DEBUG
 
 // clang-format off

@@ -25,7 +25,6 @@ cmake -G Ninja \
       -D H2_CI_BUILD=${run_coverage:-OFF} \
       -D H2_DEVELOPER_BUILD=ON \
       -D H2_ENABLE_CODE_COVERAGE=${run_coverage:-OFF} \
-      -D H2_ENABLE_DISTCONV_LEGACY=${build_distconv:-OFF} \
       \
       -D ALUMINUM_ENABLE_NCCL=${with_nccl} \
       -D ALUMINUM_ENABLE_HWLOC=OFF \

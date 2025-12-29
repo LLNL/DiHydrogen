@@ -37,7 +37,7 @@ option(H2_ENABLE_NVSHMEM
   OFF)
 
 option(H2_ENABLE_CUDA
-  "Use the CUDA backend for DistConv features of DiHydrogen."
+  "Search for and enable CUDA language features in DiHydrogen."
   OFF)
 
 option(H2_ENABLE_HIP_ROCM
@@ -56,21 +56,6 @@ endif ()
 # Just in case I missed anything
 if (H2_ENABLE_ROCM AND NOT H2_ENABLE_HIP_ROCM)
   set(H2_ENABLE_HIP_ROCM ON CACHE BOOL "Use HIP/ROCm backend." FORCE)
-endif ()
-
-option(H2_ENABLE_DACE
-  "Use the DaCe JIT compiler backend for DistConv convolutions in DiHydrogen."
-  OFF)
-
-# Sanity-check the arguments.
-if (H2_ENABLE_DISTCONV_LEGACY)
-  # We need one of CUDA or ROCm
-  if (NOT (H2_ENABLE_CUDA OR H2_ENABLE_ROCM))
-    message(FATAL_ERROR "Must enable one of CUDA and ROCm with DistConv.")
-  endif ()
-
-  set(H2_ENABLE_OPENMP ${H2_ENABLE_DISTCONV_LEGACY}
-    CACHE BOOL "Enable CPU acceleration with OpenMP threads.")
 endif ()
 
 option(H2_DEVELOPER_BUILD
@@ -93,11 +78,6 @@ option(H2_ENABLE_TESTS
 option(H2_ENABLE_WERROR
   "Enable the \"-Werror\" flag. Requires compiler support."
   OFF)
-
-# Hack
-set(MPI_ASSUME_NO_BUILTIN_MPI ON
-  CACHE BOOL
-  "Force compiler interrogation for MPI")
 
 string(TOUPPER "${CMAKE_BUILD_TYPE}" H2_BUILD_TYPE_UPPER)
 if (H2_BUILD_TYPE_UPPER MATCHES "DEBUG")
@@ -289,9 +269,6 @@ if (H2_ENABLE_ROCM)
   endif ()
 
   # These should be part of a bundled ROCm release.
-  if (H2_ENABLE_DISTCONV_LEGACY)
-    find_package(MIOpen CONFIG REQUIRED)
-  endif ()
   find_package(hipcub CONFIG REQUIRED)
   find_package(rocm_smi CONFIG REQUIRED)
 
@@ -311,59 +288,6 @@ if (H2_HAS_CUDA OR H2_HAS_ROCM)
   set(H2_HAS_GPU TRUE)
 endif ()
 
-if (H2_ENABLE_DACE)
-  set(H2_HAS_DACE TRUE)
-  message(STATUS "Using DaCe JIT-capable backend")
-endif ()
-
-# DiHydrogen will use MPI-3 features extensively. Until proven
-# otherwise, assume that the CMake module version checking is
-# accurate.
-set(MPI_ASSUME_NO_BUILTIN_MPI ON)
-if (H2_ENABLE_DISTCONV_LEGACY)
-  find_package(MPI 3.0.0 COMPONENTS CXX REQUIRED)
-
-  get_target_property(
-    __mpi_compile_options MPI::MPI_CXX INTERFACE_COMPILE_OPTIONS)
-  if (__mpi_compile_options)
-    set_property(TARGET MPI::MPI_CXX PROPERTY
-      INTERFACE_COMPILE_OPTIONS
-      $<$<COMPILE_LANGUAGE:CXX>:${__mpi_compile_options}>)
-    unset(__mpi_compile_options)
-  endif ()
-endif ()
-
-if (MPI_FOUND AND H2_HAS_ROCM)
-  # Fix things in the MPI::MPI_CXX target
-  get_target_property(_MPI_CXX_INCL_DIRS
-    MPI::MPI_CXX INTERFACE_INCLUDE_DIRECTORIES)
-  if (NOT _MPI_CXX_INCL_DIRS)
-    set(_MPI_CXX_INCL_DIRS ${MPI_CXX_COMPILER_INCLUDE_DIRS})
-  endif ()
-
-  if ((NOT _MPI_CXX_INCL_DIRS)
-      AND (DEFINED ENV{PE_ENV})
-      AND ("${MPI_CXX_COMPILER}" STREQUAL "${CMAKE_CXX_COMPILER}"))
-
-    execute_process(
-      COMMAND "${CMAKE_CXX_COMPILER}" "--cray-print-opts=cflags"
-      OUTPUT_VARIABLE _CRAY_INCLUDE_PATHS)
-    if (_CRAY_INCLUDE_PATHS)
-      string(STRIP "${_CRAY_INCLUDE_PATHS}" _CRAY_INCLUDE_PATHS_STRIPPED)
-      string(REPLACE "-I" "" _CRAY_INCLUDE_PATHS_NO_I
-        "${_CRAY_INCLUDE_PATHS_STRIPPED}")
-      string(REPLACE " " ";" _MPI_CXX_INCL_DIRS
-        "${_CRAY_INCLUDE_PATHS_NO_I}")
-    endif ()
-  endif ()
-
-  if (_MPI_CXX_INCL_DIRS)
-    target_include_directories(MPI::MPI_CXX
-      INTERFACE
-      $<$<COMPILE_LANGUAGE:HIP>:${_MPI_CXX_INCL_DIRS}>)
-  endif ()
-endif ()
-
 # Cleanup the hip targets
 set(_hip_libs hip::host hip::device hip-lang::host hip-lang::device)
 foreach (lib IN LISTS _hip_libs)
@@ -376,13 +300,6 @@ foreach (lib IN LISTS _hip_libs)
       INTERFACE_LINK_LIBRARIES "${_lib_link_libs}")
   endif ()
 endforeach ()
-
-if (MPI_CXX_FOUND)
-  message(STATUS "H2 HAS MPI_CXX")
-  set(H2_HAS_MPI TRUE)
-else ()
-  set(H2_HAS_MPI FALSE)
-endif ()
 
 if (NOT APPLE)
   # dladdr is used in the backtrace functionality
@@ -512,7 +429,6 @@ target_link_libraries(H2Core PUBLIC
   AL::Al
   ${H2_CUDA_LIBS}
   ${H2_ROCM_LIBS}
-  $<$<BOOL:${H2_HAS_MPI}>:MPI::MPI_CXX>
   ${DL_LIBRARY}
 )
 
@@ -533,11 +449,6 @@ endif ()
 
 # Setup the documentation targets
 add_subdirectory(doc)
-
-# The legacy distconv code
-if (H2_ENABLE_DISTCONV_LEGACY)
-  add_subdirectory(legacy)
-endif ()
 
 if (H2_ENABLE_CODE_COVERAGE)
   finalize_code_coverage()

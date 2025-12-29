@@ -6,9 +6,6 @@
 ################################################################################
 
 find_package(CUDAToolkit 11.0.0 REQUIRED)
-if (H2_ENABLE_DISTCONV_LEGACY)
-  find_package(cuDNN REQUIRED)
-endif ()
 
 if (NOT TARGET h2::cuda_toolkit)
   add_library(h2::cuda_toolkit INTERFACE IMPORTED)
